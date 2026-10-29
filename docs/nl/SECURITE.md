@@ -2,6 +2,10 @@
 
 De Franse tekst (`docs/fr/SECURITE.md`) is rechtsgeldig en bevat het volledige rooster per versie.
 
+## 0.7.5 (29/10/2026)
+
+Recente plaatsen in het profiel (`lieux_recents`): alleen gelezen uit de eigen aanvragen van de persoon in de actieve entiteit, inactieve plaatsen uitgesloten, niets extra bewaard. Het foutbericht bij het aanmelden verdwijnt op het scherm zodra het adres verandert of een nieuwe poging door de formuliercontrole wordt tegengehouden; het aanmelden op de server is ongewijzigd. Detail van het auditlogboek: « Ja »/« Nee » voor selectievakjes, lege velden verborgen. Geen nieuwe route, migratie of afhankelijkheid. Bewijs van falen: met de services van 0.7.4 faalt `lieux-recents.test.js` (7 op 8).
+
 ## 0.7.4 (29/10/2026)
 
 Namen van de plaats en de categorie in het detail van het auditlogboek (DV-50). De namen worden opgezocht bij het lezen; er wordt niets extra bewaard en het logboek zelf verandert niet. Het logboek blijft voorbehouden aan de beheerder, via de API en de MCP. Twee nieuwe vaste queries, identificatoren als één JSON-parameter doorgegeven. Geen nieuwe route, migratie of afhankelijkheid. Bewijs van falen: met de journaalservice van 0.7.3 faalt `journal-noms.test.js` (5 op 6).

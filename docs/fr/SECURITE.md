@@ -2,6 +2,31 @@
 
 Le français fait foi. Grille de la section 10.2 du standard, rejouée à chaque version. « Non joué » veut dire que le contrôle n'a pas tourné.
 
+## 0.7.5 (29/10/2026)
+
+Lieux récents (DV-74), bandeau de connexion (DV-53), affichage du journal d'audit (DV-76). Environnement : bac à sable de Claude, Node 22.23.4. Aucune route, aucune migration, aucune dépendance nouvelles.
+
+| Famille | Contrôle | Résultat |
+| --- | --- | --- |
+| Authentification | Connexion inchangée côté serveur (message, limite de 15 essais) ; le bandeau d'échec s'efface à l'écran seulement | Conforme (tests, `pages.test.tsx`) |
+| Autorisation | `lieux_recents` du profil : seulement les demandes de la personne elle-même, dans l'entité active | Conforme (`lieux-recents.test.js`) |
+| IDOR | Aucune route nouvelle ; le profil ne prend aucun identifiant en entrée | Conforme |
+| Cloison AC et CPAS | Lieux récents de l'entité active seulement ; changement d'entité testé | Conforme (`lieux-recents.test.js`, `cloison.test.js`) |
+| Injections | Une requête nouvelle, constante, paramètres liés | Conforme (test statique `securite.test.js`) |
+| Données | Aucune donnée enregistrée en plus : les lieux récents sont lus dans les demandes existantes ; lieux désactivés exclus | Conforme (`lieux-recents.test.js`) |
+| Secrets commités | `.gitignore` inchangé | Conforme : seul `.env.example`, aucune base, aucun `dist/`, aucune valeur de NIXUS |
+| Interface | Texte rendu par React, sans HTML injecté ; liste des lieux récents nommée pour les lecteurs d'écran | Conforme (tests, `a11y`, axe-core en NL) |
+| Infrastructure | Dockerfile, compose, `nginx.conf`, `backup.sh`, `.env`, `ci.yml` inchangés | Conforme |
+| Dépendances | `npm audit --omit=dev` serveur | 0 vulnérabilité |
+| Dépendances | `npm audit --omit=dev` interface | 3 modérées (E-09), inchangées |
+| LLM et MCP | `get_profile` rend `lieux_recents` comme l'API ; instructions du client complétées ; aucun outil nouveau | Conforme (`lieux-recents.test.js`, `mcp.test.js`) |
+
+Les trois contrôles qui ne restent jamais « non joués » (secrets commités, contrôle d'accès côté serveur, IDOR) ont été joués.
+
+### Preuve d'échec des nouveaux tests (0.7.5)
+
+Services `demandes.js` et `session.js` de la 0.7.4 remis en place : `lieux-recents.test.js` échoue (1 réussi, 7 échecs). Écrans `LoginPage.tsx`, `JournalPage.tsx` et `LieuPicker.tsx` de la 0.7.4 remis en place : 5 tests de l'interface échouent (bandeau de connexion, « Oui » et « Non » du journal en FR et en NL, lieux récents en FR et en NL). Code de la 0.7.5 : tout réussi.
+
 ## 0.7.4 (29/10/2026)
 
 Noms du lieu et de la catégorie dans le détail du journal d'audit (DV-50). Environnement : bac à sable de Claude, Node 22.23.4. Aucune route, aucune migration, aucune dépendance nouvelles.

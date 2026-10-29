@@ -27,6 +27,8 @@ export interface User {
   /** Lieu de travail habituel choisi (0.5.0, REF-04) et lieu proposé d'office dans l'entité active. */
   lieu_habituel_id?: number | null;
   lieu_propose?: LieuChoisi | null;
+  /** Derniers lieux des demandes de la personne dans l'entité active, sans le lieu proposé (0.7.5, DV-74). */
+  lieux_recents?: LieuChoisi[];
   /** Numéro à appeler en cas de danger dans l'entité active (0.7.0, DEM-06) : urgence, sinon service ; null sinon. */
   telephone_urgence?: string | null;
   /** Mentions d'information RGPD de l'entité active (0.7.0, RGPD-10), prêtes à afficher, et contact du DPO. */

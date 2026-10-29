@@ -1,6 +1,6 @@
 {
   "name": "gmao-backend",
-  "version": "0.7.4",
+  "version": "0.7.5",
   "description": "GMAO communale : serveur (standard v3.2)",
   "license": "EUPL-1.2",
   "main": "src/index.js",
@@ -10,7 +10,7 @@
   "scripts": {
     "start": "node src/index.js",
     "dev": "node --watch src/index.js",
-    "test": "APP_TEST_MODE=1 node --test --test-concurrency=1 tests/api.test.js tests/installation.test.js tests/cloison.test.js tests/securite.test.js tests/mcp.test.js tests/lieux.test.js tests/categories.test.js tests/priorites.test.js tests/calendrier.test.js tests/parametres.test.js tests/modules.test.js tests/parametres-entite.test.js tests/journal.test.js tests/journal-diff.test.js tests/journal-noms.test.js tests/trace.test.js tests/notes-version.test.js tests/portabilite.test.js tests/dependances.test.js tests/espaces.test.js tests/numerotation.test.js tests/demandes.test.js tests/recherche-lieux.test.js tests/voisines.test.js tests/formulaire.test.js"
+    "test": "APP_TEST_MODE=1 node --test --test-concurrency=1 tests/api.test.js tests/installation.test.js tests/cloison.test.js tests/securite.test.js tests/mcp.test.js tests/lieux.test.js tests/categories.test.js tests/priorites.test.js tests/calendrier.test.js tests/parametres.test.js tests/modules.test.js tests/parametres-entite.test.js tests/journal.test.js tests/journal-diff.test.js tests/journal-noms.test.js tests/trace.test.js tests/notes-version.test.js tests/portabilite.test.js tests/dependances.test.js tests/espaces.test.js tests/numerotation.test.js tests/demandes.test.js tests/recherche-lieux.test.js tests/lieux-recents.test.js tests/voisines.test.js tests/formulaire.test.js"
   },
   "dependencies": {
     "ajv": "^8.20.0",

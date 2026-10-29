@@ -11,6 +11,7 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { I18nProvider } from '../contexts/I18nContext';
 import { SettingsProvider, FALLBACK_SETTINGS } from '../contexts/SettingsContext';
+import { ApiError } from '../api';
 
 const entites = [
   { id: 1, code: 'AA', nom_fr: 'Administration fictive', nom_nl: 'Fictief bestuur', is_active: 1, motif_desactivation: null, created_at: '2026-10-15 10:00:00', updated_at: '2026-10-15 10:00:00' },
@@ -56,7 +57,7 @@ const parametresEntite = [
 ];
 const journal = [
   { id: 2, created_at: '2026-10-22 08:30:00', action: 'lieu.update', entity_type: 'lieu', entity_id: 4, channel: 'mcp', details: { nom_fr: 'Salle du conseil' }, entite_id: 1, entite_code: 'AA', user_id: 1, user_email: 'a@exemple.test', user_first_name: 'Ada', user_last_name: 'Admin' },
-  { id: 4, created_at: '2026-10-22 09:30:00', action: 'demande.create', entity_type: 'demande', entity_id: 7, channel: 'api', details: { numero: 'AA-DI-2026-00007', lieu_id: 12, categorie_id: 9, beneficiaire_id: 5 }, entite_id: 1, entite_code: 'AA', user_id: 1, user_email: 'a@exemple.test', user_first_name: 'Ada', user_last_name: 'Admin',
+  { id: 4, created_at: '2026-10-22 09:30:00', action: 'demande.create', entity_type: 'demande', entity_id: 7, channel: 'api', details: { numero: 'AA-DI-2026-00007', lieu_id: 12, categorie_id: 9, priorite: 'P3', danger: 0, beneficiaire_id: null, beneficiaire_texte: 1, date_souhaitee: null, reponses: 0 }, entite_id: 1, entite_code: 'AA', user_id: 1, user_email: 'a@exemple.test', user_first_name: 'Ada', user_last_name: 'Admin',
     noms: { lieu_id: { type: 'lieu', id: 12, code: 'MC-A-12', nom_fr: 'Bureau 12', nom_nl: 'Kantoor 12', entite_code: 'AA' }, categorie_id: { type: 'categorie', id: 9, code: 'eclairage', nom_fr: 'Éclairage', nom_nl: 'Verlichting', entite_code: 'AA' } } },
   { id: 3, created_at: '2026-10-22 09:00:00', action: 'lieu.update', entity_type: 'lieu', entity_id: 5, channel: 'api', details: { code: 'MC-A', avant: { parent_id: 2 }, apres: { parent_id: 404 } }, entite_id: 2, entite_code: 'BB', user_id: 1, user_email: 'a@exemple.test', user_first_name: 'Ada', user_last_name: 'Admin',
     noms: { 'avant.parent_id': { type: 'lieu', id: 2, code: 'MC', nom_fr: 'Maison communale', nom_nl: 'Gemeentehuis', entite_code: 'AA' }, 'apres.parent_id': { type: 'lieu', id: 404, introuvable: 1 } } },
@@ -113,6 +114,7 @@ const echeance = {
 const membres = [{ id: 1, first_name: 'Ada', last_name: 'Admin', email: 'a@exemple.test', roles: ['agent', 'gestionnaire'] }];
 
 const setEntite = vi.fn(async () => {});
+const login = vi.fn(async (_e: string, _p: string) => {});
 const nouveautesLues = vi.fn(async () => {});
 const notesVersion = [
   { version: '0.3.0', date: '2026-10-22', lignes: [{ fr: 'Nouveauté fictive A', nl: 'Fictieve nieuwigheid A' }] },
@@ -120,7 +122,7 @@ const notesVersion = [
 ];
 vi.mock('../contexts/AuthContext', () => ({
   useAuth: () => ({
-    user, loading: false, isAdmin: true, login: async () => {}, logout: async () => {}, refresh: async () => {}, savePreferences: async () => {},
+    user, loading: false, isAdmin: true, login, logout: async () => {}, refresh: async () => {}, savePreferences: async () => {},
     setEntite, nouveautesLues, entite: (user.entites as { roles: string[] }[])[0], roles: (user.entites as { roles: string[] }[])[0].roles,
   }),
   AuthProvider: ({ children }: { children: React.ReactNode }) => children,
@@ -494,7 +496,12 @@ describe('écrans', () => {
     container.querySelectorAll<HTMLButtonElement>('button.ant-table-row-expand-icon').forEach((b) => fireEvent.click(b));
     expect(await screen.findByText('MC-A-12 — Bureau 12 (#12)')).toBeInTheDocument();
     expect(screen.getByText('eclairage — Éclairage (#9)')).toBeInTheDocument();
-    expect(screen.getByText('Bénéficiaire (identifiant)')).toBeInTheDocument();
+    // 0.7.5 : cases à cocher en « Oui » ou « Non », champs vides masqués, nombre gardé tel quel.
+    expect(within(screen.getByText('Danger signalé').closest('tr') as HTMLElement).getByText('Non')).toBeInTheDocument();
+    expect(within(screen.getByText('Bénéficiaire en texte libre').closest('tr') as HTMLElement).getByText('Oui')).toBeInTheDocument();
+    expect(within(screen.getByText('Réponses aux questions').closest('tr') as HTMLElement).getByText('0')).toBeInTheDocument();
+    expect(screen.queryByText('Bénéficiaire (identifiant)')).toBeNull();
+    expect(screen.queryByText('Date souhaitée')).toBeNull();
     expect(screen.getByText('Rattaché à : MC — Maison communale (#2)')).toBeInTheDocument();
     expect(screen.getByText('Rattaché à : #404 (fiche introuvable)')).toBeInTheDocument();
     expect(screen.queryByText(/lieu_id|categorie_id|parent_id/)).toBeNull();
@@ -507,6 +514,7 @@ describe('écrans', () => {
     expect(await screen.findByText('MC-A-12 — Kantoor 12 (#12)')).toBeInTheDocument();
     expect(screen.getByText('eclairage — Verlichting (#9)')).toBeInTheDocument();
     expect(screen.getByText('Hangt af van : #404 (fiche niet gevonden)')).toBeInTheDocument();
+    expect(within(screen.getByText('Gevaar gemeld').closest('tr') as HTMLElement).getByText('Nee')).toBeInTheDocument();
   });
 
   it('le journal lit ses filtres dans l’adresse de la page et les envoie à l’API', async () => {
@@ -672,6 +680,30 @@ describe('adresse e-mail (0.5.2) : un seul message sous le champ, en FR et en NL
     fireEvent.change(email, { target: { value: 'jan@' } });
     await waitFor(() => expect(erreurs(email)).toEqual(['Ongeldig e-mailadres']));
   });
+
+  it('connexion (DV-53) : le bandeau d’échec s’efface quand l’adresse change et quand un essai est arrêté par le contrôle du format', async () => {
+    login.mockRejectedValue(new ApiError(401, 'INVALID_CREDENTIALS', 'Identifiants incorrects.'));
+    try {
+      render(wrap(LoginPage, 'fr'));
+      const email = await screen.findByLabelText('Adresse e-mail');
+      fireEvent.change(email, { target: { value: 'agent.ac@demo.invalid' } });
+      fireEvent.change(screen.getByLabelText('Mot de passe'), { target: { value: 'faux' } });
+      fireEvent.click(screen.getByRole('button', { name: 'Se connecter' }));
+      expect(await screen.findByText('Identifiants incorrects.')).toBeInTheDocument();
+      fireEvent.change(email, { target: { value: 'agent2.ac@demo.invalid' } });
+      await waitFor(() => expect(screen.queryByText('Identifiants incorrects.')).toBeNull());
+      fireEvent.click(screen.getByRole('button', { name: 'Se connecter' }));
+      expect(await screen.findByText('Identifiants incorrects.')).toBeInTheDocument();
+      // Essai arrêté par le contrôle du formulaire (mot de passe vidé), sans changer l'adresse : le bandeau s'efface.
+      const mdp = screen.getByLabelText('Mot de passe');
+      fireEvent.change(mdp, { target: { value: '' } });
+      expect(screen.getByText('Identifiants incorrects.')).toBeInTheDocument();
+      fireEvent.click(screen.getByRole('button', { name: 'Se connecter' }));
+      await waitFor(() => expect(erreurs(mdp)).toEqual(['Ce champ est obligatoire']));
+      expect(screen.queryByText('Identifiants incorrects.')).toBeNull();
+      expect(login).toHaveBeenCalledTimes(2);
+    } finally { login.mockReset(); login.mockImplementation(async () => {}); }
+  }, 30000);
 
   it('connexion : vide, « Ce champ est obligatoire » seul ; mal formée, « Adresse e-mail non valide », sans appel au serveur', async () => {
     render(wrap(LoginPage, 'fr'));

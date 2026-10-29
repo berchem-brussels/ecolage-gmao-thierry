@@ -697,3 +697,42 @@ describe('mentions RGPD et consigne (0.7.0, RGPD-10, DEM-16)', () => {
     await audit(container);
   }, 30000);
 });
+
+describe('lieux récents (0.7.5, DV-74)', () => {
+  const recent = (id: number, code: string, fr: string, nl: string) => ({ id, code, nom_fr: fr, nom_nl: nl, nature: 'local',
+    chemin: [{ id: 1, code: 'MC', nom_fr: 'Maison communale', nom_nl: 'Gemeentehuis' }, { id, code, nom_fr: fr, nom_nl: nl }] });
+  beforeEach(() => {
+    user.lieu_propose = { id: 3, code: 'MC-A-12', nom_fr: 'Bureau 12', nom_nl: 'Bureau 12', chemin, source: 'derniere_demande' };
+    user.lieux_recents = [recent(8, 'MC-ACC', 'Accueil', 'Onthaal'), recent(9, 'MC-SDC', 'Salle du conseil', 'Raadzaal')];
+  });
+
+  it('« Changer de lieu » montre les lieux récents en boutons ; un clic choisit le lieu ; la recherche les masque', async () => {
+    render(wrap(NouvelleDemandePage, 'fr'));
+    fireEvent.click(await screen.findByRole('button', { name: /Changer de lieu/ }));
+    const liste = screen.getByRole('list', { name: 'Vos lieux récents' });
+    expect(within(liste).getAllByRole('button').map((b) => b.querySelector('.dem-resultat-nom')?.textContent)).toEqual(['Accueil MC-ACC', 'Salle du conseil MC-SDC']);
+    fireEvent.change(screen.getByLabelText('Chercher un lieu'), { target: { value: 'bur' } });
+    expect(screen.queryByRole('list', { name: 'Vos lieux récents' })).toBeNull();
+    fireEvent.change(screen.getByLabelText('Chercher un lieu'), { target: { value: '' } });
+    fireEvent.click(within(screen.getByRole('list', { name: 'Vos lieux récents' })).getByRole('button', { name: /Salle du conseil/ }));
+    expect(await screen.findByText('Salle du conseil')).toBeInTheDocument();
+    expect(screen.queryByRole('list', { name: 'Vos lieux récents' })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: /Changer de lieu/ }));
+    expect(within(screen.getByRole('list', { name: 'Vos lieux récents' })).getAllByRole('button')).toHaveLength(1);
+  }, 30000);
+
+  it('sans lieu récent, rien ne s’affiche ; en néerlandais, noms NL et sans violation axe-core', async () => {
+    user.lieux_recents = [];
+    const vide = render(wrap(NouvelleDemandePage, 'fr'));
+    fireEvent.click(await screen.findByRole('button', { name: /Changer de lieu/ }));
+    expect(screen.queryByText('Vos lieux récents')).toBeNull();
+    vide.unmount();
+    user.lieux_recents = [recent(8, 'MC-ACC', 'Accueil', 'Onthaal')];
+    const { container } = render(wrap(NouvelleDemandePage, 'nl'));
+    fireEvent.click(await screen.findByRole('button', { name: /Andere plaats/ }));
+    const liste = screen.getByRole('list', { name: 'Uw recente plaatsen' });
+    expect(within(liste).getByRole('button', { name: /Onthaal/ })).toBeInTheDocument();
+    await waitFor(() => expect(container.querySelector('.ant-spin-spinning')).toBeNull());
+    await audit(container);
+  }, 30000);
+});

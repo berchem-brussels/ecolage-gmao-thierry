@@ -389,6 +389,21 @@ function lieuPropose(user) {
   return l ? { id: l.id, code: l.code, nom_fr: l.nom_fr, nom_nl: l.nom_nl, nature: l.nature, chemin: chemin(l.id), source } : null;
 }
 
+/**
+ * Lieux récents (0.7.5, DV-74) : les derniers lieux distincts des demandes déposées par la personne dans l'entité
+ * active, du plus récent au plus ancien, lieux actifs seulement, cinq au plus. Tirés des demandes déjà en base : aucune
+ * donnée nouvelle. Le lieu proposé d'office est rendu à part (lieu_propose) et retiré de la liste.
+ */
+function lieuxRecents(user, limit = 5) {
+  if (!user.entiteId) return [];
+  const propose = lieuPropose(user);
+  const rows = getDb().prepare(`SELECT l.id, l.code, l.nom_fr, l.nom_nl, l.nature FROM demandes d JOIN lieux l ON l.id = d.lieu_id
+    WHERE d.demandeur_id = ? AND d.entite_id = ? AND l.is_active = 1 AND l.entite_id = d.entite_id
+    GROUP BY l.id ORDER BY MAX(d.id) DESC LIMIT ?`).all(user.id, user.entiteId, limit + 1);
+  const cache = new Map();
+  return rows.filter((l) => !propose || l.id !== propose.id).slice(0, limit).map((l) => ({ ...l, chemin: chemin(l.id, cache) }));
+}
+
 /** Contrôle d'un lieu de travail habituel pour un compte : actif, dans une entité où le compte a un rôle actif. */
 function controlerLieuHabituel(userId, lieuId) {
   if (lieuId === null) return;
@@ -407,4 +422,4 @@ function choisirLieuHabituel(user, lieuId, channel = 'api') {
   logAudit(user.id, 'user.lieu_habituel', 'user', user.id, { avant: avant ?? null, apres: lieuId }, channel, entite);
 }
 
-module.exports = { list, get, create, voisines, suivre, beneficiaires, lieuPropose, controlerLieuHabituel, choisirLieuHabituel, chemin };
+module.exports = { list, get, create, voisines, suivre, beneficiaires, lieuPropose, lieuxRecents, controlerLieuHabituel, choisirLieuHabituel, chemin };

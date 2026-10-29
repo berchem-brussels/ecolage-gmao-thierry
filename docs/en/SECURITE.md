@@ -2,6 +2,10 @@
 
 The French text (`docs/fr/SECURITE.md`) prevails and holds the full grid per version.
 
+## 0.7.5 (29/10/2026)
+
+Recent locations in the profile (`lieux_recents`): read from the person's own requests in the active entity only, inactive locations excluded, nothing more stored. Login error banner cleared on screen when the address changes or a new attempt is stopped by form validation; server-side login unchanged. Audit log detail: « Yes »/« No » for checkboxes, empty fields hidden. No new route, migration or dependency. Proof of failure: with the 0.7.4 services, `lieux-recents.test.js` fails (7 of 8).
+
 ## 0.7.4 (29/10/2026)
 
 Names of the location and category in the audit log detail (DV-50). Names are looked up when the log is read; nothing more is stored and the log itself does not change. The log stays reserved to the administrator, through the API and the MCP. Two new constant queries, identifiers passed as a single JSON parameter. No new route, migration or dependency. Proof of failure: with the 0.7.3 journal service, `journal-noms.test.js` fails (5 of 6).
