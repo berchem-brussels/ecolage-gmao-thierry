@@ -1,6 +1,6 @@
 # Après déploiement : installer et mettre à jour la GMAO sur NIXUS
 
-Version de l'application : **0.7.2** · Mis à jour le 29/10/2026 · Le français fait foi.
+Version de l'application : **0.7.3** · Mis à jour le 29/10/2026 · Le français fait foi.
 
 Procédure pas à pas depuis un PC Windows, sans passer par DSM. Une commande à la fois ; on attend son résultat avant la suivante. Si un résultat diffère de l'attendu, on s'arrête et on colle la sortie dans la conversation.
 
@@ -178,6 +178,10 @@ Attendu : `[gmao] … : sauvegarde terminée (photos copiées), N sauvegardes de
 Suivie une seule fois, avec la 0.1.0. Elle reste décrite dans `docs/fr/INSTALLATION.md` et `NOTES_LIVRAISON_v0.1.0.md` de l'archive. Ordre : dossier `/volume1/docker/monapp` créé, archive copiée, extraction, `sudo sh verifier-ports.sh 18443 18080` (attendu : deux fois `LIBRE` ; le 18444 est occupé par la GRC), création du `.env` (une seule fois, `DEMO_ALLOWED=1` en acceptance, `chmod 600`), `build`, `up -d`, assistant d'installation dans le navigateur (nom du pouvoir local, entité AC, premier administrateur), création de l'entité CPAS dans Administration, Entités, comptes de démonstration.
 
 ## 8. Notes par version
+
+### 0.7.3 (29/10/2026)
+
+Correctif de sécurité des dépendances du serveur (E-24, E-30), sans changement fonctionnel. Mise à jour par la section 3, sans migration : `sudo docker logs gmao-api --tail 30` montre seulement `[APP] API 0.7.3 sur le port 3001`. L'image du serveur se reconstruit avec le nouveau verrou (`docker compose build`, une à deux minutes) ; aucune modification des Dockerfile, du compose, de `backup.sh` ni du `.env` ; `frontend/dist/` identique à la 0.7.2 ; `--no-cache` inutile. Peut s'installer directement sur la 0.7.1 : la 0.7.2 n'apporte rien de plus à l'écran. Contrôle : bas du menu `v0.7.3` ; l'administrateur voit la note de la 0.7.3 (correctif de sécurité), et aussi celle de la 0.7.2 s'il ne l'a pas encore lue ; aucune fenêtre de nouveautés pour `agent.ac` ni `responsable.ac`. Retour arrière vers la 0.7.1 ou la 0.7.2 sans restaurer la base.
 
 ### 0.7.2 (29/10/2026)
 

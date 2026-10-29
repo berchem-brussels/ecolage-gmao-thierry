@@ -2,6 +2,10 @@
 
 De Franse tekst (`docs/fr/SECURITE.md`) is rechtsgeldig en bevat het volledige rooster per versie.
 
+## 0.7.3 (29/10/2026)
+
+Beveiligingscorrectie van de serverafhankelijkheden, zonder functionele wijziging. Gerichte update van het slot van de server, zonder `package.json` te wijzigen en zonder `npm audit fix`: `body-parser` 1.20.9, `fast-uri` 3.1.9, `qs` 6.16.2. `npm audit --omit=dev` van de server: 0 kwetsbaarheden (E-24, E-30 opgelost). Nieuwe test `dependances.test.js`: het slot zakt nooit onder de gecorrigeerde versies. Bewijs van falen: met het slot van 0.7.2 faalt de nieuwe test.
+
 ## 0.7.2 (29/10/2026)
 
 Versie zonder functionele wijziging: code klaar voor de openbare GitHub-repository (licentie EUPL-1.2). Geen nieuwe route, afhankelijkheid of migratie. Adres, poorten en mappen van de acceptatiehost in alle bestanden vervangen door voorbeeldwaarden (`192.0.2.10`, 18443, 18080, `/volume1/docker/monapp`); portabiliteitstest uitgebreid tot elk privé-IPv4-adres in de code; `.gitignore` aangevuld; `.github/workflows/ci.yml` toegevoegd (geen geheim, geen uitrol). `npm audit --omit=dev` van de server: 1 hoog, 2 matig, ongewijzigd (E-24); de audit-stap van de CI faalt zolang E-24 niet beslist is (E-30). Bewijs van falen: een privé-IP-adres in `backend/src/config.js` doet de portabiliteitstest falen.

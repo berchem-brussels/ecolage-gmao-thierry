@@ -1,21 +1,22 @@
 # État de la GMAO
 
-Version de l'application : **0.7.2** · Mis à jour le 29/10/2026 · Archive de référence : `gmao-v0_7_2.tar.gz` (taille et empreinte SHA-256 dans `ETAT.md` des fichiers du projet et dans le message de livraison)
+Version de l'application : **0.7.3** · Mis à jour le 29/10/2026 · Archive de référence : `gmao-v0_7_3.tar.gz` (taille et empreinte SHA-256 dans `ETAT.md` des fichiers du projet et dans le message de livraison)
 
-Ce fichier fait foi pour l'avancement. Ses copies dans l'archive 0.7.2 (`ETAT.md`, `ECARTS-CDC.md`, `CHANGELOG.md`, `MANIFESTE.md`, `docs/fr/APRES-DEPLOIEMENT.md`, `docs/fr/MCP.md`) sont alignées sur les fichiers du projet à cette date, à deux différences près : seule la copie du projet donne la taille et l'empreinte de l'archive, qui ne peut pas contenir sa propre empreinte ; depuis la 0.7.2, les copies de l'archive portent des valeurs d'exemple à la place de l'adresse, des ports et des dossiers de NIXUS (`GITHUB.md`, section 6 ; DV-70).
+Ce fichier fait foi pour l'avancement. Ses copies dans l'archive 0.7.3 (`ETAT.md`, `ECARTS-CDC.md`, `CHANGELOG.md`, `MANIFESTE.md`, `docs/fr/APRES-DEPLOIEMENT.md`, `docs/fr/MCP.md`) sont alignées sur les fichiers du projet à cette date, à deux différences près : seule la copie du projet donne la taille et l'empreinte de l'archive, qui ne peut pas contenir sa propre empreinte ; depuis la 0.7.2, les copies de l'archive portent des valeurs d'exemple à la place de l'adresse, des ports et des dossiers de NIXUS (`GITHUB.md`, section 6 ; DV-70).
 
 ## 1. Où en est-on
 
 | Élément | État |
 | --- | --- |
-| Étape du planning | Étape 7 : version 0.7.0 livrée, installée et en recette le 28/10/2026 ; version 0.7.1, correctif de la recette (DV-04, DV-68), installée sur NIXUS le 28/10/2026, recette à faire ; **version 0.7.2 livrée le 29/10/2026, sans changement fonctionnel : code prêt pour le dépôt public GitHub (DV-69). À installer sur NIXUS, puis premier envoi sur GitHub (`GITHUB.md`, section 4.2)** |
-| Vérification DV-09 de la séance | Au début de la séance du 28/10/2026 : archive de travail `gmao-v0_7_0-travail-p4.tar.gz` conforme, serveur 266/266, interface 111/111 sur trois lancements. Au début de la séance du 29/10/2026 : archive `gmao-v0_7_1.tar.gz` conforme (2 217 438 octets, 346 entrées, SHA-256 `fcd49592…cdeda7`), serveur 289/289, interface 127/127 sur trois lancements, construction et accessibilité 0 erreur ; aucun test instable |
-| Décisions de la séance | DV-69 à DV-71 (`DECISIONS.md`) : version 0.7.2 pour le dépôt public ; valeurs d'exemple dans l'archive, valeurs réelles dans les fichiers du projet ; test de portabilité élargi et note de version réservée à l'administrateur |
-| Prochaine étape | Installer la 0.7.2 sur NIXUS ; premier envoi sur GitHub (section 4.2) et lien du dépôt au projet Claude (section 4.3) ; recette sur la 0.7.2 : contrôles 2 et 3 de la 0.7.1, puis contrôles 5 à 9 de la 0.7.0. Ensuite étape 6, version 0.6.0 : photos et pièces jointes avec `multer` 2.x (E-16 décidé), après le « go » ; question à poser à son début : passer aussi les photos des lieux sur `multer` ? |
-| Points pour Renaud | **E-24, qui bloque désormais GitHub (E-30)** : `npm audit --omit=dev` du serveur, 1 haute (`body-parser`) et 2 modérées (`fast-uri`, `qs`) ; l'étape d'audit du travail `tests` échoue, la protection de `main` refusera toute fusion ; correctif ciblé du verrou proposé (version 0.7.3) ; jamais `npm audit fix`. E-29 : `dist/` dans l'archive (DV-01) contre la section 8 de `GITHUB.md`. E-27 : brouillons hors journal d'audit, à soumettre. STANDARD.md à mettre à jour par Renaud : sections 4.2 et 10.2 (`multer` 2.x, E-16), rouge d'erreur (E-26) |
-| Recette de la 0.7.0 | Commencée le 28/10/2026 par Thierry : contrôles 1 à 4 conformes (note de version, réglages, questions, formulaire) ; contrôle 5 (brouillon) : défaut, aucun brouillon enregistré avec le lieu proposé d'office ; défaut de rédaction de la mention (« Administration communale traite… »). Deux défauts corrigés en 0.7.1 ; contrôles 5 à 9 à faire sur la 0.7.2 |
-| Version 0.7.2 | Livrée le 29/10/2026 : `ci.yml`, `.gitignore`, valeurs d'exemple, aucune migration, `dist/` identique à la 0.7.1. À installer sur NIXUS (`NOTES_LIVRAISON_v0.7.2.md`) |
-| Version 0.7.1 | Installée sur NIXUS le 28/10/2026 : sauvegarde `gmao-20261028-1541.db`, `[APP] API 0.7.1`, aucune migration, `/api/version` 0.7.1, `gmao-api` et `gmao-web` `healthy`. Recette à faire (sur la 0.7.2, mêmes fonctions) |
+| Étape du planning | Étape 7 : version 0.7.0 livrée, installée et en recette le 28/10/2026 ; version 0.7.1, correctif de la recette (DV-04, DV-68), installée sur NIXUS le 28/10/2026, recette à faire ; version 0.7.2 livrée le 29/10/2026, sans changement fonctionnel : code prêt pour le dépôt public GitHub (DV-69) ; **version 0.7.3 livrée le 29/10/2026, sans changement fonctionnel : correctif du verrou du serveur sur accord de Renaud (E-24, E-30, DV-72). Premier envoi de la 0.7.2 sur GitHub (`GITHUB.md`, section 4.2), puis 0.7.3 par la section 5 ; installer la 0.7.3 sur NIXUS** |
+| Vérification DV-09 de la séance | Au début de la séance du 28/10/2026 : archive de travail `gmao-v0_7_0-travail-p4.tar.gz` conforme, serveur 266/266, interface 111/111 sur trois lancements. Au début de la séance du 29/10/2026 : archive `gmao-v0_7_1.tar.gz` conforme (2 217 438 octets, 346 entrées, SHA-256 `fcd49592…cdeda7`), serveur 289/289, interface 127/127 sur trois lancements, construction et accessibilité 0 erreur. Avant la 0.7.3, le 29/10/2026 : archive `gmao-v0_7_2.tar.gz` conforme (2 225 863 octets, 350 entrées, SHA-256 `6f947ca8…a05fd8`), serveur 290/290, interface 127/127 sur trois lancements ; aucun test instable |
+| Décisions de la séance | DV-69 à DV-72 (`DECISIONS.md`) : version 0.7.2 pour le dépôt public ; valeurs d'exemple dans l'archive, valeurs réelles dans les fichiers du projet ; test de portabilité élargi et note de version réservée à l'administrateur ; mise à jour ciblée du verrou du serveur acceptée par Renaud (0.7.3) |
+| Prochaine étape | Premier envoi de la 0.7.2 sur GitHub (section 4.2, croix rouge attendue à l'audit), puis la 0.7.3 par la section 5 (coche verte attendue), puis lien du dépôt au projet Claude (section 4.3) ; installer la 0.7.3 sur NIXUS (l'archive de la publication `v0.7.3`) ; recette sur la 0.7.3 : contrôles 2 et 3 de la 0.7.1, puis contrôles 5 à 9 de la 0.7.0. Ensuite étape 6, version 0.6.0 : photos et pièces jointes avec `multer` 2.x (E-16 décidé), après le « go » ; question à poser à son début : passer aussi les photos des lieux sur `multer` ? |
+| Points pour Renaud | E-24 et E-30 corrigés en 0.7.3 sur son accord du 29/10/2026, donné pour l'écolage (`npm audit --omit=dev` du serveur à 0). E-31 : pratique de la 0.7.3 et questions ouvertes, à reprendre dans STANDARD.md (section 4.4) pour le travail réel. E-29 : `dist/` dans l'archive (DV-01) contre la section 8 de `GITHUB.md`. E-27 : brouillons hors journal d'audit, à soumettre. STANDARD.md à mettre à jour par Renaud : sections 4.2 et 10.2 (`multer` 2.x, E-16), rouge d'erreur (E-26) |
+| Recette de la 0.7.0 | Commencée le 28/10/2026 par Thierry : contrôles 1 à 4 conformes (note de version, réglages, questions, formulaire) ; contrôle 5 (brouillon) : défaut, aucun brouillon enregistré avec le lieu proposé d'office ; défaut de rédaction de la mention (« Administration communale traite… »). Deux défauts corrigés en 0.7.1 ; contrôles 5 à 9 à faire sur la 0.7.3 |
+| Version 0.7.3 | Livrée le 29/10/2026 : verrou du serveur (`body-parser` 1.20.9, `fast-uri` 3.1.9, `qs` 6.16.2), test `dependances.test.js`, note d'une ligne pour l'administrateur, aucune migration, `dist/` identique à la 0.7.2. À envoyer sur GitHub (section 5) et à installer sur NIXUS (`NOTES_LIVRAISON_v0.7.3.md`) |
+| Version 0.7.2 | Livrée le 29/10/2026 : `ci.yml`, `.gitignore`, valeurs d'exemple, aucune migration, `dist/` identique à la 0.7.1. Premier envoi sur GitHub (section 4.2) ; pas d'installation séparée sur NIXUS, la 0.7.3 la remplace |
+| Version 0.7.1 | Installée sur NIXUS le 28/10/2026 : sauvegarde `gmao-20261028-1541.db`, `[APP] API 0.7.1`, aucune migration, `/api/version` 0.7.1, `gmao-api` et `gmao-web` `healthy`. Recette à faire (sur la 0.7.3, mêmes fonctions) |
 | Version 0.7.0 | Installée sur NIXUS le 28/10/2026 : sauvegarde `gmao-20261028-1322.db`, `[DB] Migration 006_demandes_formulaire appliquée`, `[APP] API 0.7.0`, `/api/version` 0.7.0, `gmao-api` et `gmao-web` `healthy`. Recette partielle (contrôles 1 à 4 conformes), deux défauts corrigés en 0.7.1 |
 | Version 0.5.2 | Installée sur NIXUS le 27/10/2026 : sauvegarde `gmao-20261027-1509.db`, `[APP] API 0.5.2`, aucune migration, `/api/version` 0.5.2, `gmao-api` et `gmao-web` `healthy`. Recettée le 27/10/2026 par Thierry : six contrôles sur six conformes ; contrôle 7 (Samsung, facultatif) annulé faute de téléphone Samsung ; remarque sur le bandeau « Identifiants incorrects » gardée pour plus tard (DV-53) |
 | Version 0.5.1 | Installée sur NIXUS le 27/10/2026 : sauvegarde `gmao-20261027-0832.db`, `[APP] API 0.5.1`, aucune migration. Recettée le 27/10/2026 : sept contrôles sur huit conformes, contrôle 5 partiel ; trois défauts corrigés en 0.5.2 |
@@ -25,31 +26,31 @@ Ce fichier fait foi pour l'avancement. Ses copies dans l'archive 0.7.2 (`ETAT.md
 | Version 0.3.1 | Installée et recettée sur NIXUS le 22/10/2026 ; sauvegarde avant mise à jour : `gmao-20261022-1403.db` |
 | Version 0.2.1 | Abandonnée le 22/10/2026 (DV-16) |
 | Acceptance NIXUS | `https://192.0.2.10:18443` (HTTP 18080 redirigé), dossier `/volume1/docker/monapp` |
-| Version installée sur NIXUS | 0.7.1, installée le 28/10/2026 ; `[APP] API 0.7.1`, aucune migration ; `/api/version` rend `0.7.1` ; `gmao-api` et `gmao-web` `healthy` ; sauvegarde avant mise à jour : `gmao-20261028-1541.db` (photos comprises). 0.7.2 à installer |
+| Version installée sur NIXUS | 0.7.1, installée le 28/10/2026 ; `[APP] API 0.7.1`, aucune migration ; `/api/version` rend `0.7.1` ; `gmao-api` et `gmao-web` `healthy` ; sauvegarde avant mise à jour : `gmao-20261028-1541.db` (photos comprises). 0.7.3 à installer (la 0.7.2 peut être sautée) |
 | Recette de la 0.3.0 et de la 0.3.1 | Faites le 22/10/2026 par Thierry ; vue du demandeur de l'AC et contact vide du CPAS (0.3.0) à confirmer |
 | Validation à l'écran de la 0.1.1 | **À confirmer** : capture de l'écran Utilisateurs et rôles attendue |
 | Base de NIXUS | Entités AC et CPAS ; 21 comptes de démonstration (`@demo.invalid`) ; 31 lieux de démonstration ; valeur « Chaufferie » ajoutée à l'AC ; 11 photos réelles ; nom du pouvoir local « Commune de Berchem-Sainte-Agathe » ; `.env` avec `DEMO_ALLOWED=1` ; libellé « Mobilier » du CPAS remis le 24/10/2026 ; une fermeture d'essai ajoutée à l'AC à la recette de la 0.4.1 ; données de recette : demandes `AC-DI-2026-00001`, `CPAS-DI-2026-00001` (0.5.0), `AC-DI-2026-00002` (iPhone, 0.5.1) et `AC-DI-2026-00003` (iPhone, 0.5.2) ; à l'AC (recette 0.7.0) : téléphone d'urgence 02 464 04 11, contact du DPO d'essai « Mr DPO », question « D'où vient l'eau ? » (Plafond, Tuyau) ajoutée à Fuite d'eau, valeur « Essai » ajoutée puis désactivée au CPAS (motif « recette 0.5.0 ») ; `agent.ac` a pour lieu habituel Accueil (Maison communale (démo)) |
 | Référentiel des demandes sur NIXUS | 35 catégories, 4 priorités, horaire de 7 jours, 5 congés par entité ; valeurs du cahier des charges en attendant l'atelier métier (D-11) ; trois questions livrées par entité au premier démarrage de la 0.7.0 |
 | Sauvegarde | `backup.sh` copie la base et les photos ; **tâche planifiée DSM pas encore créée** |
 | Incident du 22/10/2026 | Container Manager trouvé arrêté sur NIXUS ; redémarré. Cause inconnue |
-| Dépôt GitHub | Créé, public, EUPL-1.2 : `https://github.com/berchem-brussels/ecolage-gmao-thierry`. Premier envoi (section 4.2 de `GITHUB.md`) à faire avec la 0.7.2 ; le travail `tests` sera rouge à l'étape d'audit tant que E-24 n'est pas tranché (E-30) |
+| Dépôt GitHub | Créé, public, EUPL-1.2 : `https://github.com/berchem-brussels/ecolage-gmao-thierry`. Premier envoi (section 4.2 de `GITHUB.md`) à faire avec la 0.7.2 (croix rouge attendue à l'étape d'audit, E-30) ; la 0.7.3 suit par la section 5, travail `tests` au vert (parcours rejoué sous Node 20) |
 
-## 2. Suites de tests de la 0.7.2
+## 2. Suites de tests de la 0.7.3
 
-Décomptes recopiés de la sortie, bac à sable de Claude, Node 22.23.4, après `npm ci` (verrous inchangés hors numéro de version depuis la 0.7.0).
+Décomptes recopiés de la sortie, bac à sable de Claude, Node 22.23.4, après `npm ci` (verrou du serveur : `body-parser`, `fast-uri` et `qs` seulement ; verrou de l'interface inchangé hors numéro de version).
 
 | Suite | Commande | Résultat |
 | --- | --- | --- |
-| Serveur | `cd backend && npm ci && npm test` | 290 tests, 290 réussis, 0 échec, 0 sauté (289 en 0.7.1) |
-| Interface | `cd frontend && npm ci && npm test` | 4 fichiers, 127 tests, 127 réussis, 0 échec, sur trois lancements consécutifs (127 en 0.7.1) |
-| Typage et construction | `cd frontend && npm run build` (`tsc -b` puis `vite build`) | 0 erreur ; `dist/` identique à la 0.7.1 |
+| Serveur | `cd backend && npm ci && npm test` | 293 tests, 293 réussis, 0 échec, 0 sauté (290 en 0.7.2) |
+| Interface | `cd frontend && npm ci && npm test` | 4 fichiers, 127 tests, 127 réussis, 0 échec, sur trois lancements consécutifs (127 en 0.7.2) |
+| Typage et construction | `cd frontend && npm run build` (`tsc -b` puis `vite build`) | 0 erreur ; `dist/` identique à la 0.7.2 |
 | Accessibilité statique | `cd frontend && npm run a11y` | 0 erreur |
-| Travail `tests` de `ci.yml` | Rejoué à la main sous Node 20.20.2 sur les seuls fichiers que Git verse | Serveur 290/290 ; `npm audit --omit=dev --audit-level=high` **sortie 1** (E-24, E-30) ; interface 127/127, construction et accessibilité 0 erreur |
-| Preuve d'échec | `docs/fr/SECURITE.md`, section 0.7.2 | Adresse privée ajoutée au code : le test de portabilité échoue ; retirée : réussi |
-| Dépendances | `npm audit --omit=dev` | Serveur 1 haute, 2 modérées, inchangées (E-24) ; interface 3 modérées (E-09). Audit complet de l'interface : 1 basse, 7 modérées, 6 hautes, outillage (E-18) |
-| Fichiers versés | `git add -A` sur une copie de l'archive | 220 fichiers ; aucun `.env` (sauf `.env.example`), aucune base, aucun `node_modules` ni `dist/` ; aucune occurrence de l'adresse, des ports ni du dossier de NIXUS ; aucun motif de secret |
-| Migration | Aucune en 0.7.2 | `[APP] API 0.7.2` seul attendu |
-| Images Docker | Non reconstruites | Seul `config/notes-version.json` change dans l'image du serveur |
+| Travail `tests` de `ci.yml` | Rejoué à la main sous Node 20.20.2 sur les seuls fichiers que Git verse | Serveur 293/293 ; `npm audit --omit=dev --audit-level=high` **sortie 0** ; interface 127/127, construction et accessibilité 0 erreur |
+| Preuve d'échec | `docs/fr/SECURITE.md`, section 0.7.3 | Verrou de la 0.7.2 remis : `dependances.test.js` échoue (`body-parser 1.20.8 < 1.20.9`) ; verrou de la 0.7.3 : réussi |
+| Dépendances | `npm audit --omit=dev` | Serveur 0 vulnérabilité (1 haute, 2 modérées en 0.7.2 ; E-24 corrigé) ; interface 3 modérées (E-09). Audit complet de l'interface : 1 basse, 7 modérées, 6 hautes, outillage (E-18) |
+| Fichiers versés | `git add -A` sur une copie de l'archive | 221 fichiers ; aucun `.env` (sauf `.env.example`), aucune base, aucun `node_modules` ni `dist/` ; aucune occurrence de l'adresse, des ports ni du dossier de NIXUS |
+| Migration | Aucune en 0.7.3 | `[APP] API 0.7.3` seul attendu |
+| Images Docker | Non reconstruites dans le bac à sable | L'image du serveur change (`npm ci` sur le nouveau verrou) ; celle de l'interface non |
 
 ## 3. Exigences du cahier des charges touchées
 
@@ -98,27 +99,27 @@ Décomptes recopiés de la sortie, bac à sable de Claude, Node 22.23.4, après 
 | SEC-03 contrôle des fichiers déposés | Fait pour les photos | `lieux.test.js` |
 | TEC-05 acceptance NIXUS | Fait, ports 18443 et 18080 (E-14) ; inscription au tableau 15.2 du standard à faire par Renaud | |
 | TEC-06 `backup.sh` et tâche DSM | Script fait ; tâche DSM à créer | |
-| TEC-07 commandes NIXUS une par une | Fait pour 0.1.0 à 0.7.2 | `NOTES_LIVRAISON_v0.7.2.md`, `APRES-DEPLOIEMENT.md` |
-| Dépôt public et tests automatiques (standard, section 15.7 ; `GITHUB.md`) | Code prêt (0.7.2) : `ci.yml` de la section 7, `.gitignore`, aucune valeur de la section 6 ; premier envoi à faire ; travail `tests` rouge tant que E-24 n'est pas tranché (E-30) ; `dist/` dans l'archive (E-29) | `ci.yml`, `portabilite.test.js`, recherche sur les fichiers versés |
+| TEC-07 commandes NIXUS une par une | Fait pour 0.1.0 à 0.7.3 | `NOTES_LIVRAISON_v0.7.3.md`, `APRES-DEPLOIEMENT.md` |
+| Dépôt public et tests automatiques (standard, section 15.7 ; `GITHUB.md`) | Code prêt (0.7.2) : `ci.yml` de la section 7, `.gitignore`, aucune valeur de la section 6 ; travail `tests` au vert depuis la 0.7.3 (E-30 corrigé), rejoué sous Node 20 ; premier envoi à faire ; `dist/` dans l'archive (E-29) | `ci.yml`, `portabilite.test.js`, `dependances.test.js`, recherche sur les fichiers versés |
 | ERG-01, ERG-05, ERG-06 identité, 360 px, accessibilité | Fait pour les écrans de la version ; erreurs reliées au champ (`aria-invalid`, `aria-describedby`) ; champs en 16 px sur petit écran sans bloquer le zoom (WCAG 1.4.4, 0.5.2) ; rouge d'erreur à 4,5:1 au moins en clair et en sombre (0.7.0, E-26 corrigé) | `pages.test.tsx`, `demandes.test.tsx`, `couleurs.test.tsx`, contrôle visuel, `a11y` |
 | API-03 enveloppe, erreurs, OpenAPI | Fait pour les routes de la version | `api.test.js` |
 | API-04 ordre des contrôles | Fait | `modules.test.js` |
 | API-05 MCP en écriture | Fait pour toutes les routes de la version, sauf dépôt et lecture du fichier de photo (E-17) | `mcp.test.js` |
-| AID-04 aide par fonctionnalité | Fait pour la version : rubriques (Nouvelle demande, Catégories et délais, Réglages de l'entité, Protection de vos données), FAQ (questions 20 à 24), intentions, note de version (0.7.2 : une ligne pour l'administrateur) | `HelpPage.tsx`, `i18n.test.ts`, `notes-version.test.js` |
+| AID-04 aide par fonctionnalité | Fait pour la version : rubriques (Nouvelle demande, Catégories et délais, Réglages de l'entité, Protection de vos données), FAQ (questions 20 à 24), intentions, note de version (0.7.2 et 0.7.3 : une ligne pour l'administrateur) | `HelpPage.tsx`, `i18n.test.ts`, `notes-version.test.js` |
 | Journal d'audit (standard, section 17.3) | Champs changés seulement (0.4.1) ; dépôt d'une demande sans la description, sans texte libre ni réponses (nombre seulement, 0.7.0) ; « Moi aussi » ; questions des catégories ; lieu habituel ; nettoyage de la migration ; brouillons hors journal (E-27) ; le détail montre encore `lieu_id` et `categorie_id` au lieu des noms (DV-50) | `journal-diff.test.js`, `demandes.test.js`, `numerotation.test.js` |
 | RGPD-10 mentions d'information | Fait pour le formulaire de demande et l'aide (0.7.0), par entité (E-28) ; réservations (étape 23) et portail (étape 46) à venir | `formulaire.test.js`, `demandes.test.tsx`, `pages.test.tsx` |
-| RGPD-12 trois questions RGPD | Fait à chaque version | `NOTES_LIVRAISON_v0.7.2.md` |
+| RGPD-12 trois questions RGPD | Fait à chaque version | `NOTES_LIVRAISON_v0.7.3.md` |
 | Toutes les autres exigences | À faire selon `PLANNING-GMAO.md` | |
 
 ## 4. Actions ouvertes
 
 | Action | Qui | Bloque |
 | --- | --- | --- |
-| Installer la 0.7.2 sur NIXUS (`NOTES_LIVRAISON_v0.7.2.md`) | Thierry | Recette sur la 0.7.2 |
-| Premier envoi de la 0.7.2 sur GitHub (`GITHUB.md`, section 4.2), étiquette `v0.7.2`, puis relier le dépôt au projet Claude (section 4.3) | Thierry | Section 5 de `GITHUB.md` pour les versions suivantes |
+| Installer la 0.7.3 sur NIXUS (`NOTES_LIVRAISON_v0.7.3.md`), archive de la publication `v0.7.3` | Thierry | Recette sur la 0.7.3 |
+| Premier envoi de la 0.7.2 sur GitHub (`GITHUB.md`, section 4.2), étiquette `v0.7.2` ; puis 0.7.3 par la section 5 (branche `version/v0.7.3`, demande de fusion au vert, étiquette, publication) ; puis relier le dépôt au projet Claude (section 4.3) | Thierry | Versions suivantes sur GitHub |
 | Activer la protection de `main` avec le travail `tests` exigé au vert | Administrateur de l'organisation `berchem-brussels` | Rien ; sans elle, `main` n'est pas protégée |
-| Dérouler sur la 0.7.2 les contrôles 2 et 3 de la 0.7.1, puis les contrôles 5 à 9 de la 0.7.0 | Thierry | Étape 6 |
-| Décider de la mise à jour ciblée du verrou du serveur (`body-parser`, `fast-uri`, `qs`) (E-24) ; **sans elle, le travail `tests` reste rouge et aucune fusion n'est possible (E-30)** | Renaud | Toute version suivante sur GitHub ; la production |
+| Dérouler sur la 0.7.3 les contrôles 2 et 3 de la 0.7.1, puis les contrôles 5 à 9 de la 0.7.0 | Thierry | Étape 6 |
+| Adapter si nécessaire STANDARD.md (section 4.4) d'après E-31 : mise à jour ciblée d'une dépendance pour un avis de sécurité, accord, délai, cas sans correctif | Renaud, quand on travaillera pour du vrai | Rien en écolage |
 | Trancher E-29 : `dist/` dans l'archive (DV-01) ou construction de l'interface dans l'image | Renaud | Rien |
 | Régler le téléphone d'urgence et le contact du DPO de chaque entité (Réglages de l'entité) | Responsable du service technique de l'AC et du CPAS | Rien (renvoi au responsable tant que vide) |
 | Faire valider par le DPO les mentions d'information livrées (base légale art. 6.1.e) et les adapter à l'écran si besoin | DPO, avec le responsable | Rien en acceptance ; avant la production |
