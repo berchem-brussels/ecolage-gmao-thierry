@@ -1,8 +1,28 @@
 # Manifeste
 
-Version de l'application : **0.7.2** · Mis à jour le 29/10/2026
+Version de l'application : **0.7.3** · Mis à jour le 29/10/2026
 
 Fichiers changés, dépendances et suites par version. Les décomptes sont recopiés de la sortie des commandes.
+
+## 0.7.3 (29/10/2026)
+
+Fichiers comparés à l'archive 0.7.2 par `diff -rq` (hors `node_modules` et `dist`). Pour le contrôle du `git status` (`GITHUB.md`, section 5) : aucune ligne `D` attendue ; deux lignes `A`, les autres `M`.
+
+- Nouveaux : `backend/tests/dependances.test.js` ; `NOTES_LIVRAISON_v0.7.3.md`.
+- Modifiés, serveur : `package-lock.json` (numéro de version ; `body-parser` 1.20.9, `fast-uri` 3.1.9, `qs` 6.16.2, aucun autre paquet) ; `package.json` (numéro de version ; `dependances.test.js` ajouté au script `test`) ; `config/notes-version.json` (note 0.7.3, une ligne pour l'administrateur) ; `tests/notes-version.test.js` (test de la 0.7.2 adapté, un test nouveau pour la 0.7.3).
+- Modifiés, interface : `package.json` et `package-lock.json` (numéro seulement). `frontend/dist/` reconstruit, identique à celui de la 0.7.2 (`diff -rq` vide).
+- Modifiés, documentation : `README.md`, `README.nl.md`, `README.en.md`, `CHANGELOG.md`, `MANIFESTE.md`, `ETAT.md`, `ECARTS-CDC.md` ; `docs/fr/APRES-DEPLOIEMENT.md`, `docs/fr/MCP.md` ; `docs/fr`, `docs/nl`, `docs/en` (`SECURITE.md`, section 0.7.3).
+- Inchangés : tout le code du serveur et de l'interface ; les deux Dockerfile, `nginx.conf`, `docker-entrypoint.sh`, `docker-compose.yml`, `.env.example`, `backup.sh`, `.gitignore`, `.github/workflows/ci.yml`. Aucune migration, aucune route, aucun outil MCP.
+- Retirés : aucun fichier.
+- Dépendances : aucune dépendance nouvelle ; `package.json` inchangé hors numéro et script de test ; verrou du serveur mis à jour par `npm update body-parser qs fast-uri --no-save` (diff du verrou : ces trois paquets seulement). Aucun `npm audit fix`.
+- Contrôle DV-09 de la séance, avant toute modification : archive 0.7.2 conforme à `ETAT.md` (2 225 863 octets, 350 entrées, SHA-256 `6f947ca8…a05fd8`) ; serveur 290/290 ; interface 127/127 sur trois lancements consécutifs. Aucun test instable.
+- Suites (Node 22.23.4, bac à sable, après `npm ci`) : serveur `npm test` 293 tests, 293 réussis, 0 échec, 0 sauté (290 en 0.7.2) ; interface `npm test` 4 fichiers, 127 tests, 127 réussis sur trois lancements consécutifs ; `npm run build` réussi ; `npm run a11y` 0 erreur.
+- `npm ls --depth=0` du serveur après la mise à jour (STANDARD.md, section 4.4) : `ajv` 8.20.0, `ajv-formats` 3.0.1, `bcryptjs` 3.0.3, `express` 4.22.3, `express-rate-limit` 8.7.1, `sql.js` 1.14.2, inchangés ; `npm ls --omit=dev` sans erreur ; aucune dépendance de développement au serveur.
+- Parcours du travail `tests` (`ci.yml`) rejoué sous Node 20.20.2 sur une copie ne contenant que les 221 fichiers que Git verse : serveur 293/293, `npm audit --omit=dev --audit-level=high` **sortie 0** ; interface 127/127, construction et accessibilité 0 erreur.
+- Recherche sur les fichiers versés : aucune occurrence de l'adresse, des ports ni du dossier de NIXUS ; seul `.env.example` en `.env` ; aucune base, aucun `dist/`.
+- `npm audit --omit=dev` : serveur 0 vulnérabilité (1 haute et 2 modérées en 0.7.2) ; interface 3 modérées (E-09), inchangées.
+- Preuves d'échec : `docs/fr/SECURITE.md`, section 0.7.3.
+- Images Docker : non reconstruites dans le bac à sable ; l'image du serveur change (`npm ci` avec le nouveau verrou), celle de l'interface non.
 
 ## 0.7.2 (29/10/2026)
 

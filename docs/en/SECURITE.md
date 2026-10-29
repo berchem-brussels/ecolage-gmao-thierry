@@ -2,6 +2,10 @@
 
 The French text (`docs/fr/SECURITE.md`) prevails and holds the full grid per version.
 
+## 0.7.3 (29/10/2026)
+
+Security fix of the server dependencies, no functional change. Targeted update of the server lock file, without changing `package.json` and without `npm audit fix`: `body-parser` 1.20.9, `fast-uri` 3.1.9, `qs` 6.16.2. Server `npm audit --omit=dev`: 0 vulnerabilities (E-24, E-30 fixed). New test `dependances.test.js`: the lock file never falls below the fixed versions. Proof of failure: with the 0.7.2 lock file the new test fails.
+
 ## 0.7.2 (29/10/2026)
 
 Release with no functional change: code ready for the public GitHub repository (licence EUPL-1.2). No new route, dependency or migration. Address, ports and folders of the acceptance host replaced by example values in every file (`192.0.2.10`, 18443, 18080, `/volume1/docker/monapp`); portability test widened to any private IPv4 address in the code; `.gitignore` completed; `.github/workflows/ci.yml` added (no secret, no deployment). Server `npm audit --omit=dev`: 1 high, 2 moderate, unchanged (E-24); the CI audit step fails until E-24 is decided (E-30). Proof of failure: a private IP address in `backend/src/config.js` makes the portability test fail.

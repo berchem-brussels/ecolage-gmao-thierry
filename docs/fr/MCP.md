@@ -1,6 +1,6 @@
 # Serveur MCP
 
-Version de l'application : **0.7.2** · Mis à jour le 29/10/2026 · Le français fait foi.
+Version de l'application : **0.7.3** · Mis à jour le 29/10/2026 · Le français fait foi.
 
 ## Accès
 
@@ -19,6 +19,10 @@ Version de l'application : **0.7.2** · Mis à jour le 29/10/2026 · Le françai
 - Depuis la 0.4.1, les fiches de catégorie, de priorité, de jour de l'horaire et de jour non ouvré portent `trace` (`etat`, `le`, `par`) : qui les a modifiées en dernier et quand, ou « livrée ». Le nom n'est rendu qu'aux personnes de l'entité. Aucun outil nouveau.
 - Depuis la 0.5.0, le serveur retire les espaces de début et de fin de tout texte reçu, par le MCP comme par l'API, sauf les mots de passe ; un champ obligatoire fait seulement d'espaces est refusé (`VALIDATION`), avant tout jeton de confirmation.
 - Les instructions envoyées au client demandent de commencer par `get_profile` : les données métier sont celles de l'entité active ; `select_entite` la change. Elles disent aussi que le MCP ne transporte aucun fichier, et qu'une demande se dépose par `create_demande`, le lieu proposé d'office étant `lieu_propose` dans `get_profile`.
+
+## 0.7.3
+
+Aucun outil nouveau ni changé. Correctif de sécurité des dépendances du serveur (lecture des corps JSON par `body-parser` 1.20.9) : les appels JSON-RPC sont lus comme avant.
 
 ## 0.7.2
 

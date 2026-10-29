@@ -2,6 +2,30 @@
 
 Le français fait foi. Grille de la section 10.2 du standard, rejouée à chaque version. « Non joué » veut dire que le contrôle n'a pas tourné.
 
+## 0.7.3 (29/10/2026)
+
+Correctif de sécurité des dépendances du serveur, sans changement fonctionnel (E-24, E-30), sur accord de Renaud. Environnement : bac à sable de Claude, Node 22.23.4 ; parcours du travail `tests` rejoué sous Node 20.20.2 sur les seuls fichiers versés par Git. Aucune route, aucune migration, aucune dépendance nouvelles.
+
+| Famille | Contrôle | Résultat |
+| --- | --- | --- |
+| Authentification | Inchangée ; test généré sur toutes les routes | Conforme (tests) |
+| Autorisation | Inchangée ; cloison AC et CPAS rejouée | Conforme (`cloison.test.js`) |
+| Validation | Inchangée ; lecture des corps JSON par `body-parser` 1.20.9 | Conforme (tests) |
+| Injections | Aucune requête nouvelle | Conforme (test statique `securite.test.js`) |
+| Données | Inchangées | Conforme |
+| Secrets commités | `.gitignore` inchangé ; 221 fichiers que Git verserait | Conforme : seul `.env.example`, aucune base, aucun `dist/`, aucune valeur de NIXUS |
+| Interface | Inchangée | Conforme (tests) |
+| Infrastructure | Dockerfile, compose, `nginx.conf`, `backup.sh`, `.env`, `ci.yml` inchangés | Conforme |
+| Dépendances | `npm audit --omit=dev` serveur | **0 vulnérabilité** : `body-parser` 1.20.8 → 1.20.9 (haute, GHSA-27r3-jxmh-p828), `fast-uri` 3.1.8 → 3.1.9 (modérée), `qs` 6.16.0 → 6.16.2 (modérée), par `npm update body-parser qs fast-uri --no-save` ; `package.json` inchangé ; Express 4.22.3 inchangé ; jamais `npm audit fix`. E-24 et E-30 corrigés |
+| Dépendances | `npm audit --omit=dev` interface | 3 modérées (E-09), inchangées |
+| LLM et MCP | Aucun outil nouveau | Conforme (`mcp.test.js`) |
+
+Les trois contrôles qui ne restent jamais « non joués » (secrets commités, contrôle d'accès côté serveur, IDOR) ont été joués.
+
+### Preuve d'échec des nouveaux tests (0.7.3)
+
+Verrou du serveur de la 0.7.2 remis en place : `dependances.test.js` échoue (1 réussi, 1 échec : `node_modules/body-parser 1.20.8 < 1.20.9`) ; verrou de la 0.7.3 : 2 sur 2. Sans la note 0.7.3, le test du catalogue des notes échoue ; le test nouveau de la note 0.7.3 vérifie qu'elle ne s'ouvre ni pour le demandeur ni pour le responsable.
+
 ## 0.7.2 (29/10/2026)
 
 Version sans changement fonctionnel : code prêt pour le dépôt public GitHub (licence EUPL-1.2). Environnement : bac à sable de Claude, Node 22.23.4 ; parcours du travail `tests` rejoué aussi sous Node 20.20.2 sur une copie qui ne contient que les fichiers versés par Git. Aucune route, aucune migration, aucune dépendance nouvelles.

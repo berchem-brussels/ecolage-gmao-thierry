@@ -1,6 +1,16 @@
 # Journal des versions
 
-Version de l'application : **0.7.2** · Mis à jour le 29/10/2026
+Version de l'application : **0.7.3** · Mis à jour le 29/10/2026
+
+## 0.7.3 (29/10/2026)
+
+Correctif de sécurité des dépendances du serveur, sans changement fonctionnel, sur accord de Renaud du 29/10/2026, donné pour l'écolage (E-24, E-30, DV-72) ; pratique documentée en E-31 pour adapter si nécessaire le standard.
+
+- Verrou du serveur (`backend/package-lock.json`) mis à jour paquet par paquet, dans la même génération, sans changer `package.json` : `body-parser` 1.20.8 → 1.20.9 (haute, GHSA-27r3-jxmh-p828), `fast-uri` 3.1.8 → 3.1.9 (modérée, quatre avis), `qs` 6.16.0 → 6.16.2 (modérée, GHSA-6pq8-jhm2-2vcw). Commande : `npm update body-parser qs fast-uri --no-save` ; jamais `npm audit fix`. Aucun autre paquet du verrou ne change.
+- `npm audit --omit=dev` du serveur : 0 vulnérabilité (1 haute et 2 modérées en 0.7.2). L'étape d'audit du travail `tests` de GitHub passe (E-30 corrigé).
+- Test nouveau `dependances.test.js` : le verrou ne redescend jamais sous les versions corrigées ; Express reste en version 4.
+- Note de version : une ligne pour l'administrateur seulement.
+- Tests : serveur 293 (290 en 0.7.2), interface 127 (127).
 
 ## 0.7.2 (29/10/2026)
 
