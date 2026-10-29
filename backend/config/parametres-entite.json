@@ -1,0 +1,53 @@
+{
+  "_description": "Catalogue des paramètres métier par entité (cahier des charges ADM-03 ; standard v3.2, section 11.3, niveau Métier). Chaque entité a sa valeur, réglée par le rôle qui porte la permission « parametres:gerer » (responsable du service technique) ; la base (parametres_entite) porte la valeur de l'entité, sinon le défaut livré ici s'applique. Lecture : toute personne qui a un rôle dans l'entité active. Types : texte (avec « motif » facultatif, expression régulière), texte_long (plusieurs lignes, variables permises dans « variables »), telephone, courriel, entier, choix (liste « choix »). Groupe rgpd (RGPD-10, 0.7.0) : une valeur vide reprend le texte livré ; {entite} devient le nom de l'entité, {dpo} le contact du DPO ou, s'il est vide, « adressez-vous à votre responsable ». « usage » dit en FR et en NL où le paramètre sert ; un paramètre qui ne sert pas encore à l'écran le dit.",
+  "groupes": [
+    { "code": "contact", "libelle_fr": "Contact du service technique", "libelle_nl": "Contact van de technische dienst" },
+    { "code": "urgence", "libelle_fr": "Urgence", "libelle_nl": "Dringend" },
+    { "code": "demandes", "libelle_fr": "Demandes", "libelle_nl": "Aanvragen" },
+    { "code": "numerotation", "libelle_fr": "Numérotation", "libelle_nl": "Nummering" },
+    { "code": "rgpd", "libelle_fr": "Protection des données", "libelle_nl": "Gegevensbescherming" }
+  ],
+  "parametres": [
+    { "cle": "contact.nom_fr", "groupe": "contact", "type": "texte", "max": 200, "defaut": "",
+      "libelle_fr": "Nom du service en français", "libelle_nl": "Naam van de dienst in het Frans",
+      "description_fr": "Par exemple « Service technique, bâtiments ». Affiché dans Aide, Contact, pour les personnes de l'entité.",
+      "description_nl": "Bijvoorbeeld « Technische dienst, gebouwen ». Getoond in Help, Contact, voor de personen van de entiteit." },
+    { "cle": "contact.nom_nl", "groupe": "contact", "type": "texte", "max": 200, "defaut": "",
+      "libelle_fr": "Nom du service en néerlandais", "libelle_nl": "Naam van de dienst in het Nederlands",
+      "description_fr": "Même usage, pour les personnes qui travaillent en néerlandais.",
+      "description_nl": "Zelfde gebruik, voor wie in het Nederlands werkt." },
+    { "cle": "contact.telephone", "groupe": "contact", "type": "telephone", "defaut": "",
+      "libelle_fr": "Téléphone du service", "libelle_nl": "Telefoon van de dienst",
+      "description_fr": "Numéro du service, jamais celui d'une personne. Affiché dans Aide, Contact ; repris plus tard dans les accusés de réception.",
+      "description_nl": "Nummer van de dienst, nooit dat van een persoon. Getoond in Help, Contact; later ook in de ontvangstbevestigingen." },
+    { "cle": "contact.courriel", "groupe": "contact", "type": "courriel", "defaut": "",
+      "libelle_fr": "Adresse électronique du service", "libelle_nl": "E-mailadres van de dienst",
+      "description_fr": "Boîte du service, jamais une adresse personnelle. Affichée dans Aide, Contact.",
+      "description_nl": "Mailbox van de dienst, nooit een persoonlijk adres. Getoond in Help, Contact." },
+    { "cle": "urgence.telephone", "groupe": "urgence", "type": "telephone", "defaut": "",
+      "libelle_fr": "Téléphone d'urgence du service technique", "libelle_nl": "Noodnummer van de technische dienst",
+      "description_fr": "Numéro à appeler en cas de danger pour les personnes ou les biens. Il sera affiché par la case « Danger » du formulaire de demande (étape 7).",
+      "description_nl": "Nummer om te bellen bij gevaar voor personen of goederen. Het wordt getoond door het vakje « Gevaar » van het aanvraagformulier (stap 7)." },
+    { "cle": "demandes.delai_reouverture_jours", "groupe": "demandes", "type": "entier", "min": 0, "max": 90, "defaut": "7",
+      "libelle_fr": "Délai de réouverture après clôture (jours)", "libelle_nl": "Termijn om te heropenen na afsluiting (dagen)",
+      "description_fr": "Nombre de jours pendant lesquels le demandeur peut rouvrir une demande clôturée. Il servira à l'étape 9 (avis et réouverture).",
+      "description_nl": "Aantal dagen waarin de aanvrager een afgesloten aanvraag kan heropenen. Het dient vanaf stap 9 (beoordeling en heropening)." },
+    { "cle": "numerotation.demande_type", "groupe": "numerotation", "type": "texte", "requis": true, "max": 6, "motif": "^[A-Z]{1,6}$", "defaut": "DI",
+      "libelle_fr": "Code des demandes d'intervention dans le numéro", "libelle_nl": "Code van de interventieaanvragen in het nummer",
+      "description_fr": "Une à six lettres majuscules, par exemple DI. Le numéro s'écrit code de l'entité, ce code, année et rang : AC-DI-2026-00001. Le même numéro sert en français et en néerlandais. Un changement vaut pour les demandes suivantes ; un numéro déjà attribué ne change jamais.",
+      "description_nl": "Eén tot zes hoofdletters, bijvoorbeeld DI. Het nummer bestaat uit de code van de entiteit, deze code, het jaar en het volgnummer: AC-DI-2026-00001. Hetzelfde nummer geldt in het Frans en het Nederlands. Een wijziging geldt voor de volgende aanvragen; een toegekend nummer verandert nooit." },
+    { "cle": "numerotation.remise", "groupe": "numerotation", "type": "choix", "defaut": "annuelle",
+      "choix": [
+        { "valeur": "annuelle", "libelle_fr": "Remise à un chaque année", "libelle_nl": "Elk jaar opnieuw vanaf één" },
+        { "valeur": "continue", "libelle_fr": "Numérotation continue", "libelle_nl": "Doorlopende nummering" }
+      ],
+      "libelle_fr": "Rang dans le numéro", "libelle_nl": "Volgnummer in het nummer",
+      "description_fr": "Annuelle : la première demande de l'année reçoit le rang 00001. Continue : le rang poursuit d'une année à l'autre. Un changement ne redonne jamais un numéro déjà attribué.",
+      "description_nl": "Jaarlijks: de eerste aanvraag van het jaar krijgt volgnummer 00001. Doorlopend: het volgnummer loopt door van jaar tot jaar. Een wijziging geeft nooit een reeds toegekend nummer opnieuw." },
+    {"cle": "rgpd.dpo_contact", "groupe": "rgpd", "type": "texte", "max": 300, "defaut": "", "libelle_fr": "Contact du délégué à la protection des données (DPO)", "libelle_nl": "Contact van de functionaris voor gegevensbescherming (DPO)", "description_fr": "Adresse électronique et, si vous voulez, téléphone du DPO de l'entité, par exemple « dpo@exemple.be, 02 000 00 00 ». Repris à la place de {dpo} dans la mention du formulaire de demande et dans l'aide. Vide : « adressez-vous à votre responsable ».", "description_nl": "E-mailadres en eventueel telefoonnummer van de DPO van de entiteit, bijvoorbeeld « dpo@voorbeeld.be, 02 000 00 00 ». Neemt de plaats in van {dpo} in de vermelding van het aanvraagformulier en in de help. Leeg: « wend u tot uw verantwoordelijke »."},
+    {"cle": "rgpd.mention_courte_fr", "groupe": "rgpd", "type": "texte_long", "max": 500, "variables": ["entite", "dpo"], "defaut": "Vos données (nom, service, téléphone professionnel et contenu de la demande) servent uniquement à traiter votre demande.", "libelle_fr": "Mention courte du formulaire, en français", "libelle_nl": "Korte vermelding van het formulier, in het Frans", "description_fr": "Une ou deux phrases affichées au-dessus du bouton « Envoyer la demande », suivies du lien « En savoir plus ». Vide : le texte livré.", "description_nl": "Eén of twee zinnen boven de knop « Aanvraag verzenden », gevolgd door de link « Meer weten ». Leeg: de geleverde tekst."},
+    {"cle": "rgpd.mention_courte_nl", "groupe": "rgpd", "type": "texte_long", "max": 500, "variables": ["entite", "dpo"], "defaut": "Uw gegevens (naam, dienst, professioneel telefoonnummer en inhoud van de aanvraag) dienen enkel om uw aanvraag te behandelen.", "libelle_fr": "Mention courte du formulaire, en néerlandais", "libelle_nl": "Korte vermelding van het formulier, in het Nederlands", "description_fr": "Même usage, pour les personnes qui travaillent en néerlandais.", "description_nl": "Zelfde gebruik, voor wie in het Nederlands werkt."},
+    {"cle": "rgpd.mention_fr", "groupe": "rgpd", "type": "texte_long", "max": 3000, "variables": ["entite", "dpo"], "defaut": "Responsable du traitement : {entite}. Les données de cette demande servent à organiser et suivre l'intervention du service technique (mission d'intérêt public, RGPD art. 6.1.e). Seuls le service technique et, le cas échéant, le collègue pour qui vous faites la demande y ont accès. Les données sont conservées selon les durées fixées par le responsable du traitement. Vous pouvez demander l'accès à vos données, leur rectification ou leur effacement auprès du délégué à la protection des données : {dpo}.", "libelle_fr": "Mention complète, en français", "libelle_nl": "Volledige vermelding, in het Frans", "description_fr": "Texte qui s'ouvre par « En savoir plus » sous le formulaire de demande, et rubrique « Protection de vos données » de l'aide. {entite} devient le nom de l'entité, {dpo} le contact du DPO. Vide : le texte livré. À faire valider par le DPO.", "description_nl": "Tekst die opengaat via « Meer weten » onder het aanvraagformulier, en rubriek « Bescherming van uw gegevens » van de help. {entite} wordt de naam van de entiteit, {dpo} het contact van de DPO. Leeg: de geleverde tekst. Te laten valideren door de DPO."},
+    {"cle": "rgpd.mention_nl", "groupe": "rgpd", "type": "texte_long", "max": 3000, "variables": ["entite", "dpo"], "defaut": "Verwerkingsverantwoordelijke: {entite}. De gegevens van deze aanvraag dienen om de interventie van de technische dienst te organiseren en op te volgen (taak van algemeen belang, AVG art. 6.1.e). Enkel de technische dienst en, in voorkomend geval, de collega voor wie u de aanvraag doet, hebben er toegang toe. De gegevens worden bewaard volgens de termijnen die de verwerkingsverantwoordelijke vastlegt. U kunt inzage, verbetering of wissing van uw gegevens vragen bij de functionaris voor gegevensbescherming: {dpo}.", "libelle_fr": "Mention complète, en néerlandais", "libelle_nl": "Volledige vermelding, in het Nederlands", "description_fr": "Même usage, pour les personnes qui travaillent en néerlandais.", "description_nl": "Zelfde gebruik, voor wie in het Nederlands werkt."}
+  ]
+}

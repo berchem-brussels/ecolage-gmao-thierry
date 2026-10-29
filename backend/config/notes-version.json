@@ -1,0 +1,258 @@
+{
+  "_description": "Notes de version pour les utilisateurs, en FR et en NL, sans terme technique (standard v3.2, sections 13.1 et 17.8 ; écart E-07). Une note par version, de la plus récente à la plus ancienne. Chaque ligne a un public : « tous », « admin » (administrateur de l'application) ou une permission du catalogue des rôles (par exemple « parametres:gerer »), lue dans l'entité active. La note de la version installée s'affiche une fois à la première connexion qui suit la mise à jour ; toutes restent relisibles dans Aide, Nouveautés.",
+  "notes": [
+    {
+      "version": "0.7.2",
+      "date": "2026-10-29",
+      "lignes": [
+        {
+          "public": "admin",
+          "fr": "Le code de l'application est publié sous licence libre (EUPL-1.2), sans adresse ni réglage de vos serveurs. Rien ne change à l'écran.",
+          "nl": "De code van de toepassing is gepubliceerd onder vrije licentie (EUPL-1.2), zonder adres of instelling van uw servers. Er verandert niets op het scherm."
+        }
+      ]
+    },
+    {
+      "version": "0.7.1",
+      "date": "2026-10-28",
+      "lignes": [
+        {
+          "public": "tous",
+          "fr": "Votre formulaire commencé est bien gardé, aussi quand vous gardez le lieu proposé d'office : « Brouillon enregistré à … » s'affiche sous le bouton d'envoi.",
+          "nl": "Uw begonnen formulier wordt goed bewaard, ook als u de voorgestelde plaats behoudt: « Ontwerp bewaard om … » verschijnt onder de verzendknop."
+        },
+        {
+          "public": "parametres:gerer",
+          "fr": "Le texte livré de la mention « En savoir plus » commence par « Responsable du traitement : » suivi du nom de l'entité. Un texte que vous avez modifié ne change pas.",
+          "nl": "De geleverde tekst van de vermelding « Meer weten » begint met « Verwerkingsverantwoordelijke: » gevolgd door de naam van de entiteit. Een tekst die u hebt gewijzigd, verandert niet."
+        }
+      ]
+    },
+    {
+      "version": "0.7.0",
+      "date": "2026-10-28",
+      "lignes": [
+        {
+          "public": "tous",
+          "fr": "Avant d'envoyer une demande, vous voyez les demandes déjà ouvertes dans le même bâtiment : « Moi aussi » vous associe à l'une d'elles au lieu d'en créer une nouvelle.",
+          "nl": "Vóór u een aanvraag verzendt, ziet u de aanvragen die al openstaan in hetzelfde gebouw: « Ik ook » koppelt u aan een ervan in plaats van een nieuwe aan te maken."
+        },
+        {
+          "public": "tous",
+          "fr": "Case « Danger pour les personnes ou les biens » en tête du formulaire : elle affiche le numéro à appeler et votre demande est traitée en priorité absolue.",
+          "nl": "Vakje « Gevaar voor personen of goederen » bovenaan het formulier: het toont het nummer om te bellen en uw aanvraag wordt met absolute voorrang behandeld."
+        },
+        {
+          "public": "tous",
+          "fr": "« Pour quelqu'un d'autre ? », « Une date ou un moment à respecter ? » et quelques questions selon la catégorie complètent votre demande. Le formulaire est gardé si vous le quittez : « Reprendre » ou « Recommencer à zéro ». « En savoir plus » explique l'usage de vos données.",
+          "nl": "« Voor iemand anders? », « Een datum of moment om rekening mee te houden? » en enkele vragen volgens de categorie vervolledigen uw aanvraag. Het formulier blijft bewaard als u het verlaat: « Verdergaan » of « Opnieuw beginnen ». « Meer weten » legt het gebruik van uw gegevens uit."
+        },
+        {
+          "public": "demandes:entite",
+          "fr": "Sur la fiche d'une demande, le service technique voit la mention « Danger », la personne pour qui elle est faite, la date souhaitée, les réponses aux questions et les collègues qui la suivent, avec leur remarque.",
+          "nl": "Op de fiche van een aanvraag ziet de technische dienst de vermelding « Gevaar », de persoon voor wie ze is, de gewenste datum, de antwoorden op de vragen en de collega's die ze volgen, met hun opmerking."
+        },
+        {
+          "public": "categories:gerer",
+          "fr": "Le responsable règle les questions de chaque catégorie dans Catégories et délais, et le contact du délégué à la protection des données avec les mentions du formulaire dans Réglages de l'entité, groupe « Protection des données ».",
+          "nl": "De verantwoordelijke stelt de vragen van elke categorie in via Categorieën en termijnen, en het contact van de functionaris voor gegevensbescherming met de vermeldingen van het formulier via Instellingen van de entiteit, groep « Gegevensbescherming »."
+        }
+      ]
+    },
+    {
+      "version": "0.5.2",
+      "date": "2026-10-27",
+      "lignes": [
+        {
+          "public": "tous",
+          "fr": "Sur téléphone, la page ne s'agrandit plus quand on touche un champ pour écrire ; l'agrandissement à deux doigts reste possible.",
+          "nl": "Op de telefoon wordt de pagina niet meer groter wanneer u een veld aanraakt om te schrijven; vergroten met twee vingers blijft mogelijk."
+        },
+        {
+          "public": "tous",
+          "fr": "Une adresse e-mail mal écrite affiche « Adresse e-mail non valide » sous le champ, et chaque champ ne montre plus qu'un message à la fois.",
+          "nl": "Een verkeerd geschreven e-mailadres toont « Ongeldig e-mailadres » onder het veld, en elk veld toont nog maar één melding tegelijk."
+        }
+      ]
+    },
+    {
+      "version": "0.5.1",
+      "date": "2026-10-26",
+      "lignes": [
+        {
+          "public": "tous",
+          "fr": "Dans « Changer de lieu », la liste des bâtiments se referme : « Masquer la liste », ou un nouveau clic sur « Parcourir la liste des bâtiments ».",
+          "nl": "In « Andere plaats » gaat de lijst van de gebouwen weer dicht: « Lijst verbergen », of opnieuw klikken op « De lijst van de gebouwen doorlopen »."
+        },
+        {
+          "public": "tous",
+          "fr": "Un champ obligatoire laissé vide, ou rempli seulement d'espaces, affiche « Ce champ est obligatoire » juste en dessous, avant l'envoi.",
+          "nl": "Een verplicht veld dat leeg blijft, of alleen spaties bevat, toont « Dit veld is verplicht » er net onder, vóór het verzenden."
+        }
+      ]
+    },
+    {
+      "version": "0.5.0",
+      "date": "2026-10-26",
+      "lignes": [
+        {
+          "public": "tous",
+          "fr": "Vous pouvez faire une demande au service technique : « Nouvelle demande », en haut de chaque écran. Où, quoi, quelques mots, et vous recevez un numéro, par exemple AC-DI-2026-00001, avec le délai indicatif.",
+          "nl": "U kunt een aanvraag indienen bij de technische dienst: « Nieuwe aanvraag », bovenaan elk scherm. Waar, wat, enkele woorden, en u krijgt een nummer, bijvoorbeeld AC-DI-2026-00001, met de indicatieve termijn."
+        },
+        {
+          "public": "tous",
+          "fr": "« Mes demandes » montre vos demandes et leur état, les demandes en cours en premier. Choisissez votre lieu de travail (cliquez sur votre nom, « Mon lieu de travail ») : il sera proposé d'office.",
+          "nl": "« Mijn aanvragen » toont uw aanvragen en hun status, de lopende eerst. Kies uw werkplek (klik op uw naam, « Mijn werkplek »): ze wordt dan standaard voorgesteld."
+        },
+        {
+          "public": "demandes:entite",
+          "fr": "Le gestionnaire technique et le responsable voient toutes les demandes de l'entité dans « Demandes de l'entité », et le nombre de demandes à qualifier sur l'accueil.",
+          "nl": "De technisch beheerder en de verantwoordelijke zien alle aanvragen van de entiteit in « Aanvragen van de entiteit », en het aantal te kwalificeren aanvragen op de startpagina."
+        },
+        {
+          "public": "parametres:gerer",
+          "fr": "Le responsable règle la numérotation des demandes (code et remise à un chaque année ou numérotation continue) dans Réglages de l'entité.",
+          "nl": "De verantwoordelijke stelt de nummering van de aanvragen in (code en elk jaar vanaf één of doorlopend) via Instellingen van de entiteit."
+        },
+        {
+          "public": "tous",
+          "fr": "La recherche d'un lieu ne tient plus compte des accents et trouve aussi les salles par le nom de leur bâtiment ; les espaces en trop autour d'un texte saisi sont retirés.",
+          "nl": "Het zoeken naar een plaats houdt geen rekening meer met accenten en vindt zalen ook via de naam van hun gebouw; overtollige spaties rond een ingevoerde tekst worden verwijderd."
+        }
+      ]
+    },
+    {
+      "version": "0.4.1",
+      "date": "2026-10-23",
+      "lignes": [
+        {
+          "public": "categories:gerer",
+          "fr": "Dans Catégories et délais, chaque catégorie, priorité, jour de l'horaire, congé et fermeture dit qui l'a modifié en dernier et quand, ou « Valeur livrée » si personne n'y a touché.",
+          "nl": "In Categorieën en termijnen toont elke categorie, prioriteit, dag van het uurrooster, verlofdag en sluiting wie ze het laatst heeft gewijzigd en wanneer, of « Geleverde waarde » als niemand ze heeft aangeraakt."
+        },
+        {
+          "public": "delais:gerer",
+          "fr": "Le simulateur affiche la date de l'échéance et son délai l'un sous l'autre, lisibles aussi sur téléphone, iPhone comme Android.",
+          "nl": "De simulator toont de vervaldag en de termijn onder elkaar, ook leesbaar op een telefoon, iPhone en Android."
+        },
+        {
+          "public": "admin",
+          "fr": "Le journal d'audit ne note plus que les champs modifiés d'une catégorie, d'un congé, d'une fermeture, d'un lieu, d'une valeur de liste ou d'une entité, avec l'ancienne et la nouvelle valeur.",
+          "nl": "Het auditlogboek noteert van een categorie, verlofdag, sluiting, plaats, lijstwaarde of entiteit alleen nog de gewijzigde velden, met de oude en de nieuwe waarde."
+        }
+      ]
+    },
+    {
+      "version": "0.4.0",
+      "date": "2026-10-22",
+      "lignes": [
+        {
+          "public": "tous",
+          "fr": "L'aide explique comment le délai d'une demande est compté : jours ouvrables de votre entité, sans les jours fériés ni les congés ; les cas de danger comptent jour et nuit.",
+          "nl": "De help legt uit hoe de termijn van een aanvraag wordt geteld: werkdagen van uw entiteit, zonder feestdagen en verlofdagen; gevaarlijke situaties tellen dag en nacht."
+        },
+        {
+          "public": "categories:gerer",
+          "fr": "Le responsable du service technique règle les catégories des demandes, domaine puis nature, avec leur pictogramme, et voit les tuiles telles que les demandeurs les verront, dans Réglages du service, Catégories et délais.",
+          "nl": "De verantwoordelijke van de technische dienst stelt de categorieën van de aanvragen in, domein en dan soort, met hun pictogram, en ziet de tegels zoals de aanvragers ze zullen zien, via Instellingen van de dienst, Categorieën en termijnen."
+        },
+        {
+          "public": "delais:gerer",
+          "fr": "Il y règle aussi les priorités P1 à P4 et leurs délais, l'horaire, les congés et les fermetures de l'entité, et calcule une échéance avec le simulateur.",
+          "nl": "Hij stelt er ook de prioriteiten P1 tot P4 en hun termijnen in, het uurrooster, de verlofdagen en de sluitingen van de entiteit, en berekent een vervaldag met de simulator."
+        }
+      ]
+    },
+    {
+      "version": "0.3.1",
+      "date": "2026-10-22",
+      "lignes": [
+        {
+          "public": "tous",
+          "fr": "La question de l'aide sur l'appareil photo qui reste noir explique aussi le réglage des téléphones Android, Samsung compris, dans Chrome.",
+          "nl": "De vraag in de help over de camera die zwart blijft, legt nu ook de instelling uit voor Android-telefoons, ook Samsung, in Chrome."
+        }
+      ]
+    },
+    {
+      "version": "0.3.0",
+      "date": "2026-10-22",
+      "lignes": [
+        {
+          "public": "tous",
+          "fr": "Les nouveautés de chaque mise à jour s'affichent désormais à la première connexion, puis restent dans Aide, Nouveautés.",
+          "nl": "De nieuwigheden van elke update verschijnen voortaan bij de eerste aanmelding en blijven daarna in Help, Nieuwigheden."
+        },
+        {
+          "public": "tous",
+          "fr": "L'aide donne le téléphone et l'adresse du service technique de votre entité, et une question sur l'appareil photo de l'iPhone.",
+          "nl": "De help geeft het telefoonnummer en het adres van de technische dienst van uw entiteit, en een vraag over de camera van de iPhone."
+        },
+        {
+          "public": "parametres:gerer",
+          "fr": "Le responsable du service technique règle le contact de son service, le téléphone d'urgence et le délai de réouverture dans Réglages de l'entité.",
+          "nl": "De verantwoordelijke van de technische dienst stelt het contact van zijn dienst, het noodnummer en de termijn om te heropenen in via Instellingen van de entiteit."
+        },
+        {
+          "public": "admin",
+          "fr": "L'administrateur règle le nom de l'application et du pouvoir local, la langue par défaut et les modules dans Paramètres.",
+          "nl": "De beheerder stelt de naam van de toepassing en van het lokaal bestuur, de standaardtaal en de modules in via Parameters."
+        },
+        {
+          "public": "admin",
+          "fr": "Le journal d'audit montre qui a fait quoi, quand et dans quelle entité.",
+          "nl": "Het auditlogboek toont wie wat deed, wanneer en in welke entiteit."
+        }
+      ]
+    },
+    {
+      "version": "0.2.0",
+      "date": "2026-10-21",
+      "lignes": [
+        {
+          "public": "tous",
+          "fr": "L'écran Patrimoine montre les sites, bâtiments, niveaux et locaux de votre entité, avec une photo par lieu.",
+          "nl": "Het scherm Patrimonium toont de sites, gebouwen, verdiepingen en lokalen van uw entiteit, met een foto per plaats."
+        },
+        {
+          "public": "lieux:gerer",
+          "fr": "Le gestionnaire technique et le responsable créent, modifient et désactivent les lieux, et y ajoutent une photo prise au téléphone.",
+          "nl": "De technisch beheerder en de verantwoordelijke maken plaatsen aan, wijzigen en deactiveren ze, en voegen er een foto van de telefoon aan toe."
+        },
+        {
+          "public": "listes:gerer",
+          "fr": "Le responsable du service technique règle les types de lieux en français et en néerlandais.",
+          "nl": "De verantwoordelijke van de technische dienst stelt de soorten plaatsen in het Frans en het Nederlands in."
+        }
+      ]
+    },
+    {
+      "version": "0.1.1",
+      "date": "2026-10-15",
+      "lignes": [
+        {
+          "public": "admin",
+          "fr": "L'écran Utilisateurs et rôles tient dans la largeur de l'écran, téléphone compris.",
+          "nl": "Het scherm Gebruikers en rollen past in de breedte van het scherm, ook op de telefoon."
+        }
+      ]
+    },
+    {
+      "version": "0.1.0",
+      "date": "2026-10-15",
+      "lignes": [
+        {
+          "public": "tous",
+          "fr": "Première version : l'application aux couleurs de l'institution, en français et en néerlandais.",
+          "nl": "Eerste versie: de toepassing in de kleuren van de instelling, in het Frans en het Nederlands."
+        },
+        {
+          "public": "tous",
+          "fr": "Une personne qui a des rôles dans plusieurs entités passe de l'une à l'autre en haut de l'écran.",
+          "nl": "Wie rollen heeft in meerdere entiteiten, schakelt bovenaan het scherm van de ene naar de andere."
+        }
+      ]
+    }
+  ]
+}

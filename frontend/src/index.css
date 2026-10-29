@@ -1,0 +1,168 @@
+/*
+ * Variables de couleur clair et sombre (patron SAGA index.css, préfixe --app-* dans le gabarit).
+ * Les couleurs de l'institution (--app-primary, --app-menu-bg, --app-selection...) sont posées au démarrage
+ * par main.tsx à partir des paramètres de l'instance : aucune couleur d'institution n'est écrite ici.
+ */
+:root {
+  --app-bg-page: #f6f6f6;
+  --app-bg-container: #ffffff;
+  --app-bg-subtle: #f6f6f6;
+  --app-bg-muted: #f0f0f0;
+  --app-border: #f0f0f0;
+  --app-border-strong: #d9d9d9;
+  --app-text: #444;
+  --app-text-secondary: #666;
+  --app-text-tertiary: #767676;
+}
+
+body.app-dark {
+  --app-primary-text: var(--app-primary-text-dark);
+  --app-selection: var(--app-selection-dark);
+  --app-bg-page: #141414;
+  --app-bg-container: #1f1f1f;
+  --app-bg-subtle: #262626;
+  --app-bg-muted: #2a2a2a;
+  --app-border: #303030;
+  --app-border-strong: #424242;
+  --app-text: rgba(255, 255, 255, 0.85);
+  --app-text-secondary: rgba(255, 255, 255, 0.65);
+  --app-text-tertiary: rgba(255, 255, 255, 0.55);
+  background: var(--app-bg-page);
+  color: var(--app-text);
+  color-scheme: dark;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; -webkit-font-smoothing: antialiased; }
+
+/* Menu latéral sombre (patron SAGA main.tsx) */
+.ant-menu-dark { background: transparent !important; }
+.ant-menu-dark .ant-menu-item-selected { background: rgba(173, 212, 204, 0.2) !important; }
+.ant-menu-dark .ant-menu-item-group-title {
+  color: rgba(173, 212, 204, 0.6) !important; font-size: 10px !important; text-transform: uppercase !important;
+  letter-spacing: 1.2px !important; padding: 16px 16px 4px !important; line-height: 1.2 !important; font-weight: 600 !important;
+}
+.ant-menu-dark .ant-menu-item { margin: 1px 8px !important; border-radius: 6px !important; height: 38px !important; line-height: 38px !important; }
+
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #cbd5e0; border-radius: 3px; }
+body.app-dark ::-webkit-scrollbar-thumb { background: #424242; }
+
+/* Accessibilité : lien d'évitement et focus visible */
+.skip-link { position: absolute; left: -9999px; top: 0; z-index: 999; }
+.skip-link:focus { left: 8px; top: 8px; background: var(--app-primary); color: #fff; padding: 8px 16px; border-radius: 4px; }
+.ant-btn:focus-visible, .ant-select-selector:focus-visible, .ant-input:focus-visible { outline: 2px solid var(--app-primary) !important; outline-offset: 2px; }
+
+@media (max-width: 768px) {
+  .ant-card { margin-bottom: 8px !important; }
+  .ant-card-body { padding: 12px !important; }
+  .ant-table { font-size: 12px; }
+  .ant-btn { min-height: 40px; min-width: 40px; }
+  .page-header { flex-direction: column !important; align-items: flex-start !important; gap: 8px !important; }
+  .ant-modal { max-width: calc(100vw - 16px) !important; margin: 8px !important; }
+}
+
+@media print {
+  .ant-layout-sider, .ant-layout-header, .chatbot-widget { display: none !important; }
+  .ant-layout-content { margin: 0 !important; padding: 8px !important; }
+}
+/* Texte lu par les lecteurs d'écran, invisible à l'écran (en-tête de la colonne de dépliage d'un tableau, par exemple). */
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+
+/* Référentiel des demandes (0.4.0) : grilles qui passent sur une colonne en dessous de 900 px, tuiles du demandeur. */
+.ref-grille { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr)); gap: 16px; align-items: start; }
+.ref-grille-cat { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; align-items: start; }
+@media (min-width: 1200px) { .ref-grille-cat { grid-template-columns: minmax(0, 3fr) minmax(300px, 2fr); } }
+/* Simulateur (0.4.1) : l'échéance et son délai l'un sous l'autre, sans déborder à 360 px. */
+.sim-echeance { display: flex; flex-direction: column; gap: 2px; min-width: 0; overflow-wrap: anywhere; }
+.sim-resultat .ant-descriptions-item-content { min-width: 0; }
+.ref-deux { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr)); column-gap: 12px; }
+.ref-tuiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 10px; }
+.ref-tuile { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; min-height: 104px; padding: 12px 8px;
+  border: 1px solid var(--app-border); border-radius: 8px; background: var(--app-bg-container); color: inherit; font: inherit; font-size: 13px;
+  text-align: center; cursor: pointer; }
+.ref-tuile:hover { border-color: var(--app-primary); }
+.ref-tuile:focus-visible { outline: 2px solid var(--app-primary); outline-offset: 2px; }
+.ref-icones { display: flex; flex-wrap: wrap; gap: 4px; }
+.ref-icones .ant-radio-button-wrapper { border-radius: 6px !important; border-inline-start-width: 1px; min-width: 44px; height: 44px; line-height: 42px; text-align: center; font-size: 18px; }
+.ref-icones .ant-radio-button-wrapper::before { display: none; }
+.ref-couleurs { display: flex; flex-wrap: wrap; row-gap: 8px; }
+.ref-horaire { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding: 8px 0; border-bottom: 1px solid var(--app-border); }
+.ref-horaire:last-child { border-bottom: none; }
+
+/* Demandes d'intervention (0.5.0) : accueil, choix du lieu, tuiles choisies, liste. */
+.home-actions { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }
+.home-action { display: flex; align-items: center; gap: 10px; min-height: 64px; padding: 12px 16px; border: 1px solid var(--app-border);
+  border-radius: 8px; background: var(--app-bg-container); color: inherit; font-size: 16px; font-weight: 500; }
+.home-action .anticon { font-size: 22px; color: var(--app-primary); }
+.home-action:hover { border-color: var(--app-primary); }
+.home-action:focus-visible { outline: 2px solid var(--app-primary); outline-offset: 2px; }
+.home-action-primaire { background: var(--app-primary); border-color: var(--app-primary); color: #fff; }
+.home-action-primaire .anticon { color: #fff; }
+.home-action-primaire:hover { color: #fff; filter: brightness(1.08); }
+.dem-resultats { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.dem-resultat { display: flex; flex-direction: column; align-items: flex-start; width: 100%; min-height: 44px; padding: 8px 12px; text-align: start;
+  border: 1px solid var(--app-border); border-radius: 6px; background: var(--app-bg-container); color: inherit; font: inherit; cursor: pointer; }
+.dem-resultat:hover { border-color: var(--app-primary); }
+.dem-resultat:focus-visible { outline: 2px solid var(--app-primary); outline-offset: 2px; }
+.dem-resultat-nom { font-weight: 500; }
+.dem-resultat-code { font-weight: 400; font-size: 12px; color: var(--app-text-secondary); margin-inline-start: 6px; }
+.dem-resultat-chemin { font-size: 12px; color: var(--app-text-secondary); }
+.ref-tuile.dem-tuile-choisie { border: 2px solid var(--app-primary); background: var(--app-selection, rgba(173,212,204,0.25)); }
+.dem-close td { opacity: 0.8; }
+.dem-form { max-width: 880px; }
+/* Place sous le bouton d'envoi pour le bouton flottant de l'assistant, qui le recouvrirait sur téléphone. */
+.dem-form { padding-bottom: 72px; }
+
+/* 0.5.2 : sur iPhone, Safari agrandit la page au toucher d'un champ écrit sous 16 px et ne revient pas.
+   Sur petit écran, les champs passent en 16 px ; le zoom à deux doigts reste permis (pas de maximum-scale
+   ni de user-scalable=no dans index.html, WCAG 1.4.4). */
+@media (max-width: 768px) {
+  /* !important : les règles d'Ant Design sur les champs de liste et de date sont plus précises que celles-ci.
+     Seul le texte saisi grandit ; libellés, boutons et en-tête gardent leur taille. */
+  input, textarea, select,
+  .ant-select-selection-search-input, .ant-picker input, .ant-input-number-input { font-size: 16px !important; }
+}
+
+/* 0.7.0 (DEM-04) : demandes déjà ouvertes dans le même bâtiment, sous « 1. Où ? ». Bloc discret, cartes légères. */
+.dem-voisines { margin-top: 12px; padding-top: 10px; border-top: 1px dashed var(--app-border); }
+.dem-voisines-bascule.ant-btn { display: flex; justify-content: flex-start; width: 100%; height: auto; min-height: 44px; padding: 6px 0; white-space: normal; text-align: start; }
+.dem-voisines-libelle { display: flex; align-items: flex-start; gap: 8px; text-align: start; }
+.dem-voisines-icone { margin-top: 4px; }
+.dem-voisines-voir { white-space: nowrap; }
+.dem-voisines-liste { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.dem-voisine { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border: 1px solid var(--app-border); border-radius: 8px; background: var(--app-bg-container); }
+.dem-voisine-texte { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.dem-voisine-ligne { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+.dem-voisine-cat { font-weight: 500; }
+.dem-voisine-meta { font-size: 13px; color: var(--app-text-secondary); }
+.dem-voisine-extrait { font-size: 13px; color: var(--app-text-secondary); overflow-wrap: anywhere; }
+.dem-voisine-action { flex: none; }
+.dem-voisine-action .ant-btn { min-height: 40px; }
+@media (max-width: 575px) {
+  .dem-voisine { flex-direction: column; align-items: stretch; }
+  .dem-voisine-action .ant-btn { width: 100%; }
+}
+
+/* 0.7.0 (DEM-06) : case « Danger » en tête du formulaire ; cible de 44 px, bordure rouge quand elle est cochée. */
+.dem-danger-case { min-height: 44px; display: inline-flex; align-items: center; }
+.dem-danger-libelle { font-weight: 600; font-size: 15px; }
+.ant-card.dem-danger-actif { border-color: #cf1322; }
+.dem-danger-tel { font-weight: 700; white-space: nowrap; }
+.dem-voisine-tags { display: inline-flex; gap: 4px; flex-wrap: wrap; }
+
+/* 0.7.0 (DEM-07, DEM-08) : compléments facultatifs, repliés par défaut. */
+.dem-complements { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; }
+.dem-complement-bascule.ant-btn { display: flex; justify-content: flex-start; height: auto; min-height: 44px; padding: 6px 0; white-space: normal; text-align: start; }
+.dem-complement { width: 100%; padding: 8px 0 12px; }
+.dem-complement > .ant-radio-group { display: flex; flex-wrap: wrap; row-gap: 8px; margin-bottom: 12px; }
+.dem-complement-label { display: block; font-weight: 500; margin-bottom: 4px; }
+.dem-pour-choisi { display: flex; align-items: center; justify-content: space-between; gap: 8px 12px; flex-wrap: wrap; padding: 8px 12px; border: 1px solid var(--app-border); border-radius: 8px; }
+
+/* Réponses d'une question de catégorie (0.7.0, DEM-05) : français, néerlandais, retrait, sur une ligne. */
+.ref-q-ligne { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 32px; gap: 8px; align-items: start; }
+
+/* Lien « En savoir plus » de la mention RGPD (0.7.0) : bouton dans le fil du texte, même interligne. */
+.dem-lien-texte { background: none; border: 0; padding: 0; font: inherit; color: var(--app-primary-text, var(--app-primary)); text-decoration: underline; cursor: pointer; }
+.dem-lien-texte:focus-visible { outline: 2px solid var(--app-primary); outline-offset: 2px; border-radius: 2px; }

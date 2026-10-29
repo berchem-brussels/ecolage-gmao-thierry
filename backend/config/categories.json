@@ -1,0 +1,90 @@
+{
+  "_description": "Catégories d'intervention (cahier des charges REF-06, DEM-02, DEM-15, PRI-01 ; décision D-11 : défauts en attendant l'atelier métier, arbre validé par Thierry le 22/10/2026). Arbre à deux niveaux par entité : un domaine, puis ses natures. « icones » : catalogue fermé des pictogrammes des tuiles ; chaque code correspond à une icône d'Ant Design dans frontend/src/categoriesIcones.ts. « defauts » : arbre créé pour chaque entité active au démarrage du serveur si son code manque ; une catégorie désactivée n'est jamais recréée ni réactivée. « questions » (DEM-05, 0.7.0) : questions livrées d'un domaine ou d'une nature, créées seulement si la catégorie, active, n'a encore aucune question ; type « oui_non » ou « choix » (2 à 6 réponses), facultatives. Un domaine porte toujours sa priorité par défaut (P1 à P4) et sa règle de validation (0 : envoi direct au service technique ; 1 : validation du chef de service, appliquée à l'étape 11) ; une nature les reprend de son domaine quand elle n'en a pas en propre.",
+  "icones": [
+    { "code": "eclair", "libelle_fr": "Éclair", "libelle_nl": "Bliksem" },
+    { "code": "ampoule", "libelle_fr": "Ampoule", "libelle_nl": "Lamp" },
+    { "code": "prise", "libelle_fr": "Prise", "libelle_nl": "Stekker" },
+    { "code": "courant", "libelle_fr": "Interrupteur général", "libelle_nl": "Hoofdschakelaar" },
+    { "code": "commande", "libelle_fr": "Tableau de commande", "libelle_nl": "Bedieningspaneel" },
+    { "code": "outil", "libelle_fr": "Outil", "libelle_nl": "Gereedschap" },
+    { "code": "alerte", "libelle_fr": "Alerte", "libelle_nl": "Alarm" },
+    { "code": "avertissement", "libelle_fr": "Avertissement", "libelle_nl": "Waarschuwing" },
+    { "code": "feu", "libelle_fr": "Flamme", "libelle_nl": "Vlam" },
+    { "code": "thermometre", "libelle_fr": "Cadran", "libelle_nl": "Meter" },
+    { "code": "nuage", "libelle_fr": "Nuage", "libelle_nl": "Wolk" },
+    { "code": "maison", "libelle_fr": "Maison", "libelle_nl": "Huis" },
+    { "code": "serrure", "libelle_fr": "Serrure", "libelle_nl": "Slot" },
+    { "code": "cle", "libelle_fr": "Clé", "libelle_nl": "Sleutel" },
+    { "code": "cadre", "libelle_fr": "Cadre", "libelle_nl": "Kader" },
+    { "code": "construction", "libelle_fr": "Construction", "libelle_nl": "Bouw" },
+    { "code": "securite", "libelle_fr": "Bouclier", "libelle_nl": "Schild" },
+    { "code": "cloche", "libelle_fr": "Cloche", "libelle_nl": "Bel" },
+    { "code": "mobilier", "libelle_fr": "Mobilier", "libelle_nl": "Meubilair" },
+    { "code": "exterieur", "libelle_fr": "Repère", "libelle_nl": "Locatie" },
+    { "code": "soleil", "libelle_fr": "Soleil", "libelle_nl": "Zon" },
+    { "code": "drapeau", "libelle_fr": "Drapeau", "libelle_nl": "Vlag" },
+    { "code": "amenagement", "libelle_fr": "Plan", "libelle_nl": "Plan" },
+    { "code": "deplacement", "libelle_fr": "Flèches", "libelle_nl": "Pijlen" },
+    { "code": "achat", "libelle_fr": "Chariot", "libelle_nl": "Winkelwagen" },
+    { "code": "nettoyage", "libelle_fr": "Balai", "libelle_nl": "Bezem" },
+    { "code": "peinture", "libelle_fr": "Pinceau", "libelle_nl": "Kwast" },
+    { "code": "vehicule", "libelle_fr": "Véhicule", "libelle_nl": "Voertuig" },
+    { "code": "autre", "libelle_fr": "Autre", "libelle_nl": "Andere" }
+  ],
+  "defauts": [
+    { "code": "electricite", "libelle_fr": "Électricité", "libelle_nl": "Elektriciteit", "icone": "eclair", "priorite_defaut": "P3", "validation": 0,
+      "natures": [
+        { "code": "eclairage", "libelle_fr": "Éclairage", "libelle_nl": "Verlichting", "icone": "ampoule" },
+        { "code": "prises", "libelle_fr": "Prises et interrupteurs", "libelle_nl": "Stopcontacten en schakelaars", "icone": "prise",
+          "questions": [{ "question_fr": "Combien de prises ?", "question_nl": "Hoeveel stopcontacten?", "type": "choix", "reponses": [{ "fr": "1", "nl": "1" }, { "fr": "2", "nl": "2" }, { "fr": "3", "nl": "3" }, { "fr": "Plus", "nl": "Meer" }] }] },
+        { "code": "panne_courant", "libelle_fr": "Panne de courant", "libelle_nl": "Stroomonderbreking", "icone": "courant", "priorite_defaut": "P2" },
+        { "code": "tableau_electrique", "libelle_fr": "Tableau électrique", "libelle_nl": "Elektriciteitskast", "icone": "commande" }
+      ] },
+    { "code": "plomberie", "libelle_fr": "Plomberie et sanitaires", "libelle_nl": "Sanitair en loodgieterij", "icone": "outil", "priorite_defaut": "P3", "validation": 0,
+      "questions": [{ "question_fr": "Y a-t-il de l'eau au sol ?", "question_nl": "Ligt er water op de vloer?", "type": "oui_non" }],
+      "natures": [
+        { "code": "fuite_eau", "libelle_fr": "Fuite d'eau", "libelle_nl": "Waterlek", "icone": "alerte", "priorite_defaut": "P2" },
+        { "code": "bouchage", "libelle_fr": "WC ou évier bouché", "libelle_nl": "Verstopt toilet of gootsteen", "icone": "avertissement", "priorite_defaut": "P2" },
+        { "code": "eau_chaude", "libelle_fr": "Eau chaude", "libelle_nl": "Warm water", "icone": "feu" },
+        { "code": "robinetterie", "libelle_fr": "Robinetterie", "libelle_nl": "Kranen", "icone": "outil" }
+      ] },
+    { "code": "chauffage", "libelle_fr": "Chauffage et ventilation", "libelle_nl": "Verwarming en ventilatie", "icone": "feu", "priorite_defaut": "P3", "validation": 0,
+      "questions": [{ "question_fr": "Tout le bâtiment ou un seul local ?", "question_nl": "Het hele gebouw of één lokaal?", "type": "choix", "reponses": [{ "fr": "Tout le bâtiment", "nl": "Het hele gebouw" }, { "fr": "Un seul local", "nl": "Eén lokaal" }] }],
+      "natures": [
+        { "code": "pas_chauffage", "libelle_fr": "Pas de chauffage", "libelle_nl": "Geen verwarming", "icone": "feu", "priorite_defaut": "P2" },
+        { "code": "radiateur", "libelle_fr": "Radiateur", "libelle_nl": "Radiator", "icone": "thermometre" },
+        { "code": "ventilation", "libelle_fr": "Ventilation et climatisation", "libelle_nl": "Ventilatie en airco", "icone": "nuage" }
+      ] },
+    { "code": "batiment", "libelle_fr": "Bâtiment et menuiserie", "libelle_nl": "Gebouw en schrijnwerk", "icone": "maison", "priorite_defaut": "P3", "validation": 0,
+      "natures": [
+        { "code": "porte_serrure", "libelle_fr": "Porte et serrure", "libelle_nl": "Deur en slot", "icone": "serrure" },
+        { "code": "fenetre_volet", "libelle_fr": "Fenêtre et volet", "libelle_nl": "Raam en rolluik", "icone": "cadre" },
+        { "code": "murs_sols", "libelle_fr": "Murs, sols et plafonds", "libelle_nl": "Muren, vloeren en plafonds", "icone": "construction" },
+        { "code": "toiture", "libelle_fr": "Toiture et infiltration", "libelle_nl": "Dak en insijpeling", "icone": "nuage", "priorite_defaut": "P2" }
+      ] },
+    { "code": "securite", "libelle_fr": "Sécurité", "libelle_nl": "Veiligheid", "icone": "securite", "priorite_defaut": "P2", "validation": 0,
+      "natures": [
+        { "code": "danger", "libelle_fr": "Danger immédiat", "libelle_nl": "Onmiddellijk gevaar", "icone": "avertissement", "priorite_defaut": "P1" },
+        { "code": "alarme_incendie", "libelle_fr": "Alarme et détection incendie", "libelle_nl": "Brandalarm en -detectie", "icone": "cloche" },
+        { "code": "extincteur", "libelle_fr": "Extincteur", "libelle_nl": "Brandblusser", "icone": "feu" },
+        { "code": "eclairage_secours", "libelle_fr": "Éclairage de secours", "libelle_nl": "Noodverlichting", "icone": "ampoule" }
+      ] },
+    { "code": "mobilier", "libelle_fr": "Mobilier", "libelle_nl": "Meubilair", "icone": "mobilier", "priorite_defaut": "P3", "validation": 0,
+      "natures": [
+        { "code": "reparation_mobilier", "libelle_fr": "Réparation", "libelle_nl": "Herstelling", "icone": "outil" },
+        { "code": "montage", "libelle_fr": "Montage", "libelle_nl": "Montage", "icone": "construction" }
+      ] },
+    { "code": "exterieurs", "libelle_fr": "Extérieurs", "libelle_nl": "Buitenruimtes", "icone": "exterieur", "priorite_defaut": "P3", "validation": 0,
+      "natures": [
+        { "code": "abords", "libelle_fr": "Abords", "libelle_nl": "Omgeving", "icone": "exterieur" },
+        { "code": "espaces_verts", "libelle_fr": "Espaces verts", "libelle_nl": "Groenvoorziening", "icone": "soleil" },
+        { "code": "signaletique", "libelle_fr": "Signalétique", "libelle_nl": "Signalisatie", "icone": "drapeau" }
+      ] },
+    { "code": "amenagement", "libelle_fr": "Aménagement, déménagement, achat", "libelle_nl": "Inrichting, verhuis, aankoop", "icone": "amenagement", "priorite_defaut": "P4", "validation": 1,
+      "natures": [
+        { "code": "demenagement", "libelle_fr": "Déménagement de bureau", "libelle_nl": "Verhuis van een kantoor", "icone": "deplacement" },
+        { "code": "amenagement_local", "libelle_fr": "Aménagement d'un local", "libelle_nl": "Inrichting van een lokaal", "icone": "amenagement" },
+        { "code": "achat_materiel", "libelle_fr": "Achat de matériel", "libelle_nl": "Aankoop van materiaal", "icone": "achat" }
+      ] }
+  ]
+}

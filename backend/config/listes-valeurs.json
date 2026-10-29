@@ -1,0 +1,22 @@
+{
+  "_description": "Catalogue des listes de valeurs réglables dans l'application (cahier des charges REF-08, LNG-02 ; standard v3.2, section 11.3, niveau Métier). Chaque liste existe une fois par entité. Les valeurs « defauts » sont créées pour chaque entité active au démarrage du serveur si leur code manque ; une valeur désactivée n'est jamais recréée. « gestion » : permission qui écrit dans la liste.",
+  "listes": {
+    "type_lieu": {
+      "label_fr": "Types de lieux",
+      "label_nl": "Soorten plaatsen",
+      "gestion": "listes:gerer",
+      "defauts": [
+        { "code": "bureau", "libelle_fr": "Bureau", "libelle_nl": "Kantoor" },
+        { "code": "salle_reunion", "libelle_fr": "Salle de réunion", "libelle_nl": "Vergaderzaal" },
+        { "code": "atelier", "libelle_fr": "Atelier", "libelle_nl": "Werkplaats" },
+        { "code": "garage", "libelle_fr": "Garage", "libelle_nl": "Garage" },
+        { "code": "classe", "libelle_fr": "Classe", "libelle_nl": "Klaslokaal" },
+        { "code": "cuisine", "libelle_fr": "Cuisine", "libelle_nl": "Keuken" },
+        { "code": "sanitaires", "libelle_fr": "Sanitaires", "libelle_nl": "Sanitair" },
+        { "code": "stockage", "libelle_fr": "Stockage", "libelle_nl": "Opslag" },
+        { "code": "technique", "libelle_fr": "Local technique", "libelle_nl": "Technisch lokaal" },
+        { "code": "exterieur", "libelle_fr": "Extérieur", "libelle_nl": "Buitenruimte" }
+      ]
+    }
+  }
+}

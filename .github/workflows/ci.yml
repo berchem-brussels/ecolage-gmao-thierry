@@ -1,0 +1,26 @@
+name: tests
+on:
+  pull_request:
+  push:
+    branches: [main]
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Serveur
+        working-directory: backend
+        run: |
+          npm ci
+          npm test
+          npm audit --omit=dev --audit-level=high
+      - name: Interface
+        working-directory: frontend
+        run: |
+          npm ci
+          npm test
+          npm run build
+          npm run a11y

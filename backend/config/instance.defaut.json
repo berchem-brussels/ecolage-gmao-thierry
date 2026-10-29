@@ -1,0 +1,19 @@
+{
+  "app": {
+    "name_fr": "Gestion technique",
+    "name_nl": "Technisch beheer",
+    "organisation_fr": "Pouvoir local",
+    "organisation_nl": "Lokaal bestuur",
+    "default_lang": "fr",
+    "support_contact": "Service IT",
+    "default_ui_mode": "simple"
+  },
+  "theme": {
+    "primary": "#006265",
+    "menu_bg": "#005254",
+    "primary_text_dark": "#5fb8ad",
+    "selection": "#ADD4CC",
+    "selection_dark": "#285450",
+    "login_gradient_end": "#1e4a1c"
+  }
+}

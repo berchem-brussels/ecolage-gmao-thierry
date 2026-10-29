@@ -1,0 +1,45 @@
+{
+  "_description": "Catalogue des paramètres de l'instance réglables par l'administrateur dans Administration, Paramètres (standard v3.2, sections 11.3 et 11.4, niveau Instance ; cahier des charges ADM-01). Chaque paramètre a une clé, un libellé et une description en FR et en NL, une validation (type, longueur, choix). Le défaut livré se lit dans instance.defaut.json sous la même clé ; la base (app_settings) porte la valeur de l'instance, qui prime. Aucun secret dans ce catalogue : un secret se chiffre et ne se réaffiche jamais.",
+  "groupes": [
+    { "code": "identite", "libelle_fr": "Identité de l'instance", "libelle_nl": "Identiteit van de installatie" },
+    { "code": "affichage", "libelle_fr": "Langue et affichage", "libelle_nl": "Taal en weergave" }
+  ],
+  "parametres": [
+    { "cle": "app.name_fr", "groupe": "identite", "type": "texte", "max": 100, "requis": true, "public": true,
+      "libelle_fr": "Nom de l'application en français", "libelle_nl": "Naam van de toepassing in het Frans",
+      "description_fr": "Affiché en tête du menu, sur la page de connexion et dans l'onglet du navigateur.",
+      "description_nl": "Getoond bovenaan het menu, op de aanmeldpagina en in het tabblad van de browser." },
+    { "cle": "app.name_nl", "groupe": "identite", "type": "texte", "max": 100, "requis": true, "public": true,
+      "libelle_fr": "Nom de l'application en néerlandais", "libelle_nl": "Naam van de toepassing in het Nederlands",
+      "description_fr": "Même usage, pour les personnes qui travaillent en néerlandais.",
+      "description_nl": "Zelfde gebruik, voor wie in het Nederlands werkt." },
+    { "cle": "app.organisation_fr", "groupe": "identite", "type": "texte", "max": 200, "requis": true, "public": true,
+      "libelle_fr": "Nom du pouvoir local en français", "libelle_nl": "Naam van het lokaal bestuur in het Frans",
+      "description_fr": "Nom officiel, affiché sous le nom de l'application. Il se saisit d'abord dans l'assistant d'installation.",
+      "description_nl": "Officiële naam, getoond onder de naam van de toepassing. Hij wordt eerst ingegeven in de installatiewizard." },
+    { "cle": "app.organisation_nl", "groupe": "identite", "type": "texte", "max": 200, "requis": true, "public": true,
+      "libelle_fr": "Nom du pouvoir local en néerlandais", "libelle_nl": "Naam van het lokaal bestuur in het Nederlands",
+      "description_fr": "Nom officiel en néerlandais, sur un pied d'égalité avec le français.",
+      "description_nl": "Officiële naam in het Nederlands, op gelijke voet met het Frans." },
+    { "cle": "app.support_contact", "groupe": "identite", "type": "texte", "max": 200, "requis": false, "public": true,
+      "libelle_fr": "Contact du support informatique", "libelle_nl": "Contact van de informaticaondersteuning",
+      "description_fr": "Service à contacter pour un problème de compte ou d'accès, jamais le nom d'une personne. Affiché dans l'aide.",
+      "description_nl": "Dienst om te contacteren bij een probleem met een account of toegang, nooit de naam van een persoon. Getoond in de help." },
+    { "cle": "app.default_lang", "groupe": "affichage", "type": "choix", "requis": true, "public": true,
+      "choix": [
+        { "valeur": "fr", "libelle_fr": "Français", "libelle_nl": "Frans" },
+        { "valeur": "nl", "libelle_fr": "Néerlandais", "libelle_nl": "Nederlands" }
+      ],
+      "libelle_fr": "Langue par défaut", "libelle_nl": "Standaardtaal",
+      "description_fr": "Langue de la page de connexion et des comptes créés ensuite. Chaque personne garde la langue qu'elle a choisie.",
+      "description_nl": "Taal van de aanmeldpagina en van de accounts die daarna worden aangemaakt. Iedereen behoudt de gekozen taal." },
+    { "cle": "app.default_ui_mode", "groupe": "affichage", "type": "choix", "requis": true, "public": false,
+      "choix": [
+        { "valeur": "simple", "libelle_fr": "Simple", "libelle_nl": "Eenvoudig" },
+        { "valeur": "complet", "libelle_fr": "Complet", "libelle_nl": "Volledig" }
+      ],
+      "libelle_fr": "Niveau de détail par défaut", "libelle_nl": "Standaard detailniveau",
+      "description_fr": "Niveau de détail des comptes créés ensuite. Chaque personne le change dans l'en-tête.",
+      "description_nl": "Detailniveau van de accounts die daarna worden aangemaakt. Iedereen wijzigt het in de kop van het scherm." }
+  ]
+}
