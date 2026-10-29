@@ -1,6 +1,16 @@
 # Journal des versions
 
-Version de l'application : **0.7.3** · Mis à jour le 29/10/2026
+Version de l'application : **0.7.4** · Mis à jour le 29/10/2026
+
+## 0.7.4 (29/10/2026)
+
+Journal d'audit plus lisible (DV-50, DV-73), sans migration.
+
+- Dans le détail d'une ligne du journal, un lieu ou une catégorie désigné par son identifiant s'affiche par son code et son nom, dans la langue de l'écran, l'identifiant entre parenthèses : lieu et catégorie d'une demande déposée, lieu de travail habituel (choisi par l'agent ou réglé par l'administrateur), lieu ou domaine de rattachement d'un lieu ou d'une catégorie déplacé. « fiche introuvable » si la fiche n'existe plus. Le bénéficiaire d'une demande reste un identifiant.
+- Les noms sont lus à l'affichage (champ `noms` de `GET /api/audit` et `GET /api/audit/:id`, et des outils MCP `list_audit` et `get_audit`) ; le journal enregistré ne change pas, les lignes anciennes en profitent aussi. Toujours réservé à l'administrateur.
+- Une valeur composée du détail (« Avant », « Après ») s'affiche champ par champ, avec ses libellés, au lieu du texte JSON ; libellés FR et NL des champs des demandes (numéro, priorité, danger, date souhaitée…).
+- Aide : rubrique Journal d'audit complétée ; note de version d'une ligne pour l'administrateur.
+- Tests : serveur 300 (293 en 0.7.3), interface 129 (127).
 
 ## 0.7.3 (29/10/2026)
 

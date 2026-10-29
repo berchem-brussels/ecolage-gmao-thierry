@@ -2,6 +2,10 @@
 
 De Franse tekst (`docs/fr/SECURITE.md`) is rechtsgeldig en bevat het volledige rooster per versie.
 
+## 0.7.4 (29/10/2026)
+
+Namen van de plaats en de categorie in het detail van het auditlogboek (DV-50). De namen worden opgezocht bij het lezen; er wordt niets extra bewaard en het logboek zelf verandert niet. Het logboek blijft voorbehouden aan de beheerder, via de API en de MCP. Twee nieuwe vaste queries, identificatoren als één JSON-parameter doorgegeven. Geen nieuwe route, migratie of afhankelijkheid. Bewijs van falen: met de journaalservice van 0.7.3 faalt `journal-noms.test.js` (5 op 6).
+
 ## 0.7.3 (29/10/2026)
 
 Beveiligingscorrectie van de serverafhankelijkheden, zonder functionele wijziging. Gerichte update van het slot van de server, zonder `package.json` te wijzigen en zonder `npm audit fix`: `body-parser` 1.20.9, `fast-uri` 3.1.9, `qs` 6.16.2. `npm audit --omit=dev` van de server: 0 kwetsbaarheden (E-24, E-30 opgelost). Nieuwe test `dependances.test.js`: het slot zakt nooit onder de gecorrigeerde versies. Bewijs van falen: met het slot van 0.7.2 faalt de nieuwe test.

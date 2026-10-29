@@ -4,6 +4,9 @@
  * l'adresse de la page (standard section 12.9). Les dates de la base sont en UTC et s'affichent à l'heure locale.
  * Mode Simple : date, personne, action, entité ; mode Complet : objet et canal en plus. Détail en dépliant la ligne.
  * Sous 768 px, une seule colonne empile date, personne, action et entité (standard section 12.3).
+ * Noms (0.7.4, DV-50) : un lieu ou une catégorie désigné par son identifiant s'affiche par son code et son nom dans la
+ * langue de l'écran, l'identifiant entre parenthèses ; les noms viennent du serveur (« noms », par chemin du détail). Une
+ * valeur composée (avant, après) s'affiche champ par champ au lieu du texte JSON.
  */
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Button, Card, DatePicker, Descriptions, Grid, Radio, Select, Space, Table, Tag, Typography, message } from 'antd';
@@ -19,7 +22,10 @@ interface Ligne {
   id: number; created_at: string; action: string; entity_type: string | null; entity_id: number | null; channel: string;
   details: Record<string, unknown> | null; entite_id: number | null; entite_code: string | null;
   user_id: number | null; user_email: string | null; user_first_name: string | null; user_last_name: string | null;
+  noms?: Record<string, Nom>;
 }
+/** Lieu ou catégorie nommé par le serveur ; introuvable si l'identifiant ne correspond plus à aucune fiche. */
+interface Nom { type: 'lieu' | 'categorie'; id: number; code?: string; nom_fr?: string; nom_nl?: string; entite_code?: string | null; introuvable?: number }
 interface Personne { id: number; email: string; first_name: string; last_name: string }
 interface Entite { id: number; code: string; nom_fr: string; nom_nl: string }
 
@@ -86,7 +92,19 @@ export default function JournalPage() {
   const personne = (l: Ligne) => (l.user_id ? `${l.user_first_name ?? ''} ${l.user_last_name ?? ''}`.trim() || l.user_email || `#${l.user_id}` : t('audit.systeme'));
   const canal = (c: string) => <Tag>{translations[`audit.canal.${c}`] ? t(`audit.canal.${c}`) : c}</Tag>;
   const cleDetail = (k: string) => (translations[`audit.detail.${k}`] ? t(`audit.detail.${k}`) : k);
-  const valeur = (v: unknown) => (v === null || v === undefined ? '' : typeof v === 'object' ? JSON.stringify(v) : String(v));
+  const brut = (v: unknown) => (v === null || v === undefined ? '' : typeof v === 'object' ? JSON.stringify(v) : String(v));
+  const nomme = (n: Nom) => (n.introuvable
+    ? `#${n.id} (${t('audit.introuvable')})`
+    : `${n.code} — ${tField(n as unknown as Record<string, unknown>, 'nom')} (#${n.id})`);
+  /** Valeur d'un champ du détail : nom si le serveur l'a trouvé, champ par champ pour un objet, sinon le texte brut. */
+  const valeur = (l: Ligne, chemin: string, v: unknown): string => {
+    const n = l.noms?.[chemin];
+    if (n) return nomme(n);
+    if (v && typeof v === 'object' && !Array.isArray(v)) {
+      return Object.entries(v as Record<string, unknown>).map(([k, x]) => `${cleDetail(k)} : ${valeur(l, `${chemin}.${k}`, x)}`).join(' · ');
+    }
+    return brut(v);
+  };
 
   return (
     <div>
@@ -121,7 +139,7 @@ export default function JournalPage() {
             rowExpandable: (l) => !!l.details && Object.keys(l.details).length > 0,
             expandedRowRender: (l) => (
               <Descriptions size="small" column={1} bordered>
-                {Object.entries(l.details || {}).map(([k, v]) => <Descriptions.Item key={k} label={cleDetail(k)}>{valeur(v)}</Descriptions.Item>)}
+                {Object.entries(l.details || {}).map(([k, v]) => <Descriptions.Item key={k} label={cleDetail(k)}>{valeur(l, k, v)}</Descriptions.Item>)}
               </Descriptions>
             ),
           }}

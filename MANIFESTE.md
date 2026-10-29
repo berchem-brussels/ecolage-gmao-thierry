@@ -1,8 +1,26 @@
 # Manifeste
 
-Version de l'application : **0.7.3** · Mis à jour le 29/10/2026
+Version de l'application : **0.7.4** · Mis à jour le 29/10/2026
 
 Fichiers changés, dépendances et suites par version. Les décomptes sont recopiés de la sortie des commandes.
+
+## 0.7.4 (29/10/2026)
+
+Fichiers comparés à l'archive 0.7.3 par `diff -rq` (hors `node_modules` et `dist`). Pour le contrôle du `git status` (`GITHUB.md`, section 5) : aucune ligne `D` attendue ; deux lignes `A`, les autres `M`.
+
+- Nouveaux : `backend/tests/journal-noms.test.js` ; `NOTES_LIVRAISON_v0.7.4.md`.
+- Modifiés, serveur : `src/services/journal.js` (`noms` par chemin du détail, deux requêtes constantes par page, `json_each(?)`) ; `src/mcp.js` (description FR et NL de `get_audit`) ; `config/notes-version.json` (note 0.7.4, une ligne pour l'administrateur) ; `tests/notes-version.test.js` (tests de la 0.7.2 et de la 0.7.3 décalés d'une note, un test nouveau pour la 0.7.4) ; `package.json` (numéro de version ; `journal-noms.test.js` ajouté au script `test`) ; `package-lock.json` (numéro seulement).
+- Modifiés, interface : `src/pages/JournalPage.tsx` (noms du lieu et de la catégorie, valeur composée champ par champ) ; `src/i18n.ts` (16 clés `audit.detail.*` et `audit.introuvable`, rubrique `help.guide.journal`) ; `src/test/pages.test.tsx` (deux lignes de journal de plus dans la maquette, deux tests nouveaux FR et NL, décompte d'un test existant) ; `package.json` et `package-lock.json` (numéro seulement). `frontend/dist/` reconstruit.
+- Modifiés, documentation : `README.md`, `README.nl.md`, `README.en.md`, `CHANGELOG.md`, `MANIFESTE.md`, `ETAT.md`, `ECARTS-CDC.md` (E-32 et E-33 recopiés du projet) ; `docs/fr/APRES-DEPLOIEMENT.md`, `docs/fr/MCP.md` ; `docs/fr`, `docs/nl`, `docs/en` (`SECURITE.md`, section 0.7.4) ; `docs/fonctionnel/administration.md` (écran du journal, règle 12).
+- Inchangés : les deux Dockerfile, `nginx.conf`, `docker-entrypoint.sh`, `docker-compose.yml`, `.env.example`, `backup.sh`, `.gitignore`, `.github/workflows/ci.yml`. Aucune migration, aucune route, aucun outil MCP nouveau.
+- Retirés : aucun fichier.
+- Dépendances : aucune dépendance nouvelle ; verrous inchangés hors numéro de version. Aucun `npm audit fix`.
+- Contrôle DV-09 de la séance, avant toute modification : archive 0.7.3 conforme à `ETAT.md` (2 230 587 octets, 352 entrées, SHA-256 `44b472fd…823bc`) ; serveur 293/293 ; `npm audit --omit=dev` du serveur 0 ; interface 127/127 sur trois lancements consécutifs ; construction et accessibilité 0 erreur. Aucun test instable.
+- Suites (Node 22.23.4, bac à sable, après `npm ci`) : serveur `npm test` 300 tests, 300 réussis, 0 échec, 0 sauté (293 en 0.7.3) ; interface `npm test` 4 fichiers, 129 tests, 129 réussis sur trois lancements consécutifs ; `npm run build` réussi ; `npm run a11y` 0 erreur.
+- Parcours du travail `tests` (`ci.yml`) rejoué sous Node 20.20.2 sur une copie ne contenant que les fichiers que Git verse : voir `ETAT.md`, section 2.
+- `npm audit --omit=dev` : serveur 0 vulnérabilité ; interface 3 modérées (E-09), inchangées.
+- Preuves d'échec : `docs/fr/SECURITE.md`, section 0.7.4.
+- Images Docker : non reconstruites dans le bac à sable ; les deux images changent (code du serveur, `frontend/dist/`).
 
 ## 0.7.3 (29/10/2026)
 

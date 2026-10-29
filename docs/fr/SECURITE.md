@@ -2,6 +2,31 @@
 
 Le français fait foi. Grille de la section 10.2 du standard, rejouée à chaque version. « Non joué » veut dire que le contrôle n'a pas tourné.
 
+## 0.7.4 (29/10/2026)
+
+Noms du lieu et de la catégorie dans le détail du journal d'audit (DV-50). Environnement : bac à sable de Claude, Node 22.23.4. Aucune route, aucune migration, aucune dépendance nouvelles.
+
+| Famille | Contrôle | Résultat |
+| --- | --- | --- |
+| Authentification | Inchangée ; test généré sur toutes les routes | Conforme (tests) |
+| Autorisation | Journal toujours réservé à l'administrateur, par l'API comme par le MCP ; les noms ne sont rendus que dans le journal | Conforme (`journal.test.js`, `journal-noms.test.js`) |
+| IDOR | Aucune route nouvelle ; `GET /api/audit/:id` inchangé (administrateur seul) | Conforme (`journal-noms.test.js`) |
+| Validation | Inchangée ; un identifiant du détail qui n'est pas un entier positif n'est pas cherché | Conforme (`journal-noms.test.js`) |
+| Injections | Deux requêtes nouvelles, constantes, identifiants passés en un seul paramètre JSON (`json_each(?)`) ; aucune interpolation | Conforme (test statique `securite.test.js`) |
+| Données | Aucune donnée enregistrée en plus : les noms sont lus à l'affichage, le journal ne change pas. Le bénéficiaire d'une demande reste un identifiant | Conforme (`journal-noms.test.js` : `details_json` sans nom) |
+| Secrets commités | `.gitignore` inchangé | Conforme : seul `.env.example`, aucune base, aucun `dist/`, aucune valeur de NIXUS |
+| Interface | Texte rendu par React, sans HTML injecté | Conforme (tests, `a11y`) |
+| Infrastructure | Dockerfile, compose, `nginx.conf`, `backup.sh`, `.env`, `ci.yml` inchangés | Conforme |
+| Dépendances | `npm audit --omit=dev` serveur | 0 vulnérabilité |
+| Dépendances | `npm audit --omit=dev` interface | 3 modérées (E-09), inchangées |
+| LLM et MCP | `list_audit` et `get_audit` rendent `noms` comme l'API ; aucun outil nouveau | Conforme (`journal-noms.test.js`, `mcp.test.js`) |
+
+Les trois contrôles qui ne restent jamais « non joués » (secrets commités, contrôle d'accès côté serveur, IDOR) ont été joués.
+
+### Preuve d'échec des nouveaux tests (0.7.4)
+
+Service du journal de la 0.7.3 remis en place : `journal-noms.test.js` échoue (1 réussi, 5 échecs ; seul le test MCP passe, faute de `noms` des deux côtés) ; code de la 0.7.4 : 6 sur 6. Écran du journal de la 0.7.3 remis en place : les deux tests nouveaux de `pages.test.tsx` échouent ; code de la 0.7.4 : réussis. Sans la note 0.7.4, le test du catalogue des notes échoue.
+
 ## 0.7.3 (29/10/2026)
 
 Correctif de sécurité des dépendances du serveur, sans changement fonctionnel (E-24, E-30), sur accord de Renaud. Environnement : bac à sable de Claude, Node 22.23.4 ; parcours du travail `tests` rejoué sous Node 20.20.2 sur les seuls fichiers versés par Git. Aucune route, aucune migration, aucune dépendance nouvelles.

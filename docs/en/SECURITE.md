@@ -2,6 +2,10 @@
 
 The French text (`docs/fr/SECURITE.md`) prevails and holds the full grid per version.
 
+## 0.7.4 (29/10/2026)
+
+Names of the location and category in the audit log detail (DV-50). Names are looked up when the log is read; nothing more is stored and the log itself does not change. The log stays reserved to the administrator, through the API and the MCP. Two new constant queries, identifiers passed as a single JSON parameter. No new route, migration or dependency. Proof of failure: with the 0.7.3 journal service, `journal-noms.test.js` fails (5 of 6).
+
 ## 0.7.3 (29/10/2026)
 
 Security fix of the server dependencies, no functional change. Targeted update of the server lock file, without changing `package.json` and without `npm audit fix`: `body-parser` 1.20.9, `fast-uri` 3.1.9, `qs` 6.16.2. Server `npm audit --omit=dev`: 0 vulnerabilities (E-24, E-30 fixed). New test `dependances.test.js`: the lock file never falls below the fixed versions. Proof of failure: with the 0.7.2 lock file the new test fails.

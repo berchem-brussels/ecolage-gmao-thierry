@@ -2,6 +2,17 @@
   "_description": "Notes de version pour les utilisateurs, en FR et en NL, sans terme technique (standard v3.2, sections 13.1 et 17.8 ; écart E-07). Une note par version, de la plus récente à la plus ancienne. Chaque ligne a un public : « tous », « admin » (administrateur de l'application) ou une permission du catalogue des rôles (par exemple « parametres:gerer »), lue dans l'entité active. La note de la version installée s'affiche une fois à la première connexion qui suit la mise à jour ; toutes restent relisibles dans Aide, Nouveautés.",
   "notes": [
     {
+      "version": "0.7.4",
+      "date": "2026-10-29",
+      "lignes": [
+        {
+          "public": "admin",
+          "fr": "Dans le journal d'audit, le détail d'une ligne affiche le nom du lieu et de la catégorie au lieu de leur numéro interne.",
+          "nl": "In het auditlogboek toont het detail van een regel de naam van de plaats en de categorie in plaats van hun intern nummer."
+        }
+      ]
+    },
+    {
       "version": "0.7.3",
       "date": "2026-10-29",
       "lignes": [
