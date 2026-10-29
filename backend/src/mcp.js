@@ -323,7 +323,7 @@ const TOOLS = [
     fr: "Lit le journal d'audit, plus récent d'abord : filtres action (exacte ou famille, par exemple lieu), user_id, entite_id, channel (api, mcp, cli), du et au en date ISO (administrateur).", nl: 'Leest het auditlogboek, meest recente eerst: filters action (exact of familie, bijvoorbeeld lieu), user_id, entite_id, channel (api, mcp, cli), du en au als ISO-datum (beheerder).',
     run: (u, a) => ({ ...page(journal.list)(u, a), actions: journal.actions(u) }) },
   { name: 'get_audit', route: 'GET /api/audit/:id', read: true, schema: idSchema,
-    fr: "Lit une ligne du journal d'audit avec son détail (administrateur).", nl: 'Leest een regel van het auditlogboek met de details (beheerder).',
+    fr: "Lit une ligne du journal d'audit avec son détail et, dans noms, le code et le nom des lieux et des catégories que le détail désigne (administrateur).", nl: 'Leest een regel van het auditlogboek met de details en, in noms, de code en de naam van de plaatsen en categorieën waarnaar de details verwijzen (beheerder).',
     run: (u, a) => journal.get(u, a.id) },
 
   { name: 'list_users', route: 'GET /api/users', read: true, schema: S.userList,

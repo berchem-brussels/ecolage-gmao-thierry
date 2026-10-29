@@ -1,6 +1,6 @@
 # Serveur MCP
 
-Version de l'application : **0.7.3** · Mis à jour le 29/10/2026 · Le français fait foi.
+Version de l'application : **0.7.4** · Mis à jour le 29/10/2026 · Le français fait foi.
 
 ## Accès
 
@@ -19,6 +19,10 @@ Version de l'application : **0.7.3** · Mis à jour le 29/10/2026 · Le françai
 - Depuis la 0.4.1, les fiches de catégorie, de priorité, de jour de l'horaire et de jour non ouvré portent `trace` (`etat`, `le`, `par`) : qui les a modifiées en dernier et quand, ou « livrée ». Le nom n'est rendu qu'aux personnes de l'entité. Aucun outil nouveau.
 - Depuis la 0.5.0, le serveur retire les espaces de début et de fin de tout texte reçu, par le MCP comme par l'API, sauf les mots de passe ; un champ obligatoire fait seulement d'espaces est refusé (`VALIDATION`), avant tout jeton de confirmation.
 - Les instructions envoyées au client demandent de commencer par `get_profile` : les données métier sont celles de l'entité active ; `select_entite` la change. Elles disent aussi que le MCP ne transporte aucun fichier, et qu'une demande se dépose par `create_demande`, le lieu proposé d'office étant `lieu_propose` dans `get_profile`.
+
+## 0.7.4
+
+Aucun outil nouveau. `list_audit` et `get_audit` rendent sur chaque ligne `noms` : pour chaque identifiant de lieu ou de catégorie du détail, par son chemin (`lieu_id`, `categorie_id`, `lieu_habituel_id`, `avant`, `apres`, `avant.parent_id`, `apres.parent_id`), le type, le code, le nom FR et NL et l'entité ; `introuvable: 1` si la fiche n'existe plus. Le détail enregistré ne change pas ; le bénéficiaire d'une demande reste un identifiant. Toujours réservé à l'administrateur.
 
 ## 0.7.3
 
@@ -76,7 +80,7 @@ Aucun outil nouveau ni modifié. Le message « Ce champ est obligatoire » de la
 | `list_parametres`, `get_parametre`, `update_parametre`, `prepare_reset_parametre`, `confirm_reset_parametre` | `/api/parametres` (nouveau en 0.3.0, administrateur) |
 | `list_modules`, `get_module`, `update_module` | `/api/modules` (nouveau en 0.3.0 ; réglage par l'administrateur) |
 | `list_parametres_entite`, `get_parametre_entite`, `update_parametre_entite`, `prepare_reset_parametre_entite`, `confirm_reset_parametre_entite` | `/api/parametres-entite` (nouveau en 0.3.0 ; réglage par le responsable du service technique) |
-| `list_audit`, `get_audit` | `GET /api/audit`, `GET /api/audit/:id` (nouveau en 0.3.0, administrateur, lecture seule) |
+| `list_audit`, `get_audit` | `GET /api/audit`, `GET /api/audit/:id` (nouveau en 0.3.0, administrateur, lecture seule ; `noms` des lieux et des catégories depuis la 0.7.4) |
 | `list_notes_version`, `get_note_version`, `marquer_nouveautes_lues` | `GET /api/notes-version`, `GET /api/notes-version/:version`, `PUT /api/auth/nouveautes` (nouveau en 0.3.0) |
 | `list_users`, `get_user`, `create_user`, `update_user`, `prepare_deactivate_user`, `confirm_deactivate_user` | `/api/users` |
 
