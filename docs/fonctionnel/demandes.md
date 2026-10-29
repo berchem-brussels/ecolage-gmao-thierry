@@ -58,6 +58,7 @@ Permettre à tout agent de l'administration communale et du CPAS de signaler un 
 | 26 | L'aide de la description rappelle de ne citer ni nom ni donnée personnelle sur une autre personne ; la consigne de ne pas photographier de personnes viendra avec la photo (étape 6) (0.7.0) | DV-66, DEM-16 |
 | 27 | Messages d'erreur dans un rouge d'au moins 4,5:1 de contraste, en clair et en sombre (0.7.0) | DV-64, DV-67, écart E-26 |
 | 28 | Le brouillon s'enregistre aussi quand la personne garde le lieu proposé d'office (lieu de travail habituel ou de la dernière demande) ; seuls les champs connus du lieu partent au serveur (0.7.1, défaut de la recette de la 0.7.0) | DV-04, DV-68 |
+| 29 | « Vos lieux récents » : en tête du choix d'un lieu (« Où ? » et « Mon lieu de travail »), les derniers lieux distincts des demandes de la personne dans l'entité active, du plus récent au plus ancien, cinq au plus, lieux actifs seulement, sans le lieu déjà choisi ; masqués pendant une recherche ; rien de nouveau n'est enregistré (0.7.5) | DV-74 |
 
 ## Données personnelles
 

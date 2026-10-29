@@ -2,6 +2,8 @@
  * Page de connexion (patron SAGA LoginPage.tsx) : dégradé aux couleurs de l'institution, carte de 440 px,
  * sélecteur de langue. Tant qu'aucun compte n'existe, la carte présente l'assistant d'installation du premier administrateur,
  * avec la langue par défaut et les modules activés dès le départ (version 0.3.0, écart E-08).
+ * 0.7.5 (DV-53) : le bandeau « Identifiants incorrects » s'efface dès que l'adresse change, et quand un nouvel essai est
+ * arrêté par le contrôle du formulaire (adresse mal formée, champ vide) : il ne reste jamais à côté d'une autre erreur.
  * Le bouton Microsoft (SSO préconisé) s'ajoute avec le patron OpenID Connect de PILOT : non inclus dans le gabarit.
  */
 import { useState } from 'react';
@@ -47,7 +49,8 @@ export default function LoginPage() {
         {error && <Alert message={error} type="error" showIcon closable onClose={() => setError('')} style={{ marginBottom: 16 }} />}
 
         {settings.installed ? (
-          <Form onFinish={onLogin} size="large" layout="vertical" requiredMark={false}>
+          <Form onFinish={onLogin} size="large" layout="vertical" requiredMark={false}
+            onValuesChange={(c: Record<string, unknown>) => { if ('email' in c) setError(''); }} onFinishFailed={() => setError('')}>
             <Form.Item name="email" label={t('login.email')} rules={[texteObligatoire(t), courriel(t)]} validateFirst>
               <Input prefix={<UserOutlined />} autoComplete="username" />
             </Form.Item>

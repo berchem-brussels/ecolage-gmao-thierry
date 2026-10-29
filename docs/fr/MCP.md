@@ -1,6 +1,6 @@
 # Serveur MCP
 
-Version de l'application : **0.7.4** · Mis à jour le 29/10/2026 · Le français fait foi.
+Version de l'application : **0.7.5** · Mis à jour le 29/10/2026 · Le français fait foi.
 
 ## Accès
 
@@ -18,7 +18,11 @@ Version de l'application : **0.7.4** · Mis à jour le 29/10/2026 · Le françai
 - Un module éteint (Paramètres, Modules) retire ses outils de `tools/list` et refuse leur appel (`MODULE_DISABLED`) ; module Patrimoine éteint : `create_lieu`, `update_lieu`, `deactivate_lieu`, `delete_lieu_photo`.
 - Depuis la 0.4.1, les fiches de catégorie, de priorité, de jour de l'horaire et de jour non ouvré portent `trace` (`etat`, `le`, `par`) : qui les a modifiées en dernier et quand, ou « livrée ». Le nom n'est rendu qu'aux personnes de l'entité. Aucun outil nouveau.
 - Depuis la 0.5.0, le serveur retire les espaces de début et de fin de tout texte reçu, par le MCP comme par l'API, sauf les mots de passe ; un champ obligatoire fait seulement d'espaces est refusé (`VALIDATION`), avant tout jeton de confirmation.
-- Les instructions envoyées au client demandent de commencer par `get_profile` : les données métier sont celles de l'entité active ; `select_entite` la change. Elles disent aussi que le MCP ne transporte aucun fichier, et qu'une demande se dépose par `create_demande`, le lieu proposé d'office étant `lieu_propose` dans `get_profile`.
+- Les instructions envoyées au client demandent de commencer par `get_profile` : les données métier sont celles de l'entité active ; `select_entite` la change. Elles disent aussi que le MCP ne transporte aucun fichier, et qu'une demande se dépose par `create_demande`, le lieu proposé d'office étant `lieu_propose` dans `get_profile`, et les derniers lieux de ses demandes `lieux_recents` (0.7.5).
+
+## 0.7.5
+
+Aucun outil nouveau. `get_profile` rend `lieux_recents` : les derniers lieux distincts des demandes de la personne dans l'entité active (identifiant, code, noms FR et NL, nature, chemin), cinq au plus, lieux actifs seulement, sans le lieu proposé d'office (`lieu_propose`). L'assistant peut les proposer avant de chercher par `list_lieux`.
 
 ## 0.7.4
 
@@ -60,7 +64,7 @@ Aucun outil nouveau ni modifié. Le message « Ce champ est obligatoire » de la
 
 | Outil | Route |
 | --- | --- |
-| `get_profile` | `GET /api/auth/me` (rend `lieu_propose` depuis la 0.5.0) |
+| `get_profile` | `GET /api/auth/me` (rend `lieu_propose` depuis la 0.5.0, `lieux_recents` depuis la 0.7.5) |
 | `set_lieu_habituel` | `PUT /api/auth/lieu-habituel` (nouveau en 0.5.0) |
 | `list_demandes`, `get_demande`, `create_demande` | `GET /api/demandes`, `GET /api/demandes/:id`, `POST /api/demandes` (nouveau en 0.5.0 ; `perimetre` `entite` pour le gestionnaire et le responsable) |
 | `select_entite` | `PUT /api/auth/entite` |

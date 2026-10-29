@@ -1,6 +1,16 @@
 # Journal des versions
 
-Version de l'application : **0.7.4** · Mis à jour le 29/10/2026
+Version de l'application : **0.7.5** · Mis à jour le 29/10/2026
+
+## 0.7.5 (29/10/2026)
+
+Améliorations de la recette de la 0.7.4, regroupées en une version (DV-76), sans migration.
+
+- « Vos lieux récents » : en tête du choix d'un lieu (« Où ? » de « Nouvelle demande » et « Mon lieu de travail »), les derniers lieux distincts des demandes de la personne dans l'entité active, en boutons, cinq au plus, sans le lieu déjà choisi ; masqués pendant une recherche. Tirés des demandes déjà en base : rien de nouveau n'est enregistré (DV-74). Le profil (`GET /api/auth/me`, `get_profile`) rend `lieux_recents`.
+- Connexion : le bandeau « Identifiants incorrects » s'efface dès que l'adresse change, et quand un nouvel essai est arrêté par le contrôle du formulaire (DV-53).
+- Journal d'audit : une case à cocher s'affiche « Oui » ou « Non » au lieu de 1 ou 0 ; un champ vide n'est plus montré, sauf « Avant » et « Après », où le vide se dit « aucun ».
+- Aide : rubriques Nouvelle demande et Journal d'audit complétées ; note de version (deux lignes pour tous, une pour l'administrateur).
+- Tests : serveur 309 (300 en 0.7.4), interface 132 (129).
 
 ## 0.7.4 (29/10/2026)
 

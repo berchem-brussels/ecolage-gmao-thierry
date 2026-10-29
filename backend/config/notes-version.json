@@ -2,6 +2,27 @@
   "_description": "Notes de version pour les utilisateurs, en FR et en NL, sans terme technique (standard v3.2, sections 13.1 et 17.8 ; écart E-07). Une note par version, de la plus récente à la plus ancienne. Chaque ligne a un public : « tous », « admin » (administrateur de l'application) ou une permission du catalogue des rôles (par exemple « parametres:gerer »), lue dans l'entité active. La note de la version installée s'affiche une fois à la première connexion qui suit la mise à jour ; toutes restent relisibles dans Aide, Nouveautés.",
   "notes": [
     {
+      "version": "0.7.5",
+      "date": "2026-10-29",
+      "lignes": [
+        {
+          "public": "tous",
+          "fr": "Pour choisir un lieu, « Changer de lieu » propose d'abord « Vos lieux récents » : les derniers lieux de vos demandes, à choisir d'un clic.",
+          "nl": "Om een plaats te kiezen, stelt « Andere plaats » eerst « Uw recente plaatsen » voor: de laatste plaatsen van uw aanvragen, met één klik te kiezen."
+        },
+        {
+          "public": "tous",
+          "fr": "À la connexion, le message « Identifiants incorrects » disparaît dès que vous corrigez votre adresse.",
+          "nl": "Bij het aanmelden verdwijnt het bericht « Ongeldige aanmeldgegevens » zodra u uw adres verbetert."
+        },
+        {
+          "public": "admin",
+          "fr": "Dans le journal d'audit, une case à cocher s'affiche « Oui » ou « Non » et les champs vides ne sont plus montrés.",
+          "nl": "In het auditlogboek verschijnt een selectievakje als « Ja » of « Nee » en worden lege velden niet meer getoond."
+        }
+      ]
+    },
+    {
       "version": "0.7.4",
       "date": "2026-10-29",
       "lignes": [

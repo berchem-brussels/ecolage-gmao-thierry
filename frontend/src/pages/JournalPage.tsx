@@ -7,6 +7,8 @@
  * Noms (0.7.4, DV-50) : un lieu ou une catégorie désigné par son identifiant s'affiche par son code et son nom dans la
  * langue de l'écran, l'identifiant entre parenthèses ; les noms viennent du serveur (« noms », par chemin du détail). Une
  * valeur composée (avant, après) s'affiche champ par champ au lieu du texte JSON.
+ * 0.7.5 (DV-76) : une case à cocher (danger, actif, obligatoire…) s'affiche « Oui » ou « Non » au lieu de 1 ou 0 ; un
+ * champ vide est masqué, sauf « Avant » et « Après », où le vide se dit « aucun ».
  */
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Button, Card, DatePicker, Descriptions, Grid, Radio, Select, Space, Table, Tag, Typography, message } from 'antd';
@@ -30,6 +32,10 @@ interface Personne { id: number; email: string; first_name: string; last_name: s
 interface Entite { id: number; code: string; nom_fr: string; nom_nl: string }
 
 const PAGE = 50;
+/** Champs du détail qui valent 0 ou 1 (cases à cocher) ; « reponses » est un nombre et n'en fait pas partie. */
+const BOOLEENS = new Set(['danger', 'beneficiaire_texte', 'is_active', 'obligatoire', 'remarque']);
+const VIDE_DIT = new Set(['avant', 'apres']);
+const vide = (v: unknown) => v === null || v === undefined || v === '';
 /** Date de la base (UTC, « 2026-10-22 08:00:00 ») vers l'heure locale. */
 export const depuisBase = (d: string) => dayjs(`${d.replace(' ', 'T')}Z`);
 
@@ -103,8 +109,13 @@ export default function JournalPage() {
     if (v && typeof v === 'object' && !Array.isArray(v)) {
       return Object.entries(v as Record<string, unknown>).map(([k, x]) => `${cleDetail(k)} : ${valeur(l, `${chemin}.${k}`, x)}`).join(' · ');
     }
+    const cle = chemin.split('.').pop() || '';
+    if (BOOLEENS.has(cle) && (v === 0 || v === 1 || typeof v === 'boolean')) return t(v ? 'yes' : 'no');
+    if (vide(v)) return t('audit.aucun');
     return brut(v);
   };
+  /** Champs affichés d'une ligne : les champs vides sont masqués, sauf « Avant » et « Après ». */
+  const champs = (l: Ligne) => Object.entries(l.details || {}).filter(([k, v]) => !vide(v) || VIDE_DIT.has(k));
 
   return (
     <div>
@@ -136,10 +147,10 @@ export default function JournalPage() {
           pagination={{ current: f.page, pageSize: PAGE, total, showSizeChanger: false, onChange: (p) => set({ page: p > 1 ? String(p) : undefined }) }}
           expandable={{
             columnTitle: <span className="sr-only">{t('audit.col.detail')}</span>,
-            rowExpandable: (l) => !!l.details && Object.keys(l.details).length > 0,
+            rowExpandable: (l) => champs(l).length > 0,
             expandedRowRender: (l) => (
               <Descriptions size="small" column={1} bordered>
-                {Object.entries(l.details || {}).map(([k, v]) => <Descriptions.Item key={k} label={cleDetail(k)}>{valeur(l, k, v)}</Descriptions.Item>)}
+                {champs(l).map(([k, v]) => <Descriptions.Item key={k} label={cleDetail(k)}>{valeur(l, k, v)}</Descriptions.Item>)}
               </Descriptions>
             ),
           }}

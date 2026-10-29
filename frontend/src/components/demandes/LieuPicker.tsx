@@ -7,12 +7,16 @@
  * 0.5.1 (recette du 26/10/2026) : la liste des bâtiments se referme. « Parcourir la liste des bâtiments » ouvre et
  * referme la liste (aria-expanded) ; la carte de la liste a un bouton « Masquer la liste » ; « Annuler » apparaît dès
  * qu'une recherche ou la liste est ouverte, même sans lieu choisi. Le focus revient au bouton qui ouvre la liste.
+ *
+ * 0.7.5 (DV-74) : « Vos lieux récents », les derniers lieux des demandes de la personne (profil, lieux_recents), en
+ * boutons au-dessus de la recherche, sans le lieu déjà choisi ; rien ne s'affiche s'il n'y en a pas.
  */
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { Button, Card, Input, Space, Spin, Tree, Typography } from 'antd';
 import type { DataNode } from 'antd/es/tree';
 import { EnvironmentOutlined, SwapOutlined, ApartmentOutlined, UpOutlined, DownOutlined } from '@ant-design/icons';
 import api, { qs } from '../../api';
+import { useAuth } from '../../contexts/AuthContext';
 import { useI18n } from '../../contexts/I18nContext';
 import type { Lieu } from '../../lieux';
 import { type Etape, type LieuChoisi, cheminTexte } from '../../demandes';
@@ -30,6 +34,8 @@ const versChoix = (l: LieuTrouve): LieuChoisi => ({ id: l.id, code: l.code, nom_
 
 export default function LieuPicker({ value, onChange, labelledBy }: Props) {
   const { t, lang } = useI18n();
+  const { user } = useAuth();
+  const recents = (user?.lieux_recents || []).filter((l) => l.id !== value?.id);
   const [ouvert, setOuvert] = useState(!value);
   const [q, setQ] = useState('');
   const [resultats, setResultats] = useState<LieuTrouve[] | null>(null);
@@ -95,6 +101,21 @@ export default function LieuPicker({ value, onChange, labelledBy }: Props) {
       )}
       {ouvert && (
         <Space direction="vertical" style={{ width: '100%' }} size={8}>
+          {recents.length > 0 && !q && (
+            <div>
+              <Typography.Text strong style={{ display: 'block', marginBottom: 4 }} id={`${idListe}-recents`}>{t('demande.lieu.recents')}</Typography.Text>
+              <ul className="dem-resultats" aria-labelledby={`${idListe}-recents`}>
+                {recents.map((l) => (
+                  <li key={l.id}>
+                    <button type="button" className="dem-resultat" onClick={() => choisir({ id: l.id, code: l.code, nom_fr: l.nom_fr, nom_nl: l.nom_nl, chemin: l.chemin })}>
+                      <span className="dem-resultat-nom">{nom(l)} <span className="dem-resultat-code">{l.code}</span></span>
+                      <span className="dem-resultat-chemin">{cheminTexte(l.chemin, lang)}</span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
           <Input.Search allowClear value={q} onChange={(e) => setQ(e.target.value)} placeholder={t('demande.lieu.chercher.placeholder')}
             aria-label={t('demande.lieu.chercher')} enterButton={false} size="large" />
           <Typography.Text type="secondary" style={{ fontSize: 12 }}>{t('demande.lieu.chercher.aide')}</Typography.Text>

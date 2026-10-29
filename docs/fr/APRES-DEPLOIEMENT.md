@@ -1,6 +1,6 @@
 # Après déploiement : installer et mettre à jour la GMAO sur NIXUS
 
-Version de l'application : **0.7.4** · Mis à jour le 29/10/2026 · Le français fait foi.
+Version de l'application : **0.7.5** · Mis à jour le 29/10/2026 · Le français fait foi.
 
 Procédure pas à pas depuis un PC Windows, sans passer par DSM. Une commande à la fois ; on attend son résultat avant la suivante. Si un résultat diffère de l'attendu, on s'arrête et on colle la sortie dans la conversation.
 
@@ -178,6 +178,10 @@ Attendu : `[gmao] … : sauvegarde terminée (photos copiées), N sauvegardes de
 Suivie une seule fois, avec la 0.1.0. Elle reste décrite dans `docs/fr/INSTALLATION.md` et `NOTES_LIVRAISON_v0.1.0.md` de l'archive. Ordre : dossier `/volume1/docker/monapp` créé, archive copiée, extraction, `sudo sh verifier-ports.sh 18443 18080` (attendu : deux fois `LIBRE` ; le 18444 est occupé par la GRC), création du `.env` (une seule fois, `DEMO_ALLOWED=1` en acceptance, `chmod 600`), `build`, `up -d`, assistant d'installation dans le navigateur (nom du pouvoir local, entité AC, premier administrateur), création de l'entité CPAS dans Administration, Entités, comptes de démonstration.
 
 ## 8. Notes par version
+
+### 0.7.5 (29/10/2026)
+
+Lieux récents, bandeau de connexion, affichage du journal d'audit (DV-74, DV-53, DV-76). Mise à jour par la section 3, sans migration : `sudo docker logs gmao-api --tail 30` montre seulement `[APP] API 0.7.5 sur le port 3001`. Les deux images se reconstruisent ; aucune modification des Dockerfile, du compose, de `backup.sh` ni du `.env` ; `--no-cache` inutile. Contrôle : bas du menu `v0.7.5` ; note de la 0.7.5 à la connexion (deux lignes pour tous, trois pour l'administrateur) ; « Changer de lieu » montre « Vos lieux récents » pour `agent.ac` ; un mauvais mot de passe puis une adresse corrigée efface le bandeau ; journal d'audit : « Non » au lieu de `0`, plus de ligne vide. Retour arrière vers la 0.7.4 sans restaurer la base.
 
 ### 0.7.4 (29/10/2026)
 

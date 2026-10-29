@@ -30,11 +30,13 @@ function profil(user) {
   const nouveautes = notes.aLire({ id: user.id, role: p.user_role, roles: active ? rolesIn(user.id, active) : [] });
   // Lieu proposé d'office dans le formulaire de demande, pour l'entité active (REF-04, DV-42).
   const lieu_propose = active ? demandes.lieuPropose({ id: user.id, entiteId: active }) : null;
+  // Derniers lieux des demandes de la personne dans l'entité active, en raccourcis du choix d'un lieu (0.7.5, DV-74).
+  const lieux_recents = active ? demandes.lieuxRecents({ id: user.id, entiteId: active }) : [];
   // Numéro à appeler en cas de danger (DEM-06, 0.7.0) : téléphone d'urgence de l'entité active, sinon celui du service.
   const telephone_urgence = active ? (parametresEntite.valeur(active, 'urgence.telephone') || parametresEntite.valeur(active, 'contact.telephone') || null) : null;
   // Mentions d'information et contact du DPO de l'entité active (RGPD-10, 0.7.0) : formulaire, aide et MCP.
   const protection_donnees = active ? parametresEntite.protectionDonnees(active) : null;
-  return { ...p, entites, entite_active_id: active, nouveautes, lieu_propose, telephone_urgence, protection_donnees };
+  return { ...p, entites, entite_active_id: active, nouveautes, lieu_propose, lieux_recents, telephone_urgence, protection_donnees };
 }
 
 function choisirEntite(user, entiteId, channel = 'api') {
