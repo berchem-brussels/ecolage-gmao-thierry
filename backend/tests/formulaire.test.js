@@ -218,8 +218,8 @@ test('brouillon : effacé à l’envoi d’une demande, par « Recommencer à z�
   assert.equal((await agent.post('/api/demandes', { lieu_id: L.site, categorie_id: C.p4, description: 'Demande qui efface le brouillon.' })).status, 201);
   assert.equal((await agent.get('/api/demandes/brouillon')).body.data, null);
   await agent.put('/api/demandes/brouillon', { contenu: { description: 'À effacer.' } });
-  assert.deepEqual((await agent.del('/api/demandes/brouillon')).body.data, { efface: 1 });
-  assert.deepEqual((await agent.del('/api/demandes/brouillon')).body.data, { efface: 0 });
+  assert.deepEqual((await agent.del('/api/demandes/brouillon')).body.data, { efface: 1, pieces: 0 });
+  assert.deepEqual((await agent.del('/api/demandes/brouillon')).body.data, { efface: 0, pieces: 0 });
   await agent.put('/api/demandes/brouillon', { contenu: { description: 'Ancien.' } });
   getDb().prepare("UPDATE brouillons SET updated_at = datetime('now', '-31 days') WHERE user_id = ?").run(agent.id);
   assert.equal((await agent.get('/api/demandes/brouillon')).body.data, null);

@@ -33,7 +33,7 @@ interface Entite { id: number; code: string; nom_fr: string; nom_nl: string }
 
 const PAGE = 50;
 /** Champs du détail qui valent 0 ou 1 (cases à cocher) ; « reponses » est un nombre et n'en fait pas partie. */
-const BOOLEENS = new Set(['danger', 'beneficiaire_texte', 'is_active', 'obligatoire', 'remarque']);
+const BOOLEENS = new Set(['danger', 'beneficiaire_texte', 'is_active', 'obligatoire', 'remarque', 'brouillon']);
 const VIDE_DIT = new Set(['avant', 'apres']);
 const vide = (v: unknown) => v === null || v === undefined || v === '';
 /** Date de la base (UTC, « 2026-10-22 08:00:00 ») vers l'heure locale. */

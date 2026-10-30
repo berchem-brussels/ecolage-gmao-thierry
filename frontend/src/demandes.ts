@@ -47,6 +47,29 @@ export interface Demande {
   reponses?: ReponseDemande[];
   /** Personnes qui suivent la demande, avec leur remarque : pour le gestionnaire et le responsable seulement. */
   suiveurs?: { user_id: number; prenom: string; nom: string; remarque: string | null; created_at: string }[];
+  /** Pièces jointes (0.8.0) : rendues au demandeur, au bénéficiaire et au service technique ; null pour qui suit seulement. */
+  pieces?: Piece[] | null;
+}
+
+/** Pièce jointe d'une demande ou du brouillon (0.8.0, DEM-09) ; le fichier se lit par /api/pieces/:id/fichier. */
+export interface Piece {
+  id: number; entite_id: number; demande_id: number | null; auteur_id: number; nom: string;
+  type: 'image/jpeg' | 'image/png' | 'application/pdf'; octets: number; largeur: number | null; hauteur: number | null;
+  canal: string; created_at: string; brouillon: 0 | 1;
+  /** Droit de la personne de retirer la pièce (DV-84), calculé par le serveur ; confort d'affichage. */
+  peut_retirer?: 0 | 1;
+}
+
+/** Plafonds de l'entité pour les pièces jointes (Réglages de l'entité, DV-83). */
+export interface PlafondsPieces { nombre: number; octets: number; types: string[] }
+
+/** Adresse du fichier d'une pièce (cookie de session ; téléchargement en pièce jointe, aperçu par une balise image). */
+export const fichierPiece = (id: number) => `/api/pieces/${id}/fichier`;
+
+/** Taille lisible : « 850 ko », « 2,4 Mo ». */
+export function taille(octets: number, lang: 'fr' | 'nl'): string {
+  if (octets < 1024 * 1024) return `${Math.max(1, Math.round(octets / 1024))} ${lang === 'nl' ? 'kB' : 'ko'}`;
+  return `${(octets / (1024 * 1024)).toFixed(1).replace('.', ',')} ${lang === 'nl' ? 'MB' : 'Mo'}`;
 }
 
 /** Réponse à une question de la catégorie, avec le texte de la question et de la réponse au moment du dépôt. */

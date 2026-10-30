@@ -1,9 +1,11 @@
 /**
  * Référentiel des lieux (REF-01, REF-02) : cinq routes REST, l'arbre de l'entité active et la photo d'un lieu.
- * La photo arrive en corps binaire (image/jpeg ou image/png, 1 Mo au plus) par le lecteur intégré d'Express,
- * sans bibliothèque de plus (écart E-16) ; elle se lit par le seul cookie de session, comme une balise image l'envoie.
+ * La photo arrive en formulaire multipart (champ `fichier`, JPEG ou PNG, 1 Mo au plus) par le lecteur commun de
+ * fichiers.js, sur `multer` 2.x (écart E-16 fermé en 0.8.0) ; elle se lit par le seul cookie de session, comme une
+ * balise image l'envoie.
  */
 const express = require('express');
+const fichiers = require('../fichiers');
 const { authMiddleware } = require('../auth');
 const { validate, validateQuery, validateParams, idParam } = require('../validation');
 const { ok, handle } = require('../envelope');
@@ -14,8 +16,7 @@ const lieux = require('../services/lieux');
 const router = express.Router();
 router.use(authMiddleware);
 
-const PHOTO_TYPES = ['image/jpeg', 'image/png'];
-const rawPhoto = express.raw({ type: PHOTO_TYPES, limit: PHOTO_MAX_OCTETS });
+const recevoirPhoto = fichiers.recevoir({ maxOctets: PHOTO_MAX_OCTETS, types: fichiers.IMAGES });
 
 router.get('/', validateQuery(S.lieuList), handle((req, res) => {
   const { rows, pagination } = lieux.list(req.user, req.query);
@@ -51,9 +52,12 @@ router.get('/:id/photo', validateParams(idParam), handle((req, res) => {
   res.sendFile(file);
 }));
 
-router.post('/:id/photo', validateParams(idParam), rawPhoto, handle((req, res) => {
-  const announced = String(req.headers['content-type'] || '').split(';')[0].trim();
-  ok(res, lieux.setPhoto(req.user, Number(req.params.id), req.body, PHOTO_TYPES.includes(announced) ? announced : null), { resource: 'lieux' });
+/** Droits, module, cloison et lieu actif contrôlés avant la lecture du corps : un refus ne lit aucun octet du fichier. */
+const avantDepot = handle((req, res, next) => { lieux.peutDeposerPhoto(req.user, Number(req.params.id)); next(); });
+
+router.post('/:id/photo', validateParams(idParam), avantDepot, recevoirPhoto, handle((req, res) => {
+  const announced = fichiers.annonce(req, fichiers.IMAGES);
+  ok(res, lieux.setPhoto(req.user, Number(req.params.id), req.file.buffer, announced), { resource: 'lieux' });
 }));
 
 /** Suppression réelle de la photo (standard v3.2, section 9.1) : fichier effacé, lien vidé, journal d'audit. */

@@ -104,6 +104,21 @@ describe('traductions', () => {
     expect(answer('mijn werkplek').key).toBe('chat.intent.lieuhabituel');
   });
 
+  it('0.8.0 : aide des photos, questions 25 et 26, assistant (photo d’une demande, photo d’un lieu), sans jargon', () => {
+    for (const k of ['help.faq.q25', 'help.faq.a25', 'help.faq.q26', 'help.faq.a26', 'chat.intent.piecesdemande', 'demande.pieces.consigne']) {
+      expect(translations[k]?.fr && translations[k]?.nl, k).toBeTruthy();
+      expect(`${translations[k].fr} ${translations[k].nl}`, k).not.toMatch(/GMAO|\bOT\b|RGPD|AVG|MCP|multer/);
+    }
+    for (const [m, fr, nl] of [['help.guide.demande', /Ajouter une photo ou un document/, /Foto of document toevoegen/], ['help.guide.demande', /plaque d'immatriculation/, /nummerplaat/],
+      ['help.guide.reglages', /Pièces jointes des demandes/, /Bijlagen bij aanvragen/]] as [string, RegExp, RegExp][]) {
+      expect(translations[m].fr, m).toMatch(fr);
+      expect(translations[m].nl, m).toMatch(nl);
+    }
+    expect(answer('comment ajouter une photo à ma demande').key).toBe('chat.intent.piecesdemande');
+    expect(answer('bijlage toevoegen').key).toBe('chat.intent.piecesdemande');
+    expect(answer("changer la photo d'un lieu").key).toBe('chat.intent.photo');
+  });
+
   it('0.7.0 : aide du formulaire complet, questions 20 à 24, réponses de l’assistant, sans jargon', () => {
     for (const k of ['help.faq.q20', 'help.faq.a20', 'help.faq.q21', 'help.faq.a21', 'help.faq.q22', 'help.faq.a22', 'help.faq.q23', 'help.faq.a23', 'help.faq.q24', 'help.faq.a24']) {
       expect(translations[k]?.fr && translations[k]?.nl, k).toBeTruthy();

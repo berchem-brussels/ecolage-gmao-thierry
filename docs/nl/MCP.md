@@ -1,5 +1,9 @@
 
 
+## 0.8.0
+
+Nieuwe tools: `list_pieces_brouillon` (bijlagen van het ontwerp van de persoon en grenzen van de entiteit), `get_piece` (fiche van een bijlage), `prepare_delete_piece` en `confirm_delete_piece` (definitieve verwijdering, bestand van de schijf gewist). `get_demande` geeft `pieces` (met `peut_retirer`), of `null` voor wie de aanvraag enkel volgt. `create_demande` koppelt de bijlagen van het ontwerp aan de aanvraag. Het opladen en downloaden van een bestand blijft buiten de MCP (afwijking E-17, vier routes).
+
 ## 0.7.1
 
 Geen nieuwe tool. `save_brouillon` aanvaardt de soort van de plaats (`contenu.lieu.nature`), zoals `get_profile` die in `lieu_propose` geeft: een ontwerp met de voorgestelde plaats werd geweigerd. Elk ander onbekend veld blijft geweigerd.

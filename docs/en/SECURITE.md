@@ -2,6 +2,10 @@
 
 The French text (`docs/fr/SECURITE.md`) prevails and holds the full grid per version.
 
+## 0.8.0 (30/10/2026)
+
+Photos and attachments on requests (step 6). New dependency `multer` 2.5.0 (E-16), migration `007_pieces_jointes`, five new routes. Files received in memory, one file per request, size limit set by the entity (10 MB at most), type checked on the first bytes; photos cleaned (EXIF, GPS), PDFs with active content (script, embedded file, form) refused, escaped names included. Rights and count checked before the body is read. A draft attachment is readable by its author only; a request attachment by the requester, the beneficiary and the technical service, not by someone who only follows the request. Real deletion (row and file), audit log without file name. Download always as an attachment, `nosniff`, `no-store`, sandbox. Partition between entities tested through the API and MCP. nginx: 11 MB on the attachment upload route only, 1 MB elsewhere; `backup.sh` copies the `pieces` folder. `npm audit --omit=dev` server: 0. Known limit: a PDF is not rewritten (document metadata remains). Proof of failure: removing each check in turn makes at least one test fail.
+
 ## 0.7.5 (29/10/2026)
 
 Recent locations in the profile (`lieux_recents`): read from the person's own requests in the active entity only, inactive locations excluded, nothing more stored. Login error banner cleared on screen when the address changes or a new attempt is stopped by form validation; server-side login unchanged. Audit log detail: « Yes »/« No » for checkboxes, empty fields hidden. No new route, migration or dependency. Proof of failure: with the 0.7.4 services, `lieux-recents.test.js` fails (7 of 8).

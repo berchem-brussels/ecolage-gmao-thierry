@@ -36,6 +36,10 @@ module.exports = {
   // Photos des lieux : à côté de la base, dans le même volume, hors de la racine web (standard v3.2, section 10.2).
   PHOTOS_DIR: process.env.PHOTOS_DIR || path.join(path.dirname(DB_PATH), 'photos'),
   PHOTO_MAX_OCTETS: 1024 * 1024,
+  // Pièces jointes des demandes (0.8.0) : même volume, dossier à part ; plafond absolu de 10 Mo par fichier, que le
+  // réglage de l'entité ne dépasse jamais (nginx accepte 11 Mo sur la seule route de dépôt).
+  PIECES_DIR: process.env.PIECES_DIR || path.join(path.dirname(DB_PATH), 'pieces'),
+  PIECE_MAX_OCTETS: 10 * 1024 * 1024,
   JWT_SECRET: secret('JWT_SECRET'),
   CONFIG_ENC_KEY: secret('CONFIG_ENC_KEY'),
   VERSION: require('../package.json').version,

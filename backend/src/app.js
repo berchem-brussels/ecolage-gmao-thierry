@@ -49,6 +49,7 @@ function buildApp() {
   app.use('/api/jours-feries', require('./routes/jours-feries'));
   app.use('/api/echeances', require('./routes/echeances'));
   app.use('/api/demandes', require('./routes/demandes'));
+  app.use('/api/pieces', require('./routes/pieces'));
   app.use('/api/parametres', require('./routes/parametres'));
   app.use('/api/modules', require('./routes/modules'));
   app.use('/api/parametres-entite', require('./routes/parametres-entite'));

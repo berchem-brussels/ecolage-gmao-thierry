@@ -4,7 +4,6 @@
  * recherche ou par l'arbre), Quoi (tuiles), Description (10 caractères au moins). Le bouton d'envoi s'active dès que
  * les trois sont donnés ; une erreur du serveur ne fait rien perdre de la saisie. Après l'envoi : le numéro et le délai
  * indicatif, avec les liens vers « Mes demandes » et vers une nouvelle demande.
- * La photo (étape 6), la case « Danger », le champ « Pour » et la date souhaitée (étape 7) viendront s'ajouter ici.
  * 0.7.0, point 1 (DEM-04) : sous « 1. Où ? », les demandes déjà ouvertes dans le même bâtiment ; « Moi aussi » suit
  * l'une d'elles au lieu d'en créer une nouvelle, et l'écran le confirme.
  * 0.7.0, point 2 (DEM-06) : case « Danger pour les personnes ou les biens » en tête du formulaire ; cochée, elle
@@ -19,6 +18,10 @@
  * 0.7.0, point 6 (RGPD-10, DEM-16) : mention d'information courte de l'entité au-dessus du bouton d'envoi, « En savoir
  * plus » déplie le texte complet avec le contact du DPO (Réglages de l'entité) ; l'aide de la description rappelle de ne
  * citer ni nom ni donnée personnelle sur une autre personne.
+ * 0.8.0, point 3 (DEM-09, DEM-16, DV-66, DV-83 à DV-85) : bloc « Photos et documents » sous la description. Chaque
+ * pièce part au brouillon dès l'ajout et revient à la reprise ; elle passe à la demande à l'envoi. Une pièce ajoutée
+ * compte comme une saisie (le brouillon est gardé) ; « Recommencer à zéro » et « Moi aussi » les effacent avec le
+ * brouillon, et l'invite de reprise le dit.
  */
 import { useEffect, useRef, useState } from 'react';
 import dayjs from 'dayjs';
@@ -33,8 +36,9 @@ import TuilesCategories, { type CategorieChoisie } from '../components/demandes/
 import DemandesVoisines from '../components/demandes/DemandesVoisines';
 import ComplementsDemande, { type Complements, COMPLEMENTS_VIDES, champsComplements } from '../components/demandes/ComplementsDemande';
 import QuestionsCategorie, { obligatoiresManquantes, reponsesValables } from '../components/demandes/QuestionsCategorie';
+import PiecesDemande from '../components/demandes/PiecesDemande';
 import type { ReponseDonnee } from '../referentiel';
-import { type Demande, type LieuChoisi, DESCRIPTION_MIN, beneficiaireTexte, cheminTexte, dateDepot, dateSouhaitee, finAnnoncee, lienTel } from '../demandes';
+import { type Demande, type LieuChoisi, type Piece, type PlafondsPieces, DESCRIPTION_MIN, beneficiaireTexte, cheminTexte, dateDepot, dateSouhaitee, finAnnoncee, lienTel } from '../demandes';
 
 /** Brouillon du formulaire (DEM-11) : ce que l'écran affiche, pour le reprendre tel quel. */
 interface ContenuBrouillon {
@@ -69,18 +73,26 @@ export default function NouvelleDemandePage() {
   const [brouillonPret, setBrouillonPret] = useState(false);
   const [enregistreA, setEnregistreA] = useState<string | null>(null);
   const minuterie = useRef<ReturnType<typeof setTimeout>>();
+  // Pièces jointes du brouillon (0.8.0) et plafonds de l'entité ; null tant qu'ils ne sont pas lus.
+  const [pieces, setPieces] = useState<Piece[]>([]);
+  const [plafonds, setPlafonds] = useState<PlafondsPieces | null>(null);
 
   const formulaireVide = !danger && !categorie && !description.trim() && !complements.collegue && !complements.pourTexte.trim()
-    && !complements.date && !complements.creneau.trim();
+    && !complements.date && !complements.creneau.trim() && pieces.length === 0;
 
   useEffect(() => {
     let actif = true;
     setBrouillon(null);
     setBrouillonPret(false);
     setEnregistreA(null);
+    setPieces([]);
+    setPlafonds(null);
     api.get<Brouillon | null>('/demandes/brouillon')
       .then((b) => { if (!actif) return; if (b && b.contenu && b.updated_at) setBrouillon(b); else setBrouillonPret(true); })
       .catch(() => { if (actif) setBrouillonPret(true); });
+    api.get<{ pieces: Piece[]; plafonds: PlafondsPieces }>('/demandes/brouillon/pieces')
+      .then((r) => { if (actif) { setPieces(r.pieces); setPlafonds(r.plafonds); } })
+      .catch(() => {});
     return () => { actif = false; };
   }, [user?.entite_active_id]);
 
@@ -105,7 +117,7 @@ export default function NouvelleDemandePage() {
       api.put('/demandes/brouillon', { contenu }).then(() => setEnregistreA(dayjs().format('HH:mm'))).catch(() => {});
     }, 1500);
     return () => clearTimeout(minuterie.current);
-  }, [brouillonPret, danger, lieu, categorie, reponses, description, complements, faite, suivie]);
+  }, [brouillonPret, danger, lieu, categorie, reponses, description, complements, faite, suivie, pieces]);
 
   const reprendre = () => {
     const c = brouillon?.contenu || {};
@@ -120,7 +132,9 @@ export default function NouvelleDemandePage() {
     setBrouillonPret(true);
   };
   const recommencerAZero = () => {
+    // Le serveur efface aussi les pièces jointes du brouillon (DV-85).
     api.del('/demandes/brouillon').catch(() => {});
+    setPieces([]);
     setBrouillon(null);
     setBrouillonPret(true);
   };
@@ -161,6 +175,7 @@ export default function NouvelleDemandePage() {
 
   const recommencer = () => {
     setSuivie(null);
+    setPieces([]);
     setFaite(null);
     setDanger(false);
     setComplements(COMPLEMENTS_VIDES);
@@ -222,6 +237,7 @@ export default function NouvelleDemandePage() {
                 {(faite.reponses || []).map((r) => (
                   <span key={r.question_id}>{lang === 'nl' ? r.question_nl : r.question_fr} {lang === 'nl' ? r.reponse_nl : r.reponse_fr}</span>
                 ))}
+                {(faite.pieces || []).length > 0 && <span>{t('demande.envoyee.pieces').replace('{n}', String((faite.pieces || []).length))}</span>}
                 <Typography.Text type="secondary" style={{ fontSize: 13 }}>{t('demande.envoyee.suite')}</Typography.Text>
               </Space>
             )}
@@ -242,10 +258,17 @@ export default function NouvelleDemandePage() {
           <Alert type="info" showIcon className="dem-brouillon"
             message={t('demande.brouillon.propose').replace('{date}', dateDepot(brouillon.updated_at).slice(0, 10)).replace('{heure}', dateDepot(brouillon.updated_at).slice(11))}
             description={(
-              <Space wrap size={[8, 8]} style={{ marginTop: 4 }}>
-                <Button type="primary" onClick={reprendre}>{t('demande.brouillon.reprendre')}</Button>
-                <Button onClick={recommencerAZero}>{t('demande.brouillon.zero')}</Button>
-              </Space>
+              <>
+                {pieces.length > 0 && (
+                  <Typography.Text type="secondary" style={{ fontSize: 13, display: 'block' }}>
+                    {t('demande.brouillon.zero.pieces').replace('{n}', String(pieces.length))}
+                  </Typography.Text>
+                )}
+                <Space wrap size={[8, 8]} style={{ marginTop: 4 }}>
+                  <Button type="primary" onClick={reprendre}>{t('demande.brouillon.reprendre')}</Button>
+                  <Button onClick={recommencerAZero}>{t('demande.brouillon.zero')}</Button>
+                </Space>
+              </>
             )} />
         )}
         {/* 0.7.0 (DEM-06) : en tête du formulaire. */}
@@ -266,7 +289,7 @@ export default function NouvelleDemandePage() {
           <Typography.Title level={2} id="dem-ou" style={{ fontSize: 17 }}>{t('demande.ou.title')}</Typography.Title>
           <LieuPicker value={lieu} onChange={setLieu} labelledBy="dem-ou" />
           <DemandesVoisines lieuId={lieu?.id ?? null} categorieId={categorie?.id ?? null} remarque={description}
-            onSuivie={(d) => { setSuivie(d); setEnregistreA(null); api.del('/demandes/brouillon').catch(() => {}); refresh(); }} />
+            onSuivie={(d) => { setSuivie(d); setEnregistreA(null); setPieces([]); api.del('/demandes/brouillon').catch(() => {}); refresh(); }} />
         </Card>
         <Card>
           <Typography.Title level={2} id="dem-quoi" style={{ fontSize: 17 }}>{t('demande.quoi.title')}</Typography.Title>
@@ -288,6 +311,12 @@ export default function NouvelleDemandePage() {
           {/* 0.5.1 : seulement des espaces, message sous le champ (sous le compteur, qui occupe la marge du bas). */}
           {seulementEspaces(description) && <ErreurObligatoire id="dem-description-erreur" />}
         </Card>
+        {plafonds && (plafonds.nombre > 0 || pieces.length > 0) && (
+          <Card>
+            <Typography.Title level={2} style={{ fontSize: 17 }}>{t('demande.pieces.title')}</Typography.Title>
+            <PiecesDemande pieces={pieces} plafonds={plafonds} onChange={setPieces} />
+          </Card>
+        )}
         <Card size="small">
           <ComplementsDemande value={complements} onChange={setComplements} />
         </Card>

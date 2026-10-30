@@ -77,6 +77,16 @@ let brouillonData: unknown = null;
 let puts: { url: string; method: string; body: Record<string, unknown> }[] = [];
 // 0.7.0 (DEM-05) : arbre sans questions par défaut ; le bloc des questions le remplace.
 let arbreData: unknown = arbreCategories;
+// 0.8.0 : pièces jointes du brouillon et plafonds de l'entité ; aucune pièce par défaut, plafonds livrés.
+const PLAFONDS = { nombre: 5, octets: 10 * 1024 * 1024, types: ['image/jpeg', 'image/png', 'application/pdf'] };
+const piece = (id: number, nom: string, type = 'image/jpeg', extra: Record<string, unknown> = {}) => ({
+  id, entite_id: 1, demande_id: null, auteur_id: 7, nom, type, octets: 180 * 1024, largeur: 800, hauteur: 600, canal: 'ecran',
+  created_at: '2026-10-30 10:00:00', brouillon: 1, ...extra,
+});
+let ficheData: unknown = null;
+let piecesData: { pieces: unknown[]; plafonds: unknown } = { pieces: [], plafonds: PLAFONDS };
+let uploads: { url: string; fichier: File }[] = [];
+let reponseUpload: (n: number) => { status: number; json: unknown } = (n) => ({ status: 201, json: { data: piece(100 + n, `photo-${n}.jpg`), meta: { envelope: 1 } } });
 let reponsePost: { status: number; json: unknown } = { status: 201, json: { data: demande(3, 'AA-DI-2026-00003', 'a_qualifier'), meta: { envelope: 1 } } };
 
 beforeEach(() => {
@@ -86,21 +96,32 @@ beforeEach(() => {
   brouillonData = null;
   arbreData = arbreCategories;
   puts = [];
+  piecesData = { pieces: [], plafonds: PLAFONDS };
+  ficheData = null;
+  uploads = [];
+  reponseUpload = (n) => ({ status: 201, json: { data: piece(100 + n, `photo-${n}.jpg`), meta: { envelope: 1 } } });
   reponsePost = { status: 201, json: { data: demande(3, 'AA-DI-2026-00003', 'a_qualifier'), meta: { envelope: 1 } } };
-  vi.stubGlobal('fetch', vi.fn(async (url: string, init?: { method?: string; body?: string }) => {
+  vi.stubGlobal('fetch', vi.fn(async (url: string, init?: { method?: string; body?: string | FormData }) => {
+    if (init?.method === 'POST' && init.body instanceof FormData) {
+      uploads.push({ url, fichier: init.body.get('fichier') as File });
+      const rep = reponseUpload(uploads.length);
+      return { ok: rep.status < 400, status: rep.status, statusText: 'x', json: async () => rep.json };
+    }
     if (init?.method === 'POST') {
-      posts.push({ url, body: JSON.parse(init.body || '{}') });
+      posts.push({ url, body: JSON.parse(String(init.body || '{}')) });
       return { ok: reponsePost.status < 400, status: reponsePost.status, statusText: 'x', json: async () => reponsePost.json };
     }
     gets.push(url);
-    if (init?.method === 'PUT' || init?.method === 'DELETE') puts.push({ url, method: init.method, body: JSON.parse(init.body || '{}') });
-    const json = url.startsWith('/api/demandes/brouillon') ? { data: init?.method && init.method !== 'GET' ? { efface: 1 } : brouillonData, meta: { envelope: 1 } }
+    if (init?.method === 'PUT' || init?.method === 'DELETE') puts.push({ url, method: init.method, body: JSON.parse(String(init.body || '{}')) });
+    const json = url.startsWith('/api/demandes/brouillon/pieces') ? { data: piecesData, meta: { envelope: 1 } }
+      : url.startsWith('/api/pieces/') ? { data: { id: 1, supprime: 1 }, meta: { envelope: 1 } }
+      : url.startsWith('/api/demandes/brouillon') ? { data: init?.method && init.method !== 'GET' ? { efface: 1 } : brouillonData, meta: { envelope: 1 } }
       : url.startsWith('/api/demandes/voisines') ? { data: voisinesData, meta: { envelope: 1 } }
       : url.startsWith('/api/demandes/beneficiaires') ? { data: [{ id: 9, prenom: 'Hélène', nom: 'Dupré' }], meta: { envelope: 1 } }
       : url.startsWith('/api/categories/arbre') ? { data: arbreData, meta: { envelope: 1 } }
       : url.startsWith('/api/lieux/arbre') ? { data: { racines: arbreLieux, total: 2 }, meta: { envelope: 1 } }
       : url.startsWith('/api/lieux') ? page(lieuxTrouves)
-      : url.match(/^\/api\/demandes\/\d+/) ? { data: demandes[0], meta: { envelope: 1 } }
+      : url.match(/^\/api\/demandes\/\d+/) ? { data: ficheData || demandes[0], meta: { envelope: 1 } }
       : url.startsWith('/api/demandes') ? (url.includes('etat=a_qualifier') ? page([demandes[0]], 4) : page(demandes))
       : url.startsWith('/api/roles') ? { data: roles, meta: { envelope: 1 } }
       : url.includes('/membres') ? { data: [], meta: { envelope: 1 } }
@@ -108,6 +129,12 @@ beforeEach(() => {
     return { ok: true, status: 200, statusText: 'OK', json: async () => json };
   }));
 });
+
+// 0.8.0 : jsdom n'a pas de canevas ; la réduction réelle est éprouvée dans le navigateur. « illisible » simule un échec.
+vi.mock('../photo', () => ({
+  reduirePhoto: vi.fn(async (f: File) => { if (f.name.startsWith('illisible')) throw new Error('decode'); return new Blob(['jpeg'], { type: 'image/jpeg' }); }),
+  PHOTO_MAX_PX: 1600, PHOTO_MAX_OCTETS: 900 * 1024,
+}));
 
 import HomePage from '../pages/HomePage';
 import NouvelleDemandePage from '../pages/NouvelleDemandePage';
@@ -735,4 +762,167 @@ describe('lieux récents (0.7.5, DV-74)', () => {
     await waitFor(() => expect(container.querySelector('.ant-spin-spinning')).toBeNull());
     await audit(container);
   }, 30000);
+});
+
+describe('pièces jointes du formulaire (0.8.0, DEM-09, DEM-16)', () => {
+  beforeEach(() => { user.lieu_propose = { id: 3, code: 'MC-A-12', nom_fr: 'Bureau 12', nom_nl: 'Bureau 12', chemin, source: 'derniere_demande' }; });
+  const entree = () => screen.getByTestId('dem-pieces-entree') as HTMLInputElement;
+  const deposer = (...fichiers: File[]) => fireEvent.change(entree(), { target: { files: fichiers } });
+
+  for (const lang of ['fr', 'nl'] as const) {
+    it(`bloc « Photos et documents » (${lang}) : bouton, compteur, consigne, sans violation axe-core`, async () => {
+      piecesData = { pieces: [piece(1, 'fuite.jpg'), piece(2, 'devis.pdf', 'application/pdf', { octets: 2.5 * 1024 * 1024 })], plafonds: PLAFONDS };
+      const { container } = render(wrap(NouvelleDemandePage, lang));
+      expect(await screen.findByRole('heading', { name: translations['demande.pieces.title'][lang] })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: new RegExp(`${translations['demande.pieces.ajouter'][lang]}$`) })).toBeEnabled();
+      expect(screen.getByText(lang === 'fr' ? '2 sur 5' : '2 van 5')).toBeInTheDocument();
+      expect(screen.getByText(new RegExp(lang === 'fr' ? 'Ne photographiez ni personne' : 'Fotografeer geen personen'))).toBeInTheDocument();
+      expect(screen.getByRole('img', { name: 'fuite.jpg' })).toHaveAttribute('src', '/api/pieces/1/fichier');
+      expect(screen.getByRole('link', { name: lang === 'fr' ? 'Télécharger devis.pdf' : 'devis.pdf downloaden' })).toHaveAttribute('href', '/api/pieces/2/fichier');
+      expect(screen.getByText(lang === 'fr' ? '2,5 Mo' : '2,5 MB')).toBeInTheDocument();
+      expect(entree()).toHaveAttribute('accept', 'image/*,application/pdf');
+      await waitFor(() => expect(container.querySelector('.ant-spin-spinning')).toBeNull());
+      await audit(container);
+    }, 30000);
+  }
+
+  it('ajout : photo réduite puis envoyée au brouillon, PDF envoyé tel quel ; vignettes et compteur suivent', async () => {
+    render(wrap(NouvelleDemandePage, 'fr'));
+    await screen.findByText('0 sur 5');
+    reponseUpload = (n) => ({ status: 201, json: { data: n === 1 ? piece(101, 'Fuite cave.jpg') : piece(102, 'devis.pdf', 'application/pdf'), meta: { envelope: 1 } } });
+    deposer(new File(['brut'], 'Fuite cave.HEIC', { type: 'image/heic' }), new File(['%PDF-1.7'], 'devis.pdf', { type: 'application/pdf' }));
+    await waitFor(() => expect(screen.getByText('2 sur 5')).toBeInTheDocument());
+    expect(uploads.map((u) => u.url)).toEqual(['/api/demandes/brouillon/pieces', '/api/demandes/brouillon/pieces']);
+    expect(uploads[0].fichier.name).toBe('Fuite cave.jpg');
+    expect(uploads[0].fichier.type).toBe('image/jpeg');
+    expect(uploads[1].fichier.name).toBe('devis.pdf');
+    expect(uploads[1].fichier.type).toBe('application/pdf');
+    expect(screen.getByRole('img', { name: 'Fuite cave.jpg' })).toBeInTheDocument();
+  });
+
+  it('refus : photo illisible, format refusé, PDF trop lourd, refus du serveur ; les autres fichiers partent', async () => {
+    render(wrap(NouvelleDemandePage, 'fr'));
+    await screen.findByText('0 sur 5');
+    reponseUpload = () => ({ status: 400, json: { error: true, code: 'FILE_ACTIVE', message: 'Ce PDF contient du contenu actif (script, fichier joint, formulaire) : il est refusé.' } });
+    deposer(new File(['x'], 'illisible.jpg', { type: 'image/jpeg' }), new File(['x'], 'notes.docx', { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' }),
+      new File([new Uint8Array(11 * 1024 * 1024)], 'scan.pdf', { type: 'application/pdf' }), new File(['%PDF'], 'piege.pdf', { type: 'application/pdf' }));
+    const alerte = await screen.findByRole('alert');
+    expect(alerte).toHaveTextContent('illisible.jpg : cette photo ne peut pas être lue');
+    expect(alerte).toHaveTextContent('notes.docx : format non accepté.');
+    expect(alerte).toHaveTextContent('scan.pdf dépasse 10 Mo.');
+    expect(alerte).toHaveTextContent('piege.pdf : Ce PDF contient du contenu actif');
+    expect(uploads.map((u) => u.fichier.name)).toEqual(['piege.pdf']);
+    expect(screen.getByText('0 sur 5')).toBeInTheDocument();
+  });
+
+  it('maximum atteint : bouton désactivé, message ; fichiers en trop annoncés', async () => {
+    piecesData = { pieces: [piece(1, 'a.jpg'), piece(2, 'b.jpg'), piece(3, 'c.jpg'), piece(4, 'd.jpg')], plafonds: PLAFONDS };
+    render(wrap(NouvelleDemandePage, 'fr'));
+    await screen.findByText('4 sur 5');
+    deposer(new File(['x'], 'e.jpg', { type: 'image/jpeg' }), new File(['x'], 'f.jpg', { type: 'image/jpeg' }));
+    await waitFor(() => expect(screen.getByText('5 sur 5')).toBeInTheDocument());
+    expect(uploads).toHaveLength(1);
+    expect(screen.getByRole('alert')).toHaveTextContent('Nombre maximal atteint : 1 fichier(s) non ajouté(s).');
+    expect(screen.getByRole('button', { name: /Ajouter une photo ou un document$/ })).toBeDisabled();
+    expect(screen.getByText(/Maximum atteint : retirez une pièce/)).toBeInTheDocument();
+  });
+
+  it('« Retirer » demande confirmation puis supprime réellement sur le serveur', async () => {
+    piecesData = { pieces: [piece(1, 'fuite.jpg'), piece(2, 'autre.jpg')], plafonds: PLAFONDS };
+    render(wrap(NouvelleDemandePage, 'fr'));
+    fireEvent.click(await screen.findByRole('button', { name: 'Retirer fuite.jpg' }));
+    expect(await screen.findByText('Retirer « fuite.jpg » ? La pièce est effacée définitivement.')).toBeInTheDocument();
+    fireEvent.click(screen.getAllByRole('button', { name: 'Retirer' }).slice(-1)[0]);
+    await waitFor(() => expect(puts).toContainEqual({ url: '/api/pieces/1', method: 'DELETE', body: {} }));
+    await waitFor(() => expect(screen.queryByRole('img', { name: 'fuite.jpg' })).toBeNull());
+    expect(screen.getByText('1 sur 5')).toBeInTheDocument();
+  });
+
+  it('entité qui ferme le dépôt : aucun bloc ; photos seulement : bouton « Ajouter une photo », sélecteur d’images', async () => {
+    piecesData = { pieces: [], plafonds: { ...PLAFONDS, nombre: 0 } };
+    const { unmount } = render(wrap(NouvelleDemandePage, 'fr'));
+    await screen.findByRole('button', { name: 'Divers' });
+    expect(screen.queryByRole('heading', { name: 'Photos et documents (facultatif)' })).toBeNull();
+    unmount();
+    piecesData = { pieces: [], plafonds: { ...PLAFONDS, types: ['image/jpeg', 'image/png'], octets: 2 * 1024 * 1024 } };
+    render(wrap(NouvelleDemandePage, 'fr'));
+    expect(await screen.findByRole('button', { name: /Ajouter une photo$/ })).toBeInTheDocument();
+    expect(entree()).toHaveAttribute('accept', 'image/*');
+    expect(screen.getByText(/Photos seulement, 2 Mo au plus/)).toBeInTheDocument();
+  });
+
+  it('brouillon avec pièces : l’invite le dit ; une pièce seule suffit à garder le brouillon', async () => {
+    piecesData = { pieces: [piece(1, 'fuite.jpg'), piece(2, 'autre.jpg')], plafonds: PLAFONDS };
+    brouillonData = { entite_id: 1, updated_at: '2026-10-30 09:05:00', contenu: { description: 'Fuite' } };
+    const { unmount } = render(wrap(NouvelleDemandePage, 'fr'));
+    expect(await screen.findByText('« Recommencer à zéro » efface aussi les pièces jointes déjà ajoutées (2).')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Recommencer à zéro' }));
+    await waitFor(() => expect(screen.getByText('0 sur 5')).toBeInTheDocument());
+    unmount();
+    brouillonData = null;
+    piecesData = { pieces: [piece(1, 'fuite.jpg')], plafonds: PLAFONDS };
+    puts = [];
+    render(wrap(NouvelleDemandePage, 'fr'));
+    await screen.findByText('1 sur 5');
+    await waitFor(() => expect(puts.some((p) => p.url === '/api/demandes/brouillon' && p.method === 'PUT')).toBe(true), { timeout: 4000 });
+  }, 15000);
+
+  it('après l’envoi, l’écran dit le nombre de pièces jointes', async () => {
+    reponsePost = { status: 201, json: { data: demande(3, 'AA-DI-2026-00003', 'a_qualifier', { pieces: [piece(1, 'fuite.jpg', 'image/jpeg', { demande_id: 3, brouillon: 0 })] }), meta: { envelope: 1 } } };
+    piecesData = { pieces: [piece(1, 'fuite.jpg')], plafonds: PLAFONDS };
+    render(wrap(NouvelleDemandePage, 'fr'));
+    fireEvent.click(await screen.findByRole('button', { name: 'Divers' }));
+    fireEvent.change(screen.getByLabelText('3. Décrivez le problème'), { target: { value: 'Une fuite sous l’évier de la cuisine.' } });
+    fireEvent.click(screen.getByRole('button', { name: /Envoyer/ }));
+    expect(await screen.findByText('Pièces jointes : 1')).toBeInTheDocument();
+  });
+});
+
+describe('pièces jointes sur la fiche (0.8.0, DEM-09, DV-84)', () => {
+  const avecPieces = (peut: 0 | 1) => demande(2, 'AA-DI-2026-00002', 'a_qualifier', {
+    pieces: [piece(1, 'fuite.jpg', 'image/jpeg', { demande_id: 2, brouillon: 0, peut_retirer: peut }), piece(2, 'devis.pdf', 'application/pdf', { demande_id: 2, brouillon: 0, peut_retirer: peut })],
+  });
+
+  for (const lang of ['fr', 'nl'] as const) {
+    it(`fiche avec pièces (${lang}) : vignette, PDF à télécharger, « Retirer » si permis ; sans violation axe-core`, async () => {
+      ficheData = avecPieces(1);
+      render(wrap(MesDemandes, lang, ['/?demande=2']));
+      const fiche = await screen.findByRole('dialog');
+      expect(await within(fiche).findByText(translations['demande.champ.pieces'][lang])).toBeInTheDocument();
+      expect(within(fiche).getByRole('img', { name: 'fuite.jpg' })).toHaveAttribute('src', '/api/pieces/1/fichier');
+      expect(within(fiche).getByRole('link', { name: lang === 'fr' ? 'Télécharger devis.pdf' : 'devis.pdf downloaden' })).toHaveAttribute('href', '/api/pieces/2/fichier');
+      expect(within(fiche).getAllByRole('button', { name: new RegExp(translations['demande.pieces.retirer'][lang]) })).toHaveLength(2);
+      await audit(fiche);
+    }, 30000);
+  }
+
+  it('sans le droit (bénéficiaire, demande prise en charge) : pièces visibles, pas de « Retirer »', async () => {
+    ficheData = avecPieces(0);
+    render(wrap(MesDemandes, 'fr', ['/?demande=2']));
+    const fiche = await screen.findByRole('dialog');
+    expect(await within(fiche).findByRole('img', { name: 'fuite.jpg' })).toBeInTheDocument();
+    expect(within(fiche).queryByRole('button', { name: /Retirer/ })).toBeNull();
+  });
+
+  it('« Retirer » : confirmation, suppression sur le serveur, fiche rechargée', async () => {
+    ficheData = avecPieces(1);
+    render(wrap(MesDemandes, 'fr', ['/?demande=2']));
+    const fiche = await screen.findByRole('dialog');
+    fireEvent.click(await within(fiche).findByRole('button', { name: 'Retirer fuite.jpg' }));
+    expect(await screen.findByText('Retirer « fuite.jpg » ? La pièce est effacée définitivement.')).toBeInTheDocument();
+    const avant = gets.filter((g) => g === '/api/demandes/2').length;
+    ficheData = demande(2, 'AA-DI-2026-00002', 'a_qualifier', { pieces: [] });
+    fireEvent.click(screen.getAllByRole('button', { name: 'Retirer' }).slice(-1)[0]);
+    await waitFor(() => expect(puts).toContainEqual({ url: '/api/pieces/1', method: 'DELETE', body: {} }));
+    await waitFor(() => expect(gets.filter((g) => g === '/api/demandes/2').length).toBe(avant + 1));
+    await waitFor(() => expect(within(fiche).queryByRole('img', { name: 'fuite.jpg' })).toBeNull());
+  });
+
+  it('qui suit seulement la demande (pieces null) : aucune ligne « Pièces jointes »', async () => {
+    ficheData = demande(2, 'AA-DI-2026-00002', 'a_qualifier', { pieces: null, suivie: 1 });
+    render(wrap(MesDemandes, 'fr', ['/?demande=2']));
+    const fiche = await screen.findByRole('dialog');
+    await within(fiche).findByText('AA-DI-2026-00002');
+    expect(within(fiche).queryByText('Pièces jointes')).toBeNull();
+  });
 });

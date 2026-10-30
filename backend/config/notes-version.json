@@ -2,6 +2,22 @@
   "_description": "Notes de version pour les utilisateurs, en FR et en NL, sans terme technique (standard v3.2, sections 13.1 et 17.8 ; écart E-07). Une note par version, de la plus récente à la plus ancienne. Chaque ligne a un public : « tous », « admin » (administrateur de l'application) ou une permission du catalogue des rôles (par exemple « parametres:gerer »), lue dans l'entité active. La note de la version installée s'affiche une fois à la première connexion qui suit la mise à jour ; toutes restent relisibles dans Aide, Nouveautés.",
   "notes": [
     {
+      "version": "0.8.0",
+      "date": "2026-10-30",
+      "lignes": [
+        {
+          "public": "tous",
+          "fr": "Ajoutez des photos ou un PDF à vos demandes : « Ajouter une photo ou un document », dans le formulaire. Elles sont gardées avec le brouillon et visibles sur la fiche.",
+          "nl": "Voeg foto's of een pdf toe aan uw aanvragen: « Foto of document toevoegen », in het formulier. Ze worden met het ontwerp bewaard en zijn zichtbaar op de fiche."
+        },
+        {
+          "public": "parametres:gerer",
+          "fr": "Réglages de l'entité, Pièces jointes des demandes : nombre par demande, taille d'un fichier et formats admis.",
+          "nl": "Instellingen van de entiteit, Bijlagen bij aanvragen: aantal per aanvraag, grootte van een bestand en toegelaten formaten."
+        }
+      ]
+    },
+    {
       "version": "0.7.5",
       "date": "2026-10-29",
       "lignes": [

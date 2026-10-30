@@ -21,7 +21,7 @@ const { logAudit, changements } = require('../audit');
 const { assertActif } = require('../modules');
 const { rolesWith } = require('../roles');
 const { PHOTOS_DIR } = require('../config');
-const { cleanPhoto } = require('../images');
+const { controler, IMAGES } = require('../fichiers');
 const valeurs = require('./listes-valeurs');
 
 const COLUMNS = `l.id, l.entite_id, l.parent_id, l.nature, l.code, l.nom_fr, l.nom_nl, l.type_id,
@@ -263,15 +263,20 @@ function eraseFile(name) {
 }
 
 /**
- * Dépose ou remplace la photo : contrôle du contenu (images.js), nom de fichier généré par le serveur,
+ * Dépose ou remplace la photo : contrôle du contenu (fichiers.js, puis images.js), nom de fichier généré par le serveur,
  * écriture atomique, effacement réel de l'ancien fichier, ligne au journal sans contenu.
  */
-function setPhoto(user, id, buf, announced, channel = 'api') {
+/** Contrôle préalable au dépôt, avant la lecture du fichier : droit de gestion, module actif, cloison, lieu actif. */
+function peutDeposerPhoto(user, id) {
   gestion(user);
   const l = load(user, id);
   if (!l.is_active) throw new AppError(409, 'CANCELLED');
-  if (!Buffer.isBuffer(buf) || !buf.length) throw new AppError(400, 'FILE_TYPE');
-  const clean = cleanPhoto(buf, announced);
+}
+
+function setPhoto(user, id, buf, announced, channel = 'api') {
+  peutDeposerPhoto(user, id);
+  if (!Buffer.isBuffer(buf) || !buf.length) throw new AppError(400, 'FILE_MISSING');
+  const clean = controler(buf, announced, IMAGES);
   if (clean.error) throw new AppError(400, clean.error);
   fs.mkdirSync(PHOTOS_DIR, { recursive: true });
   const name = `${crypto.randomBytes(16).toString('hex')}.${clean.type === 'image/png' ? 'png' : 'jpg'}`;
@@ -310,4 +315,4 @@ function deletePhoto(user, id, channel = 'api') {
   return load(user, id);
 }
 
-module.exports = { normaliser, list, arbre, get, create, update, deactivate, setPhoto, photoFile, deletePhoto, gestion, PARENTS };
+module.exports = { normaliser, list, arbre, get, create, update, deactivate, peutDeposerPhoto, setPhoto, photoFile, deletePhoto, gestion, PARENTS };

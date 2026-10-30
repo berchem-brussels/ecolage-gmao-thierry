@@ -156,7 +156,7 @@ test('migration 003_parametres sur une base 0.2.0 : comptes existants à 0.2.0, 
   assert.equal(up.status, 0, up.stderr);
   assert.match(up.stdout, /\[DB\] Migration 003_parametres appliquée/);
   const out = JSON.parse(up.stdout.trim().split('\n').pop());
-  assert.deepEqual(out.migrations, ['001_noyau', '002_lieux', '003_parametres', '004_referentiel_demandes', '005_demandes', '006_demandes_formulaire']);
+  assert.deepEqual(out.migrations, ['001_noyau', '002_lieux', '003_parametres', '004_referentiel_demandes', '005_demandes', '006_demandes_formulaire', '007_pieces_jointes']);
   assert.deepEqual(out.users, [{ email: 'ancien@exemple.test', version_vue: '0.2.0' }, { email: 'nouveau@exemple.test', version_vue: VERSION }]);
   assert.deepEqual(out.audit, { action: 'ancienne.ligne', entite_id: null }, 'journal existant gardé');
   assert.equal(out.tables, 1);

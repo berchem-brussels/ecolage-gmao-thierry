@@ -25,6 +25,8 @@ const FAQ: { n: number; module?: string; admin?: boolean; permission?: string }[
   { n: 16, module: 'demandes' }, { n: 17, module: 'demandes' }, { n: 18, module: 'demandes' }, { n: 19, permission: 'parametres:gerer' },
   // 0.7.0 : « Moi aussi », danger, brouillon, questions des catégories, protection des données.
   { n: 20, module: 'demandes' }, { n: 21, module: 'demandes' }, { n: 22, module: 'demandes' }, { n: 23, permission: 'categories:gerer' }, { n: 24, module: 'demandes' },
+  // 0.8.0 : photos et pièces jointes des demandes.
+  { n: 25, module: 'demandes' }, { n: 26, module: 'demandes' },
 ];
 const ONGLETS = ['guide', 'faq', 'nouveautes', 'contact'];
 

@@ -1,5 +1,9 @@
 
 
+## 0.8.0
+
+New tools: `list_pieces_brouillon` (attachments of the person's draft and the entity's limits), `get_piece` (attachment record), `prepare_delete_piece` and `confirm_delete_piece` (real deletion, file erased from disk). `get_demande` returns `pieces` (with `peut_retirer`), or `null` for someone who only follows the request. `create_demande` attaches the draft's attachments to the request. Uploading and downloading a file stay outside MCP (gap E-17, four routes).
+
 ## 0.7.1
 
 No new tool. `save_brouillon` accepts the place type (`contenu.lieu.nature`), as `get_profile` returns it in `lieu_propose`: a draft made with the proposed place was refused. Any other unknown field is still refused.

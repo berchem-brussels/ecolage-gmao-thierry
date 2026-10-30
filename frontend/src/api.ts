@@ -29,11 +29,18 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
   return json;
 }
 
-/** Dépôt d'un fichier en corps binaire (photo d'un lieu) : même cookie, même jeton anti-CSRF, même enveloppe. */
-async function upload<T>(path: string, blob: Blob): Promise<T> {
-  const headers: Record<string, string> = { Accept: 'application/json', 'Content-Type': blob.type };
+/**
+ * Dépôt d'un fichier en formulaire multipart, au champ « fichier » (photo d'un lieu, pièces jointes ; `multer` côté
+ * serveur, 0.8.0) : même cookie, même jeton anti-CSRF, même enveloppe. Le navigateur pose lui-même l'en-tête du
+ * formulaire et sa frontière. Le nom envoyé (neutre par défaut) ne sert qu'à l'affichage : le serveur le nettoie et
+ * range le fichier sous un nom qu'il génère.
+ */
+async function upload<T>(path: string, blob: Blob, nom = 'fichier'): Promise<T> {
+  const headers: Record<string, string> = { Accept: 'application/json' };
   if (csrfToken) headers['X-CSRF-Token'] = csrfToken;
-  const res = await fetch(`/api${path}`, { method: 'POST', headers, credentials: 'same-origin', body: blob });
+  const body = new FormData();
+  body.append('fichier', blob, nom);
+  const res = await fetch(`/api${path}`, { method: 'POST', headers, credentials: 'same-origin', body });
   const json = await res.json().catch(() => null);
   if (!res.ok || !json || json.error) {
     if (res.status === 401) window.dispatchEvent(new Event('app-unauthorized'));
