@@ -19,6 +19,7 @@ function collectRoutes(app) {
           const schemas = {};
           for (const h of layer.route.stack) {
             if (h.handle && h.handle.ajvSchema) schemas[h.handle.ajvWhere] = h.handle.ajvSchema;
+            if (h.handle && h.handle.fichierContrat) schemas.fichier = h.handle.fichierContrat;
           }
           routes.push({ method: method.toUpperCase(), path, schemas, tag: prefix.replace('/api/', '').split('/')[0] || 'core' });
         }
@@ -61,6 +62,16 @@ function buildOpenApi(app, version, publicRoutes) {
       security: publicRoutes.includes(`${r.method} ${r.path}`) ? [] : [{ cookieAuth: [] }, { bearerAuth: [] }],
     };
     if (r.schemas.body) op.requestBody = { required: true, content: { 'application/json': { schema: r.schemas.body } } };
+    if (r.schemas.fichier) {
+      // Dépôt de fichier (fichiers.js, `multer`) : un seul fichier, au champ indiqué, types et plafond du serveur.
+      const { champ, types, maxOctets } = r.schemas.fichier;
+      op.requestBody = {
+        required: true,
+        description: `Formulaire multipart, un seul fichier au champ « ${champ} » : ${types.join(', ')} ; ${maxOctets} octets au plus. Type vérifié sur le contenu.`,
+        content: { 'multipart/form-data': { schema: { type: 'object', required: [champ], properties: { [champ]: { type: 'string', format: 'binary' } } }, encoding: { [champ]: { contentType: types.join(', ') } } } },
+      };
+      op.responses[400] = { description: 'FILE_FORM, FILE_MISSING, FILE_TYPE, FILE_INVALID ou FILE_ACTIVE' };
+    }
     paths[p][r.method.toLowerCase()] = op;
   }
   return {

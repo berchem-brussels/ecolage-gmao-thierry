@@ -1,6 +1,6 @@
 # Serveur MCP
 
-Version de l'application : **0.7.5** · Mis à jour le 29/10/2026 · Le français fait foi.
+Version de l'application : **0.8.0** · Mis à jour le 30/10/2026 · Le français fait foi.
 
 ## Accès
 
@@ -12,13 +12,17 @@ Version de l'application : **0.7.5** · Mis à jour le 29/10/2026 · Le françai
 ## Règles
 
 - Chaque outil appelle la même fonction de service que la route REST, sous l'identité et les droits de la personne, dans son entité active.
-- Un test de parité échoue si une route n'a pas son outil ou l'inverse. Deux routes binaires en sont exclues par une liste fermée : le dépôt et la lecture du fichier d'une photo (écart E-17).
+- Un test de parité échoue si une route n'a pas son outil ou l'inverse. Quatre routes binaires en sont exclues par une liste fermée : le dépôt et la lecture du fichier d'une photo d'un lieu, et, depuis la 0.8.0, d'une pièce jointe d'une demande (écart E-17).
 - Une désactivation, un retrait ou un effacement se fait en deux appels : `prepare_*` décrit l'effet et rend un jeton de cinq minutes lié à la personne, `confirm_*` exécute. Le droit d'écrire est vérifié dès `prepare_*`.
 - Descriptions en français et en néerlandais. Aucun outil de SQL libre.
 - Un module éteint (Paramètres, Modules) retire ses outils de `tools/list` et refuse leur appel (`MODULE_DISABLED`) ; module Patrimoine éteint : `create_lieu`, `update_lieu`, `deactivate_lieu`, `delete_lieu_photo`.
 - Depuis la 0.4.1, les fiches de catégorie, de priorité, de jour de l'horaire et de jour non ouvré portent `trace` (`etat`, `le`, `par`) : qui les a modifiées en dernier et quand, ou « livrée ». Le nom n'est rendu qu'aux personnes de l'entité. Aucun outil nouveau.
 - Depuis la 0.5.0, le serveur retire les espaces de début et de fin de tout texte reçu, par le MCP comme par l'API, sauf les mots de passe ; un champ obligatoire fait seulement d'espaces est refusé (`VALIDATION`), avant tout jeton de confirmation.
-- Les instructions envoyées au client demandent de commencer par `get_profile` : les données métier sont celles de l'entité active ; `select_entite` la change. Elles disent aussi que le MCP ne transporte aucun fichier, et qu'une demande se dépose par `create_demande`, le lieu proposé d'office étant `lieu_propose` dans `get_profile`, et les derniers lieux de ses demandes `lieux_recents` (0.7.5).
+- Les instructions envoyées au client demandent de commencer par `get_profile` : les données métier sont celles de l'entité active ; `select_entite` la change. Elles disent aussi que le MCP ne transporte aucun fichier, et qu'une demande se dépose par `create_demande`, le lieu proposé d'office étant `lieu_propose` dans `get_profile`, et les derniers lieux de ses demandes `lieux_recents` (0.7.5). Depuis la 0.8.0, elles disent que les pièces du brouillon partent avec la demande suivante, même déposée par `create_demande`, et qu'il faut le dire à la personne.
+
+## 0.8.0
+
+Outils nouveaux : `list_pieces_brouillon` (`GET /api/demandes/brouillon/pieces` : pièces du brouillon de la personne et plafonds de l'entité, `nombre`, `octets`, `types`), `get_piece` (`GET /api/pieces/:id` : nom affiché, type, taille, dimensions, numéro de la demande), `prepare_delete_piece` et `confirm_delete_piece` (`DELETE /api/pieces/:id`, suppression réelle, fichier effacé du disque ; droit vérifié dès `prepare_*`). `get_demande` rend `pieces` (avec `peut_retirer`), ou `null` pour qui suit seulement la demande. `create_demande` rattache les pièces du brouillon à la demande. `prepare_delete_brouillon` annonce le nombre de pièces effacées avec le brouillon. Le dépôt et le téléchargement d'un fichier restent hors MCP : la personne ajoute ses photos à l'écran.
 
 ## 0.7.5
 
@@ -88,12 +92,13 @@ Aucun outil nouveau ni modifié. Le message « Ce champ est obligatoire » de la
 | `list_notes_version`, `get_note_version`, `marquer_nouveautes_lues` | `GET /api/notes-version`, `GET /api/notes-version/:version`, `PUT /api/auth/nouveautes` (nouveau en 0.3.0) |
 | `list_users`, `get_user`, `create_user`, `update_user`, `prepare_deactivate_user`, `confirm_deactivate_user` | `/api/users` |
 
-Hors MCP : `POST /api/lieux/:id/photo` et `GET /api/lieux/:id/photo` (fichier). La fiche d'un lieu rendue par `get_lieu` dit s'il a une photo (`has_photo`) et depuis quand (`photo_at`).
+Hors MCP : `POST /api/lieux/:id/photo` et `GET /api/lieux/:id/photo`, `POST /api/demandes/brouillon/pieces` et `GET /api/pieces/:id/fichier` (fichiers). La fiche d'un lieu rendue par `get_lieu` dit s'il a une photo (`has_photo`) et depuis quand (`photo_at`).
 
 ## Exemples de demandes à l'assistant
 
 - « Signale une lampe en panne dans la salle du conseil. » L'assistant appelle `get_profile`, cherche le lieu par `list_lieux` (`q` « salle du conseil ») et la catégorie par `get_categories_arbre`, puis appelle `create_demande` et donne le numéro.
 - « Où en sont mes demandes ? » L'assistant appelle `list_demandes` avec `ouvertes` 1.
+- « Retire la photo que j'ai jointe par erreur à ma demande. » L'assistant lit la demande par `get_demande`, nomme la pièce, puis appelle `prepare_delete_piece` et, après accord, `confirm_delete_piece`.
 - « Montre-moi l'arbre du patrimoine du CPAS. » L'assistant appelle `get_profile`, `select_entite` si nécessaire, puis `get_lieux_arbre`.
 - « Ajoute le local 1.02, un bureau, au premier étage de la maison communale. » L'assistant cherche le niveau par `list_lieux`, le type par `list_listes_valeurs`, puis appelle `create_lieu`.
 - « Qui a modifié le nom du pouvoir local ? » (administrateur) L'assistant appelle `list_audit` avec l'action `parametre.update`.

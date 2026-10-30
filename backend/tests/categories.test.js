@@ -242,7 +242,7 @@ test('migration 004 sur une base 0.3.1 : arbre et priorités livrés à chaque e
   assert.match(up.stdout, /\[DB\] Migration 004_referentiel_demandes appliquée/);
   const out = JSON.parse(up.stdout.trim().split('\n').pop());
   assert.ok(out.migrations.includes('004_referentiel_demandes'));
-  assert.equal(out.migrations.at(-1), '006_demandes_formulaire', 'les migrations suivantes passent aussi');
+  assert.equal(out.migrations.at(-1), '007_pieces_jointes', 'les migrations suivantes passent aussi');
   assert.deepEqual(out.parEntite, [{ code: 'AC', n: 35 }, { code: 'CPAS', n: 35 }, { code: 'OLD', n: 0 }]);
   assert.deepEqual(out.priorites, [{ code: 'AC', n: 4 }, { code: 'CPAS', n: 4 }]);
   assert.deepEqual(out.questions, [{ code: 'AC', n: 3 }, { code: 'CPAS', n: 3 }], 'questions livrées (DEM-05, 0.7.0)');

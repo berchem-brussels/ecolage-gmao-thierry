@@ -27,11 +27,13 @@ const parse = (r) => JSON.parse(r.body.result.content[0].text);
 const tool = async (c, name, args = {}) => parse(await c.mcp('tools/call', { name, arguments: args }));
 const typeId = (code) => types.find((t) => t.code === code).id;
 
-/** Dépôt binaire d'une photo par le cookie de session et le jeton anti-CSRF, comme le navigateur. */
+/** Dépôt d'une photo en formulaire multipart (champ « fichier ») par le cookie de session et le jeton anti-CSRF, comme le navigateur. */
 async function upload(c, id, buf, type = 'image/jpeg', { csrf = true } = {}) {
-  const headers = { Cookie: c.cookie, 'Content-Type': type };
+  const headers = { Cookie: c.cookie };
   if (csrf) headers['X-CSRF-Token'] = c.csrf;
-  const res = await fetch(`${srv.base}/api/lieux/${id}/photo`, { method: 'POST', headers, body: buf });
+  const body = new FormData();
+  body.append('fichier', new Blob([buf], { type }), 'photo');
+  const res = await fetch(`${srv.base}/api/lieux/${id}/photo`, { method: 'POST', headers, body });
   return { status: res.status, body: await res.json() };
 }
 

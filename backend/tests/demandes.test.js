@@ -68,7 +68,7 @@ test('dépôt par un agent : numéro, état « À qualifier », priorité propos
   assert.ok(d.delai_annonce.fin_le || d.delai_annonce.date_convenue);
   const j = getDb().prepare("SELECT * FROM audit_log WHERE action = 'demande.create' AND entity_id = ?").get(d.id);
   assert.equal(j.entite_id, ea.id);
-  assert.deepEqual(Object.keys(JSON.parse(j.details_json)).sort(), ['beneficiaire_id', 'beneficiaire_texte', 'categorie_id', 'danger', 'date_souhaitee', 'lieu_id', 'numero', 'priorite', 'reponses'], 'pas de description au journal');
+  assert.deepEqual(Object.keys(JSON.parse(j.details_json)).sort(), ['beneficiaire_id', 'beneficiaire_texte', 'categorie_id', 'danger', 'date_souhaitee', 'lieu_id', 'numero', 'pieces', 'priorite', 'reponses'], 'pas de description au journal');
 });
 
 test('validation : description de 10 caractères au moins après retrait des espaces, champs connus seulement', async () => {

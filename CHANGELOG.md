@@ -1,6 +1,20 @@
 # Journal des versions
 
-Version de l'application : **0.7.5** · Mis à jour le 29/10/2026
+Version de l'application : **0.8.0** · Mis à jour le 30/10/2026
+
+## 0.8.0 (30/10/2026)
+
+Étape 6 : photos et pièces jointes des demandes (DEM-09, DEM-16, RGPD-01, RGPD-02 ; DV-82 à DV-85). Migration `007_pieces_jointes`.
+
+- Socle des fichiers : `multer` 2.5.0 (E-16, décidé par Renaud le 28/10/2026) dans un lecteur commun (`backend/src/fichiers.js`) : formulaire multipart, un fichier au champ `fichier`, en mémoire, plafonné ; type sur les premiers octets ; photos nettoyées par `images.js` ; PDF tronqué ou à contenu actif refusé. La photo d'un lieu passe sur ce lecteur ; droits contrôlés avant la lecture du fichier. Contrat OpenAPI en `multipart/form-data`.
+- Pièces jointes : table `pieces_jointes`, dossier `pieces`, routes `GET` et `POST /api/demandes/brouillon/pieces`, `GET /api/pieces/:id`, `GET /api/pieces/:id/fichier` (toujours en pièce jointe), `DELETE /api/pieces/:id` (suppression réelle). Ajout au brouillon (DV-85), rattachement à l'envoi, effacement avec le brouillon et après 30 jours. Lecture par le demandeur, le bénéficiaire et le service technique, pas par qui suit seulement. Suppression selon DV-84 (permission nouvelle `pieces:supprimer`). Journal `piece.add`, `piece.delete`, `piece.purge`, sans nom de fichier.
+- Réglages de l'entité, groupe « Pièces jointes des demandes » : 5 pièces, 10 Mo, photos et PDF (DV-83).
+- Formulaire : bloc « Photos et documents » (réduction des photos dans le navigateur, envoi un à un, consigne DV-66, compteur, « Retirer ») ; pièces dans le brouillon et l'invite de reprise ; nombre de pièces après l'envoi.
+- Fiche d'une demande : ligne « Pièces jointes », vignettes, téléchargement des PDF, « Retirer » selon `peut_retirer`.
+- MCP : `list_pieces_brouillon`, `get_piece`, `delete_piece` ; dépôt et téléchargement hors MCP (E-17, quatre routes).
+- Exploitation : `nginx.conf` 11 Mo sur la seule route de dépôt des pièces ; `backup.sh` copie le dossier `pieces`.
+- Aide : rubriques Nouvelle demande et Réglages de l'entité, questions 25 et 26 de la FAQ, réponse de l'assistant ; note de version (une ligne pour tous, une pour le responsable).
+- Tests : serveur 347 (309 en 0.7.5), interface 149 (132).
 
 ## 0.7.5 (29/10/2026)
 

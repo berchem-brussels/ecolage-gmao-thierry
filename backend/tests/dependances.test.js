@@ -28,3 +28,9 @@ test('verrou du serveur : body-parser, fast-uri et qs aux versions corrigées ou
 test('verrou du serveur : Express reste en version 4 (standard, section 4)', () => {
   assert.equal(num(VERROU['node_modules/express'].version)[0], 4);
 });
+
+test('verrou du serveur : `multer` en version 2 (E-16 ; la ligne 1.x est dépréciée par son éditeur), sur busboy', () => {
+  assert.equal(num(VERROU['node_modules/multer'].version)[0], 2);
+  assert.ok(VERROU['node_modules/busboy'], 'busboy, lecteur multipart de multer');
+  assert.ok(JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'package.json'), 'utf8')).dependencies.multer.startsWith('^2.'));
+});

@@ -7,6 +7,7 @@
 const { test, before, after } = require('node:test');
 const assert = require('node:assert/strict');
 const { startServer, setup, person } = require('./helpers');
+const { jpeg } = require('./fixtures');
 const { collectRoutes } = require('../src/openapi');
 
 let srv;
@@ -34,6 +35,8 @@ const RESSOURCES = [
   { route: 'GET /api/demandes/:id', tool: 'get_demande', id: (ent) => objets[ent.code].demande },
   { route: 'GET /api/categories/:id/questions', tool: 'list_questions_categorie', id: (ent) => objets[ent.code].categorie },
   { route: 'GET /api/questions-categorie/:id', tool: 'get_question_categorie', id: (ent) => objets[ent.code].question },
+  { route: 'GET /api/pieces/:id', tool: 'get_piece', id: (ent) => objets[ent.code].piece },
+  { route: 'GET /api/pieces/:id/fichier', tool: null, id: (ent) => objets[ent.code].piece },
 ];
 
 /** Écritures cloisonnées : même attente, 403 depuis l'autre entité, et l'objet n'a pas bougé. */
@@ -52,7 +55,16 @@ const ECRITURES = [
   { route: 'POST /api/categories/:id/questions', body: { question_fr: 'Piraté', question_nl: 'Piraté', type: 'oui_non' }, tool: 'create_question_categorie', id: (ent) => objets[ent.code].categorie },
   { route: 'PUT /api/questions-categorie/:id', body: { question_fr: 'Piraté' }, tool: 'update_question_categorie', id: (ent) => objets[ent.code].question },
   { route: 'DELETE /api/questions-categorie/:id', body: { motif: 'Piraté' }, tool: 'prepare_deactivate_question_categorie', id: (ent) => objets[ent.code].question },
+  { route: 'DELETE /api/pieces/:id', body: {}, tool: 'prepare_delete_piece', id: (ent) => objets[ent.code].piece },
 ];
+
+/** Dépôt d'une pièce jointe au brouillon (formulaire multipart), comme le navigateur. */
+async function deposerPiece(c) {
+  const body = new FormData();
+  body.append('fichier', new Blob([jpeg()], { type: 'image/jpeg' }), 'photo.jpg');
+  const res = await fetch(`${srv.base}/api/demandes/brouillon/pieces`, { method: 'POST', headers: { Cookie: c.cookie, 'X-CSRF-Token': c.csrf }, body });
+  return { status: res.status, body: await res.json() };
+}
 
 const tool = async (c, name, args) => JSON.parse((await c.mcp('tools/call', { name, arguments: args })).body.result.content[0].text);
 
@@ -69,11 +81,14 @@ before(async () => {
     const valeur = (await c.get('/api/listes-valeurs?liste=type_lieu')).body.data[0];
     const categorie = (await c.get('/api/categories?niveau=nature&q=eclairage')).body.data[0];
     const jour = (await c.get('/api/jours-non-ouvres?nature=conge')).body.data[0];
+    const piece = await deposerPiece(c);
+    assert.equal(piece.status, 201, JSON.stringify(piece.body));
     const demande = await c.post('/api/demandes', { lieu_id: lieu.body.data.id, categorie_id: categorie.id, description: `Lampe en panne ${ent.code}` });
     assert.equal(demande.status, 201, JSON.stringify(demande.body));
+    assert.equal(demande.body.data.pieces.length, 1, 'la pièce du brouillon passe à la demande');
     const plomberie = (await c.get('/api/categories?niveau=domaine&q=plomberie')).body.data[0];
     const question = (await c.get(`/api/categories/${plomberie.id}/questions`)).body.data[0];
-    objets[ent.code] = { lieu: lieu.body.data.id, valeur: valeur.id, categorie: categorie.id, jour: jour.id, demande: demande.body.data.id, question: question.id };
+    objets[ent.code] = { lieu: lieu.body.data.id, valeur: valeur.id, categorie: categorie.id, jour: jour.id, demande: demande.body.data.id, question: question.id, piece: piece.body.data.id };
   }
 });
 after(() => srv.stop());
@@ -134,6 +149,7 @@ for (const w of ECRITURES) {
     assert.notEqual(question.question_fr, 'Piraté');
     assert.equal(question.is_active, 1);
     assert.equal((await gestB.get(`/api/categories/${objets.BB.categorie}/questions?inclure_inactives=1`)).body.data.length, 0, 'aucune question ajoutée');
+    assert.equal((await gestB.get(`/api/pieces/${objets.BB.piece}`)).status, 200, 'la pièce jointe est toujours là');
   });
 }
 
@@ -244,6 +260,6 @@ test('toute route qui porte un identifiant d’entité figure dans la liste des 
     const key = `${r.method} ${r.path}`;
     if (/^\/api\/entites\/:id/.test(r.path) && !instance.has(key)) assert.ok(declared.has(key), `${key} hors de la liste`);
     // Ressources métier rattachées à une entité : toute route à identifiant est essayée depuis l'autre entité.
-    if (/^\/api\/(lieux|listes-valeurs|categories|questions-categorie|jours-non-ouvres|demandes)\/:id/.test(r.path)) assert.ok(declared.has(key) || ecritures.has(key), `${key} hors de la liste`);
+    if (/^\/api\/(lieux|listes-valeurs|categories|questions-categorie|jours-non-ouvres|demandes|pieces)\/:id/.test(r.path)) assert.ok(declared.has(key) || ecritures.has(key), `${key} hors de la liste`);
   }
 });

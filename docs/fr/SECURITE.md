@@ -2,6 +2,37 @@
 
 Le français fait foi. Grille de la section 10.2 du standard, rejouée à chaque version. « Non joué » veut dire que le contrôle n'a pas tourné.
 
+## 0.8.0 (30/10/2026)
+
+Photos et pièces jointes des demandes (étape 6 ; DEM-09, DEM-16, RGPD-01, RGPD-02 ; DV-82 à DV-85). Environnement : bac à sable de Claude, Node 22.23.4. Dépendance nouvelle : `multer` 2.5.0 (E-16, décidé par Renaud le 28/10/2026), avec `busboy`, `streamsearch` et `append-field` (`type-is` était déjà là). Migration `007_pieces_jointes`. Routes nouvelles : `GET` et `POST /api/demandes/brouillon/pieces`, `GET /api/pieces/:id`, `GET /api/pieces/:id/fichier`, `DELETE /api/pieces/:id`.
+
+| Famille | Contrôle | Résultat |
+| --- | --- | --- |
+| Authentification | Session exigée sur toutes les routes nouvelles, fichier compris (lecture par le cookie seul, comme une balise image) ; 401 sans session | Conforme (`pieces.test.js`, test généré sur toutes les routes) |
+| Autorisation | Pièce de brouillon : son auteur seul, même face au service technique ; pièce de demande : demandeur, bénéficiaire et service technique (`demandes:entite`), pas qui suit seulement (« Moi aussi ») ; suppression selon DV-84 (demandeur tant que « Reçue », gestionnaire et responsable toujours, ouvrier jamais) ; droits contrôlés **avant** la lecture du corps | Conforme (`pieces.test.js`, `fichiers.test.js`) |
+| IDOR | Identifiant d'une pièce d'une autre personne ou d'une autre entité : 403, par l'API comme par le MCP ; le nom du fichier sur le disque n'est jamais rendu | Conforme (`pieces.test.js`, `cloison.test.js`) |
+| Cloison AC et CPAS | `GET /api/pieces/:id`, `GET /api/pieces/:id/fichier` et `DELETE /api/pieces/:id` ajoutés à la liste de `cloison.test.js`, la pièce reste en place | Conforme (`cloison.test.js`) |
+| Validation (fichiers) | `multer` 2.x en mémoire, un seul fichier au champ `fichier`, `limits.fileSize` au plafond de l'entité (10 Mo au plus), `fileFilter` sur le type annoncé ; type vérifié sur les premiers octets ; photo parcourue et nettoyée (EXIF, GPS, commentaires, blocs texte du PNG), dimensions plafonnées ; PDF : en-tête, fin de fichier, refus de `/JavaScript`, `/JS`, `/Launch`, `/EmbeddedFile(s)`, `/RichMedia`, `/XFA`, `/SubmitForm`, `/ImportData`, y compris en noms échappés (`#xx`) ; exécutable renommé, SVG, PDF déguisé en JPEG, corps binaire brut, deux fichiers, champ inconnu : refusés et codés | Conforme (`fichiers.test.js`, `pieces.test.js`, `lieux.test.js`) |
+| Validation (plafonds) | Nombre de pièces contrôlé avant la lecture (409 `PIECES_PLAFOND`) ; dépôt fermé (409 `PIECES_FERMEES`) ; taille au-delà du réglage : 413 `PAYLOAD_TOO_LARGE` dans l'enveloppe ; réglages bornés (0 à 10 pièces, 1 à 10 Mo) | Conforme (`pieces.test.js`) |
+| Injections | Requêtes constantes, paramètres liés ; nom affiché nettoyé (chemin, caractères de contrôle, guillemets, `<>`) et extension remise d'après le type reconnu | Conforme (test statique `securite.test.js`, `pieces.test.js`) |
+| Données | Stockage hors de la racine web (`/app/data/pieces`), nom généré par le serveur (32 caractères hexadécimaux), écriture atomique ; suppression réelle : ligne supprimée et fichier effacé du disque (RGPD-02) ; pièces du brouillon effacées avec lui et après 30 jours sans brouillon ; journal sans nom de fichier ni contenu | Conforme (`pieces.test.js`) |
+| Téléchargement | Toujours en pièce jointe (`Content-Disposition: attachment`, nom ASCII et UTF-8), `nosniff`, `Cache-Control: private, no-store`, `Content-Security-Policy: default-src 'none'; sandbox` | Conforme (`pieces.test.js`) |
+| CSRF | Jeton anti-CSRF exigé sur le dépôt et la suppression | Conforme (`pieces.test.js`, `lieux.test.js`) |
+| Secrets commités | `.gitignore` inchangé | Conforme : seul `.env.example`, aucune base, aucun `dist/`, aucune valeur de NIXUS |
+| Interface | Noms rendus par React, sans HTML injecté ; vignettes avec texte de remplacement ; « Retirer » avec confirmation ; consigne de prise de vue (DV-66) | Conforme (tests, `a11y`, axe-core en FR et en NL) |
+| Infrastructure | `nginx.conf` : 11 Mo sur la seule route de dépôt des pièces, 1 Mo ailleurs ; `backup.sh` copie le dossier `pieces` (30 jours) ; Dockerfile, compose, `.env`, `ci.yml` inchangés | Conforme (`nginx -t` ; mesuré : 12 Mo refusé par nginx sur la route des pièces, 5 Mo transmis à l'API, 2 Mo refusé sur la photo d'un lieu ; test statique `pieces.test.js`) |
+| Dépendances | `npm audit --omit=dev` serveur | 0 vulnérabilité (`multer` 2.5.0 compris) |
+| Dépendances | `npm audit --omit=dev` interface | 3 modérées (E-09), inchangées |
+| LLM et MCP | `list_pieces_brouillon`, `get_piece`, `delete_piece` (deux appels) sous les droits de la personne ; aucun fichier transporté ; dépôt et téléchargement hors MCP (E-17, liste de 4 routes) | Conforme (`pieces.test.js`, `mcp.test.js`) |
+
+Les trois contrôles qui ne restent jamais « non joués » (secrets commités, contrôle d'accès côté serveur, IDOR) ont été joués.
+
+Limites connues : un PDF ne se réécrit pas ; ses métadonnées de document (auteur, logiciel) restent, et un contenu actif caché dans un flux compressé n'est pas décompressé pour être cherché. Le fichier n'est jamais affiché en ligne depuis l'adresse de l'API (pièce jointe, bac à sable).
+
+### Preuve d'échec des nouveaux tests (0.8.0)
+
+Chaque contrôle retiré à tour de rôle, le reste du code de la 0.8.0 en place : sans le plafond de taille de `multer`, 2 tests échouent ; sans le contrôle du type admis, 1 ; sans le refus des PDF actifs, 1 ; sans le contrôle des droits avant la lecture, 1 ; sans la cloison sur les pièces, 5 ; brouillon lisible par d'autres, 7 ; sans le verrou après prise en charge, 1 ; sans l'effacement du fichier sur le disque, 1 ; sans le plafond du nombre, 1 ; pièces lues par qui suit seulement, 1. Code de la 0.8.0 : tout réussi.
+
 ## 0.7.5 (29/10/2026)
 
 Lieux récents (DV-74), bandeau de connexion (DV-53), affichage du journal d'audit (DV-76). Environnement : bac à sable de Claude, Node 22.23.4. Aucune route, aucune migration, aucune dépendance nouvelles.

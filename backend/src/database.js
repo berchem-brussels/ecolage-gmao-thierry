@@ -451,6 +451,28 @@ const MIGRATIONS = [
       UNIQUE (demande_id, question_id)
     )
   `],
+  // Version 0.8.0 (étape 6) : pièces jointes des demandes (DEM-09, DEM-10 ; DV-83 à DV-85). Une pièce appartient au
+  // brouillon de son auteur (demande_id NULL) puis à la demande envoyée ; elle se supprime réellement (RGPD-02) : ni
+  // colonne is_active ni suppression logique. Le fichier est sur le disque (dossier pieces, nom généré par le serveur) ;
+  // la table porte le nom affiché, nettoyé, et ce que le contrôle a mesuré.
+  ['007_pieces_jointes', `
+    CREATE TABLE pieces_jointes (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      entite_id INTEGER NOT NULL REFERENCES entites(id) ON DELETE RESTRICT,
+      demande_id INTEGER REFERENCES demandes(id) ON DELETE RESTRICT,
+      auteur_id INTEGER NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
+      fichier TEXT NOT NULL UNIQUE CHECK (length(fichier) BETWEEN 36 AND 40),
+      nom TEXT NOT NULL CHECK (length(nom) BETWEEN 1 AND 120),
+      type TEXT NOT NULL CHECK (type IN ('image/jpeg', 'image/png', 'application/pdf')),
+      octets INTEGER NOT NULL CHECK (octets > 0),
+      largeur INTEGER CHECK (largeur IS NULL OR largeur > 0),
+      hauteur INTEGER CHECK (hauteur IS NULL OR hauteur > 0),
+      canal TEXT NOT NULL DEFAULT 'ecran' CHECK (canal IN ('ecran', 'mcp', 'api')),
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+    CREATE INDEX idx_pieces_demande ON pieces_jointes(demande_id);
+    CREATE INDEX idx_pieces_auteur ON pieces_jointes(auteur_id, entite_id, demande_id)
+  `],
 ];
 
 function migrate() {

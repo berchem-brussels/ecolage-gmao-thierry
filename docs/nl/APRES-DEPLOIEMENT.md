@@ -2,6 +2,10 @@
 
 De Franse tekst is rechtsgeldig. Bijwerkingsprocedure: archief plaatsen, `cd <map>`, `ls -l` van het archief, `sudo bash backup.sh`, `sudo rm -rf backend frontend docs`, `sudo tar xzf … --strip-components=1`, `ls backend frontend`, `sudo docker compose build`, `sudo docker compose up -d`, `sudo docker compose ps`, `curl -sk https://localhost:<https>/api/version`, controlelijst van het leveringsbericht. `.env` en de volumes worden nooit aangeraakt.
 
+## 0.8.0 (30/10/2026)
+
+Bijwerking met migratie `007_pieces_jointes` (`[DB] Migration 007_pieces_jointes appliquée` in `sudo docker logs gmao-api --tail 30`). `docker compose build` downloadt `multer` (enkele minuten extra). `backup.sh` meldt nu ook `pièces jointes copiées` of `aucune pièce jointe à copier`. Controle: blok « Foto's en documenten » in het formulier, bijlagen op de fiche, groep « Bijlagen bij aanvragen » in Instellingen van de entiteit. Terugkeer naar 0.7.5 zonder de databank terug te zetten.
+
 ## 0.2.0 (21/10/2026)
 
 Bijwerking met migratie `002_lieux`, automatisch toegepast bij het starten (`[DB] Migration 002_lieux appliquée` in `sudo docker logs gmao-api --tail 30`). Daarna de demonstratiegegevens opnieuw laden (`sudo docker compose stop api`, `sudo docker compose run --rm api node src/demo.js`, `sudo docker compose up -d`) en de foto's op het scherm opladen. Controle: scherm Patrimonium, boom van AC onzichtbaar vanuit OCMW, foto van een plaats, scherm Waardelijsten. `backup.sh` kopieert nu ook de foto's.

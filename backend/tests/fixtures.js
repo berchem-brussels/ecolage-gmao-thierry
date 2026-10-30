@@ -52,4 +52,13 @@ function png({ width = 32, height = 32 } = {}) {
   ]);
 }
 
-module.exports = { jpeg, png };
+/** PDF minimal d'une page ; `corps` s'ajoute au catalogue (pour y glisser un contenu actif), `fin: false` le tronque. */
+function pdf({ corps = '', fin = true } = {}) {
+  const texte = ['%PDF-1.7', '1 0 obj << /Type /Catalog /Pages 2 0 R ' + corps + ' >> endobj',
+    '2 0 obj << /Type /Pages /Kids [3 0 R] /Count 1 >> endobj',
+    '3 0 obj << /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] >> endobj',
+    'trailer << /Root 1 0 R >>', ...(fin ? ['%%EOF'] : [])].join('\n');
+  return Buffer.from(texte, 'latin1');
+}
+
+module.exports = { jpeg, png, pdf };

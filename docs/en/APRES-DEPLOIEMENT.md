@@ -2,6 +2,10 @@
 
 The French text prevails. Update procedure: upload the archive, `cd <folder>`, `ls -l` the archive, `sudo bash backup.sh`, `sudo rm -rf backend frontend docs`, `sudo tar xzf … --strip-components=1`, `ls backend frontend`, `sudo docker compose build`, `sudo docker compose up -d`, `sudo docker compose ps`, `curl -sk https://localhost:<https>/api/version`, checklist from the delivery message. `.env` and the volumes are never touched.
 
+## 0.8.0 (30/10/2026)
+
+Update with migration `007_pieces_jointes` (`[DB] Migration 007_pieces_jointes appliquée` in `sudo docker logs gmao-api --tail 30`). `docker compose build` downloads `multer` (a few extra minutes). `backup.sh` now also reports `pièces jointes copiées` or `aucune pièce jointe à copier`. Check: « Photos et documents » block in the form, attachments on the request record, group « Pièces jointes des demandes » in Entity settings. Rollback to 0.7.5 without restoring the database.
+
 ## 0.2.0 (21/10/2026)
 
 Update with migration `002_lieux`, applied automatically at start-up (`[DB] Migration 002_lieux appliquée` in `sudo docker logs gmao-api --tail 30`). Then reload the demonstration data (`sudo docker compose stop api`, `sudo docker compose run --rm api node src/demo.js`, `sudo docker compose up -d`) and upload the photos on screen. Check: Places screen, AC tree invisible from CPAS, photo of a place, Value lists screen. `backup.sh` now also copies the photos.

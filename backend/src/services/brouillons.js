@@ -6,6 +6,7 @@
  *      date, créneau), contrôlé par le schéma brouillonSave. À la reprise, un lieu, une catégorie, une réponse ou un
  *      collègue qui ne vaut plus est retiré.
  *   3. Il est effacé à l'envoi d'une demande (services/demandes.js), par « Recommencer à zéro », ou au bout de 30 jours.
+ *      Ses pièces jointes (0.8.0) passent à la demande envoyée, ou s'effacent avec lui.
  *   4. Pas de ligne au journal d'audit : un brouillon n'est pas encore une demande (écart E-27, à soumettre).
  */
 const { getDb } = require('../database');
@@ -25,6 +26,8 @@ function entiteActive(user) {
 /** Efface les brouillons de plus de 30 jours, de toutes les personnes. */
 function purger() {
   getDb().prepare("DELETE FROM brouillons WHERE updated_at < datetime('now', ?)").run(`-${JOURS} days`);
+  // Pièces jointes de plus de 30 jours restées sans brouillon (0.8.0, DV-85).
+  require('./pieces').purger();
 }
 
 /** Retire du contenu ce qui ne vaut plus dans l'entité : lieu inactif ou d'une autre entité, catégorie inactive, collègue parti. */
@@ -71,10 +74,12 @@ function save(user, { contenu }) {
 }
 
 /** Efface le brouillon de la personne dans l'entité active (« Recommencer à zéro ») ; rien s'il n'y en a pas. */
-function remove(user) {
+function remove(user, channel = 'api') {
   const entiteId = entiteActive(user);
   const r = getDb().prepare('DELETE FROM brouillons WHERE user_id = ? AND entite_id = ?').run(user.id, entiteId);
-  return { efface: r.changes ? 1 : 0 };
+  // Les pièces jointes du brouillon s'effacent avec lui, fichiers compris (DV-85, RGPD-02).
+  const pieces = require('./pieces').effacerBrouillon(user, channel);
+  return { efface: r.changes || pieces ? 1 : 0, pieces };
 }
 
 /** Effacement après l'envoi d'une demande, dans la transaction de dépôt. */

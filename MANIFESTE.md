@@ -1,8 +1,27 @@
 # Manifeste
 
-Version de l'application : **0.7.5** · Mis à jour le 29/10/2026
+Version de l'application : **0.8.0** · Mis à jour le 30/10/2026
 
 Fichiers changés, dépendances et suites par version. Les décomptes sont recopiés de la sortie des commandes.
+
+## 0.8.0 (30/10/2026)
+
+Fichiers comparés à l'archive 0.7.5 par `diff -rq` (hors `node_modules` et `dist`). Pour le contrôle du `git status` (`GITHUB.md`, section 5) : aucune ligne `D` attendue ; neuf lignes `A`, les autres `M`.
+
+- Nouveaux : `backend/src/fichiers.js`, `backend/src/services/pieces.js`, `backend/src/routes/pieces.js` ; `backend/tests/fichiers.test.js`, `backend/tests/pieces.test.js` ; `frontend/src/components/demandes/PiecesDemande.tsx`, `frontend/src/components/demandes/VignettesPieces.tsx`, `frontend/src/test/api.test.ts` ; `NOTES_LIVRAISON_v0.8.0.md`.
+- Modifiés, serveur : `src/database.js` (migration `007_pieces_jointes`) ; `src/config.js` (`PIECES_DIR`, `PIECE_MAX_OCTETS`) ; `src/app.js` (montage de `/api/pieces`) ; `src/routes/lieux.js` (photo par `multer`, contrôle préalable) ; `src/routes/demandes.js` (pièces du brouillon) ; `src/services/lieux.js` (`peutDeposerPhoto`, contrôle commun) ; `src/services/demandes.js` (pièces de la fiche, rattachement à l'envoi) ; `src/services/brouillons.js` (pièces effacées avec le brouillon, purge) ; `src/openapi.js` (corps multipart) ; `src/mcp.js` (trois outils, instructions) ; `src/i18n-server.js` (codes `FILE_*`, `PIECES_*`, `PIECE_VERROUILLEE`) ; `config/roles.json` (`pieces:supprimer`) ; `config/parametres-entite.json` (groupe `pieces`) ; `config/notes-version.json` (note 0.8.0) ; tests `lieux`, `cloison`, `mcp`, `demandes`, `formulaire`, `parametres-entite`, `parametres`, `categories`, `numerotation`, `dependances`, `notes-version`, `fixtures.js` ; `package.json` (numéro, `multer`, deux fichiers de test) ; `package-lock.json` (`multer` 2.5.0, `busboy`, `streamsearch`, `append-field` ajoutés ; `type-is` déjà présent ; numéro).
+- Modifiés, interface : `src/api.ts` (`upload` en `FormData`, nom) ; `src/demandes.ts` (types `Piece`, `PlafondsPieces`, `taille`) ; `src/pages/NouvelleDemandePage.tsx` ; `src/pages/DemandesPage.tsx` ; `src/pages/JournalPage.tsx` ; `src/pages/HelpPage.tsx` (questions 25 et 26) ; `src/i18n.ts` ; `src/index.css` ; `src/test/demandes.test.tsx`, `src/test/i18n.test.ts` ; `nginx.conf` ; `package.json` et `package-lock.json` (numéro seulement). `frontend/dist/` reconstruit.
+- Modifiés, exploitation : `backup.sh` (dossier `pieces`).
+- Modifiés, documentation : `README.md`, `README.nl.md`, `README.en.md`, `CHANGELOG.md`, `MANIFESTE.md`, `ETAT.md`, `ECARTS-CDC.md` ; `docs/fr`, `docs/nl`, `docs/en` (`SECURITE.md`, `ARCHITECTURE.md`, `EXPLOITATION.md`, `MCP.md`, `APRES-DEPLOIEMENT.md`) ; `docs/fonctionnel/demandes.md` (règles 26, 30 à 34), `docs/fonctionnel/administration.md` (règle 13).
+- Inchangés : les deux Dockerfile, `docker-entrypoint.sh`, `docker-compose.yml`, `.env.example`, `.gitignore`, `.github/workflows/ci.yml`, `backend/src/images.js`.
+- Retirés : aucun fichier.
+- Dépendances : `multer` ^2.5.0 (section 4 du standard ; génération 2.x décidée par Renaud, E-16). Aucun `npm audit fix`.
+- Suites (Node 22.23.4, bac à sable, après `npm ci`) : serveur `npm test` 347 tests, 347 réussis, 0 échec, 0 sauté (309 en 0.7.5) ; interface `npm test` 5 fichiers, 149 tests, 149 réussis sur trois lancements consécutifs ; `npm run build` réussi ; `npm run a11y` 0 erreur.
+- Parcours du travail `tests` (`ci.yml`) rejoué sous Node 20.20.2 sur une copie ne contenant que les fichiers que Git verse : voir `ETAT.md`, section 2.
+- `npm audit --omit=dev` : serveur 0 vulnérabilité ; interface 3 modérées (E-09), inchangées.
+- Preuves d'échec : `docs/fr/SECURITE.md`, section 0.8.0.
+- Essai dans un vrai navigateur (Chromium, 390 × 844) : photo de 3 000 × 2 000 pixels réduite à 1 600 × 1 067 (13 ko), PDF envoyé tel quel, vignettes et compteur affichés. Retour à la 0.7.5 sur une base passée en 0.8.0 : démarre.
+- Images Docker : non reconstruites dans le bac à sable ; les deux images changent (code et dépendances du serveur, `frontend/dist/`, `nginx.conf`).
 
 ## 0.7.5 (29/10/2026)
 

@@ -11,15 +11,18 @@
  * 0.7.0 (DEM-04) : « Mes demandes » montre aussi les demandes suivies par « Moi aussi », marquées « Vous suivez aussi
  * cette demande », sans le nom du demandeur. La fiche du service technique cite les personnes qui suivent et leur remarque.
  * 0.7.0 (DEM-05) : la fiche montre les réponses aux questions de la catégorie, au demandeur comme au service technique.
+ * 0.8.0 (DEM-09, DV-84) : la fiche montre les pièces jointes au demandeur, au bénéficiaire et au service technique
+ * (pas à qui suit seulement) ; « Retirer » selon le droit rendu par le serveur, puis la fiche se recharge.
  */
 import { useCallback, useEffect, useState } from 'react';
-import { Alert, Button, Card, Descriptions, Drawer, Grid, Input, List, Segmented, Space, Table, Tag, Typography } from 'antd';
+import { Alert, Button, Card, Descriptions, Drawer, Grid, Input, List, Segmented, Space, Table, Tag, Typography, message } from 'antd';
 import { useSearchParams } from 'react-router-dom';
-import api, { qs } from '../api';
+import api, { ApiError, qs } from '../api';
+import VignettesPieces from '../components/demandes/VignettesPieces';
 import { useI18n } from '../contexts/I18nContext';
 import { useAuth } from '../contexts/AuthContext';
 import { Icone } from '../referentiel';
-import { type Demande, COULEUR_ETAT, beneficiaireTexte, cheminTexte, dateDepot, dateSouhaitee, extrait, finAnnoncee } from '../demandes';
+import { type Demande, type Piece, COULEUR_ETAT, beneficiaireTexte, cheminTexte, dateDepot, dateSouhaitee, extrait, finAnnoncee } from '../demandes';
 
 /** Mention « Danger » (0.7.0, DEM-06), à côté de l'état. */
 export function DangerTag() {
@@ -36,8 +39,17 @@ export function EtatTag({ etat }: { etat: Demande['etat'] }) {
 }
 
 /** Fiche d'une demande en lecture (0.5.0) ; la ligne du temps et les messages arrivent aux étapes 9 et 10. */
-export function FicheDemande({ d, avecDemandeur }: { d: Demande; avecDemandeur: boolean }) {
+export function FicheDemande({ d, avecDemandeur, onChange }: { d: Demande; avecDemandeur: boolean; onChange?: () => void }) {
   const { t, lang } = useI18n();
+  const retirer = async (p: Piece) => {
+    try {
+      await api.del(`/pieces/${p.id}`);
+      message.success(t('demande.pieces.retiree'));
+      onChange?.();
+    } catch (e) {
+      message.error(e instanceof ApiError ? e.message : t('common.error'));
+    }
+  };
   const fin = finAnnoncee(d.delai_annonce, lang);
   const cat = lang === 'nl' ? d.categorie_libelle_nl : d.categorie_libelle_fr;
   const dom = lang === 'nl' ? d.domaine_libelle_nl : d.domaine_libelle_fr;
@@ -63,6 +75,11 @@ export function FicheDemande({ d, avecDemandeur }: { d: Demande; avecDemandeur: 
       <Descriptions.Item label={t('demande.champ.description')}>
         <span lang={d.langue} style={{ whiteSpace: 'pre-wrap' }}>{d.description}</span>
       </Descriptions.Item>
+      {d.pieces && d.pieces.length > 0 && (
+        <Descriptions.Item label={t('demande.champ.pieces')}>
+          <VignettesPieces pieces={d.pieces} peutRetirer={(p) => p.peut_retirer === 1} onRetirer={retirer} label={t('demande.champ.pieces')} />
+        </Descriptions.Item>
+      )}
       {beneficiaireTexte(d) && d.pour_moi !== 1 && <Descriptions.Item label={t('demande.champ.pour')}>{beneficiaireTexte(d)}</Descriptions.Item>}
       <Descriptions.Item label={t('demande.champ.depot')}>{dateDepot(d.created_at)}</Descriptions.Item>
       {d.date_souhaitee && <Descriptions.Item label={t('demande.champ.date_souhaitee')}>{dateSouhaitee(d.date_souhaitee, lang)}</Descriptions.Item>}
@@ -116,10 +133,11 @@ export default function DemandesPage({ perimetre = 'miennes' }: { perimetre?: 'm
   useEffect(() => { charger(); }, [charger, user?.entite_active_id]);
 
   const ouverte = params.get('demande');
-  useEffect(() => {
+  const chargerFiche = useCallback(() => {
     if (!ouverte) { setFiche(null); return; }
     api.get<Demande>(`/demandes/${ouverte}`).then(setFiche).catch(() => setFiche(null));
   }, [ouverte]);
+  useEffect(() => { chargerFiche(); }, [chargerFiche]);
   const ouvrir = (d: Demande) => { const p = new URLSearchParams(params); p.set('demande', String(d.id)); setParams(p); };
   const fermer = () => { const p = new URLSearchParams(params); p.delete('demande'); setParams(p); };
 
@@ -189,7 +207,7 @@ export default function DemandesPage({ perimetre = 'miennes' }: { perimetre?: 'm
           ]} />
       )}
       <Drawer open={!!fiche} onClose={fermer} width={mobile ? '100%' : 520} title={fiche ? `${t('demande.fiche')} ${fiche.numero}` : ''}>
-        {fiche && <FicheDemande d={fiche} avecDemandeur={entiteMode} />}
+        {fiche && <FicheDemande d={fiche} avecDemandeur={entiteMode} onChange={chargerFiche} />}
         {fiche && !entiteMode && <Typography.Paragraph type="secondary" style={{ marginTop: 12, fontSize: 13 }}>{t('demande.fiche.suite')}</Typography.Paragraph>}
       </Drawer>
     </div>

@@ -29,6 +29,8 @@
  *  11. Questions propres à la catégorie (DEM-05, 0.7.0) : les réponses sont contrôlées au dépôt (questions de la
  *      catégorie choisie et de son domaine, réponse permise, obligatoires remplies ; services/questions-categorie.js)
  *      et enregistrées avec la demande, texte compris. Elles sont lues sur la fiche par le demandeur et par le service.
+ *  12. Pièces jointes (DEM-09, 0.8.0, services/pieces.js) : celles du brouillon passent à la demande dans la transaction
+ *      d'envoi ; la fiche les rend au demandeur, au bénéficiaire et au service technique, pas à qui suit seulement.
  * Module « demandes » du noyau : toujours actif ; le contrôle est posé pour l'ordre API-04.
  */
 const { getDb } = require('../database');
@@ -151,6 +153,9 @@ function get(user, id) {
   const f = fiche(d, undefined, user);
   f.reponses = questions.deDemande(d.id);
   if (peut(user, 'demandes:entite')) f.suiveurs = suiveurs(d.id);
+  // Pièces jointes (0.8.0) : demandeur, bénéficiaire et service technique ; null pour qui suit seulement la demande.
+  const litPieces = d.demandeur_id === user.id || d.beneficiaire_id === user.id || peut(user, 'demandes:entite');
+  f.pieces = litPieces ? require('./pieces').deDemande(d.id, user, d) : null;
   return f;
 }
 
@@ -254,6 +259,8 @@ function create(user, data, channel = 'api') {
         priorite, danger, CANAUX[channel] || 'api', user.id, beneficiaireId, beneficiaireTexte, dateSouhaitee, data.creneau || null,
         user.id, user.id, versSql(maintenant), versSql(maintenant));
     questions.enregistrer(r.lastInsertRowid, reponses);
+    // Les pièces jointes du brouillon passent à la demande (DV-85, 0.8.0), avant l'effacement du brouillon.
+    const nbPieces = require('./pieces').rattacher(user.id, entiteId, r.lastInsertRowid);
     // Le brouillon du formulaire n'a plus lieu d'être (DEM-11, 0.7.0).
     require('./brouillons').effacerApresEnvoi(user.id, entiteId);
     // Le journal garde le numéro, le lieu et la catégorie ; la description reste sur la fiche.
@@ -261,7 +268,7 @@ function create(user, data, channel = 'api') {
       // Ni le texte du bénéficiaire ni le créneau : textes libres, ils restent sur la fiche.
       { numero: n.numero, lieu_id: data.lieu_id, categorie_id: data.categorie_id, priorite, danger,
         beneficiaire_id: beneficiaireId, beneficiaire_texte: beneficiaireTexte ? 1 : 0, date_souhaitee: dateSouhaitee,
-        reponses: reponses.length }, channel, entiteId);
+        reponses: reponses.length, pieces: nbPieces }, channel, entiteId);
     return r.lastInsertRowid;
   })();
   return get(user, id);

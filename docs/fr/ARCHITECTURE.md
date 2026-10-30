@@ -9,7 +9,7 @@ Version 0.7.1 · Le français fait foi.
 | `api` | `${APP_NAME}-api` | Express 4 : routes `/api/*`, validation `ajv`, session, droits, journal d'audit, serveur MCP dans le processus (`POST /api/mcp`) | 3001 en `expose`, jamais publié |
 | `web` | `${APP_NAME}-web` | nginx 1.27.5 : redirection HTTP vers HTTPS, interface construite (`dist/`), relais `/api/` vers `api:3001`, en-têtes de sécurité | `HTTPS_PORT` et `HTTP_PORT` du `.env` |
 
-Base `sql.js` dans le volume `db-data` (`/app/data/app.db`), écrite par le seul processus `api`. Photos des lieux dans le même volume (`/app/data/photos`, variable `PHOTOS_DIR`), hors de la racine web, lues par une route authentifiée. Certificat dans le volume `ssl-certs`. PostgreSQL 16 arrive au lot L7 (standard, section 5).
+Base `sql.js` dans le volume `db-data` (`/app/data/app.db`), écrite par le seul processus `api`. Photos des lieux dans le même volume (`/app/data/photos`, variable `PHOTOS_DIR`) et, depuis la 0.8.0, pièces jointes des demandes (`/app/data/pieces`, variable `PIECES_DIR`), hors de la racine web, lues par des routes authentifiées. Certificat dans le volume `ssl-certs`. PostgreSQL 16 arrive au lot L7 (standard, section 5).
 
 ## Tables (migrations `001_noyau` à `006_demandes_formulaire`)
 
@@ -32,6 +32,7 @@ Base `sql.js` dans le volume `db-data` (`/app/data/app.db`), écrite par le seul
 | `demande_suiveurs` | Personnes qui suivent une demande d'un autre, « Moi aussi » (0.7.0) | (`demande_id`, `user_id`) unique ; `remarque` (1 à 5 000 caractères, lue par le seul service technique), `canal` |
 | `brouillons` | Brouillon du formulaire de demande (0.7.0) | (`user_id`, `entite_id`) unique ; `contenu` JSON (2 à 20 000 caractères) tel que l'écran l'affiche ; effacé à l'envoi, par « Recommencer à zéro » ou après 30 jours ; hors journal d'audit (écart E-27) |
 | `questions_categorie` | Questions propres à un domaine ou une nature (0.7.0) | `entite_id`, `categorie_id` ; `question_fr`, `question_nl` (1 à 200 caractères) ; `type` (`oui_non`, `choix`) ; `reponses_json` (2 à 6 réponses FR et NL pour un choix, vide pour oui ou non) ; `obligatoire`, `ordre`, `is_active`, `motif_desactivation`, traces `created_*` et `updated_*` |
+| `pieces_jointes` | Pièces jointes des demandes (0.8.0) | `entite_id`, `demande_id` (NULL tant que la pièce est dans le brouillon), `auteur_id`, `fichier` (nom généré, unique, jamais rendu), `nom` affiché nettoyé, `type` (`image/jpeg`, `image/png`, `application/pdf`), `octets`, `largeur`, `hauteur`, `canal` ; pas de `is_active` : suppression réelle |
 | `demande_reponses` | Réponses d'une demande aux questions (0.7.0) | (`demande_id`, `question_id`) unique ; `valeur` (`oui`, `non`, `1` à `6`) ; copie de `question_fr`, `question_nl`, `reponse_fr`, `reponse_nl` au dépôt ; `ordre` |
 | `jours_non_ouvres` | Congés et fermetures par entité (0.4.0) | `nature` `conge` (`mois_jour` `MM-JJ`, chaque année) ou `fermeture` (`date_debut`, `date_fin`) ; libellés FR et NL ; `is_active`, `motif_desactivation`. Les jours fériés légaux sont calculés, sans table |
 | `schema_migrations` | Journal des migrations | |
@@ -82,7 +83,7 @@ Règles validées le 21/10/2026, appliquées dans `services/lieux.js` :
 
 La nature d'un lieu ne change pas après la création. Le parent et le type se contrôlent dans l'entité active : un parent ou un type d'une autre entité est refusé.
 
-Photo : `POST /api/lieux/:id/photo` reçoit le fichier en corps binaire (`image/jpeg` ou `image/png`, 1 Mo au plus) par `express.raw`. `images.js` reconnaît le type sur les premiers octets, refuse un type annoncé faux, parcourt la structure, plafonne les dimensions à 4 096 pixels et retire les métadonnées (segments APP1 à APP15 et commentaires du JPEG, blocs `tEXt`, `zTXt`, `iTXt`, `eXIf`, `tIME` du PNG). Le nom du fichier est généré par le serveur (32 caractères hexadécimaux), écrit par un fichier temporaire puis renommé ; il ne sort jamais dans une réponse ni dans le journal. Le navigateur réduit d'abord la photo à 1 600 pixels et la réencode en JPEG (`frontend/src/photo.ts`), ce qui retire déjà les métadonnées.
+Photo : `POST /api/lieux/:id/photo` reçoit le fichier en formulaire multipart, au champ `fichier` (`image/jpeg` ou `image/png`, 1 Mo au plus), par le lecteur commun `fichiers.js` sur `multer` 2.x (depuis la 0.8.0 ; corps binaire par `express.raw` avant). Droit, module et lieu actif sont contrôlés avant la lecture du corps. `images.js` reconnaît le type sur les premiers octets, refuse un type annoncé faux, parcourt la structure, plafonne les dimensions à 4 096 pixels et retire les métadonnées (segments APP1 à APP15 et commentaires du JPEG, blocs `tEXt`, `zTXt`, `iTXt`, `eXIf`, `tIME` du PNG). Le nom du fichier est généré par le serveur (32 caractères hexadécimaux), écrit par un fichier temporaire puis renommé ; il ne sort jamais dans une réponse ni dans le journal. Le navigateur réduit d'abord la photo à 1 600 pixels et la réencode en JPEG (`frontend/src/photo.ts`), ce qui retire déjà les métadonnées.
 
 ## Routes
 
@@ -137,6 +138,8 @@ Photo : `POST /api/lieux/:id/photo` reçoit le fichier en corps binaire (`image/
 | `DEMO_ALLOWED` | `0` | `.env`, autorise la commande de démonstration |
 | Listes de valeurs et valeurs livrées | Dix types de lieux | `config/listes-valeurs.json` ; créées pour chaque entité active au démarrage et à la création d'une entité, jamais recréées une fois désactivées |
 | `PHOTOS_DIR` | `photos` à côté de la base | Environnement du conteneur `api` |
+| `PIECES_DIR` | `pieces` à côté de la base (0.8.0) | Environnement du conteneur `api` |
+| Plafonds des pièces jointes | 5 par demande, 10 Mo par fichier, photos et PDF ; plafond absolu `PIECE_MAX_OCTETS` 10 Mo | `config/parametres-entite.json` (groupe `pieces`), `backend/src/config.js` |
 
 ## Commande de démonstration
 
@@ -225,6 +228,20 @@ Mentions d'information (RGPD-10) : `parametresEntite.protectionDonnees()` rend l
 Interface : `components/demandes/DemandesVoisines.tsx`, `ComplementsDemande.tsx`, `QuestionsCategorie.tsx`, `components/referentiel/QuestionsFiche.tsx` ; `NouvelleDemandePage.tsx` (danger, voisines, questions, compléments, brouillon enregistré 1,5 s après le dernier changement, mention et « En savoir plus ») ; `DemandesPage.tsx` (« Précisions », suiveurs, « Faite pour vous ») ; `ReglagesForm.tsx` (type `texte_long`) ; rubrique « Protection de vos données » de l'aide.
 
 Rouge des erreurs (écart E-26) : `frontend/src/couleurs.ts` et `buildTheme()` d'`App.tsx` posent `colorError`, `colorErrorText` et `Button.dangerColor` en clair (`#cf1322`) et en sombre (graine `#ff8a8a`, `#dc7878` calculé par Ant Design sous les champs) ; `ErreurObligatoire.tsx` lit le jeton du thème ; `test/couleurs.test.tsx` vérifie 4,5:1 sur chaque fond à partir des jetons calculés (`theme.getDesignToken`).
+
+## Photos et pièces jointes des demandes (0.8.0)
+
+Migration `007_pieces_jointes` : table `pieces_jointes` et deux index ; ajout seulement.
+
+Réception (`backend/src/fichiers.js`) : `recevoir({ maxOctets, types, contrat })` rend le lecteur `multer` d'une route (stockage en mémoire, un fichier au champ `fichier`, `limits.fileSize`, `fileFilter` sur le type annoncé, noms en UTF-8) ; plafond et types fixes ou lus par requête ; `fichierContrat` est lu par `openapi.js`, qui déclare le corps `multipart/form-data`. Erreurs : 413 `PAYLOAD_TOO_LARGE`, 400 `FILE_FORM`, `FILE_MISSING`, `FILE_TYPE`. `controler(buf, annonce, types)` : type sur les premiers octets ; JPEG et PNG par `images.js` ; PDF : en-tête `%PDF-x.y`, `%%EOF` dans les 1 024 derniers octets, noms décodés (`#xx`) puis refus de `/JavaScript`, `/JS`, `/Launch`, `/EmbeddedFile(s)`, `/RichMedia`, `/XFA`, `/SubmitForm`, `/ImportData` (`FILE_ACTIVE`). Un PDF n'est pas réécrit.
+
+Service (`services/pieces.js`) : `GET` et `POST /api/demandes/brouillon/pieces` (liste avec `plafonds`, ajout ; contrôle préalable `peutAjouter` : droit `demandes:creer`, module, `PIECES_FERMEES`, `PIECES_PLAFOND`) ; `GET /api/pieces/:id` (fiche, `demande_numero`), `GET /api/pieces/:id/fichier` (`Content-Disposition: attachment` avec nom ASCII et `filename*` UTF-8, `nosniff`, `no-store`, `Content-Security-Policy: default-src 'none'; sandbox`), `DELETE /api/pieces/:id` (suppression réelle, `PIECE_VERROUILLEE` pour le demandeur après `a_qualifier`). Permission nouvelle `pieces:supprimer` (gestionnaire, responsable). Lecture : brouillon par l'auteur ; demande par demandeur, bénéficiaire et `demandes:entite`. La fiche d'une demande rend `pieces` (avec `peut_retirer`), ou `null` pour qui suit seulement. Dépôt d'une demande : `rattacher()` dans la transaction, `pieces` compté dans le journal. `brouillons.remove()` efface les pièces du brouillon ; `brouillons.purger()` appelle `pieces.purger()` (plus de 30 jours, sans brouillon ; action `piece.purge`). Journal : `piece.add`, `piece.delete`, `piece.purge`, sans nom de fichier.
+
+Réglages : groupe `pieces` du catalogue des paramètres d'entité (`pieces.nombre_max`, `pieces.taille_max_mo`, `pieces.formats`).
+
+Interface : `components/demandes/PiecesDemande.tsx` (bloc du formulaire, réduction des photos par `photo.ts`, envoi un à un), `VignettesPieces.tsx` (formulaire et fiche), `api.upload(chemin, blob, nom)` en `FormData` ; `NouvelleDemandePage.tsx` (pièces dans le brouillon et l'invite de reprise) ; `DemandesPage.tsx` (ligne « Pièces jointes » de la fiche).
+
+Exploitation : `nginx.conf` accepte 11 Mo sur `location = /api/demandes/brouillon/pieces` seulement ; `backup.sh` copie `/app/data/pieces`.
 
 ## Champs sur téléphone et adresse e-mail (0.5.2)
 

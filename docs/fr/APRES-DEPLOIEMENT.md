@@ -1,6 +1,6 @@
 # Après déploiement : installer et mettre à jour la GMAO sur NIXUS
 
-Version de l'application : **0.7.5** · Mis à jour le 29/10/2026 · Le français fait foi.
+Version de l'application : **0.8.0** · Mis à jour le 30/10/2026 · Le français fait foi.
 
 Procédure pas à pas depuis un PC Windows, sans passer par DSM. Une commande à la fois ; on attend son résultat avant la suivante. Si un résultat diffère de l'attendu, on s'arrête et on colle la sortie dans la conversation.
 
@@ -79,13 +79,13 @@ Attendu : une ligne avec la taille de l'archive. Sinon, s'arrêter : rien n'a é
 sudo bash backup.sh
 ```
 
-Attendu : `[gmao] … : sauvegarde terminée, N sauvegardes conservées.` Depuis la 0.2.0, le message dit aussi `photos copiées` ou `aucune photo à copier`.
+Attendu : `[gmao] … : sauvegarde terminée, N sauvegardes conservées.` Depuis la 0.2.0, le message dit aussi `photos copiées` ou `aucune photo à copier` ; depuis la 0.8.0, `pièces jointes copiées` ou `aucune pièce jointe à copier`.
 
 ```
 sudo rm -rf backend frontend docs
 ```
 
-Attendu : aucune sortie. Le `.env`, la base, les photos et les certificats ne sont pas touchés (ils sont dans le `.env` et dans des volumes Docker).
+Attendu : aucune sortie. Le `.env`, la base, les photos, les pièces jointes et les certificats ne sont pas touchés (ils sont dans le `.env` et dans des volumes Docker).
 
 ```
 sudo tar xzf gmao-vX_Y_Z.tar.gz --strip-components=1
@@ -139,7 +139,7 @@ Attendu : retour à l'invite `C:\Users\…>` du cmd.
 
 ## 4. Retour arrière
 
-Mêmes commandes que la section 3.3 avec l'archive précédente, toujours présente dans `/volume1/docker/monapp`. Si la version annulée contenait une migration, restaurer aussi la base par la procédure de `docs/fr/EXPLOITATION.md` (copie de la sauvegarde dans le volume, `chown 10001`). La migration `002_lieux` de la 0.2.0 ajoute des tables sans rien changer aux anciennes : la 0.1.1 démarre encore sur une base passée en 0.2.0 et ignore simplement les lieux. De même, la 0.2.0 démarre sur une base passée en 0.3.0 (`003_parametres` ajoute une table et des colonnes). La 0.3.1 démarre sur une base passée en 0.4.0 (`004_referentiel_demandes` ajoute quatre tables) ; essayé dans le bac à sable le 22/10/2026. La 0.4.1 n'a pas de migration : retour à la 0.4.0 sans restaurer la base, essayé dans le bac à sable le 23/10/2026. La 0.4.1 démarre sur une base passée en 0.5.0 (`005_demandes` ajoute deux tables et une colonne, et retire des espaces en trop dans des libellés) : retour sans restaurer la base, essayé dans le bac à sable le 26/10/2026 ; les demandes déposées restent en base et réapparaissent au retour à la 0.5.0. La 0.5.1 et la 0.5.2 n'ont pas de migration : retour à la version précédente sans restaurer la base.
+Mêmes commandes que la section 3.3 avec l'archive précédente, toujours présente dans `/volume1/docker/monapp`. Si la version annulée contenait une migration, restaurer aussi la base par la procédure de `docs/fr/EXPLOITATION.md` (copie de la sauvegarde dans le volume, `chown 10001`). La migration `002_lieux` de la 0.2.0 ajoute des tables sans rien changer aux anciennes : la 0.1.1 démarre encore sur une base passée en 0.2.0 et ignore simplement les lieux. De même, la 0.2.0 démarre sur une base passée en 0.3.0 (`003_parametres` ajoute une table et des colonnes). La 0.3.1 démarre sur une base passée en 0.4.0 (`004_referentiel_demandes` ajoute quatre tables) ; essayé dans le bac à sable le 22/10/2026. La 0.4.1 n'a pas de migration : retour à la 0.4.0 sans restaurer la base, essayé dans le bac à sable le 23/10/2026. La 0.4.1 démarre sur une base passée en 0.5.0 (`005_demandes` ajoute deux tables et une colonne, et retire des espaces en trop dans des libellés) : retour sans restaurer la base, essayé dans le bac à sable le 26/10/2026 ; les demandes déposées restent en base et réapparaissent au retour à la 0.5.0. La 0.5.1 et la 0.5.2 n'ont pas de migration : retour à la version précédente sans restaurer la base. La 0.7.5 démarre sur une base passée en 0.8.0 (`007_pieces_jointes` ajoute une table) et ignore les pièces jointes : retour sans restaurer la base, essayé dans le bac à sable le 30/10/2026 ; les pièces restent en base et sur le disque, et réapparaissent au retour à la 0.8.0.
 
 ## 5. Données de démonstration (acceptance seulement)
 
@@ -171,13 +171,17 @@ La tâche se crée dans DSM, seul endroit où le NAS planifie des tâches : ouvr
 sudo bash /volume1/docker/monapp/backup.sh
 ```
 
-Attendu : `[gmao] … : sauvegarde terminée (photos copiées), N sauvegardes de la base conservées.`
+Attendu : `[gmao] … : sauvegarde terminée (photos copiées, aucune pièce jointe à copier), N sauvegardes de la base conservées.` Depuis la 0.8.0, `pièces jointes copiées` dès la première pièce déposée.
 
 ## 7. Première installation (pour mémoire, faite le 15/10/2026)
 
 Suivie une seule fois, avec la 0.1.0. Elle reste décrite dans `docs/fr/INSTALLATION.md` et `NOTES_LIVRAISON_v0.1.0.md` de l'archive. Ordre : dossier `/volume1/docker/monapp` créé, archive copiée, extraction, `sudo sh verifier-ports.sh 18443 18080` (attendu : deux fois `LIBRE` ; le 18444 est occupé par la GRC), création du `.env` (une seule fois, `DEMO_ALLOWED=1` en acceptance, `chmod 600`), `build`, `up -d`, assistant d'installation dans le navigateur (nom du pouvoir local, entité AC, premier administrateur), création de l'entité CPAS dans Administration, Entités, comptes de démonstration.
 
 ## 8. Notes par version
+
+### 0.8.0 (30/10/2026)
+
+Photos et pièces jointes des demandes (étape 6 ; DV-82 à DV-85). Mise à jour par la section 3, **avec migration** : `sudo docker logs gmao-api --tail 30` montre `[DB] Migration 007_pieces_jointes appliquée` puis `[APP] API 0.8.0 sur le port 3001`. Dépendance nouvelle `multer` : `sudo docker compose build` la télécharge (quelques minutes de plus). Les deux images se reconstruisent ; `nginx.conf` (11 Mo sur la route de dépôt des pièces) et `backup.sh` (dossier `pieces`) changent dans l'archive ; Dockerfile, compose et `.env` inchangés ; `--no-cache` inutile. Contrôle : bas du menu `v0.8.0` ; note de la 0.8.0 (une ligne pour tous, deux pour le responsable) ; bloc « Photos et documents » du formulaire ; fiche de la demande avec ses pièces ; Réglages de l'entité, groupe « Pièces jointes des demandes ». Retour arrière vers la 0.7.5 sans restaurer la base (section 4).
 
 ### 0.7.5 (29/10/2026)
 

@@ -36,7 +36,7 @@ after(() => srv.stop());
 test('défauts livrés : contact vide, délai de réouverture de 7 jours, numérotation DI annuelle ; libellés FR et NL', async () => {
   const r = await agent.get('/api/parametres-entite');
   assert.equal(r.status, 200);
-  assert.deepEqual(r.body.data.map((p) => p.cle), ['contact.nom_fr', 'contact.nom_nl', 'contact.telephone', 'contact.courriel', 'urgence.telephone', 'demandes.delai_reouverture_jours', 'numerotation.demande_type', 'numerotation.remise',
+  assert.deepEqual(r.body.data.map((p) => p.cle), ['contact.nom_fr', 'contact.nom_nl', 'contact.telephone', 'contact.courriel', 'urgence.telephone', 'demandes.delai_reouverture_jours', 'pieces.nombre_max', 'pieces.taille_max_mo', 'pieces.formats', 'numerotation.demande_type', 'numerotation.remise',
     'rgpd.dpo_contact', 'rgpd.mention_courte_fr', 'rgpd.mention_courte_nl', 'rgpd.mention_fr', 'rgpd.mention_nl']);
   for (const p of r.body.data) {
     assert.equal(p.entite_id, ea.id);
