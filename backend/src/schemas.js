@@ -56,6 +56,18 @@ const reponsesDemande = {
 
 const ETATS = ['brouillon', 'en_validation', 'refusee_validation', 'a_qualifier', 'qualifiee', 'planifiee', 'en_cours', 'en_attente',
   'externe', 'terminee', 'cloturee', 'rouverte', 'refusee', 'fusionnee', 'annulee'];
+
+// Filtres de la liste du service technique (0.9.0, GES-02) ; les mêmes clés forment une vue enregistrée.
+const listeCodes = { type: 'string', maxLength: 300, pattern: '^[a-z0-9_]+(,[a-z0-9_]+)*$' };
+const listePrio = { type: 'string', maxLength: 20, pattern: '^P[1-4](,P[1-4])*$' };
+const CANAUX_DEMANDE = ['ecran', 'mcp', 'api', 'telephone', 'courriel', 'grc', 'preventif'];
+const TRIS_DEMANDE = ['depot', 'numero', 'echeance', 'priorite'];
+const filtresGestion = {
+  etats: listeCodes, priorites: listePrio, categorie_id: T.int(1), batiment_id: T.int(1),
+  echeance: T.en('retard', 'proche', 'sans'), canal: T.en(...CANAUX_DEMANDE), danger: flag,
+  tri: T.en(...TRIS_DEMANDE), ordre: T.en('asc', 'desc'),
+};
+const vueFiltres = obj({ ...filtresGestion, q: T.str(100), ouvertes: flag });
 const lieuOuNul = { type: ['integer', 'null'], minimum: 1 };
 
 module.exports = {
@@ -193,7 +205,20 @@ module.exports = {
 
   // Demandes d'intervention (DEM-01 à 03, SUI-01) : un lieu, une catégorie, une description de 10 caractères au moins
   // (comptés après le retrait des espaces, DV-37). perimetre « entite » : gestionnaire et responsable (DV-46).
-  demandeList: listQuery({ etat: T.en(...ETATS), ouvertes: flag, perimetre: { enum: ['miennes', 'entite'], default: 'miennes' } }),
+  demandeList: listQuery({ etat: T.en(...ETATS), ouvertes: flag, perimetre: { enum: ['miennes', 'entite'], default: 'miennes' }, ...filtresGestion }),
+  // Qualification par le service technique (0.9.0, GES-04, PRI-01) : catégorie, lieu et priorité obligatoires ; le motif
+  // est exigé par le serveur quand la priorité diffère de la priorité proposée. Champs facultatifs absents : inchangés.
+  demandeQualifier: obj({
+    categorie_id: T.int(1), lieu_id: T.int(1), priorite: T.en('P1', 'P2', 'P3', 'P4'),
+    motif_priorite: T.str(500),
+    duree_estimee_minutes: { type: ['integer', 'null'], minimum: 15, maximum: 10080 },
+    consignes: T.str(2000), photos_visibles: flag,
+    date_convenue: { type: ['string', 'null'], format: 'date' },
+  }, ['categorie_id', 'lieu_id', 'priorite']),
+  // Vues enregistrées de la liste du service technique (0.9.0, GES-02) : un nom et les filtres de la liste.
+  vueList: listQuery(),
+  vueCreate: obj({ nom: T.reqStr(60), filtres: vueFiltres }, ['nom', 'filtres']),
+  vueUpdate: obj({ nom: T.reqStr(60), filtres: vueFiltres }),
   demandeCreate: obj({
     lieu_id: T.int(1), categorie_id: T.int(1), description: { type: 'string', minLength: 10, maxLength: 5000 }, langue: T.en('fr', 'nl'),
     // 0.7.0 (DEM-06) : « Danger pour les personnes ou les biens » ; la demande part en P1.

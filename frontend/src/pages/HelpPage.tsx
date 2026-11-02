@@ -27,6 +27,8 @@ const FAQ: { n: number; module?: string; admin?: boolean; permission?: string }[
   { n: 20, module: 'demandes' }, { n: 21, module: 'demandes' }, { n: 22, module: 'demandes' }, { n: 23, permission: 'categories:gerer' }, { n: 24, module: 'demandes' },
   // 0.8.0 : photos et pièces jointes des demandes.
   { n: 25, module: 'demandes' }, { n: 26, module: 'demandes' },
+  // 0.9.0 : tableau de bord et qualification, pour le service technique.
+  { n: 27, permission: 'demandes:entite' }, { n: 28, permission: 'demandes:entite' },
 ];
 const ONGLETS = ['guide', 'faq', 'nouveautes', 'contact'];
 

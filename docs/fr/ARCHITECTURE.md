@@ -1,6 +1,6 @@
 # Architecture
 
-Version 0.7.1 · Le français fait foi.
+Version 0.9.0 · Le français fait foi.
 
 ## Services
 
@@ -11,7 +11,7 @@ Version 0.7.1 · Le français fait foi.
 
 Base `sql.js` dans le volume `db-data` (`/app/data/app.db`), écrite par le seul processus `api`. Photos des lieux dans le même volume (`/app/data/photos`, variable `PHOTOS_DIR`) et, depuis la 0.8.0, pièces jointes des demandes (`/app/data/pieces`, variable `PIECES_DIR`), hors de la racine web, lues par des routes authentifiées. Certificat dans le volume `ssl-certs`. PostgreSQL 16 arrive au lot L7 (standard, section 5).
 
-## Tables (migrations `001_noyau` à `006_demandes_formulaire`)
+## Tables (migrations `001_noyau` à `008_qualification`)
 
 | Table | Rôle | Points clés |
 | --- | --- | --- |
@@ -35,6 +35,7 @@ Base `sql.js` dans le volume `db-data` (`/app/data/app.db`), écrite par le seul
 | `pieces_jointes` | Pièces jointes des demandes (0.8.0) | `entite_id`, `demande_id` (NULL tant que la pièce est dans le brouillon), `auteur_id`, `fichier` (nom généré, unique, jamais rendu), `nom` affiché nettoyé, `type` (`image/jpeg`, `image/png`, `application/pdf`), `octets`, `largeur`, `hauteur`, `canal` ; pas de `is_active` : suppression réelle |
 | `demande_reponses` | Réponses d'une demande aux questions (0.7.0) | (`demande_id`, `question_id`) unique ; `valeur` (`oui`, `non`, `1` à `6`) ; copie de `question_fr`, `question_nl`, `reponse_fr`, `reponse_nl` au dépôt ; `ordre` |
 | `jours_non_ouvres` | Congés et fermetures par entité (0.4.0) | `nature` `conge` (`mois_jour` `MM-JJ`, chaque année) ou `fermeture` (`date_debut`, `date_fin`) ; libellés FR et NL ; `is_active`, `motif_desactivation`. Les jours fériés légaux sont calculés, sans table |
+| `vues_demandes` | Vues enregistrées de la liste du service technique (0.9.0) | (`user_id`, `entite_id`, `nom`) unique, `nom` 1 à 60 caractères ; `filtres` JSON (mêmes clés que les filtres de `GET /api/demandes`) ; vingt au plus par personne et par entité ; suppression réelle (préférence d'affichage) |
 | `schema_migrations` | Journal des migrations | |
 
 ## Rôles
@@ -55,7 +56,7 @@ Base `sql.js` dans le volume `db-data` (`/app/data/app.db`), écrite par le seul
 
 Le catalogue (`backend/config/roles.json`) porte aussi les descriptions FR et NL et les permissions, pour l'application Droits. Un test vérifie que la contrainte `CHECK` de `user_roles` et le catalogue disent la même chose.
 
-Permissions : `lieux:lire` et `listes:lire` pour tous les rôles d'entité ; `lieux:gerer` pour `gestionnaire` et `responsable` ; `listes:gerer` et `parametres:gerer` (0.3.0) pour `responsable`. Le serveur lit ces permissions dans le catalogue (`rolesWith`), l'interface aussi pour son menu (`hasPermission`) : aucun code de rôle n'est écrit dans les services des lieux.
+Permissions : depuis la 0.9.0, `demandes:qualifier` pour `gestionnaire` et `responsable` ; `lieux:lire` et `listes:lire` pour tous les rôles d'entité ; `lieux:gerer` pour `gestionnaire` et `responsable` ; `listes:gerer` et `parametres:gerer` (0.3.0) pour `responsable`. Le serveur lit ces permissions dans le catalogue (`rolesWith`), l'interface aussi pour son menu (`hasPermission`) : aucun code de rôle n'est écrit dans les services des lieux.
 
 ## Entité active et cloison
 
@@ -118,6 +119,9 @@ Photo : `POST /api/lieux/:id/photo` reçoit le fichier en formulaire multipart, 
 | `POST /api/jours-non-ouvres`, `PUT /api/jours-non-ouvres/:id`, `DELETE /api/jours-non-ouvres/:id` (désactivation avec motif) | `delais:gerer` | `services/calendrier.js` |
 | `GET /api/jours-feries` | rôle dans l'entité active | `services/calendrier.js` |
 | `GET /api/echeances/simulation` | rôle dans l'entité active | `services/echeances.js` |
+| `GET /api/demandes/tableau-bord` (0.9.0) | `demandes:entite` | `services/qualification.js` |
+| `POST /api/demandes/:id/qualifier` (0.9.0) | `demandes:qualifier`, demande de l'entité active, état `a_qualifier` ou `qualifiee` | `services/qualification.js` |
+| `/api/vues-demandes` (cinq routes, 0.9.0 ; `DELETE` = suppression réelle) | `demandes:entite` ; vues de la personne seule | `services/vues-demandes.js` |
 | `POST /api/mcp` | session ou jeton porteur | `mcp.js` |
 | `GET /api/openapi.json` | session | `openapi.js` |
 
@@ -228,6 +232,24 @@ Mentions d'information (RGPD-10) : `parametresEntite.protectionDonnees()` rend l
 Interface : `components/demandes/DemandesVoisines.tsx`, `ComplementsDemande.tsx`, `QuestionsCategorie.tsx`, `components/referentiel/QuestionsFiche.tsx` ; `NouvelleDemandePage.tsx` (danger, voisines, questions, compléments, brouillon enregistré 1,5 s après le dernier changement, mention et « En savoir plus ») ; `DemandesPage.tsx` (« Précisions », suiveurs, « Faite pour vous ») ; `ReglagesForm.tsx` (type `texte_long`) ; rubrique « Protection de vos données » de l'aide.
 
 Rouge des erreurs (écart E-26) : `frontend/src/couleurs.ts` et `buildTheme()` d'`App.tsx` posent `colorError`, `colorErrorText` et `Button.dangerColor` en clair (`#cf1322`) et en sombre (graine `#ff8a8a`, `#dc7878` calculé par Ant Design sous les champs) ; `ErreurObligatoire.tsx` lit le jeton du thème ; `test/couleurs.test.tsx` vérifie 4,5:1 sur chaque fond à partir des jetons calculés (`theme.getDesignToken`).
+
+## Service technique : tableau de bord, liste et qualification (0.9.0)
+
+Migration `008_qualification` : dix colonnes de `demandes` (`priorite_proposee`, `motif_priorite`, `prise_en_charge_le`, `echeance_le`, `date_convenue`, `duree_estimee_minutes`, `consignes`, `photos_visibles`, `qualifiee_par`, `qualifiee_le`), un index (`entite_id`, `echeance_le`), table `vues_demandes` ; ajout seulement. Son étape JavaScript calcule les échéances des demandes déjà en base ; `index.js` la rejoue à chaque démarrage pour une demande qui n'en a pas (déposée par une version antérieure après un retour arrière) et écrit `[DB] Échéances calculées pour N demande(s)`.
+
+Échéances (`services/qualification.js`, DV-88, DV-89) : calculées au dépôt par `services/echeances.js` (0.4.0) depuis l'instant de réception, recalculées à chaque qualification depuis le même instant ; instants UTC en base. Échéance qui compte : `prise_en_charge_le` tant que l'état est `a_qualifier`, sinon `echeance_le` ; vide pour une demande fermée ou « Terminée ». La fiche et la liste du service rendent `echeance_type` (`prise_en_charge` ou `fin`), `echeance_courante` et `retard` (0 ou 1). Une priorité sans délai de fin (P4 livrée) n'a d'échéance de fin qu'avec une date convenue, fixée à 23:59 à Bruxelles.
+
+Qualification (`POST /api/demandes/:id/qualifier`, DV-90, DV-91) : `categorie_id`, `lieu_id`, `priorite` obligatoires ; `motif_priorite` exigé quand la priorité diffère de la priorité proposée (celle de la catégorie, P1 si un danger est signalé ; 409 `MOTIF_PRIORITE_REQUIS`), effacé quand elle est confirmée ; `duree_estimee_minutes` (15 à 10 080), `consignes` (2 000 caractères), `photos_visibles`, `date_convenue` (priorité sans délai de fin seulement, aujourd'hui à deux ans ; 409 `DATE_CONVENUE_INUTILE`, `DATE_CONVENUE_INVALIDE`). Lieu et catégorie contrôlés comme au dépôt (entité, actif, nature). `a_qualifier` devient `qualifiee` ; une demande `qualifiee` se qualifie de nouveau sans changer d'état ; tout autre état : 409 `DEMANDE_ETAT` (cycle de vie à l'étape 9). Journal `demande.qualifier` : champs changés, motif et consignes notés 1 ou 0, `premiere`, `priorite_confirmee` ; noms du lieu et de la catégorie à la lecture (`REFERENCES` de `services/journal.js`). Champs internes (`priorite_proposee`, `motif_priorite`, `duree_estimee_minutes`, `consignes`, `qualifiee_par`, `qualifiee_le`) retirés de la fiche pour qui n'a pas `demandes:entite`.
+
+Liste du service (`GET /api/demandes?perimetre=entite`, GES-02) : filtres `etats` et `priorites` (listes séparées par des virgules, chaque valeur contrôlée), `categorie_id` (un domaine compte ses natures), `batiment_id` (le lieu et tout ce qu'il contient), `echeance` (`retard`, `proche` : dans les deux jours ouvrés de l'entité, `sans`), `canal`, `danger` ; `q` cherche aussi le nom du demandeur ; tri `depot`, `numero`, `echeance`, `priorite` et `ordre`, sur liste blanche ; les demandes fermées restent en fin de liste.
+
+Tableau de bord (`GET /api/demandes/tableau-bord`, DV-92) : `a_qualifier`, `en_retard`, `p1_p2` (P1 et P2 ouvertes), `echeance_proche`, `limite_proche`, `jours_proches` ; chaque compteur égale le total du filtre correspondant de la liste.
+
+Vues (`services/vues-demandes.js`, DV-93) : d'une personne dans une entité ; vue d'une autre entité 403, d'une autre personne 404 ; 409 `VUE_NOM_PRIS` (nom sans la casse), `VUES_MAX`.
+
+Permission nouvelle `demandes:qualifier` (gestionnaire et responsable) dans `config/roles.json`.
+
+Interface : `pages/GestionDemandesPage.tsx` (liste du service ; filtres dans l'adresse, repliés sous « Filtres et vues » sur téléphone ; vues ; fiche latérale et « Qualifier »), `components/demandes/TableauBord.tsx` (accueil et liste), `components/demandes/QualificationForm.tsx`, `FicheDemande` de `DemandesPage.tsx` (lignes du service : priorité et motif, échéances, durée, consignes, qualifiée le). Libellés des états pour le service : `demande.etat_service.*`. `ReglagesEntitePage.tsx` affiche le groupe `pieces` (contrôle 7 de la 0.8.0) ; un test compare ses groupes au catalogue.
 
 ## Photos et pièces jointes des demandes (0.8.0)
 

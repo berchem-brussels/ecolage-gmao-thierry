@@ -39,6 +39,11 @@ const REFERENCES = [
   { chemin: 'apres.parent_id', type: 'lieu', entity: 'lieu' },
   { chemin: 'avant.parent_id', type: 'categorie', entity: 'categorie' },
   { chemin: 'apres.parent_id', type: 'categorie', entity: 'categorie' },
+  // 0.9.0 : lieu précisé et catégorie changée à la qualification d'une demande.
+  { chemin: 'avant.lieu_id', type: 'lieu', action: 'demande.qualifier' },
+  { chemin: 'apres.lieu_id', type: 'lieu', action: 'demande.qualifier' },
+  { chemin: 'avant.categorie_id', type: 'categorie', action: 'demande.qualifier' },
+  { chemin: 'apres.categorie_id', type: 'categorie', action: 'demande.qualifier' },
 ];
 const NOMS = {
   lieu: `SELECT l.id, l.code, l.nom_fr, l.nom_nl, e.code AS entite_code FROM lieux l LEFT JOIN entites e ON e.id = l.entite_id

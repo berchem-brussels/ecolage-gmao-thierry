@@ -31,6 +31,12 @@
  *      et enregistrées avec la demande, texte compris. Elles sont lues sur la fiche par le demandeur et par le service.
  *  12. Pièces jointes (DEM-09, 0.8.0, services/pieces.js) : celles du brouillon passent à la demande dans la transaction
  *      d'envoi ; la fiche les rend au demandeur, au bénéficiaire et au service technique, pas à qui suit seulement.
+ *  13. Qualification et échéances (0.9.0, services/qualification.js) : les échéances de prise en charge et de fin sont
+ *      enregistrées au dépôt ; la fiche rend l'échéance qui compte et le retard. Le service technique lit en plus la
+ *      priorité proposée, le motif d'un changement, la durée estimée, les consignes à l'ouvrier et qui a qualifié ;
+ *      le demandeur ne les reçoit pas. Liste du gestionnaire (GES-02) : filtres par états, priorités, catégorie (son
+ *      domaine compris), bâtiment (ses locaux compris), échéance, source et danger ; tri par numéro, dépôt, échéance
+ *      ou priorité.
  * Module « demandes » du noyau : toujours actif ; le contrôle est posé pour l'ordre API-04.
  */
 const { getDb } = require('../database');
@@ -42,6 +48,7 @@ const { rolesIn } = require('../auth');
 const numerotation = require('./numerotation');
 const echeances = require('./echeances');
 const questions = require('./questions-categorie');
+const qualification = require('./qualification');
 
 const OUVERTE = "d.etat NOT IN ('cloturee', 'refusee', 'refusee_validation', 'fusionnee', 'annulee')";
 const COLUMNS = `d.id, d.entite_id, d.numero, d.annee, d.sequence, d.description, d.langue, d.etat, d.priorite, d.danger, d.canal,
@@ -52,13 +59,20 @@ const COLUMNS = `d.id, d.entite_id, d.numero, d.annee, d.sequence, d.description
   d.demandeur_id, u.first_name AS demandeur_prenom, u.last_name AS demandeur_nom,
   d.beneficiaire_id, b.first_name AS beneficiaire_prenom, b.last_name AS beneficiaire_nom, d.beneficiaire_texte,
   d.date_souhaitee, d.creneau,
+  d.priorite_proposee, d.motif_priorite, d.prise_en_charge_le, d.echeance_le, d.date_convenue, d.duree_estimee_minutes,
+  d.consignes, d.photos_visibles, d.qualifiee_par, qp.first_name AS qualifiee_par_prenom, qp.last_name AS qualifiee_par_nom, d.qualifiee_le,
   (SELECT COUNT(*) FROM demande_suiveurs s WHERE s.demande_id = d.id) AS nb_suiveurs,
   d.is_demo, d.created_at, d.updated_at`;
 const FROM = `FROM demandes d JOIN lieux l ON l.id = d.lieu_id JOIN categories c ON c.id = d.categorie_id
-  LEFT JOIN categories p ON p.id = c.parent_id JOIN users u ON u.id = d.demandeur_id LEFT JOIN users b ON b.id = d.beneficiaire_id`;
+  LEFT JOIN categories p ON p.id = c.parent_id JOIN users u ON u.id = d.demandeur_id LEFT JOIN users b ON b.id = d.beneficiaire_id
+  LEFT JOIN users qp ON qp.id = d.qualifiee_par`;
+/** Champs internes au service technique (0.9.0) : retirés de la fiche rendue au demandeur et à qui suit la demande. */
+const INTERNES = ['priorite_proposee', 'motif_priorite', 'duree_estimee_minutes', 'consignes', 'qualifiee_par', 'qualifiee_par_prenom', 'qualifiee_par_nom', 'qualifiee_le'];
 const LIEU = 'SELECT id, entite_id, parent_id, nature, code, nom_fr, nom_nl, is_active FROM lieux WHERE id = ?';
 const ETATS_FERMES = ['cloturee', 'refusee', 'refusee_validation', 'fusionnee', 'annulee'];
 const SUIVIE = 'SELECT 1 FROM demande_suiveurs WHERE demande_id = ? AND user_id = ?';
+const ETATS = ['brouillon', 'en_validation', 'refusee_validation', 'a_qualifier', 'qualifiee', 'planifiee', 'en_cours', 'en_attente', 'externe',
+  'terminee', 'cloturee', 'rouverte', 'refusee', 'fusionnee', 'annulee'];
 
 function entiteActive(user) {
   if (!user.entiteId) throw new AppError(403, 'NO_ENTITE');
@@ -86,17 +100,21 @@ function chemin(lieuId, cache = new Map()) {
   return out;
 }
 
-/** Délai annoncé : échéance de fin selon la priorité proposée et le délai de la catégorie ; null si incalculable. */
+/**
+ * Délai annoncé : échéance de fin enregistrée sur la fiche (0.9.0 ; calculée au dépôt, recalculée à la qualification),
+ * avec l'unité et le délai de la priorité ; null si la priorité manque.
+ */
 function delaiAnnonce(d) {
   if (!d.priorite) return null;
-  try {
-    const prio = getDb().prepare('SELECT code, unite, prise_en_charge, fin FROM priorites WHERE entite_id = ? AND code = ?').get(d.entite_id, d.priorite);
-    if (!prio) return null;
-    const r = echeances.calculer(d.entite_id, depuisSql(d.created_at), prio, d.delai_fin_jours_categorie);
-    return { priorite: r.priorite, unite: r.unite, delai_fin: r.delai_fin, fin_le: r.fin_le, date_convenue: r.date_convenue };
-  } catch (e) {
-    return null;
-  }
+  const prio = getDb().prepare('SELECT code, unite, fin FROM priorites WHERE entite_id = ? AND code = ?').get(d.entite_id, d.priorite);
+  if (!prio) return null;
+  const fin = d.echeance_le ? depuisSql(d.echeance_le) : null;
+  return {
+    priorite: prio.code, unite: prio.unite,
+    delai_fin: prio.unite === 'jours_ouvrables' && d.delai_fin_jours_categorie ? d.delai_fin_jours_categorie : prio.fin,
+    fin_le: fin ? { utc: fin.toISOString(), local: echeances.texteLocal(fin) } : null,
+    date_convenue: !fin,
+  };
 }
 
 /**
@@ -113,8 +131,13 @@ function fiche(d, cache, user) {
   if (autre && !pourMoi && !peut(user, 'demandes:entite')) {
     for (const k of ['demandeur_id', 'demandeur_prenom', 'demandeur_nom', 'beneficiaire_id', 'beneficiaire_prenom', 'beneficiaire_nom', 'beneficiaire_texte']) reste[k] = null;
   }
+  // Champs internes du service technique (0.9.0) : ni pour le demandeur, ni pour le bénéficiaire, ni pour qui suit.
+  const service = !!user && peut(user, 'demandes:entite');
+  if (!service) for (const k of INTERNES) delete reste[k];
   return {
     ...reste,
+    // Échéance qui compte et retard (0.9.0, PRI-03) : pour le service technique ; le demandeur garde le délai annoncé.
+    ...(service ? qualification.etatEcheance(d) : {}),
     suivie: autre && !pourMoi && getDb().prepare(SUIVIE).get(d.id, user.id) ? 1 : 0,
     pour_moi: pourMoi ? 1 : 0,
     ouverte: !ETATS_FERMES.includes(d.etat) ? 1 : 0,
@@ -159,13 +182,44 @@ function get(user, id) {
   return f;
 }
 
+/** Tris de la liste (GES-02, 0.9.0) : colonne SQL de chaque tri. Ouvertes en tête dans tous les cas. */
+const TRIS = {
+  depot: 'd.created_at',
+  numero: 'd.annee, d.sequence',
+  echeance: `(${qualification.ECHEANCE}) IS NULL, ${qualification.ECHEANCE}`,
+  priorite: "d.priorite IS NULL, d.priorite",
+};
+const FERMEE_SQL = "CASE WHEN d.etat IN ('cloturee', 'refusee', 'refusee_validation', 'fusionnee', 'annulee') THEN 1 ELSE 0 END";
+
+/**
+ * Requêtes de la liste. La clause n'est faite que de fragments constants du module, de noms de la table TRIS et de
+ * « ? » ; toute valeur reçue passe en paramètre.
+ */
+const compter = (clause, params) => getDb().prepare(`SELECT COUNT(*) AS n ${FROM} ${clause}`).get(...params).n;
+const lire = (clause, params) => getDb().prepare(`SELECT ${COLUMNS} ${FROM} ${clause}`).all(...params);
+
+/** Liste de valeurs séparées par des virgules, chacune admise ; sinon 400. */
+function valeurs(texte, admises, champ) {
+  if (!texte) return [];
+  const v = [...new Set(String(texte).split(',').map((x) => x.trim()).filter(Boolean))];
+  const hors = v.filter((x) => !admises.includes(x));
+  if (hors.length) throw new AppError(400, 'VALIDATION', [`${champ}: ${hors.join(', ')}`]);
+  return v;
+}
+
 /**
  * Liste de l'entité active. perimetre « miennes » (défaut) : les demandes de la personne ; « entite » : toutes celles
- * de l'entité, pour le gestionnaire et le responsable. Ouvertes en tête, puis les plus récentes.
+ * de l'entité, pour le gestionnaire et le responsable. Ouvertes en tête, puis les plus récentes (ou le tri demandé).
+ * Filtres du service technique (0.9.0, GES-02) : etats et priorites (listes séparées par des virgules), categorie_id
+ * (un domaine compte ses natures), batiment_id (un lieu compte tout ce qu'il contient), echeance (retard, proche,
+ * sans), canal, danger. La recherche q porte aussi sur le nom du demandeur dans le périmètre de l'entité.
  */
-function list(user, { limit = 50, offset = 0, q, etat, ouvertes, perimetre = 'miennes' } = {}) {
+function list(user, { limit = 50, offset = 0, q, etat, etats, priorites, categorie_id: categorieId, batiment_id: batimentId,
+  echeance, canal, danger, ouvertes, tri, ordre, perimetre = 'miennes' } = {}) {
+  const entiteId = entiteActive(user);
   const where = ['d.entite_id = ?'];
-  const params = [entiteActive(user)];
+  const params = [entiteId];
+  const db = getDb();
   if (perimetre === 'entite') {
     if (!peut(user, 'demandes:entite')) throw new AppError(403, 'FORBIDDEN');
   } else {
@@ -174,18 +228,50 @@ function list(user, { limit = 50, offset = 0, q, etat, ouvertes, perimetre = 'mi
     params.push(user.id, user.id, user.id);
   }
   if (etat) { where.push('d.etat = ?'); params.push(etat); }
+  const listeEtats = valeurs(etats, ETATS, 'etats');
+  if (listeEtats.length) { where.push(`d.etat IN (${listeEtats.map(() => '?').join(', ')})`); params.push(...listeEtats); }
+  const listePrio = valeurs(priorites, ['P1', 'P2', 'P3', 'P4'], 'priorites');
+  if (listePrio.length) { where.push(`d.priorite IN (${listePrio.map(() => '?').join(', ')})`); params.push(...listePrio); }
+  if (categorieId) {
+    const c = db.prepare('SELECT id, entite_id FROM categories WHERE id = ?').get(categorieId);
+    if (!c) throw new AppError(404, 'NOT_FOUND');
+    if (c.entite_id !== entiteId) throw new AppError(403, 'FORBIDDEN');
+    where.push('(d.categorie_id = ? OR c.parent_id = ?)'); params.push(categorieId, categorieId);
+  }
+  if (batimentId) {
+    const l = db.prepare(LIEU).get(batimentId);
+    if (!l) throw new AppError(404, 'NOT_FOUND');
+    if (l.entite_id !== entiteId) throw new AppError(403, 'FORBIDDEN');
+    const ids = descendants(entiteId, batimentId);
+    where.push(`d.lieu_id IN (${ids.map(() => '?').join(', ')})`); params.push(...ids);
+  }
+  if (echeance) {
+    const f = qualification.filtreEcheance(entiteId, echeance);
+    where.push(f.sql); params.push(...f.params);
+  }
+  if (canal) { where.push('d.canal = ?'); params.push(canal); }
+  if (danger === 1) where.push('d.danger = 1');
+  if (danger === 0) where.push('d.danger = 0');
   if (ouvertes === 1) where.push(OUVERTE);
   if (ouvertes === 0) where.push(`NOT (${OUVERTE})`);
   if (q) {
-    where.push('(d.numero LIKE ? OR d.description LIKE ? OR l.nom_fr LIKE ? OR l.nom_nl LIKE ? OR l.code LIKE ?)');
-    params.push(`%${q}%`, `%${q}%`, `%${q}%`, `%${q}%`, `%${q}%`);
+    const champs = ['d.numero', 'd.description', 'l.nom_fr', 'l.nom_nl', 'l.code'];
+    if (perimetre === 'entite') champs.push("(u.first_name || ' ' || u.last_name)", "(u.last_name || ' ' || u.first_name)");
+    where.push(`(${champs.map((c) => `${c} LIKE ?`).join(' OR ')})`);
+    params.push(...champs.map(() => `%${q}%`));
   }
-  const clause = `WHERE ${where.join(' AND ')}`;
-  const db = getDb();
-  const total = db.prepare(`SELECT COUNT(*) AS n ${FROM} ${clause}`).get(...params).n;
+  const total = compter(`WHERE ${where.join(' AND ')}`, params);
   const cache = new Map();
-  const rows = db.prepare(`SELECT ${COLUMNS} ${FROM} ${clause} ORDER BY CASE WHEN d.etat IN ('cloturee', 'refusee', 'refusee_validation', 'fusionnee', 'annulee') THEN 1 ELSE 0 END, d.created_at DESC, d.id DESC LIMIT ? OFFSET ?`)
-    .all(...params, limit, offset).map((d) => fiche(d, cache, user));
+  // Ordre : seuls des noms de la table TRIS et ASC ou DESC entrent dans la clause, jamais une valeur reçue telle quelle.
+  const sens = ordre === 'asc' ? 'ASC' : ordre === 'desc' ? 'DESC' : null;
+  const cle = Object.prototype.hasOwnProperty.call(TRIS, tri) ? tri : null;
+  let order = `${FERMEE_SQL}, d.created_at DESC, d.id DESC`;
+  if (cle) {
+    const s = sens || (cle === 'depot' || cle === 'numero' ? 'DESC' : 'ASC');
+    const cols = TRIS[cle].split(', ').map((c) => (c.endsWith('IS NULL') ? c : `${c} ${s}`)).join(', ');
+    order = `${FERMEE_SQL}, ${cols}, d.id ${s}`;
+  }
+  const rows = lire(`WHERE ${where.join(' AND ')} ORDER BY ${order} LIMIT ? OFFSET ?`, [...params, limit, offset]).map((d) => fiche(d, cache, user));
   return { rows, pagination: { total, limit, offset } };
 }
 
@@ -249,15 +335,17 @@ function create(user, data, channel = 'api') {
   if (dateSouhaitee) controlerDateSouhaitee(dateSouhaitee, maintenant);
   const reponses = questions.controler(cat, data.reponses || []);
   const db = getDb();
+  // Échéances enregistrées au dépôt (0.9.0, DV-88), depuis l'instant de réception.
+  const ech = qualification.calculer(db, { entiteId, recuSql: versSql(maintenant), priorite, categorieId: data.categorie_id });
   const id = db.transaction(() => {
     const n = numerotation.attribuer(entiteId, 'demande', maintenant);
     const r = db.prepare(`INSERT INTO demandes (entite_id, numero, annee, sequence, lieu_id, categorie_id, description, langue, etat,
       priorite, danger, canal, demandeur_id, beneficiaire_id, beneficiaire_texte, date_souhaitee, creneau,
-      created_by, updated_by, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'a_qualifier', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
+      priorite_proposee, prise_en_charge_le, echeance_le, created_by, updated_by, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'a_qualifier', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
       .run(entiteId, n.numero, n.annee, n.sequence, data.lieu_id, data.categorie_id, data.description, langue,
         priorite, danger, CANAUX[channel] || 'api', user.id, beneficiaireId, beneficiaireTexte, dateSouhaitee, data.creneau || null,
-        user.id, user.id, versSql(maintenant), versSql(maintenant));
+        priorite, ech.prise_en_charge_le, ech.echeance_le, user.id, user.id, versSql(maintenant), versSql(maintenant));
     questions.enregistrer(r.lastInsertRowid, reponses);
     // Les pièces jointes du brouillon passent à la demande (DV-85, 0.8.0), avant l'effacement du brouillon.
     const nbPieces = require('./pieces').rattacher(user.id, entiteId, r.lastInsertRowid);
@@ -429,4 +517,4 @@ function choisirLieuHabituel(user, lieuId, channel = 'api') {
   logAudit(user.id, 'user.lieu_habituel', 'user', user.id, { avant: avant ?? null, apres: lieuId }, channel, entite);
 }
 
-module.exports = { list, get, create, voisines, suivre, beneficiaires, lieuPropose, lieuxRecents, controlerLieuHabituel, choisirLieuHabituel, chemin };
+module.exports = { list, get, create, voisines, suivre, beneficiaires, lieuPropose, lieuxRecents, controlerLieuHabituel, choisirLieuHabituel, chemin, lieuDeDemande, categorieDeDemande, descendants };

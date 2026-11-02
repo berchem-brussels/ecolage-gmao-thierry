@@ -1,8 +1,27 @@
 # Manifeste
 
-Version de l'application : **0.8.0** · Mis à jour le 30/10/2026
+Version de l'application : **0.9.0** · Mis à jour le 02/11/2026
 
 Fichiers changés, dépendances et suites par version. Les décomptes sont recopiés de la sortie des commandes.
+
+## 0.9.0 (02/11/2026)
+
+Fichiers comparés à l'archive 0.8.0 par `diff -rq` (hors `node_modules` et `dist`). Pour le contrôle du `git status` (`GITHUB.md`, section 5) : aucune ligne `D` attendue ; onze lignes `A`, les autres `M`.
+
+- Nouveaux : `backend/src/services/qualification.js`, `backend/src/services/vues-demandes.js`, `backend/src/routes/vues-demandes.js` ; `backend/tests/qualification.test.js`, `backend/tests/vues-demandes.test.js` ; `frontend/src/pages/GestionDemandesPage.tsx`, `frontend/src/components/demandes/TableauBord.tsx`, `frontend/src/components/demandes/QualificationForm.tsx` ; `docs/fonctionnel/service-technique.md` ; `NOTES_LIVRAISON_v0.9.0.md`.
+- Modifiés, serveur : `src/database.js` (migration `008_qualification`) ; `src/index.js` (échéances complétées au démarrage) ; `src/app.js` (montage de `/api/vues-demandes`) ; `src/routes/demandes.js` (tableau de bord, qualification) ; `src/services/demandes.js` (échéances au dépôt, filtres et tris, champs internes, délai annoncé lu sur la fiche) ; `src/services/journal.js` (noms du lieu et de la catégorie d'une qualification) ; `src/schemas.js` (filtres, `demandeQualifier`, vues) ; `src/mcp.js` (sept outils, `list_demandes` décrit) ; `src/i18n-server.js` (six codes) ; `config/roles.json` (`demandes:qualifier`) ; `config/notes-version.json` (note 0.9.0) ; tests `cloison`, `mcp`, `notes-version`, `dependances`, `categories`, `numerotation`, `parametres` ; `package.json` (numéro, deux fichiers de test) ; `package-lock.json` (numéro seulement).
+- Modifiés, interface : `src/demandes.ts` (types, filtres, compteurs) ; `src/pages/DemandesPage.tsx` (liste du service déléguée, fiche du service) ; `src/pages/HomePage.tsx` (tableau de bord) ; `src/pages/ReglagesEntitePage.tsx` (groupe `pieces`) ; `src/pages/JournalPage.tsx` (cases à cocher de la qualification) ; `src/pages/HelpPage.tsx` (questions 27 et 28) ; `src/i18n.ts` ; `src/index.css` ; `src/test/demandes.test.tsx`, `src/test/i18n.test.ts` ; `package.json` et `package-lock.json` (numéro seulement). `frontend/dist/` reconstruit.
+- Modifiés, documentation : `README.md`, `README.nl.md`, `README.en.md`, `CHANGELOG.md`, `MANIFESTE.md`, `ETAT.md`, `ECARTS-CDC.md` ; `docs/fr`, `docs/nl`, `docs/en` (`SECURITE.md`, `ARCHITECTURE.md`, `EXPLOITATION.md`, `MCP.md`, `APRES-DEPLOIEMENT.md`) ; `docs/fonctionnel/demandes.md` (règles 9 et 35), `docs/fonctionnel/administration.md` (règle 14).
+- Inchangés : les deux Dockerfile, `nginx.conf`, `docker-entrypoint.sh`, `docker-compose.yml`, `.env.example`, `backup.sh`, `.gitignore`, `.github/workflows/ci.yml`.
+- Retirés : aucun fichier.
+- Dépendances : aucune dépendance nouvelle ; verrous inchangés hors numéro de version. Aucun `npm audit fix`.
+- Contrôle DV-09 de la séance, avant toute modification : archive 0.8.0 conforme à `ETAT.md` (2 298 942 octets, 367 entrées, SHA-256 `d3af99af…c74c61`) ; serveur 347/347 ; `npm audit --omit=dev` du serveur 0 ; interface 149/149 sur trois lancements consécutifs ; construction et accessibilité 0 erreur. Aucun test instable.
+- Suites (Node 22.23.4, bac à sable, après `npm ci`) : serveur `npm test` 371 tests, 371 réussis, 0 échec, 0 sauté (347 en 0.8.0) ; interface `npm test` 5 fichiers, 161 tests, 161 réussis sur trois lancements consécutifs ; `npm run build` réussi ; `npm run a11y` 0 erreur.
+- Parcours du travail `tests` (`ci.yml`) rejoué sous Node 20.20.2 sur une copie ne contenant que les fichiers que Git verse : voir `ETAT.md`, section 2.
+- `npm audit --omit=dev` : serveur 0 vulnérabilité ; interface 3 modérées (E-09), inchangées.
+- Preuves d'échec : `docs/fr/SECURITE.md`, section 0.9.0.
+- Essai dans un vrai navigateur (Chromium, 1280, 768, 390 et 360 px de large, FR et NL) sur une base créée par la 0.8.0 puis migrée : tableau de bord, liste filtrée et triée, fiche, qualification envoyée (P2 changée en P3 avec motif, 1,5 heure, consignes), fiche du demandeur sans consignes ; aucune page plus large que l'écran ; aucune erreur dans la console. Retour à la 0.8.0 sur la base migrée : démarre, dépose une demande ; remontée en 0.9.0 : `[DB] Échéances calculées pour 1 demande(s)`.
+- Images Docker : non reconstruites dans le bac à sable ; les deux images changent (code du serveur, `frontend/dist/`).
 
 ## 0.8.0 (30/10/2026)
 

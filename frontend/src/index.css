@@ -171,3 +171,18 @@ body.app-dark ::-webkit-scrollbar-thumb { background: #424242; }
 .dem-piece { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; width: 96px; }
 .dem-piece-pdf { display: flex; align-items: center; justify-content: center; width: 96px; height: 96px; border: 1px solid var(--app-border-strong); border-radius: 6px; color: inherit; }
 .dem-piece-pdf:focus-visible { outline: 2px solid var(--app-primary); outline-offset: 2px; }
+
+/* Tableau de bord du service technique (0.9.0, GES-01) : quatre compteurs en liens ; le retard en rouge, avec son icône. */
+.bord-compteurs { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; }
+.bord-compteur { display: block; color: inherit; border-radius: 8px; }
+.bord-compteur:focus-visible { outline: 2px solid var(--app-primary); outline-offset: 2px; }
+.bord-nombre { display: flex; align-items: center; gap: 8px; font-size: 26px; font-weight: 600; line-height: 1.2; color: var(--app-primary-text, var(--app-primary)); }
+.bord-libelle { font-size: 14px; color: var(--app-text-secondary); }
+.bord-alerte .bord-nombre { color: #cf1322; }
+body.app-dark .bord-alerte .bord-nombre { color: #ff8a8a; }
+/* Liste du service (0.9.0, GES-02) : échéance dépassée en rouge, toujours avec la mention « En retard ». */
+.dem-retard { color: #cf1322; font-weight: 500; }
+body.app-dark .dem-retard { color: #ff8a8a; }
+.gest-filtres { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; margin-bottom: 12px; }
+.gest-filtres .ant-select { min-width: 180px; }
+@media (max-width: 767px) { .gest-filtres > * { width: 100%; } .gest-filtres .ant-select { min-width: 0; } }

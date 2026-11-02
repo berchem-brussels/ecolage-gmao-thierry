@@ -4,6 +4,8 @@
  * en plus, le nombre de demandes à qualifier et le lien vers les demandes de l'entité (le tableau de bord arrive à
  * l'étape 8). Ensuite, comme depuis la 0.1.0 : entité active, rôles, personnes de l'entité pour les rôles habilités.
  * « Réserver » viendra avec le module des salles (étape 22).
+ * 0.9.0 (GES-01) : pour le service technique, le tableau de bord sous les gros boutons ; chaque compteur ouvre la
+ * liste du service filtrée.
  */
 import { useEffect, useState } from 'react';
 import { Alert, Card, List, Space, Table, Tag, Typography } from 'antd';
@@ -12,6 +14,7 @@ import { Link } from 'react-router-dom';
 import api, { qs } from '../api';
 import { type Demande, dateDepot } from '../demandes';
 import { EtatTag } from './DemandesPage';
+import TableauBord from '../components/demandes/TableauBord';
 import { useAuth } from '../contexts/AuthContext';
 import { useI18n } from '../contexts/I18nContext';
 import { hasPermission, useRoles } from '../useRoles';
@@ -69,6 +72,7 @@ export default function HomePage() {
             </div>
           </Card>
         )}
+        {entite && voitEntite && <Card><TableauBord /></Card>}
         {entite && (
           <Card title={<Typography.Title level={2} style={{ fontSize: 16, margin: 0, marginInlineEnd: 12, whiteSpace: 'normal' }}>{t('home.encours')}</Typography.Title>}
             extra={<Link to="/demandes">{t('home.encours.tout')}</Link>}>

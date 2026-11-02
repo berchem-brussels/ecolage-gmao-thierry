@@ -13,6 +13,9 @@
  * 0.7.0 (DEM-05) : la fiche montre les réponses aux questions de la catégorie, au demandeur comme au service technique.
  * 0.8.0 (DEM-09, DV-84) : la fiche montre les pièces jointes au demandeur, au bénéficiaire et au service technique
  * (pas à qui suit seulement) ; « Retirer » selon le droit rendu par le serveur, puis la fiche se recharge.
+ * 0.9.0 (étape 8) : « Demandes de l'entité » est la liste du service technique (GestionDemandesPage : tableau de
+ * bord, filtres, tris, vues, qualification). La fiche du service montre l'état avec le libellé du service, les
+ * échéances, le retard et la qualification (priorité proposée, motif, durée, consignes, qui a qualifié).
  */
 import { useCallback, useEffect, useState } from 'react';
 import { Alert, Button, Card, Descriptions, Drawer, Grid, Input, List, Segmented, Space, Table, Tag, Typography, message } from 'antd';
@@ -22,7 +25,8 @@ import VignettesPieces from '../components/demandes/VignettesPieces';
 import { useI18n } from '../contexts/I18nContext';
 import { useAuth } from '../contexts/AuthContext';
 import { Icone } from '../referentiel';
-import { type Demande, type Piece, COULEUR_ETAT, beneficiaireTexte, cheminTexte, dateDepot, dateSouhaitee, extrait, finAnnoncee } from '../demandes';
+import { type Demande, type Piece, COULEUR_ETAT, beneficiaireTexte, cheminTexte, dateDepot, dateSouhaitee, duree, extrait, finAnnoncee, instant } from '../demandes';
+import GestionDemandesPage from './GestionDemandesPage';
 
 /** Mention « Danger » (0.7.0, DEM-06), à côté de l'état. */
 export function DangerTag() {
@@ -32,14 +36,17 @@ export function DangerTag() {
 
 type Filtre = 'toutes' | 'ouvertes' | 'closes';
 
-/** Étiquette d'état : libellé simple vu par le demandeur (cahier des charges, section 8.1). */
-export function EtatTag({ etat }: { etat: Demande['etat'] }) {
+/**
+ * Étiquette d'état : libellé simple vu par le demandeur (cahier des charges, section 8.1) ; libellé du service
+ * technique (« À qualifier », « Qualifiée »…) avec service (0.9.0).
+ */
+export function EtatTag({ etat, service = false }: { etat: Demande['etat']; service?: boolean }) {
   const { t } = useI18n();
-  return <Tag color={COULEUR_ETAT[etat]} style={{ marginInlineEnd: 0 }}>{t(`demande.etat.${etat}`)}</Tag>;
+  return <Tag color={COULEUR_ETAT[etat]} style={{ marginInlineEnd: 0 }}>{t(`demande.${service ? 'etat_service' : 'etat'}.${etat}`)}</Tag>;
 }
 
 /** Fiche d'une demande en lecture (0.5.0) ; la ligne du temps et les messages arrivent aux étapes 9 et 10. */
-export function FicheDemande({ d, avecDemandeur, onChange }: { d: Demande; avecDemandeur: boolean; onChange?: () => void }) {
+export function FicheDemande({ d, avecDemandeur, service = false, onChange }: { d: Demande; avecDemandeur: boolean; service?: boolean; onChange?: () => void }) {
   const { t, lang } = useI18n();
   const retirer = async (p: Piece) => {
     try {
@@ -59,7 +66,25 @@ export function FicheDemande({ d, avecDemandeur, onChange }: { d: Demande; avecD
     {d.pour_moi === 1 && <Alert type="info" showIcon message={`${t('demande.pour_moi.fiche')} ${d.demandeur_prenom || ''} ${d.demandeur_nom || ''}.`} style={{ marginBottom: 12 }} />}
     <Descriptions column={1} size="small" bordered>
       <Descriptions.Item label={t('demande.champ.numero')}><Typography.Text strong copyable>{d.numero}</Typography.Text></Descriptions.Item>
-      <Descriptions.Item label={t('demande.champ.etat')}><EtatTag etat={d.etat} /></Descriptions.Item>
+      <Descriptions.Item label={t('demande.champ.etat')}><EtatTag etat={d.etat} service={service} /></Descriptions.Item>
+      {service && d.priorite && (
+        <Descriptions.Item label={t('gest.col.priorite')}>
+          <Space size={6} wrap>
+            <Tag style={{ marginInlineEnd: 0 }}>{d.priorite}</Tag>
+            {d.priorite_proposee && d.priorite_proposee !== d.priorite && <Typography.Text type="secondary">{t('qualif.proposee')} {d.priorite_proposee}</Typography.Text>}
+          </Space>
+          {d.motif_priorite && <div><Typography.Text type="secondary">{t('qualif.motif')} : </Typography.Text><span style={{ whiteSpace: 'pre-wrap' }}>{d.motif_priorite}</span></div>}
+        </Descriptions.Item>
+      )}
+      {service && d.ouverte === 1 && (
+        <Descriptions.Item label={t('gest.fiche.echeances')}>
+          <Space direction="vertical" size={2}>
+            {d.prise_en_charge_le && <span className={d.etat === 'a_qualifier' && d.retard ? 'dem-retard' : undefined}>{t('gest.echeance.prise_en_charge')} : {instant(d.prise_en_charge_le)}</span>}
+            <span className={d.etat !== 'a_qualifier' && d.retard ? 'dem-retard' : undefined}>{t('gest.echeance.fin')} : {d.echeance_le ? instant(d.echeance_le) : t('demande.delai.convenir')}</span>
+            {d.retard === 1 && <Tag color="red" style={{ alignSelf: 'flex-start' }}>{t('gest.retard')}</Tag>}
+          </Space>
+        </Descriptions.Item>
+      )}
       {d.danger === 1 && <Descriptions.Item label={t('demande.champ.danger')}><Typography.Text type="danger" strong>{t('demande.danger.oui')}</Typography.Text></Descriptions.Item>}
       <Descriptions.Item label={t('demande.champ.quoi')}>{dom ? `${dom} › ${cat}` : cat}</Descriptions.Item>
       <Descriptions.Item label={t('demande.champ.ou')}>{cheminTexte(d.lieu_chemin, lang)}</Descriptions.Item>
@@ -88,6 +113,14 @@ export function FicheDemande({ d, avecDemandeur, onChange }: { d: Demande; avecD
         {d.danger === 1 && !d.delai_annonce ? t('demande.danger.envoyee') : fin ? `${t('demande.delai.indicatif')} ${fin}` : t('demande.delai.convenir')}
       </Descriptions.Item>
       {avecDemandeur && <Descriptions.Item label={t('demande.champ.demandeur')}>{d.demandeur_prenom} {d.demandeur_nom}</Descriptions.Item>}
+      {service && d.duree_estimee_minutes ? <Descriptions.Item label={t('qualif.duree')}>{duree(d.duree_estimee_minutes)}</Descriptions.Item> : null}
+      {service && d.consignes ? <Descriptions.Item label={t('qualif.consignes')}><span style={{ whiteSpace: 'pre-wrap' }}>{d.consignes}</span></Descriptions.Item> : null}
+      {service && d.qualifiee_le ? (
+        <Descriptions.Item label={t('gest.fiche.qualifiee')}>
+          {dateDepot(d.qualifiee_le)}{d.qualifiee_par_nom ? ` · ${d.qualifiee_par_prenom || ''} ${d.qualifiee_par_nom}` : ''}
+          {d.photos_visibles === 0 && <div><Typography.Text type="secondary">{t('qualif.photos.masquees')}</Typography.Text></div>}
+        </Descriptions.Item>
+      ) : null}
       {avecDemandeur && d.suiveurs && d.suiveurs.length > 0 && (
         <Descriptions.Item label={t('demande.champ.suiveurs')}>
           <Space direction="vertical" size={6}>
@@ -105,7 +138,12 @@ export function FicheDemande({ d, avecDemandeur, onChange }: { d: Demande; avecD
   );
 }
 
+/** « Mes demandes » (perimetre miennes) ou liste du service technique (perimetre entite, 0.9.0). */
 export default function DemandesPage({ perimetre = 'miennes' }: { perimetre?: 'miennes' | 'entite' }) {
+  return perimetre === 'entite' ? <GestionDemandesPage /> : <MesDemandes />;
+}
+
+function MesDemandes() {
   const { t, lang } = useI18n();
   const { user } = useAuth();
   const screens = Grid.useBreakpoint();
@@ -118,18 +156,17 @@ export default function DemandesPage({ perimetre = 'miennes' }: { perimetre?: 'm
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(false);
   const [fiche, setFiche] = useState<Demande | null>(null);
-  const entiteMode = perimetre === 'entite';
   const taille = 20;
 
   const charger = useCallback(async () => {
     setLoading(true);
     try {
       const ouvertes = filtre === 'ouvertes' ? 1 : filtre === 'closes' ? 0 : undefined;
-      const r = await api.page<Demande>(`/demandes${qs({ perimetre, ouvertes, q: q.trim() || undefined, limit: taille, offset: (page - 1) * taille })}`);
+      const r = await api.page<Demande>(`/demandes${qs({ perimetre: 'miennes', ouvertes, q: q.trim() || undefined, limit: taille, offset: (page - 1) * taille })}`);
       setRows(r.data);
       setTotal(r.pagination.total);
     } catch { setRows([]); setTotal(0); } finally { setLoading(false); }
-  }, [perimetre, filtre, q, page]);
+  }, [filtre, q, page]);
   useEffect(() => { charger(); }, [charger, user?.entite_active_id]);
 
   const ouverte = params.get('demande');
@@ -144,14 +181,14 @@ export default function DemandesPage({ perimetre = 'miennes' }: { perimetre?: 'm
   const cat = (d: Demande) => (lang === 'nl' ? d.categorie_libelle_nl : d.categorie_libelle_fr);
   const lieu = (d: Demande) => (lang === 'nl' ? d.lieu_nom_nl : d.lieu_nom_fr);
   const delai = (d: Demande) => (d.danger === 1 && !d.delai_annonce ? t('demande.danger.court') : finAnnoncee(d.delai_annonce, lang) || t('demande.delai.convenir.court'));
-  const titre = entiteMode ? t('demande.entite.title') : t('demande.mes.title');
+  const titre = t('demande.mes.title');
 
   return (
     <div>
       <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8, gap: 12, flexWrap: 'wrap' }}>
         <Typography.Title level={1} style={{ fontSize: 22, margin: 0 }}>{titre}</Typography.Title>
       </div>
-      <Typography.Paragraph type="secondary">{entiteMode ? t('demande.entite.intro') : t('demande.mes.intro')}</Typography.Paragraph>
+      <Typography.Paragraph type="secondary">{t('demande.mes.intro')}</Typography.Paragraph>
       <Space wrap style={{ marginBottom: 12 }}>
         <Segmented aria-label={t('demande.filtre')} value={filtre} onChange={(v) => { setFiltre(v as Filtre); setPage(1); }}
           options={[{ value: 'toutes', label: t('demande.filtre.toutes') }, { value: 'ouvertes', label: t('demande.filtre.ouvertes') }, { value: 'closes', label: t('demande.filtre.closes') }]} />
@@ -173,7 +210,6 @@ export default function DemandesPage({ perimetre = 'miennes' }: { perimetre?: 'm
                   {d.suivie === 1 && <Tag color="green" style={{ alignSelf: 'flex-start' }}>{t('demande.suivie.tag')}</Tag>}
                   {d.pour_moi === 1 && <Tag color="purple" style={{ alignSelf: 'flex-start' }}>{t('demande.pour_moi.tag')}</Tag>}
                   <Typography.Text type="secondary" style={{ fontSize: 13 }}>{lieu(d)} · {dateDepot(d.created_at)}</Typography.Text>
-                  {entiteMode && <Typography.Text style={{ fontSize: 13 }}>{d.demandeur_prenom} {d.demandeur_nom}</Typography.Text>}
                   <Typography.Text type="secondary" style={{ fontSize: 13 }}>{t('demande.champ.delai')} : {delai(d)}</Typography.Text>
                 </Space>
               </Card>
@@ -200,15 +236,14 @@ export default function DemandesPage({ perimetre = 'miennes' }: { perimetre?: 'm
                 <Typography.Text type="secondary" style={{ fontSize: 12 }}>{cheminTexte(d.lieu_chemin.slice(0, -1), lang)}</Typography.Text>
               </div>
             ) },
-            ...(entiteMode ? [{ title: t('demande.champ.demandeur'), key: 'demandeur', render: (_: unknown, d: Demande) => `${d.demandeur_prenom} ${d.demandeur_nom}` }] : []),
             { title: t('demande.champ.etat'), key: 'etat', render: (_, d) => <Space size={4} wrap>{d.danger === 1 && <DangerTag />}<EtatTag etat={d.etat} /></Space> },
             { title: t('demande.champ.depot'), key: 'depot', render: (_, d) => dateDepot(d.created_at) },
             { title: t('demande.champ.delai'), key: 'delai', render: (_, d) => delai(d) },
           ]} />
       )}
       <Drawer open={!!fiche} onClose={fermer} width={mobile ? '100%' : 520} title={fiche ? `${t('demande.fiche')} ${fiche.numero}` : ''}>
-        {fiche && <FicheDemande d={fiche} avecDemandeur={entiteMode} onChange={chargerFiche} />}
-        {fiche && !entiteMode && <Typography.Paragraph type="secondary" style={{ marginTop: 12, fontSize: 13 }}>{t('demande.fiche.suite')}</Typography.Paragraph>}
+        {fiche && <FicheDemande d={fiche} avecDemandeur={false} onChange={chargerFiche} />}
+        {fiche && <Typography.Paragraph type="secondary" style={{ marginTop: 12, fontSize: 13 }}>{t('demande.fiche.suite')}</Typography.Paragraph>}
       </Drawer>
     </div>
   );

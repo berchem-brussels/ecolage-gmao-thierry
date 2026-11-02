@@ -56,6 +56,8 @@ const ECRITURES = [
   { route: 'PUT /api/questions-categorie/:id', body: { question_fr: 'Piraté' }, tool: 'update_question_categorie', id: (ent) => objets[ent.code].question },
   { route: 'DELETE /api/questions-categorie/:id', body: { motif: 'Piraté' }, tool: 'prepare_deactivate_question_categorie', id: (ent) => objets[ent.code].question },
   { route: 'DELETE /api/pieces/:id', body: {}, tool: 'prepare_delete_piece', id: (ent) => objets[ent.code].piece },
+  // 0.9.0 (GES-04) : qualification d'une demande de l'autre entité, avec une catégorie et un lieu de l'autre entité.
+  { route: 'POST /api/demandes/:id/qualifier', body: { categorie_id: 1, lieu_id: 1, priorite: 'P3' }, tool: 'qualifier_demande', id: (ent) => objets[ent.code].demande },
 ];
 
 /** Dépôt d'une pièce jointe au brouillon (formulaire multipart), comme le navigateur. */
@@ -150,6 +152,9 @@ for (const w of ECRITURES) {
     assert.equal(question.is_active, 1);
     assert.equal((await gestB.get(`/api/categories/${objets.BB.categorie}/questions?inclure_inactives=1`)).body.data.length, 0, 'aucune question ajoutée');
     assert.equal((await gestB.get(`/api/pieces/${objets.BB.piece}`)).status, 200, 'la pièce jointe est toujours là');
+    const demande = (await gestB.get(`/api/demandes/${objets.BB.demande}`)).body.data;
+    assert.equal(demande.etat, 'a_qualifier', 'la demande n’a pas été qualifiée');
+    assert.equal(demande.qualifiee_par, null);
   });
 }
 

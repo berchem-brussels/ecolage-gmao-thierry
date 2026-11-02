@@ -2,6 +2,32 @@
   "_description": "Notes de version pour les utilisateurs, en FR et en NL, sans terme technique (standard v3.2, sections 13.1 et 17.8 ; écart E-07). Une note par version, de la plus récente à la plus ancienne. Chaque ligne a un public : « tous », « admin » (administrateur de l'application) ou une permission du catalogue des rôles (par exemple « parametres:gerer »), lue dans l'entité active. La note de la version installée s'affiche une fois à la première connexion qui suit la mise à jour ; toutes restent relisibles dans Aide, Nouveautés.",
   "notes": [
     {
+      "version": "0.9.0",
+      "date": "2026-11-02",
+      "lignes": [
+        {
+          "public": "tous",
+          "fr": "Quand le service technique prend votre demande en charge, elle passe à « Prise en charge » et le délai annoncé suit la priorité qu'il a retenue.",
+          "nl": "Wanneer de technische dienst uw aanvraag in behandeling neemt, gaat ze naar « In behandeling » en volgt de aangekondigde termijn de prioriteit die de dienst gekozen heeft."
+        },
+        {
+          "public": "demandes:entite",
+          "fr": "Tableau de bord du service technique à l'accueil : demandes à qualifier, en retard, P1 et P2 en cours, échéance dans les deux jours ouvrés. Un clic ouvre la liste filtrée.",
+          "nl": "Dashboard van de technische dienst op de startpagina: aanvragen te kwalificeren, te laat, P1 en P2 in behandeling, vervaldatum binnen twee werkdagen. Een klik opent de gefilterde lijst."
+        },
+        {
+          "public": "demandes:entite",
+          "fr": "Demandes de l'entité : filtres (état, priorité, catégorie, bâtiment, échéance, source), tri par colonne, vues enregistrées ; « Qualifier » sur la fiche pour confirmer ou changer la priorité (avec un motif), préciser le lieu et la catégorie, estimer la durée et donner des consignes à l'ouvrier.",
+          "nl": "Aanvragen van de entiteit: filters (status, prioriteit, categorie, gebouw, vervaldatum, bron), sorteren per kolom, opgeslagen weergaven; « Kwalificeren » op de fiche om de prioriteit te bevestigen of te wijzigen (met een reden), de plaats en de categorie te verfijnen, de duur te schatten en instructies voor de arbeider te geven."
+        },
+        {
+          "public": "parametres:gerer",
+          "fr": "Réglages de l'entité : le groupe « Pièces jointes des demandes » est maintenant affiché (nombre, taille, formats).",
+          "nl": "Instellingen van de entiteit: de groep « Bijlagen bij aanvragen » wordt nu getoond (aantal, grootte, formaten)."
+        }
+      ]
+    },
+    {
       "version": "0.8.0",
       "date": "2026-10-30",
       "lignes": [

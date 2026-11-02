@@ -1,6 +1,6 @@
 # Demandes d'intervention : dépôt et suivi par le demandeur
 
-Version 0.7.1 · Fiche fonctionnelle (modèle du standard, section 17.8).
+Version 0.9.0 · Fiche fonctionnelle (modèle du standard, section 17.8).
 
 ## Objet
 
@@ -38,7 +38,7 @@ Permettre à tout agent de l'administration communale et du CPAS de signaler un 
 | 6 | En 0.5.0, toute demande arrive « À qualifier », vue par le demandeur comme « Reçue par le service technique » ; la validation par le chef de service s'appliquera à l'étape 11 | DV-43, écart E-22 |
 | 7 | Numéro `{code de l'entité}-{code du type}-{année}-{rang}`, le même en FR et en NL ; code du type (DI) et remise à un chaque année ou numérotation continue réglés par le responsable ; attribué à l'enregistrement, sans trou ni doublon, jamais réutilisé | DV-44, NUM-01 à 05 |
 | 8 | « Mes demandes » : les demandes de la personne, ouvertes en tête, état en libellé simple et couleur, date de dépôt, délai annoncé ; le filtre « Mon service » attend la lecture du service des agents | DV-45, SUI-01, écart E-23 |
-| 9 | « Demandes de l'entité » : toutes les demandes de l'entité active, en lecture seule, pour le gestionnaire et le responsable, avec le nom du demandeur | DV-46 |
+| 9 | « Demandes de l'entité » : toutes les demandes de l'entité active, pour le gestionnaire et le responsable, avec le nom du demandeur ; depuis la 0.9.0, liste du service technique avec tableau de bord, filtres, tris et qualification (fiche `service-technique.md`) | DV-46, DV-87 |
 | 10 | Les espaces en trop au début et à la fin d'un texte saisi sont retirés par le serveur, sauf dans les mots de passe ; un champ obligatoire fait seulement d'espaces est refusé | DV-37 |
 | 11 | La recherche d'un lieu ignore accents, majuscules et ponctuation, en FR et en NL, et trouve une salle par le nom de son bâtiment | REF-03, LNG-09 |
 | 12 | Aucune modification ni annulation d'une demande en 0.5.0 : elles arrivent avec le cycle de vie | Étape 9, écart E-21 |
@@ -64,6 +64,7 @@ Permettre à tout agent de l'administration communale et du CPAS de signaler un 
 | 32 | Chaque pièce part au brouillon dès l'ajout, revient à la reprise et passe à la demande à l'envoi ; une pièce seule suffit à garder le brouillon ; « Recommencer à zéro », « Moi aussi » et la purge des 30 jours effacent les pièces du brouillon (0.8.0) | DV-85 |
 | 33 | Lecture : pièce du brouillon par son auteur seul ; pièce de la demande par le demandeur, le bénéficiaire et le service technique, pas par qui suit seulement (« Moi aussi ») ; fichier toujours téléchargé en pièce jointe (0.8.0) | DEM-09, SEC-02 |
 | 34 | « Retirer » : suppression réelle, avec confirmation et ligne au journal sans nom de fichier ; le demandeur tant que la demande est « Reçue par le service technique », le gestionnaire et le responsable à tout moment, l'ouvrier jamais ; sur la fiche, le bouton n'apparaît que si le serveur l'autorise (0.8.0) | DV-84, RGPD-02 |
+| 35 | Quand le service technique qualifie la demande, le demandeur lit « Prise en charge » et le délai annoncé suit la priorité retenue, compté depuis la réception ; il ne lit ni les consignes à l'ouvrier, ni le motif d'un changement de priorité, ni l'échéance de prise en charge (0.9.0) | DV-88, DV-90 |
 
 ## Données personnelles
 
@@ -71,4 +72,4 @@ Nom du demandeur, rattaché à la demande, visible du demandeur et des gestionna
 
 ## Ce qui vient ensuite
 
-Tableau de bord et qualification (étape 8) ; ligne du temps, clôture, avis (étape 9) ; messages (étape 10) ; validation par le chef de service (étape 11) ; courriel d'accusé de réception, aussi au bénéficiaire et aux personnes qui suivent (étape 13) ; alerte de la garde en cas de danger (étapes 13 et 17) ; fusion des doublons (étape 12).
+Tableau de bord et qualification : faits en 0.9.0 (fiche `service-technique.md`) ; ligne du temps, clôture, avis (étape 9) ; messages (étape 10) ; validation par le chef de service (étape 11) ; courriel d'accusé de réception, aussi au bénéficiaire et aux personnes qui suivent (étape 13) ; alerte de la garde en cas de danger (étapes 13 et 17) ; fusion des doublons (étape 12).
