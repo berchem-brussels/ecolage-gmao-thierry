@@ -24,6 +24,8 @@ const echeances = require('./services/echeances');
 const demandes = require('./services/demandes');
 const brouillons = require('./services/brouillons');
 const pieces = require('./services/pieces');
+const qualification = require('./services/qualification');
+const vues = require('./services/vues-demandes');
 const parametres = require('./services/parametres');
 const modulesService = require('./services/modules');
 const parametresEntite = require('./services/parametres-entite');
@@ -75,8 +77,30 @@ const TOOLS = [
     run: (u, a) => session.lieuHabituel(u, a.lieu_id, 'mcp') },
 
   { name: 'list_demandes', route: 'GET /api/demandes', read: true, schema: S.demandeList,
-    fr: "Liste les demandes d'intervention de l'entité active, ouvertes en tête : celles de la personne (perimetre miennes, défaut) ou toutes celles de l'entité (perimetre entite, gestionnaire ou responsable). Filtres etat, ouvertes, q sur le numéro, la description ou le lieu.", nl: 'Lijst van de interventieaanvragen van de actieve entiteit, open aanvragen eerst: die van de persoon (perimetre miennes, standaard) of alle aanvragen van de entiteit (perimetre entite, beheerder of verantwoordelijke). Filters etat, ouvertes, q op nummer, beschrijving of plaats.',
+    fr: "Liste les demandes d'intervention de l'entité active, ouvertes en tête : celles de la personne (perimetre miennes, défaut) ou toutes celles de l'entité (perimetre entite, gestionnaire ou responsable). Filtres etat, ouvertes, q sur le numéro, la description, le lieu (et le demandeur pour l'entité) ; pour le service technique : etats et priorites (listes séparées par des virgules), categorie_id (un domaine compte ses natures), batiment_id (un lieu compte tout ce qu'il contient), echeance (retard, proche : dans les deux jours ouvrés, sans), canal, danger ; tri (depot, numero, echeance, priorite) et ordre (asc, desc). Chaque demande du service porte echeance_courante, echeance_type et retard.", nl: 'Lijst van de interventieaanvragen van de actieve entiteit, open aanvragen eerst: die van de persoon (perimetre miennes, standaard) of alle aanvragen van de entiteit (perimetre entite, beheerder of verantwoordelijke). Filters etat, ouvertes, q op nummer, beschrijving, plaats (en aanvrager voor de entiteit); voor de technische dienst: etats en priorites (lijsten gescheiden door komma’s), categorie_id (een domein telt zijn soorten mee), batiment_id (een plaats telt alles wat ze bevat), echeance (retard, proche: binnen twee werkdagen, sans), canal, danger; tri (depot, numero, echeance, priorite) en ordre (asc, desc). Elke aanvraag van de dienst draagt echeance_courante, echeance_type en retard.',
     run: page(demandes.list) },
+  { name: 'get_tableau_bord', route: 'GET /api/demandes/tableau-bord', read: true, schema: { type: 'object', properties: {}, additionalProperties: false },
+    fr: "Tableau de bord du service technique de l'entité active (gestionnaire, responsable) : nombre de demandes à qualifier, en retard, P1 et P2 ouvertes, et dont l'échéance tombe dans les deux jours ouvrés. Chaque nombre correspond à un filtre de list_demandes (etats=a_qualifier, echeance=retard, priorites=P1,P2 avec ouvertes=1, echeance=proche).", nl: 'Dashboard van de technische dienst van de actieve entiteit (beheerder, verantwoordelijke): aantal aanvragen te kwalificeren, te laat, open P1 en P2, en met een vervaldatum binnen twee werkdagen. Elk getal komt overeen met een filter van list_demandes (etats=a_qualifier, echeance=retard, priorites=P1,P2 met ouvertes=1, echeance=proche).',
+    run: (u) => qualification.tableauBord(u) },
+  { name: 'qualifier_demande', route: 'POST /api/demandes/:id/qualifier', schema: withId(S.demandeQualifier),
+    fr: "Qualifie une demande de l'entité active (gestionnaire, responsable) : categorie_id, lieu_id et priorite obligatoires ; motif_priorite obligatoire si la priorité diffère de celle que propose la catégorie (P1 si un danger est signalé) ; duree_estimee_minutes, consignes à l'ouvrier, photos_visibles (photos du service visibles par le demandeur), date_convenue (seulement pour une priorité sans délai de fin). Une demande « À qualifier » passe « Qualifiée » ; les échéances sont recalculées depuis la réception.", nl: 'Kwalificeert een aanvraag van de actieve entiteit (beheerder, verantwoordelijke): categorie_id, lieu_id en priorite verplicht; motif_priorite verplicht als de prioriteit verschilt van die welke de categorie voorstelt (P1 bij gemeld gevaar); duree_estimee_minutes, consignes voor de arbeider, photos_visibles (foto’s van de dienst zichtbaar voor de aanvrager), date_convenue (enkel voor een prioriteit zonder eindtermijn). Een aanvraag « Te kwalificeren » wordt « Gekwalificeerd »; de vervaldata worden herberekend vanaf de ontvangst.',
+    run: (u, a) => { const { id, ...data } = a; return qualification.qualifier(u, id, data, 'mcp'); } },
+  { name: 'list_vues_demandes', route: 'GET /api/vues-demandes', read: true, schema: S.vueList,
+    fr: "Liste les vues enregistrées de la personne connectée pour la liste du service technique, dans l'entité active : un nom et des filtres de list_demandes.", nl: 'Lijst van de opgeslagen weergaven van de aangemelde persoon voor de lijst van de technische dienst, in de actieve entiteit: een naam en filters van list_demandes.',
+    run: page(vues.list) },
+  { name: 'get_vue_demandes', route: 'GET /api/vues-demandes/:id', read: true, schema: idSchema,
+    fr: 'Lit une vue enregistrée de la personne connectée.', nl: 'Leest een opgeslagen weergave van de aangemelde persoon.',
+    run: (u, a) => vues.get(u, a.id) },
+  { name: 'create_vue_demandes', route: 'POST /api/vues-demandes', schema: S.vueCreate,
+    fr: "Enregistre une vue de la liste du service technique : nom (60 caractères, unique pour la personne) et filtres (mêmes clés que list_demandes : etats, priorites, categorie_id, batiment_id, echeance, canal, danger, q, ouvertes, tri, ordre). Vingt vues au plus par entité.", nl: 'Slaat een weergave van de lijst van de technische dienst op: naam (60 tekens, uniek voor de persoon) en filters (zelfde sleutels als list_demandes: etats, priorites, categorie_id, batiment_id, echeance, canal, danger, q, ouvertes, tri, ordre). Maximaal twintig weergaven per entiteit.',
+    run: (u, a) => vues.create(u, a, 'mcp') },
+  { name: 'update_vue_demandes', route: 'PUT /api/vues-demandes/:id', schema: withId(S.vueUpdate),
+    fr: "Renomme une vue enregistrée de la personne connectée ou remplace ses filtres.", nl: 'Hernoemt een opgeslagen weergave van de aangemelde persoon of vervangt de filters.',
+    run: (u, a) => { const { id, ...data } = a; return vues.update(u, id, data, 'mcp'); } },
+  { name: 'delete_vue_demandes', route: 'DELETE /api/vues-demandes/:id', confirm: true, schema: idSchema,
+    fr: "Supprime une vue enregistrée de la personne connectée (deux appels : prepare_delete_vue_demandes puis confirm_delete_vue_demandes). Les demandes ne changent pas.", nl: 'Verwijdert een opgeslagen weergave van de aangemelde persoon (twee oproepen: prepare_delete_vue_demandes en dan confirm_delete_vue_demandes). De aanvragen veranderen niet.',
+    summary: (u, a) => ({ action: 'delete_vue_demandes', vue: vues.get(u, a.id), definitif: true }),
+    run: (u, a) => vues.remove(u, a.id, 'mcp') },
   { name: 'get_demande', route: 'GET /api/demandes/:id', read: true, schema: idSchema,
     fr: "Lit une demande d'intervention : numéro, lieu et son chemin, catégorie, description, état, délai annoncé. Le demandeur ne lit que les siennes.", nl: 'Leest een interventieaanvraag: nummer, plaats en pad, categorie, beschrijving, status, aangekondigde termijn. De aanvrager leest enkel de zijne.',
     run: (u, a) => demandes.get(u, a.id) },

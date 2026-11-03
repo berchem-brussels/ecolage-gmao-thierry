@@ -5,6 +5,8 @@ import path from 'path';
 import { translations, intents } from '../i18n';
 import { answer } from '../components/Chatbot';
 import { ICONE_CODES } from '../referentiel';
+import { ETATS } from '../demandes';
+import { GROUPES as GROUPES_REGLAGES } from '../pages/ReglagesEntitePage';
 
 const SRC = path.resolve(process.cwd(), 'src');
 const tsx = (dir: string): string[] => fs.readdirSync(dir).flatMap((f) => {
@@ -50,6 +52,36 @@ describe('traductions', () => {
     }
     expect(codes.size).toBeGreaterThan(25);
     for (const c of codes) expect(translations[`audit.action.${c}`], c).toBeTruthy();
+  });
+
+  it('0.9.0 (contrôle 7 de la 0.8.0) : chaque groupe du catalogue des réglages de l’entité est affiché, avec son titre FR et NL', () => {
+    const catalogue = JSON.parse(fs.readFileSync(path.resolve(process.cwd(), '..', 'backend', 'config', 'parametres-entite.json'), 'utf8'));
+    const codes = catalogue.groupes.map((g: { code: string }) => g.code);
+    expect(GROUPES_REGLAGES).toEqual(codes);
+    for (const c of codes) expect(translations[`reglages.groupe.${c}`]?.fr && translations[`reglages.groupe.${c}`]?.nl, c).toBeTruthy();
+    for (const p of catalogue.parametres) expect(codes, p.cle).toContain(p.groupe);
+  });
+
+  it('0.9.0 : chaque famille d’actions du journal d’audit a son libellé FR et NL (filtre du journal)', () => {
+    const backend = path.resolve(process.cwd(), '..', 'backend', 'src');
+    const js = (dir: string): string[] => fs.readdirSync(dir).flatMap((f) => {
+      const p = path.join(dir, f);
+      return fs.statSync(p).isDirectory() ? js(p) : p.endsWith('.js') ? [p] : [];
+    });
+    const familles = new Set<string>();
+    for (const f of js(backend)) {
+      for (const m of fs.readFileSync(f, 'utf8').matchAll(/logAudit\([^,]+,\s*([^,]+),/g)) {
+        for (const c of m[1].matchAll(/'([a-z_.]+)'/g)) familles.add(c[1].split('.')[0]);
+      }
+    }
+    expect(familles.has('piece')).toBe(true);
+    for (const f of familles) expect(translations[`audit.famille.${f}`]?.fr && translations[`audit.famille.${f}`]?.nl, f).toBeTruthy();
+  });
+
+  it('0.9.0 : chaque état a son libellé pour le service technique, en FR et en NL, distinct de celui du demandeur pour « À qualifier »', () => {
+    for (const e of ETATS) expect(translations[`demande.etat_service.${e}`]?.fr && translations[`demande.etat_service.${e}`]?.nl, e).toBeTruthy();
+    expect(translations['demande.etat_service.a_qualifier'].fr).toBe('À qualifier');
+    expect(translations['demande.etat.a_qualifier'].fr).not.toBe('À qualifier');
   });
 
   it('chaque icône du catalogue des catégories a son pictogramme et son libellé FR et NL (0.4.0)', () => {

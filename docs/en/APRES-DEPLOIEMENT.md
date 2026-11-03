@@ -2,6 +2,10 @@
 
 The French text prevails. Update procedure: upload the archive, `cd <folder>`, `ls -l` the archive, `sudo bash backup.sh`, `sudo rm -rf backend frontend docs`, `sudo tar xzf … --strip-components=1`, `ls backend frontend`, `sudo docker compose build`, `sudo docker compose up -d`, `sudo docker compose ps`, `curl -sk https://localhost:<https>/api/version`, checklist from the delivery message. `.env` and the volumes are never touched.
 
+## 0.9.0 (02/11/2026)
+
+Update with migration `008_qualification` (`[DB] Migration 008_qualification appliquée` in `sudo docker logs gmao-api --tail 30`). No new dependency; both images are rebuilt. The migration computes the due dates of existing requests. Check: dashboard on the manager's home page, filtered list « Demandes de l'entité », « Qualifier » on a record, group « Pièces jointes des demandes » in the entity settings. Rollback to 0.8.0 without restoring the database.
+
 ## 0.8.0 (30/10/2026)
 
 Update with migration `007_pieces_jointes` (`[DB] Migration 007_pieces_jointes appliquée` in `sudo docker logs gmao-api --tail 30`). `docker compose build` downloads `multer` (a few extra minutes). `backup.sh` now also reports `pièces jointes copiées` or `aucune pièce jointe à copier`. Check: « Photos et documents » block in the form, attachments on the request record, group « Pièces jointes des demandes » in Entity settings. Rollback to 0.7.5 without restoring the database.

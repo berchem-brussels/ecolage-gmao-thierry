@@ -2,6 +2,33 @@
 
 Le français fait foi. Grille de la section 10.2 du standard, rejouée à chaque version. « Non joué » veut dire que le contrôle n'a pas tourné.
 
+## 0.9.0 (02/11/2026)
+
+Service technique : tableau de bord, liste, qualification, vues enregistrées (étape 8 ; GES-01, GES-02, GES-04, PRI-01, PRI-03 ; DV-88 à DV-93) et correction du contrôle 7 de la 0.8.0 (DV-86). Environnement : bac à sable de Claude, Node 22.23.4 ; parcours `ci.yml` rejoué sous Node 20.20.2. Aucune dépendance nouvelle. Migration `008_qualification`. Routes nouvelles : `GET /api/demandes/tableau-bord`, `POST /api/demandes/:id/qualifier`, cinq routes `/api/vues-demandes`. Permission nouvelle `demandes:qualifier` (gestionnaire, responsable).
+
+| Famille | Contrôle | Résultat |
+| --- | --- | --- |
+| Authentification | Session exigée sur toutes les routes nouvelles ; 401 sans session | Conforme (test généré sur toutes les routes) |
+| Autorisation | Qualification : `demandes:qualifier` seulement ; agent, ouvrier et collègue refusés (403) ; tableau de bord et vues : `demandes:entite` ; état hors `a_qualifier` et `qualifiee` refusé (409) | Conforme (`qualification.test.js`, `vues-demandes.test.js`) |
+| IDOR | Vue d'une autre personne : 404 (existence non révélée), lecture, modification et suppression ; vue d'une autre entité : 403 | Conforme (`vues-demandes.test.js`) |
+| Cloison AC et CPAS | `POST /api/demandes/:id/qualifier` ajouté à `ECRITURES` de `cloison.test.js` (API et MCP, la demande reste « À qualifier ») ; lieu et catégorie d'une autre entité refusés ; filtres `categorie_id` et `batiment_id` d'une autre entité : 403 ; vues de l'entité active seulement | Conforme (`cloison.test.js`, `qualification.test.js`, `vues-demandes.test.js`) |
+| Validation | Schémas `ajv` à `additionalProperties: false` : champ inconnu (`etat`) refusé ; priorité hors P1 à P4, durée hors 15 à 10 080 minutes, consignes au-delà de 2 000 caractères, date mal formée refusés ; filtres `etats` et `priorites` au motif de liste, chaque valeur contrôlée contre le catalogue (400) ; filtres d'une vue contrôlés par le même schéma | Conforme (`qualification.test.js`, `vues-demandes.test.js`) |
+| Injections | Requêtes constantes du module ; liste des « ? » pour les listes de valeurs ; ordre de tri pris dans une table fixe (`TRIS`), sens `ASC` ou `DESC` seulement ; aucune valeur reçue dans le texte SQL | Conforme (test statique `securite.test.js`) |
+| Données | Consignes, motif, durée et auteur de la qualification retirés de la fiche pour qui n'a pas `demandes:entite` (demandeur, bénéficiaire, qui suit) ; journal sans texte libre (motif et consignes notés 1 ou 0) ; vues : nom et filtres seulement | Conforme (`qualification.test.js`) |
+| CSRF | Jeton anti-CSRF exigé sur la qualification et les écritures des vues | Conforme (test généré) |
+| Secrets commités | `.gitignore` inchangé | Conforme : seul `.env.example`, aucune base, aucun `dist/`, aucune valeur de NIXUS |
+| Interface | Textes rendus par React ; retard dit en mots et par une icône, pas seulement en couleur ; groupe de boutons des priorités en `radiogroup` (axe-core) | Conforme (tests, `a11y`, axe-core en FR et en NL) |
+| Infrastructure | Dockerfile, compose, `nginx.conf`, `backup.sh`, `.env`, `ci.yml` inchangés | Conforme |
+| Dépendances | `npm audit --omit=dev` serveur | 0 vulnérabilité |
+| Dépendances | `npm audit --omit=dev` interface | 3 modérées (E-09), inchangées |
+| LLM et MCP | `get_tableau_bord`, `qualifier_demande`, cinq outils des vues (suppression en deux appels) sous les droits de la personne ; parité API et MCP | Conforme (`qualification.test.js`, `vues-demandes.test.js`, `mcp.test.js`) |
+
+Les trois contrôles qui ne restent jamais « non joués » (secrets commités, contrôle d'accès côté serveur, IDOR) ont été joués.
+
+### Preuve d'échec des nouveaux tests (0.9.0)
+
+Chaque contrôle retiré à tour de rôle, le reste du code de la 0.9.0 en place : sans le droit de qualifier, 2 tests échouent ; sans la cloison de la qualification, 1 ; sans le motif exigé, 2 ; sans le contrôle de l'état, 1 ; champs internes rendus au demandeur, 2 ; vue d'un collègue lisible, 1 ; sans la cloison des vues, 2 ; sans le plafond des vues, 1 ; sans le contrôle des valeurs de filtre, 1 ; écran Réglages de l'entité sans le groupe `pieces`, 1 (interface) ; famille `piece` du journal sans libellé, 1 (interface). La liste blanche du tri n'est pas éprouvable par l'API : le schéma refuse d'abord une valeur inconnue (400) ; elle reste une seconde barrière. Code de la 0.9.0 : tout réussi.
+
 ## 0.8.0 (30/10/2026)
 
 Photos et pièces jointes des demandes (étape 6 ; DEM-09, DEM-16, RGPD-01, RGPD-02 ; DV-82 à DV-85). Environnement : bac à sable de Claude, Node 22.23.4. Dépendance nouvelle : `multer` 2.5.0 (E-16, décidé par Renaud le 28/10/2026), avec `busboy`, `streamsearch` et `append-field` (`type-is` était déjà là). Migration `007_pieces_jointes`. Routes nouvelles : `GET` et `POST /api/demandes/brouillon/pieces`, `GET /api/pieces/:id`, `GET /api/pieces/:id/fichier`, `DELETE /api/pieces/:id`.

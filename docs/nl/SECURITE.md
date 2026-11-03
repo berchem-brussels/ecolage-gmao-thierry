@@ -2,6 +2,10 @@
 
 De Franse tekst (`docs/fr/SECURITE.md`) is rechtsgeldig en bevat het volledige rooster per versie.
 
+## 0.9.0 (02/11/2026)
+
+Technische dienst: dashboard, lijst, kwalificatie, opgeslagen weergaven (stap 8). Geen nieuwe afhankelijkheid, migratie `008_qualification`, zeven nieuwe routes, nieuwe permissie `demandes:qualifier` (beheerder, verantwoordelijke). Kwalificatie enkel met die permissie en in de status « Te kwalificeren » of « Gekwalificeerd »; tussenschot AC en CPAS getest via API en MCP; weergave van een andere persoon 404, van een andere entiteit 403; filters gecontroleerd tegen de catalogus, sortering uit een vaste tabel; instructies en reden nooit aan de aanvrager; logboek zonder vrije tekst. `npm audit --omit=dev`: server 0, interface 3 matige (E-09). Bewijs van falen per verwijderde controle in de Franse tekst.
+
 ## 0.8.0 (30/10/2026)
 
 Foto's en bijlagen bij aanvragen (stap 6). Nieuwe afhankelijkheid `multer` 2.5.0 (E-16), migratie `007_pieces_jointes`, vijf nieuwe routes. Bestanden in het geheugen ontvangen, één bestand per verzoek, groottegrens van de entiteit (maximaal 10 MB), type gecontroleerd op de eerste bytes; foto's opgeschoond (EXIF, GPS), pdf's met actieve inhoud (script, bijgevoegd bestand, formulier) geweigerd, ook met geëscapete namen. Rechten en aantal gecontroleerd vóór het lezen van het bestand. Een bijlage van het ontwerp is alleen leesbaar voor de auteur; een bijlage van een aanvraag voor de aanvrager, de begunstigde en de technische dienst, niet voor wie alleen volgt. Echte verwijdering (rij en bestand), journaal zonder bestandsnaam. Downloaden altijd als bijlage, `nosniff`, `no-store`, sandbox. Scheiding tussen entiteiten getest via de API en de MCP. nginx: 11 MB op de enige uploadroute van de bijlagen, elders 1 MB; `backup.sh` kopieert de map `pieces`. `npm audit --omit=dev` server: 0. Bekende grens: een pdf wordt niet herschreven (documentmetagegevens blijven). Bewijs van falen: elke controle afzonderlijk verwijderd doet minstens één test falen.

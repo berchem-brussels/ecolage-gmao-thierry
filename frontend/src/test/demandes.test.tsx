@@ -26,7 +26,7 @@ const user: Record<string, unknown> = {
 };
 const roles = [
   { code: 'agent', portee: 'entite', defaut: true, label_fr: 'Demandeur', label_nl: 'Aanvrager', description_fr: 'd', description_nl: 'd', permissions: ['lieux:lire', 'categories:lire', 'demandes:creer'] },
-  { code: 'gestionnaire', portee: 'entite', defaut: false, label_fr: 'Gestionnaire technique', label_nl: 'Technisch beheerder', description_fr: 'd', description_nl: 'd', permissions: ['lieux:lire', 'entites:membres', 'demandes:creer', 'demandes:entite'] },
+  { code: 'gestionnaire', portee: 'entite', defaut: false, label_fr: 'Gestionnaire technique', label_nl: 'Technisch beheerder', description_fr: 'd', description_nl: 'd', permissions: ['lieux:lire', 'entites:membres', 'demandes:creer', 'demandes:entite', 'demandes:qualifier'] },
 ];
 const cat = (id: number, parent: number | null, fr: string, nl: string, icone: string, natures?: unknown[]) => ({
   id, entite_id: 1, parent_id: parent, niveau: parent ? 'nature' : 'domaine', code: `c${id}`, libelle_fr: fr, libelle_nl: nl, icone,
@@ -84,6 +84,13 @@ const piece = (id: number, nom: string, type = 'image/jpeg', extra: Record<strin
   created_at: '2026-10-30 10:00:00', brouillon: 1, ...extra,
 });
 let ficheData: unknown = null;
+// 0.9.0 : tableau de bord, vues enregistrées et priorités de l'entité.
+const BORD = { a_qualifier: 4, en_retard: 2, p1_p2: 1, echeance_proche: 3, limite_proche: '2026-11-04 16:00:00', jours_proches: 2 };
+let bordData: unknown = BORD;
+let vuesData: unknown[] = [];
+const prio = (code: string, fr: string, nl: string, fin: number | null) => ({ id: Number(code[1]), entite_id: 1, code, libelle_fr: fr, libelle_nl: nl, description_fr: null, description_nl: null,
+  couleur: 'blue', unite: 'jours_ouvrables', prise_en_charge: 2, fin, updated_at: '', defaut: {}, est_defaut: true });
+const prioritesData = [prio('P1', 'Sécurité', 'Veiligheid', 4), prio('P2', 'Urgente', 'Dringend', 2), prio('P3', 'Normale', 'Normaal', 10), prio('P4', 'Planifiable', 'Planbaar', null)];
 let piecesData: { pieces: unknown[]; plafonds: unknown } = { pieces: [], plafonds: PLAFONDS };
 let uploads: { url: string; fichier: File }[] = [];
 let reponseUpload: (n: number) => { status: number; json: unknown } = (n) => ({ status: 201, json: { data: piece(100 + n, `photo-${n}.jpg`), meta: { envelope: 1 } } });
@@ -98,6 +105,8 @@ beforeEach(() => {
   puts = [];
   piecesData = { pieces: [], plafonds: PLAFONDS };
   ficheData = null;
+  bordData = BORD;
+  vuesData = [];
   uploads = [];
   reponseUpload = (n) => ({ status: 201, json: { data: piece(100 + n, `photo-${n}.jpg`), meta: { envelope: 1 } } });
   reponsePost = { status: 201, json: { data: demande(3, 'AA-DI-2026-00003', 'a_qualifier'), meta: { envelope: 1 } } };
@@ -116,6 +125,9 @@ beforeEach(() => {
     const json = url.startsWith('/api/demandes/brouillon/pieces') ? { data: piecesData, meta: { envelope: 1 } }
       : url.startsWith('/api/pieces/') ? { data: { id: 1, supprime: 1 }, meta: { envelope: 1 } }
       : url.startsWith('/api/demandes/brouillon') ? { data: init?.method && init.method !== 'GET' ? { efface: 1 } : brouillonData, meta: { envelope: 1 } }
+      : url.startsWith('/api/demandes/tableau-bord') ? { data: bordData, meta: { envelope: 1 } }
+      : url.startsWith('/api/vues-demandes') ? page(vuesData)
+      : url.startsWith('/api/priorites') ? page(prioritesData)
       : url.startsWith('/api/demandes/voisines') ? { data: voisinesData, meta: { envelope: 1 } }
       : url.startsWith('/api/demandes/beneficiaires') ? { data: [{ id: 9, prenom: 'Hélène', nom: 'Dupré' }], meta: { envelope: 1 } }
       : url.startsWith('/api/categories/arbre') ? { data: arbreData, meta: { envelope: 1 } }
@@ -924,5 +936,129 @@ describe('pièces jointes sur la fiche (0.8.0, DEM-09, DV-84)', () => {
     const fiche = await screen.findByRole('dialog');
     await within(fiche).findByText('AA-DI-2026-00002');
     expect(within(fiche).queryByText('Pièces jointes')).toBeNull();
+  });
+});
+
+
+describe('service technique (0.9.0, GES-01, GES-02, GES-04, PRI-01, PRI-03)', () => {
+  const service = (id: number, numero: string, etat: string, extra: Record<string, unknown> = {}) => demande(id, numero, etat, {
+    priorite_proposee: 'P3', prise_en_charge_le: '2026-10-28 13:05:00', echeance_le: '2026-11-09 13:05:00', echeance_type: etat === 'a_qualifier' ? 'prise_en_charge' : 'fin',
+    echeance_courante: etat === 'a_qualifier' ? '2026-10-28 13:05:00' : '2026-11-09 13:05:00', retard: 0, photos_visibles: 1, ...extra,
+  });
+  const calls = () => (fetch as unknown as { mock: { calls: [string, { method?: string; body?: string }?][] } }).mock.calls;
+  beforeEach(() => {
+    demandes.splice(0, demandes.length, service(2, 'AA-DI-2026-00002', 'a_qualifier', { retard: 1 }), service(1, 'AA-DI-2026-00001', 'qualifiee'));
+  });
+  const remettre = () => demandes.splice(0, demandes.length, demande(2, 'AA-DI-2026-00002', 'a_qualifier'), demande(1, 'AA-DI-2026-00001', 'cloturee', { delai_annonce: null }));
+
+  it('accueil du service : quatre compteurs en liens vers la liste filtrée, nombre et libellé dans le lien', async () => {
+    try {
+      render(wrap(HomePage, 'fr'));
+      const retard = await screen.findByRole('link', { name: /2\s*En retard/ });
+      expect(retard).toHaveAttribute('href', expect.stringContaining('echeance=retard'));
+      expect(retard).toHaveClass('bord-alerte');
+      expect(screen.getByRole('link', { name: /4\s*À qualifier/ })).toHaveAttribute('href', expect.stringContaining('etats=a_qualifier'));
+      expect(screen.getByRole('link', { name: /1\s*P1 et P2 ouvertes/ })).toHaveAttribute('href', expect.stringContaining('priorites=P1%2CP2'));
+      expect(screen.getByRole('link', { name: /3\s*Échéance dans les 2 jours ouvrés/ })).toHaveAttribute('href', expect.stringContaining('echeance=proche'));
+    } finally { remettre(); }
+  });
+
+  it('liste : filtres de l’adresse transmis au serveur ; en cours par défaut ; échéance et « En retard » en mots', async () => {
+    try {
+      render(wrap(DemandesEntite, 'fr', ['/demandes-entite?echeance=retard&tri=echeance&ordre=asc']));
+      expect(await screen.findAllByText('En retard')).not.toHaveLength(0);
+      const u = calls().map((c) => c[0]).find((x) => x.startsWith('/api/demandes?') && x.includes('perimetre=entite'))!;
+      expect(u).toContain('echeance=retard');
+      expect(u).toContain('tri=echeance');
+      expect(u).toContain('ouvertes=1');
+      expect(screen.getAllByText('Prise en charge avant').length).toBeGreaterThan(0);
+      expect(screen.getAllByText('À qualifier').length).toBeGreaterThan(0);
+    } finally { remettre(); }
+  });
+
+  it('liste : le filtre « Dans les 2 jours ouvrés » demande echeance=proche', async () => {
+    try {
+      render(wrap(DemandesEntite, 'fr', ['/demandes-entite']));
+      await screen.findByRole('button', { name: 'AA-DI-2026-00002' });
+      fireEvent.click(screen.getByText('Filtres et vues'));
+      fireEvent.click(await screen.findByText('Dans les 2 jours ouvrés'));
+      await waitFor(() => expect(calls().some((c) => c[0].includes('perimetre=entite') && c[0].includes('echeance=proche'))).toBe(true));
+    } finally { remettre(); }
+  });
+
+  it('vue : « Enregistrer la vue » envoie le nom et les filtres du moment', async () => {
+    try {
+      render(wrap(DemandesEntite, 'fr', ['/demandes-entite?priorites=P1,P2&echeance=retard']));
+      await screen.findByRole('button', { name: 'AA-DI-2026-00002' });
+      fireEvent.click(screen.getByText(/Filtres et vues \(2\)/));
+      fireEvent.click(await screen.findByRole('button', { name: /Enregistrer la vue/ }));
+      fireEvent.change(await screen.findByLabelText('Nom de la vue'), { target: { value: 'Urgentes en retard' } });
+      fireEvent.click(screen.getByRole('button', { name: 'Enregistrer' }));
+      await waitFor(() => expect(posts.some((p) => p.url === '/api/vues-demandes')).toBe(true));
+      const p = posts.find((x) => x.url === '/api/vues-demandes')!;
+      expect(p.body).toEqual({ nom: 'Urgentes en retard', filtres: { priorites: 'P1,P2', echeance: 'retard', ouvertes: 1 } });
+    } finally { remettre(); }
+  });
+
+  it('fiche du service : échéances, « Qualifier » ; le formulaire propose la priorité, exige un motif quand elle change, puis envoie', async () => {
+    ficheData = service(2, 'AA-DI-2026-00002', 'a_qualifier', { retard: 1 });
+    reponsePost = { status: 200, json: { data: service(2, 'AA-DI-2026-00002', 'qualifiee', { priorite: 'P2', motif_priorite: 'Classe occupée' }), meta: { envelope: 1 } } };
+    try {
+      render(wrap(DemandesEntite, 'fr', ['/demandes-entite?demande=2']));
+      const fiche = await screen.findByRole('dialog');
+      expect(await within(fiche).findByText('Échéances')).toBeInTheDocument();
+      fireEvent.click(await screen.findByRole('button', { name: 'Qualifier' }));
+      expect(await screen.findByText(/Priorité proposée : P3/)).toBeInTheDocument();
+      fireEvent.click(await screen.findByText('P2 · Urgente'));
+      expect(await screen.findByLabelText(/Motif du changement de priorité/)).toBeInTheDocument();
+      fireEvent.change(screen.getByLabelText(/Consignes à l’ouvrier|Consignes à l'ouvrier/), { target: { value: 'Prendre l’échelle.' } });
+      fireEvent.click(screen.getAllByRole('button', { name: 'Qualifier' }).slice(-1)[0]);
+      expect(await screen.findByText('Indiquez pourquoi vous changez la priorité proposée.')).toBeInTheDocument();
+      expect(posts.some((p) => p.url.endsWith('/qualifier'))).toBe(false);
+      fireEvent.change(screen.getByLabelText(/Motif du changement de priorité/), { target: { value: 'Classe occupée' } });
+      fireEvent.click(screen.getAllByRole('button', { name: 'Qualifier' }).slice(-1)[0]);
+      await waitFor(() => expect(posts.some((p) => p.url === '/api/demandes/2/qualifier')).toBe(true));
+      expect(posts.find((p) => p.url === '/api/demandes/2/qualifier')!.body).toEqual({
+        categorie_id: 11, lieu_id: 3, priorite: 'P2', motif_priorite: 'Classe occupée', duree_estimee_minutes: null,
+        consignes: 'Prendre l’échelle.', photos_visibles: 1, date_convenue: null,
+      });
+    } finally { remettre(); }
+  });
+
+  for (const lang of ['fr', 'nl'] as const) {
+    it(`formulaire de qualification (${lang}) sans violation axe-core`, async () => {
+      ficheData = service(2, 'AA-DI-2026-00002', 'a_qualifier');
+      try {
+        render(wrap(DemandesEntite, lang, ['/demandes-entite?demande=2']));
+        await screen.findByRole('dialog');
+        fireEvent.click(await screen.findByRole('button', { name: translations['qualif.bouton'][lang] }));
+        await screen.findByText(new RegExp(translations['qualif.proposee'][lang]));
+        await audit(screen.getByRole('dialog'));
+      } finally { remettre(); }
+    }, 30000);
+  }
+
+  it('erreur du serveur à la qualification : message affiché, saisie gardée (ERG-09)', async () => {
+    ficheData = service(2, 'AA-DI-2026-00002', 'a_qualifier');
+    reponsePost = { status: 409, json: { error: true, code: 'DEMANDE_ETAT', message: 'Cette demande ne peut plus être qualifiée dans son état actuel.' } };
+    try {
+      render(wrap(DemandesEntite, 'fr', ['/demandes-entite?demande=2']));
+      fireEvent.click(await screen.findByRole('button', { name: 'Qualifier' }));
+      await screen.findByText(/Priorité proposée : P3/);
+      fireEvent.change(screen.getByLabelText(/Consignes à l’ouvrier|Consignes à l'ouvrier/), { target: { value: 'Ne pas oublier.' } });
+      fireEvent.click(screen.getAllByRole('button', { name: 'Qualifier' }).slice(-1)[0]);
+      expect(await screen.findByText('Cette demande ne peut plus être qualifiée dans son état actuel.')).toBeInTheDocument();
+      expect(screen.getByLabelText(/Consignes à l’ouvrier|Consignes à l'ouvrier/)).toHaveValue('Ne pas oublier.');
+    } finally { remettre(); }
+  });
+
+  it('« Mes demandes » : la fiche du demandeur ne montre ni échéances du service ni consignes', async () => {
+    ficheData = demande(2, 'AA-DI-2026-00002', 'qualifiee');
+    render(wrap(MesDemandes, 'fr', ['/?demande=2']));
+    const fiche = await screen.findByRole('dialog');
+    expect(await within(fiche).findByText('Prise en charge')).toBeInTheDocument();
+    expect(within(fiche).queryByText('Échéances')).toBeNull();
+    expect(within(fiche).queryByText(/Consignes/)).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Qualifier' })).toBeNull();
   });
 });

@@ -70,6 +70,13 @@ const MESSAGES = {
   REPONSE_INVALIDE: { fr: 'Cette réponse n’est pas une des réponses proposées.', nl: 'Dit antwoord is niet een van de voorgestelde antwoorden.' },
   REPONSE_OBLIGATOIRE: { fr: 'Répondez aux questions obligatoires sur la catégorie.', nl: 'Beantwoord de verplichte vragen over de categorie.' },
   NO_PHOTO: { fr: "Ce lieu n'a pas de photo.", nl: 'Deze plaats heeft geen foto.' },
+  // 0.9.0 : qualification et vues enregistrées.
+  MOTIF_PRIORITE_REQUIS: { fr: 'Vous changez la priorité proposée : indiquez le motif.', nl: 'U wijzigt de voorgestelde prioriteit: geef de reden op.' },
+  DEMANDE_ETAT: { fr: "Cette demande ne peut plus être qualifiée dans son état actuel.", nl: 'Deze aanvraag kan in haar huidige toestand niet meer gekwalificeerd worden.' },
+  DATE_CONVENUE_INUTILE: { fr: "Cette priorité a déjà un délai de fin : la date convenue ne sert qu'aux priorités sans délai.", nl: 'Deze prioriteit heeft al een eindtermijn: de afgesproken datum dient enkel voor prioriteiten zonder termijn.' },
+  DATE_CONVENUE_INVALIDE: { fr: "La date convenue doit être aujourd'hui ou plus tard, dans les deux ans.", nl: 'De afgesproken datum moet vandaag of later zijn, binnen twee jaar.' },
+  VUE_NOM_PRIS: { fr: 'Vous avez déjà une vue de ce nom : choisissez-en un autre.', nl: 'U hebt al een weergave met deze naam: kies een andere.' },
+  VUES_MAX: { fr: 'Vingt vues enregistrées au plus : supprimez-en une d’abord.', nl: 'Hoogstens twintig opgeslagen weergaven: verwijder er eerst een.' },
 };
 
 function langOf(req) {

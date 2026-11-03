@@ -49,6 +49,74 @@ export interface Demande {
   suiveurs?: { user_id: number; prenom: string; nom: string; remarque: string | null; created_at: string }[];
   /** Pièces jointes (0.8.0) : rendues au demandeur, au bénéficiaire et au service technique ; null pour qui suit seulement. */
   pieces?: Piece[] | null;
+  /**
+   * Qualification et échéances (0.9.0, GES-04, PRI-01, PRI-03). Les champs internes (priorité proposée, motif, durée,
+   * consignes, qui a qualifié) et l'échéance qui compte ne sont rendus qu'au service technique.
+   */
+  priorite_proposee?: string | null; motif_priorite?: string | null;
+  prise_en_charge_le?: string | null; echeance_le?: string | null; date_convenue?: string | null;
+  duree_estimee_minutes?: number | null; consignes?: string | null; photos_visibles?: 0 | 1;
+  qualifiee_par?: number | null; qualifiee_par_prenom?: string | null; qualifiee_par_nom?: string | null; qualifiee_le?: string | null;
+  echeance_type?: 'prise_en_charge' | 'fin' | null; echeance_courante?: string | null; retard?: 0 | 1;
+}
+
+/** Tableau de bord du service technique (0.9.0, GES-01). */
+export interface TableauBord { a_qualifier: number; en_retard: number; p1_p2: number; echeance_proche: number; limite_proche: string; jours_proches: number }
+
+/** Filtres de la liste du service technique (0.9.0, GES-02) ; les mêmes clés forment une vue enregistrée. */
+export interface FiltresGestion {
+  etats?: string; priorites?: string; categorie_id?: number; batiment_id?: number; echeance?: 'retard' | 'proche' | 'sans';
+  canal?: string; danger?: 0 | 1; q?: string; ouvertes?: 0 | 1; tri?: 'depot' | 'numero' | 'echeance' | 'priorite'; ordre?: 'asc' | 'desc';
+}
+export interface VueDemandes { id: number; nom: string; filtres: FiltresGestion; created_at: string; updated_at: string }
+
+const NOMBRES: (keyof FiltresGestion)[] = ['categorie_id', 'batiment_id', 'danger', 'ouvertes'];
+export const CLES_FILTRES: (keyof FiltresGestion)[] = ['etats', 'priorites', 'categorie_id', 'batiment_id', 'echeance', 'canal', 'danger', 'q', 'ouvertes', 'tri', 'ordre'];
+export const CANAUX = ['ecran', 'telephone', 'courriel', 'grc', 'mcp', 'api', 'preventif'];
+/** États où le service technique peut qualifier une demande en 0.9.0 ; les autres attendent le cycle de vie (étape 9). */
+export const QUALIFIABLES: Etat[] = ['a_qualifier', 'qualifiee'];
+
+/**
+ * Filtres lus dans l'adresse de la page. Sans « ouvertes » dans l'adresse, la liste montre les demandes en cours ;
+ * « ouvertes=tout » montre aussi les fermées.
+ */
+export function filtresDepuisUrl(p: URLSearchParams): FiltresGestion {
+  const f: Record<string, unknown> = {};
+  for (const k of CLES_FILTRES) {
+    const v = p.get(k);
+    if (v === null || v === '' || v === 'tout') continue;
+    f[k] = NOMBRES.includes(k) ? Number(v) : v;
+  }
+  if (!p.has('ouvertes')) f.ouvertes = 1;
+  return f as FiltresGestion;
+}
+
+/** Adresse de la liste du service pour des filtres donnés (compteurs du tableau de bord, vues). */
+export function urlGestion(f: FiltresGestion, extra: Record<string, string> = {}): string {
+  const p = new URLSearchParams();
+  for (const k of CLES_FILTRES) { const v = f[k]; if (v !== undefined && v !== null && v !== '') p.set(k, String(v)); }
+  if (f.ouvertes === undefined) p.set('ouvertes', 'tout');
+  for (const [k, v] of Object.entries(extra)) p.set(k, v);
+  return `/demandes-entite?${p.toString()}`;
+}
+
+/** Filtres de chaque compteur du tableau de bord : un clic ouvre la liste filtrée, avec le même total. */
+export const COMPTEURS: { cle: 'a_qualifier' | 'en_retard' | 'p1_p2' | 'echeance_proche'; filtres: FiltresGestion }[] = [
+  { cle: 'a_qualifier', filtres: { etats: 'a_qualifier', tri: 'echeance', ordre: 'asc' } },
+  { cle: 'en_retard', filtres: { echeance: 'retard', tri: 'echeance', ordre: 'asc' } },
+  { cle: 'p1_p2', filtres: { priorites: 'P1,P2', ouvertes: 1, tri: 'echeance', ordre: 'asc' } },
+  { cle: 'echeance_proche', filtres: { echeance: 'proche', tri: 'echeance', ordre: 'asc' } },
+];
+
+/** Instant de la base (UTC, « 2026-11-05 07:00:00 ») à l'heure du poste : « 05/11/2026 08:00 ». */
+export const instant = (sql: string) => dayjs(`${sql.replace(' ', 'T')}Z`).format('DD/MM/YYYY HH:mm');
+
+/** Durée estimée lisible : « 45 min », « 1 h 30 », « 2 h ». */
+export function duree(minutes: number): string {
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  if (!h) return `${m} min`;
+  return m ? `${h} h ${String(m).padStart(2, '0')}` : `${h} h`;
 }
 
 /** Pièce jointe d'une demande ou du brouillon (0.8.0, DEM-09) ; le fichier se lit par /api/pieces/:id/fichier. */

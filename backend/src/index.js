@@ -5,6 +5,9 @@ const { buildApp } = require('./app');
 
 async function start() {
   await initDb();
+  // 0.9.0 : échéances des demandes qui n'en ont pas (déposées par une version antérieure après un retour arrière).
+  const n = require('./services/qualification').completerEcheances(require('./database').getDb());
+  if (n) { console.log(`[DB] Échéances calculées pour ${n} demande(s)`); saveNow(); }
   const app = buildApp();
   const server = app.listen(PORT, '0.0.0.0', () => console.log(`[APP] API ${VERSION} sur le port ${PORT}`));
   const stop = () => { saveNow(); server.close(() => process.exit(0)); };

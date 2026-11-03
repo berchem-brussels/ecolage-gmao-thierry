@@ -1,6 +1,22 @@
 # Journal des versions
 
-Version de l'application : **0.8.0** · Mis à jour le 30/10/2026
+Version de l'application : **0.9.0** · Mis à jour le 02/11/2026
+
+## 0.9.0 (02/11/2026)
+
+Étape 8 : tableau de bord, liste et qualification du service technique (GES-01, GES-02, GES-04, PRI-01, PRI-03 ; DV-87 à DV-93), avec la correction du contrôle 7 de la recette de la 0.8.0 (DV-86). Migration `008_qualification`.
+
+- Échéances enregistrées sur chaque demande (prise en charge et fin), calculées au dépôt depuis la réception, recalculées à chaque qualification ; la migration les calcule pour les demandes déjà en base, et le démarrage complète celles qui n'en ont pas. Échéance qui compte : la prise en charge tant que la demande est « À qualifier », puis la fin ; « En retard » quand elle est passée.
+- Tableau de bord du service technique, à l'accueil et en tête de « Demandes de l'entité » : à qualifier, en retard, P1 et P2 ouvertes, échéance dans les deux jours ouvrés ; chaque compteur ouvre la liste filtrée (`GET /api/demandes/tableau-bord`).
+- « Demandes de l'entité » devient la liste du service : filtres (en cours, échéance, états, priorités, catégorie avec son domaine, site ou bâtiment avec ses locaux, source, danger), recherche sur le demandeur aussi, tri par numéro, priorité, échéance et dépôt, filtres dans l'adresse de la page, repliés sur téléphone ; états avec les libellés du service (« À qualifier », « Qualifiée »…).
+- Vues enregistrées par personne et par entité (`/api/vues-demandes`, table `vues_demandes`, vingt au plus).
+- Qualification sur un écran (`POST /api/demandes/:id/qualifier`, permission nouvelle `demandes:qualifier` du gestionnaire et du responsable) : catégorie, lieu, priorité confirmée ou changée avec un motif, durée estimée, date convenue pour une priorité sans délai de fin, consignes à l'ouvrier, photos du service visibles ou non par le demandeur. « À qualifier » devient « Qualifiée ». Consignes et motif jamais rendus au demandeur ; journal `demande.qualifier` sans texte libre, lieu et catégorie nommés à la lecture.
+- Fiche du service : priorité et motif, échéances, durée, consignes, qualifiée le … par ….
+- Contrôle 7 de la 0.8.0 : le groupe « Pièces jointes des demandes » apparaît dans Réglages de l'entité ; toutes les familles du journal d'audit ont leur nom (pièces jointes, demandes, catégories, priorités et délais, horaire, congés et fermetures, système, vues). Tests : chaque groupe du catalogue est affiché, chaque famille a son libellé.
+- MCP : `get_tableau_bord`, `qualifier_demande`, cinq outils des vues ; `list_demandes` prend les filtres du service.
+- Test nouveau : chaque fichier de test du serveur est joué par `npm test`.
+- Aide : rubriques Demandes de l'entité et Délais des demandes, questions 27 et 28, deux réponses de l'assistant ; fiche fonctionnelle `docs/fonctionnel/service-technique.md` ; note de version (une ligne pour tous, deux pour le service technique, une pour le responsable).
+- Tests : serveur 371 (347 en 0.8.0), interface 161 (149).
 
 ## 0.8.0 (30/10/2026)
 

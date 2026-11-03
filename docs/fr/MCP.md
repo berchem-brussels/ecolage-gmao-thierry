@@ -1,6 +1,6 @@
 # Serveur MCP
 
-Version de l'application : **0.8.0** · Mis à jour le 30/10/2026 · Le français fait foi.
+Version de l'application : **0.9.0** · Mis à jour le 02/11/2026 · Le français fait foi.
 
 ## Accès
 
@@ -19,6 +19,10 @@ Version de l'application : **0.8.0** · Mis à jour le 30/10/2026 · Le françai
 - Depuis la 0.4.1, les fiches de catégorie, de priorité, de jour de l'horaire et de jour non ouvré portent `trace` (`etat`, `le`, `par`) : qui les a modifiées en dernier et quand, ou « livrée ». Le nom n'est rendu qu'aux personnes de l'entité. Aucun outil nouveau.
 - Depuis la 0.5.0, le serveur retire les espaces de début et de fin de tout texte reçu, par le MCP comme par l'API, sauf les mots de passe ; un champ obligatoire fait seulement d'espaces est refusé (`VALIDATION`), avant tout jeton de confirmation.
 - Les instructions envoyées au client demandent de commencer par `get_profile` : les données métier sont celles de l'entité active ; `select_entite` la change. Elles disent aussi que le MCP ne transporte aucun fichier, et qu'une demande se dépose par `create_demande`, le lieu proposé d'office étant `lieu_propose` dans `get_profile`, et les derniers lieux de ses demandes `lieux_recents` (0.7.5). Depuis la 0.8.0, elles disent que les pièces du brouillon partent avec la demande suivante, même déposée par `create_demande`, et qu'il faut le dire à la personne.
+
+## 0.9.0
+
+Outils nouveaux : `get_tableau_bord` (`GET /api/demandes/tableau-bord` : nombre de demandes à qualifier, en retard, P1 et P2 ouvertes, échéance dans les deux jours ouvrés ; gestionnaire et responsable), `qualifier_demande` (`POST /api/demandes/:id/qualifier` : `categorie_id`, `lieu_id`, `priorite` obligatoires ; `motif_priorite` si la priorité diffère de la proposée ; `duree_estimee_minutes`, `consignes`, `photos_visibles`, `date_convenue` ; permission `demandes:qualifier`), `list_vues_demandes`, `get_vue_demandes`, `create_vue_demandes`, `update_vue_demandes`, `prepare_delete_vue_demandes` et `confirm_delete_vue_demandes` (`/api/vues-demandes` : vues enregistrées de la personne dans l'entité active). `list_demandes` prend les filtres de la liste du service (`etats`, `priorites`, `categorie_id`, `batiment_id`, `echeance`, `canal`, `danger`, `tri`, `ordre`) ; chaque demande rendue au service porte `echeance_courante`, `echeance_type` et `retard`, et la fiche les champs de qualification. Ces champs internes (`consignes`, `motif_priorite`…) ne sont jamais rendus au demandeur. `list_audit` et `get_audit` nomment aussi le lieu et la catégorie d'une qualification (`avant.lieu_id`, `apres.lieu_id`, `avant.categorie_id`, `apres.categorie_id`).
 
 ## 0.8.0
 

@@ -3,6 +3,8 @@
  * section 7.3). En 0.5.0, pas de modification ni d'annulation : elles arrivent avec le cycle de vie (étape 9, écart E-21).
  * 0.7.0 : demandes ouvertes du même bâtiment et « Moi aussi » (DEM-04).
  * 0.8.0 : pièces jointes du brouillon (DEM-09, DV-85), formulaire multipart lu par fichiers.js après le contrôle préalable.
+ * 0.9.0 : tableau de bord du service technique (GES-01), filtres et tris de la liste (GES-02), qualification (GES-04,
+ * PRI-01) ; services/qualification.js.
  */
 const express = require('express');
 const { authMiddleware } = require('../auth');
@@ -10,6 +12,7 @@ const { validate, validateQuery, validateParams, idParam } = require('../validat
 const { ok, handle } = require('../envelope');
 const S = require('../schemas');
 const demandes = require('../services/demandes');
+const qualification = require('../services/qualification');
 const brouillons = require('../services/brouillons');
 const pieces = require('../services/pieces');
 const fichiers = require('../fichiers');
@@ -26,6 +29,11 @@ router.get('/', validateQuery(S.demandeList), handle((req, res) => {
 // Avant « /:id » : demandes ouvertes du même bâtiment (DEM-04, 0.7.0).
 router.get('/voisines', validateQuery(S.demandeVoisines), handle((req, res) => {
   ok(res, demandes.voisines(req.user, req.query), { resource: 'demandes' });
+}));
+
+// Avant « /:id » : tableau de bord du service technique de l'entité active (GES-01, 0.9.0).
+router.get('/tableau-bord', handle((req, res) => {
+  ok(res, qualification.tableauBord(req.user), { resource: 'demandes' });
 }));
 
 // Avant « /:id » : brouillon du formulaire de la personne dans l'entité active (DEM-11, 0.7.0).
@@ -71,6 +79,11 @@ router.post('/', validate(S.demandeCreate), handle((req, res) => {
 // « Moi aussi » (DEM-04) : suivre une demande ouverte au lieu d'en créer une nouvelle.
 router.post('/:id/suivre', validateParams(idParam), validate(S.demandeSuivre), handle((req, res) => {
   ok(res, demandes.suivre(req.user, Number(req.params.id), req.body), { resource: 'demandes' });
+}));
+
+// Qualification par le service technique (GES-04, PRI-01, 0.9.0) : « À qualifier » devient « Qualifiée ».
+router.post('/:id/qualifier', validateParams(idParam), validate(S.demandeQualifier), handle((req, res) => {
+  ok(res, qualification.qualifier(req.user, Number(req.params.id), req.body), { resource: 'demandes' });
 }));
 
 module.exports = router;

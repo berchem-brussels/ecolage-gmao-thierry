@@ -473,6 +473,35 @@ const MIGRATIONS = [
     CREATE INDEX idx_pieces_demande ON pieces_jointes(demande_id);
     CREATE INDEX idx_pieces_auteur ON pieces_jointes(auteur_id, entite_id, demande_id)
   `],
+  // Version 0.9.0 (étape 8) : qualification par le gestionnaire (GES-04), priorité confirmée ou changée avec un motif
+  // (PRI-01), échéances enregistrées sur la fiche (PRI-03), vues enregistrées de la liste du gestionnaire (GES-02).
+  // Les échéances des demandes déjà en base sont calculées par l'étape JavaScript, sur le calendrier de leur entité ;
+  // une échéance incalculable reste vide (date à convenir).
+  ['008_qualification', `
+    ALTER TABLE demandes ADD COLUMN priorite_proposee TEXT CHECK (priorite_proposee IS NULL OR priorite_proposee IN ('P1', 'P2', 'P3', 'P4'));
+    ALTER TABLE demandes ADD COLUMN motif_priorite TEXT CHECK (motif_priorite IS NULL OR length(motif_priorite) BETWEEN 1 AND 500);
+    ALTER TABLE demandes ADD COLUMN prise_en_charge_le TEXT;
+    ALTER TABLE demandes ADD COLUMN echeance_le TEXT;
+    ALTER TABLE demandes ADD COLUMN date_convenue TEXT;
+    ALTER TABLE demandes ADD COLUMN duree_estimee_minutes INTEGER CHECK (duree_estimee_minutes IS NULL OR duree_estimee_minutes BETWEEN 15 AND 10080);
+    ALTER TABLE demandes ADD COLUMN consignes TEXT CHECK (consignes IS NULL OR length(consignes) BETWEEN 1 AND 2000);
+    ALTER TABLE demandes ADD COLUMN photos_visibles INTEGER NOT NULL DEFAULT 1 CHECK (photos_visibles IN (0, 1));
+    ALTER TABLE demandes ADD COLUMN qualifiee_par INTEGER REFERENCES users(id) ON DELETE SET NULL;
+    ALTER TABLE demandes ADD COLUMN qualifiee_le TEXT;
+    UPDATE demandes SET priorite_proposee = priorite;
+    CREATE INDEX idx_demandes_echeance ON demandes(entite_id, echeance_le);
+    CREATE TABLE vues_demandes (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
+      entite_id INTEGER NOT NULL REFERENCES entites(id) ON DELETE RESTRICT,
+      nom TEXT NOT NULL CHECK (length(nom) BETWEEN 1 AND 60),
+      filtres TEXT NOT NULL CHECK (length(filtres) BETWEEN 2 AND 2000),
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+      UNIQUE (user_id, entite_id, nom)
+    );
+    CREATE INDEX idx_vues_user ON vues_demandes(user_id, entite_id)
+  `, (db) => require('./services/qualification').completerEcheances(db)],
 ];
 
 function migrate() {

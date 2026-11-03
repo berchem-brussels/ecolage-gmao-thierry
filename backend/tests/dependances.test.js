@@ -34,3 +34,10 @@ test('verrou du serveur : `multer` en version 2 (E-16 ; la ligne 1.x est dépré
   assert.ok(VERROU['node_modules/busboy'], 'busboy, lecteur multipart de multer');
   assert.ok(JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'package.json'), 'utf8')).dependencies.multer.startsWith('^2.'));
 });
+
+test('0.9.0 : chaque fichier de test du dossier tests est joué par « npm test » (aucune suite oubliée)', () => {
+  const script = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'package.json'), 'utf8')).scripts.test;
+  const fichiers = fs.readdirSync(__dirname).filter((f) => f.endsWith('.test.js'));
+  assert.ok(fichiers.length >= 30);
+  for (const f of fichiers) assert.ok(script.includes(`tests/${f}`), `${f} absent du script de test`);
+});

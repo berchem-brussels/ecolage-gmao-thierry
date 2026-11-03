@@ -1,6 +1,6 @@
 # Après déploiement : installer et mettre à jour la GMAO sur NIXUS
 
-Version de l'application : **0.8.0** · Mis à jour le 30/10/2026 · Le français fait foi.
+Version de l'application : **0.9.0** · Mis à jour le 02/11/2026 · Le français fait foi.
 
 Procédure pas à pas depuis un PC Windows, sans passer par DSM. Une commande à la fois ; on attend son résultat avant la suivante. Si un résultat diffère de l'attendu, on s'arrête et on colle la sortie dans la conversation.
 
@@ -178,6 +178,10 @@ Attendu : `[gmao] … : sauvegarde terminée (photos copiées, aucune pièce joi
 Suivie une seule fois, avec la 0.1.0. Elle reste décrite dans `docs/fr/INSTALLATION.md` et `NOTES_LIVRAISON_v0.1.0.md` de l'archive. Ordre : dossier `/volume1/docker/monapp` créé, archive copiée, extraction, `sudo sh verifier-ports.sh 18443 18080` (attendu : deux fois `LIBRE` ; le 18444 est occupé par la GRC), création du `.env` (une seule fois, `DEMO_ALLOWED=1` en acceptance, `chmod 600`), `build`, `up -d`, assistant d'installation dans le navigateur (nom du pouvoir local, entité AC, premier administrateur), création de l'entité CPAS dans Administration, Entités, comptes de démonstration.
 
 ## 8. Notes par version
+
+### 0.9.0 (02/11/2026)
+
+Service technique : tableau de bord, liste, qualification (étape 8 ; DV-86 à DV-93). Mise à jour par la section 3, **avec migration** : `sudo docker logs gmao-api --tail 30` montre `[DB] Migration 008_qualification appliquée` puis `[APP] API 0.9.0 sur le port 3001`. Aucune dépendance nouvelle ; les deux images se reconstruisent ; Dockerfile, compose, `nginx.conf`, `backup.sh` et `.env` inchangés ; `--no-cache` inutile. La migration calcule les échéances des demandes déjà en base. Contrôle : bas du menu `v0.9.0` ; note de la 0.9.0 (une ligne pour tous, quatre pour le responsable) ; tableau de bord à l'accueil de `gestionnaire.ac` ; « Demandes de l'entité » filtrée et triée ; « Qualifier » sur une fiche ; Réglages de l'entité avec le groupe « Pièces jointes des demandes ». Retour arrière vers la 0.8.0 sans restaurer la base : la 0.8.0 ignore les colonnes et la table nouvelles ; à la remontée en 0.9.0, les demandes déposées entre-temps reçoivent leurs échéances au démarrage (`[DB] Échéances calculées pour N demande(s)`).
 
 ### 0.8.0 (30/10/2026)
 
