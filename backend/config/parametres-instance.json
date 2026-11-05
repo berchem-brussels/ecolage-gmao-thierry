@@ -2,7 +2,8 @@
   "_description": "Catalogue des paramètres de l'instance réglables par l'administrateur dans Administration, Paramètres (standard v3.2, sections 11.3 et 11.4, niveau Instance ; cahier des charges ADM-01). Chaque paramètre a une clé, un libellé et une description en FR et en NL, une validation (type, longueur, choix). Le défaut livré se lit dans instance.defaut.json sous la même clé ; la base (app_settings) porte la valeur de l'instance, qui prime. Aucun secret dans ce catalogue : un secret se chiffre et ne se réaffiche jamais.",
   "groupes": [
     { "code": "identite", "libelle_fr": "Identité de l'instance", "libelle_nl": "Identiteit van de installatie" },
-    { "code": "affichage", "libelle_fr": "Langue et affichage", "libelle_nl": "Taal en weergave" }
+    { "code": "affichage", "libelle_fr": "Langue et affichage", "libelle_nl": "Taal en weergave" },
+    { "code": "tickets", "libelle_fr": "Tickets", "libelle_nl": "Tickets" }
   ],
   "parametres": [
     { "cle": "app.name_fr", "groupe": "identite", "type": "texte", "max": 100, "requis": true, "public": true,
@@ -40,6 +41,22 @@
       ],
       "libelle_fr": "Niveau de détail par défaut", "libelle_nl": "Standaard detailniveau",
       "description_fr": "Niveau de détail des comptes créés ensuite. Chaque personne le change dans l'en-tête.",
-      "description_nl": "Detailniveau van de accounts die daarna worden aangemaakt. Iedereen wijzigt het in de kop van het scherm." }
+      "description_nl": "Detailniveau van de accounts die daarna worden aangemaakt. Iedereen wijzigt het in de kop van het scherm." },
+    { "cle": "tickets.business_roles", "groupe": "tickets", "type": "texte", "format": "roles", "max": 200, "requis": true, "public": false,
+      "libelle_fr": "Rôles qui traitent les questions métier", "libelle_nl": "Rollen die de vakvragen behandelen",
+      "description_fr": "Codes des rôles séparés par des virgules, par exemple responsable,gestionnaire. Un rôle d'entité ne voit que les questions de son entité active ; admin les voit toutes.",
+      "description_nl": "Codes van de rollen gescheiden door komma's, bijvoorbeeld responsable,gestionnaire. Een rol van een entiteit ziet alleen de vragen van zijn actieve entiteit; admin ziet ze allemaal." },
+    { "cle": "tickets.it_roles", "groupe": "tickets", "type": "texte", "format": "roles", "max": 200, "requis": true, "public": false,
+      "libelle_fr": "Rôles qui traitent les incidents, bugs et souhaits", "libelle_nl": "Rollen die de incidenten, bugs en wensen behandelen",
+      "description_fr": "Codes des rôles séparés par des virgules, en principe admin, qui voit les tickets des deux entités.",
+      "description_nl": "Codes van de rollen gescheiden door komma's, in principe admin, die de tickets van beide entiteiten ziet." },
+    { "cle": "tickets.reopen_days", "groupe": "tickets", "type": "texte", "format": "entier", "max": 3, "requis": true, "public": false,
+      "libelle_fr": "Délai de réouverture d'un ticket résolu (jours)", "libelle_nl": "Termijn om een opgelost ticket te heropenen (dagen)",
+      "description_fr": "Nombre de jours, de 1 à 365, pendant lesquels le demandeur peut rouvrir son ticket résolu, avec un motif.",
+      "description_nl": "Aantal dagen, van 1 tot 365, waarin de aanvrager zijn opgeloste ticket kan heropenen, met een reden." },
+    { "cle": "tickets.sla_json", "groupe": "tickets", "type": "texte", "format": "delais", "max": 300, "requis": true, "public": false,
+      "libelle_fr": "Délais des tickets par priorité (heures)", "libelle_nl": "Termijnen van de tickets per prioriteit (uren)",
+      "description_fr": "Pour P1 à P4, délai de prise en charge puis délai de résolution, en heures calendaires. Exemple : {\"P1\":[1,8],\"P2\":[4,24],\"P3\":[8,72],\"P4\":[24,240]}.",
+      "description_nl": "Voor P1 tot P4, termijn van tenlasteneming en daarna van oplossing, in kalenderuren. Voorbeeld: {\"P1\":[1,8],\"P2\":[4,24],\"P3\":[8,72],\"P4\":[24,240]}." }
   ]
 }

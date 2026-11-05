@@ -11,6 +11,7 @@ const path = require('path');
 const { getDb } = require('../database');
 const { AppError } = require('../envelope');
 const { logAudit } = require('../audit');
+const { ROLES } = require('../roles');
 
 const CONFIG = path.join(__dirname, '..', '..', 'config');
 const DEFAULTS = JSON.parse(fs.readFileSync(path.join(CONFIG, 'instance.defaut.json'), 'utf8'));
@@ -39,12 +40,15 @@ function instanceSettings() {
   return out;
 }
 
-/** Paramètres servis sans session à la page de connexion : seulement ceux que le catalogue marque publics, et la palette. */
+/**
+ * Paramètres servis sans session à la page de connexion : seulement ceux que le catalogue marque publics, et la palette.
+ * Les autres groupes (tickets, depuis la 0.11.0) ne sont jamais servis sans session.
+ */
 function publicSettings() {
   const s = instanceSettings();
-  const prives = PARAMETRES.filter((p) => !p.public).map((p) => p.cle.split('.')[1]);
+  const prives = PARAMETRES.filter((p) => !p.public && p.cle.startsWith('app.')).map((p) => p.cle.split('.')[1]);
   for (const nom of prives) delete s.app[nom];
-  return s;
+  return { app: s.app, theme: s.theme };
 }
 
 const admin = (user) => { if (!user || user.role !== 'admin') throw new AppError(403, 'FORBIDDEN'); };
@@ -81,6 +85,31 @@ function get(user, cle) {
   return fiche(trouver(cle));
 }
 
+/**
+ * Formats des paramètres des tickets (0.11.0) : liste de codes de rôles connus, nombre entier de jours, délais P1 à P4.
+ * Rend la valeur normalisée ou lève VALIDATION avec le motif.
+ */
+const FORMATS = {
+  roles: (v) => {
+    const codes = v.split(',').map((x) => x.trim()).filter(Boolean);
+    const inconnus = codes.filter((c) => !ROLES.some((r) => r.code === c));
+    if (!codes.length || inconnus.length) throw new AppError(400, 'VALIDATION', [`valeur: rôles inconnus ${inconnus.join(', ')}`.trim()]);
+    return [...new Set(codes)].join(',');
+  },
+  entier: (v) => {
+    if (!/^\d{1,3}$/.test(v) || Number(v) < 1 || Number(v) > 365) throw new AppError(400, 'VALIDATION', ['valeur: nombre de 1 à 365']);
+    return String(Number(v));
+  },
+  delais: (v) => {
+    let o;
+    try { o = JSON.parse(v); } catch (e) { throw new AppError(400, 'VALIDATION', ['valeur: JSON illisible']); }
+    const ok = o && typeof o === 'object' && !Array.isArray(o) && Object.keys(o).sort().join() === 'P1,P2,P3,P4'
+      && Object.values(o).every((d) => Array.isArray(d) && d.length === 2 && d.every((h) => Number.isInteger(h) && h >= 1 && h <= 8760) && d[0] <= d[1]);
+    if (!ok) throw new AppError(400, 'VALIDATION', ['valeur: P1 à P4, chacun [prise en charge, résolution] en heures, de 1 à 8760']);
+    return JSON.stringify({ P1: o.P1, P2: o.P2, P3: o.P3, P4: o.P4 });
+  },
+};
+
 /** Contrôle de la valeur selon le catalogue ; rend la valeur nettoyée ou lève VALIDATION avec le motif. */
 function controler(p, brute) {
   const v = typeof brute === 'string' ? brute.trim() : brute;
@@ -91,7 +120,7 @@ function controler(p, brute) {
   if (typeof v !== 'string') throw new AppError(400, 'VALIDATION', ['valeur: texte attendu']);
   if (p.requis && !v) throw new AppError(400, 'VALIDATION', ['valeur: obligatoire']);
   if (p.max && v.length > p.max) throw new AppError(400, 'VALIDATION', [`valeur: ${p.max} caractères au plus`]);
-  return v;
+  return p.format ? FORMATS[p.format](v) : v;
 }
 
 function ecrire(user, cle, v) {

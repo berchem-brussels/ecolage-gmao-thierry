@@ -31,6 +31,7 @@ const ParametresPage = React.lazy(() => import('./pages/ParametresPage'));
 const ReglagesEntitePage = React.lazy(() => import('./pages/ReglagesEntitePage'));
 const ReferentielPage = React.lazy(() => import('./pages/ReferentielPage'));
 const JournalPage = React.lazy(() => import('./pages/JournalPage'));
+const TicketsPage = React.lazy(() => import('./pages/TicketsPage'));
 const HelpPage = React.lazy(() => import('./pages/HelpPage'));
 const NouvelleDemandePage = React.lazy(() => import('./pages/NouvelleDemandePage'));
 const DemandesPage = React.lazy(() => import('./pages/DemandesPage'));
@@ -123,6 +124,7 @@ function AppRoutes() {
           <Route path="users" element={<AdminOnly><UsersPage /></AdminOnly>} />
           <Route path="parametres" element={<AdminOnly><ParametresPage /></AdminOnly>} />
           <Route path="journal" element={<AdminOnly><JournalPage /></AdminOnly>} />
+          <Route path="tickets" element={<TicketsPage />} />
           <Route path="help" element={<HelpPage />} />
           <Route path="accessibility" element={<AccessibilityPage />} />
         </Route>

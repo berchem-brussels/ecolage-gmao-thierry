@@ -1,4 +1,14 @@
+# Architectuur
 
+Versie van de toepassing: **0.11.0** · De Franse tekst is rechtsgeldig (`docs/fr/ARCHITECTURE.md`); dit bestand vat elke versie samen.
+
+## Tickets (0.11.0)
+
+Tabellen `tickets` (referentie `TCK-JJJJ-NNNNN`, soort, wachtrij `business` of `it`, prioriteit P1 tot P4, status, `entite_id` van de aanvrager bij het melden, schermafbeelding zonder metagegevens) en `ticket_messages` (berichten, gebeurtenissen, interne nota's), migratie `010_tickets`. Dienst, routes, schema's en negen MCP-tools uit het sjabloon 1.3.0; de functionele wachtrij volgt de rollen van de persoon in zijn actieve entiteit, de IT-wachtrij de beheerder voor alle entiteiten. Instellingen in de parameters van de installatie, groep `tickets`. Knop « Melden » in de kop, scherm Tickets in het menu Help.
+
+## Microsoft-aanmelding (0.10.0)
+
+Tabel `auth_pending`, kolommen `users.oid` en `users.is_admin_local` (migratie `009_sso`); `oidc.js`, `settings.js`, `routes/sso.js` uit het sjabloon 1.3.0; instellingen via `services/connexion.js`.
 
 ## Technische dienst: dashboard, lijst en kwalificatie (0.9.0)
 

@@ -12,7 +12,8 @@ import type { Trace } from '../../referentiel';
 const PARTIES = new Intl.DateTimeFormat('en-GB', {
   timeZone: 'Europe/Brussels', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', hourCycle: 'h23',
 });
-function bruxelles(d: Date) {
+/** Date et heure à l'heure de Bruxelles (JJ/MM/AAAA, HH:MM) ; reprise par la mention « Enregistré le … » de la connexion Microsoft (0.11.0). */
+export function bruxelles(d: Date) {
   const p = Object.fromEntries(PARTIES.formatToParts(d).map((x) => [x.type, x.value]));
   return { date: `${p.day}/${p.month}/${p.year}`, heure: `${p.hour}:${p.minute}` };
 }

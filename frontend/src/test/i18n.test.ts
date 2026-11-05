@@ -179,4 +179,21 @@ describe('traductions', () => {
     }
     expect(translations['help.guide.demande'].fr).toMatch(/AC-DI-2026-00001/);
   });
+
+  it('0.11.0 : aide, FAQ et chatbot des tickets en FR et en NL ; « bug » et « l’application » mènent à Tickets, pas une panne', () => {
+    for (const k of ['help.faq.q29', 'help.faq.a29', 'help.faq.q30', 'help.faq.a30', 'help.guide.tickets', 'chat.intent.tickets', 'nav.tickets', 'tickets.report']) {
+      expect(translations[k]?.fr, k).toBeTruthy();
+      expect(translations[k]?.nl, k).toBeTruthy();
+    }
+    expect(translations['help.faq.a29'].fr).toMatch(/« Signaler »/);
+    expect(translations['help.faq.a29'].nl).toMatch(/« Melden »/);
+    for (const q of ["j'ai trouvé un bug", "la recherche de l'application ne fonctionne pas", 'de toepassing werkt niet', 'ik heb een suggestie']) {
+      const r = answer(q);
+      expect(r.key, q).toBe('chat.intent.tickets');
+      expect(r.route, q).toBe('/tickets');
+    }
+    expect(answer('où en est ma demande').key).not.toBe('chat.intent.tickets');
+    expect(answer('le chauffage ne fonctionne pas').key, 'une panne reste une demande d’intervention').not.toBe('chat.intent.tickets');
+  });
 });
+

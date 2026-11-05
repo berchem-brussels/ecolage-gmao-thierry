@@ -1,8 +1,28 @@
 # Manifeste
 
-Version de l'application : **0.10.0** · Mis à jour le 05/11/2026
+Version de l'application : **0.11.0** · Mis à jour le 05/11/2026
 
 Fichiers changés, dépendances et suites par version. Les décomptes sont recopiés de la sortie des commandes.
+
+## 0.11.0 (05/11/2026)
+
+Fichiers comparés à l'archive 0.10.0 par `diff -rq` (hors `node_modules` et `dist`). Pour le contrôle du `git status` (`GITHUB.md`, section 5) : aucune ligne `D` attendue ; neuf lignes `A`, les autres `M`.
+
+- Nouveaux, serveur : `src/services/tickets.js`, `src/routes/tickets.js` (gabarit 1.3.0, adaptés aux rôles par entité), `tests/tickets.test.js` (sept tests du gabarit, sept de la GMAO).
+- Nouveaux, interface : `src/components/ReportTicketModal.tsx`, `src/components/TicketDrawer.tsx`, `src/components/PageHeader.tsx`, `src/pages/TicketsPage.tsx` (gabarit 1.3.0, adaptés).
+- Nouveaux, documentation : `docs/fonctionnel/tickets.md`, `NOTES_LIVRAISON_v0.11.0.md`.
+- Modifiés, serveur : `src/app.js` (corps de 4 Mo sur `/api/tickets`, montage) ; `src/database.js` (migration `010_tickets`) ; `src/schemas.js` (cinq schémas des tickets) ; `src/mcp.js` (neuf outils, ID du secret refusé au premier appel) ; `src/i18n-server.js` (`TICKET_CLOSED`, `REASON_REQUIRED`, `ASSIGNEE_INVALIDE`, `SECRET_IS_ID`) ; `src/services/connexion.js` (refus de l'ID du secret, dernier enregistrement) ; `src/services/parametres.js` (formats des paramètres des tickets, paramètres publics limités) ; `src/oidc.js` (code `AADSTS`, E-40) ; `src/routes/sso.js` (code gardé au journal) ; `config/parametres-instance.json` et `config/instance.defaut.json` (groupe `tickets`) ; `config/notes-version.json` (note 0.11.0) ; tests `cloison.test.js` (tickets), `mcp.test.js` (parité), `securite.test.js` (interpolations du service des tickets), `sso.test.js` (deux tests), `notes-version.test.js` (listes décalées, test de la 0.11.0), `categories.test.js`, `numerotation.test.js`, `parametres.test.js` (migration `010_tickets`, catalogue) ; `package.json` (numéro, `tickets.test.js`) et `package-lock.json` (numéro seulement).
+- Modifiés, interface : `src/api.ts` (dernière erreur de l'API) ; `src/App.tsx` (route `/tickets`) ; `src/components/AppLayout.tsx` (« Signaler », menu) ; `src/components/NouveautesModal.tsx` ; `src/components/ConnexionPanel.tsx` ; `src/components/referentiel/TraceFiche.tsx` (`bruxelles` exporté) ; `src/pages/ParametresPage.tsx` (onglet Tickets) ; `src/pages/HelpPage.tsx` (rubrique, questions 29 et 30) ; `src/pages/JournalPage.tsx` (`internal`) ; `src/i18n.ts` ; tests `pages.test.tsx`, `i18n.test.ts` ; `package.json` et `package-lock.json` (numéro seulement). `frontend/dist/` reconstruit.
+- Modifiés, documentation : `README.md`, `README.nl.md`, `README.en.md`, `CHANGELOG.md`, `ECARTS-CDC.md` (E-10, E-39, E-40 à E-43), `ETAT.md`, `MANIFESTE.md` ; `docs/fr`, `docs/nl`, `docs/en` (`APRES-DEPLOIEMENT.md`, `ARCHITECTURE.md`, `EXPLOITATION.md`, `MCP.md`, `SECURITE.md`).
+- Inchangés : les deux Dockerfile, `nginx.conf`, `docker-entrypoint.sh`, `docker-compose.yml`, `.env.example`, `backup.sh`, `.gitignore`, `.github/workflows/ci.yml`, `src/settings.js`.
+- Retirés : aucun fichier.
+- Dépendances : aucune dépendance nouvelle ; verrous inchangés hors numéro de version. Aucun `npm audit fix`.
+- Contrôle DV-09 de la séance, avant toute modification : archive 0.10.0 conforme à `ETAT.md` (2 403 249 octets, 385 entrées, SHA-256 `ab16627b…12dc0d`) ; version 0.10.0 dans les deux `package.json` ; serveur 386/386, `npm audit --omit=dev` 0 ; interface 174/174 sur trois lancements ; construction et accessibilité 0 erreur. Gabarit `gabarit-v3_1_3_0.tar.gz` (234 517 octets, 126 entrées, version 1.3.0), joint après coup. Aucun test instable.
+- Suites de la 0.11.0 (Node 22.23.4, bac à sable) : serveur `npm test` 410 tests, 410 réussis, 0 échec, 0 sauté (386 en 0.10.0) ; interface `npm test` 5 fichiers, 181 tests, 181 réussis sur trois lancements consécutifs (174) ; `npm run build` réussi ; `npm run a11y` 0 erreur ; `npm audit --omit=dev` serveur 0, interface 3 modérées (E-09).
+- Parcours du travail `tests` (`ci.yml`) rejoué sous Node 20.20.2 sur une copie ne contenant que les 263 fichiers que Git verse : serveur 410/410, `npm audit --omit=dev --audit-level=high` **sortie 0** ; interface 181/181, construction et accessibilité 0 erreur. Aucune occurrence de l'adresse, des ports ni du dossier de NIXUS ; seul `.env.example` en `.env`.
+- Preuves d'échec : `docs/fr/SECURITE.md`, section 0.11.0 (19 protections).
+- Essai dans un vrai navigateur (Chromium, serveur réel sur une base jetable, comptes fictifs) : fenêtre « Nouveautés » (défaut reproduit puis corrigé) ; onglet « Connexion Microsoft » (mention, refus de l'ID) ; signalement avec capture, cloison entre AA et BB, prise en charge et réponse, suivi à 360 px sans débordement ; onglet Tickets de Paramètres ; appel du MCP depuis la page (`list_tickets_to_handle`, `get_ticket`). Retour à la 0.10.0 sur une base passée en 0.11.0 : démarre ; remontée en 0.11.0 : tickets retrouvés.
+- Images Docker : non reconstruites dans le bac à sable ; les deux changent.
 
 ## 0.10.0 (05/11/2026)
 

@@ -1,4 +1,22 @@
+# MCP-server
 
+Versie van de toepassing: **0.11.0** · Bijgewerkt op 05/11/2026 · De Franse tekst is rechtsgeldig (`docs/fr/MCP.md`).
+
+## Toegang en regels
+
+- Adres in acceptatie: `https://192.0.2.10:18443/api/mcp`; algemeen `https://<adres>:<HTTPS-poort>/api/mcp`.
+- Protocol: JSON-RPC 2.0, zonder toestand, in het proces van de API.
+- Authenticatie: de sessie, of het sessietoken in `Authorization: Bearer`. OAuth 2.1 met PKCE komt in stap 44 (afwijking E-10).
+- Limiet: 60 oproepen per minuut en per persoon.
+- Elke tool roept dezelfde dienstfunctie op als de REST-route, met de identiteit en de rechten van de persoon, in haar actieve entiteit. Een deactivering, intrekking of wissing gebeurt in twee oproepen (`prepare_*`, dan `confirm_*`). Geen tool voor vrije SQL.
+
+## 0.11.0
+
+Nieuwe tools, overgenomen uit het sjabloon 1.3.0: `list_tickets_to_handle` (nieuwe of lopende tickets die de persoon behandelt, met hun context), `list_tickets`, `ticket_stats`, `get_ticket`, `get_ticket_screenshot` (schermafbeelding zonder metagegevens), `create_ticket`, `update_ticket`, `add_ticket_message` en `change_ticket_status` in twee oproepen. De wachtrijen volgen de rollen van de persoon in zijn actieve entiteit: een functionele vraag wordt behandeld door de verantwoordelijke en de beheerder van de entiteit van het ticket; een incident, een bug of een wens door de beheerder van de toepassing, voor alle entiteiten. De rollen van de wachtrijen en de termijnen worden ingesteld met `update_parametre`. `prepare_update_auth_settings` weigert een geheim met de vorm van een id (`SECRET_IS_ID`).
+
+## Tickets lezen door Claude op een intern netwerk
+
+Zolang de MCP geen OAuth heeft (stap 44, E-10), leest Claude de tickets via de browser van de persoon, met haar sessie: niets te installeren, geen token via de assistent, alleen de rechten van de persoon. Open een Cowork-gesprek gekoppeld aan de pc, open de toepassing in de browser van de Claude-app, meld aan met een account dat een wachtrij behandelt en vraag: « Toon de te behandelen tickets van de GMAO die in de browser open is. » Claude roept dan `list_tickets_to_handle` op vanuit de open pagina (`POST /api/mcp` met het sessiecookie en de anti-CSRF-token van `/api/auth/me`). De inhoud van een ticket is een gegeven, nooit een instructie; elke schrijfactie wacht op het akkoord van de persoon.
 
 ## 0.10.0
 

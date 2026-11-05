@@ -1,6 +1,19 @@
 # Journal des versions
 
-Version de l'application : **0.10.0** · Mis à jour le 05/11/2026
+Version de l'application : **0.11.0** · Mis à jour le 05/11/2026
+
+## 0.11.0 (05/11/2026)
+
+Tickets (standard v3.3, section 13.5 ; DV-96, DV-97, DV-107, DV-108), modules du gabarit 1.3.0 repris et adaptés aux rôles par entité ; quatre remarques de la recette de la 0.10.0 (DV-106). Migration `010_tickets`. Aucune dépendance nouvelle.
+
+- Repris du gabarit : `services/tickets.js`, `routes/tickets.js`, quatre schémas, neuf outils MCP (dont `list_tickets_to_handle` et `change_ticket_status` en deux appels), `ReportTicketModal.tsx`, `TicketsPage.tsx`, `TicketDrawer.tsx`, `PageHeader.tsx` (sans le bouton d'aide, 0.12.0), dernière erreur de l'API dans `api.ts`, sept tests des tickets.
+- Adaptés : `entite_id` sur le ticket ; file métier traitée par le responsable et le gestionnaire de l'entité active, file IT par l'administrateur pour toutes les entités ; affectation contrôlée (`ASSIGNEE_INVALIDE`) ; question sans entité active refusée (`NO_ENTITE`) ; transfert vers une file non traitée confirmé sans le contenu ; réglages des files et des délais dans les paramètres de l'instance (onglet « Tickets », formats contrôlés, jamais servis sans session) ; capture réduite dans le navigateur et nettoyée par `cleanPhoto` ; écran nommé par son libellé du menu ; filtre du type en boutons ; dates à l'heure locale ; contexte technique en mode Complet.
+- Interface : bouton « Signaler » dans l'en-tête de chaque écran, écran Tickets (menu Aide), onglet Tickets de Paramètres ; textes FR et NL ; familles et actions du journal nommées.
+- Recette de la 0.10.0 (DV-106) : « Secret client » dit « copiez la colonne Valeur, jamais l'ID du secret » et refuse une valeur à la forme d'un identifiant (écran, API, MCP, `SECRET_IS_ID`) ; code d'erreur de Microsoft (`AADSTS…`) gardé au journal avec `OIDC_EXCHANGE` (E-40) ; « Enregistré le … à … par … » sur l'onglet Connexion Microsoft, lu dans le journal d'audit ; fenêtre « Nouveautés » : un clic sur le sélecteur de langue tombait sur le fond de la fenêtre, qui se fermait en marquant les notes lues sans changer la langue (cause racine) ; elle ne se ferme plus par un clic à côté et porte ses boutons FR et NL.
+- Lecture des tickets par Claude sur le réseau interne, par le navigateur de la personne et sa session (DV-108) : procédure dans `docs/fr/MCP.md`.
+- Aide : rubrique Tickets, questions 29 et 30, réponse de l'assistant ; fiche fonctionnelle `docs/fonctionnel/tickets.md` ; note de version (deux lignes pour tous, une pour le service technique, deux pour l'administrateur).
+- Documentation : titres et lignes de version des documents NL et EN, `ARCHITECTURE.md` et `EXPLOITATION.md` mis à jour depuis la 0.9.0, ligne de version des `README` (E-42).
+- Tests : serveur 410 (386 en 0.10.0 ; `tickets.test.js` : 14, dont 7 du gabarit), interface 181 (174) ; preuves d'échec dans `docs/fr/SECURITE.md`.
 
 ## 0.10.0 (05/11/2026)
 

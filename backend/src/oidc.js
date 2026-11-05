@@ -32,7 +32,13 @@ async function exchangeCode({ tenant, clientId, clientSecret, redirectUri, code,
     method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body,
   });
   const json = await res.json().catch(() => ({}));
-  if (!res.ok || !json.id_token) throw new Error('OIDC_EXCHANGE');
+  if (!res.ok || !json.id_token) {
+    // Code d'erreur de Microsoft (AADSTS suivi de chiffres) gardé pour le journal, sans le reste du message (GMAO 0.11.0, DV-106).
+    const err = new Error('OIDC_EXCHANGE');
+    const m = /\bAADSTS\d{4,8}\b/.exec(String(json.error_description || ''));
+    if (m) err.microsoftCode = m[0];
+    throw err;
+  }
   return json.id_token;
 }
 

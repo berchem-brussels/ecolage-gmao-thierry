@@ -15,5 +15,11 @@
     "selection": "#ADD4CC",
     "selection_dark": "#285450",
     "login_gradient_end": "#1e4a1c"
+  },
+  "tickets": {
+    "business_roles": "responsable,gestionnaire",
+    "it_roles": "admin",
+    "reopen_days": "14",
+    "sla_json": "{\"P1\":[1,8],\"P2\":[4,24],\"P3\":[8,72],\"P4\":[24,240]}"
   }
 }

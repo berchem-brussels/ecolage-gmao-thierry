@@ -2,6 +2,14 @@
 
 The French text (`docs/fr/SECURITE.md`) prevails and holds the full grid per version.
 
+## 0.11.0 (05/11/2026)
+
+Tickets (standard, section 13.5), template 1.3.0 modules taken over and adapted to roles per entity. Tested: a business question is read and handled only by the technical department of the ticket's entity and by its requester (API and MCP, other entity 403); internal note hidden from the requester; assignment only to a handler of the queue in that entity; transitions and mandatory reasons; screenshot checked on its first bytes and stripped of metadata, never served without a session; ticket parameters never served without a session. Microsoft sign-in: secret identifier refused (`SECRET_IS_ID`), only the `AADSTS` error code kept in the log. No new dependency; migration `010_tickets`, rollback to 0.10.0 tested. `npm audit --omit=dev`: server 0, interface 3 moderate (E-09). Nineteen proofs of failure in the French text.
+
+## 0.10.0 (05/11/2026)
+
+Microsoft sign-in compatible with Portal (standard, section 8.6): PKCE, no `prompt` or `max_age`, token verified (RS256, issuer, audience, expiry, `nonce`), safe return path, two cookies, matching by `oid`, administrator emergency access. No new dependency; migration `009_sso`. Proofs of failure in the French text.
+
 ## 0.9.1 (03/11/2026)
 
 Fix of 0.9.0 (R1, R2), interface only: no new dependency, migration, route or permission. Counter reloaded through a route already restricted to `demandes:entite`; state translated through a fixed table, rendered as text, unknown code shown unchanged. `npm audit --omit=dev`: server 0, interface 3 moderate (E-09). Proof of failure in the French text.

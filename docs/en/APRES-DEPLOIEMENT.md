@@ -2,6 +2,14 @@
 
 The French text prevails. Update procedure: upload the archive, `cd <folder>`, `ls -l` the archive, `sudo bash backup.sh`, `sudo rm -rf backend frontend docs`, `sudo tar xzf … --strip-components=1`, `ls backend frontend`, `sudo docker compose build`, `sudo docker compose up -d`, `sudo docker compose ps`, `curl -sk https://localhost:<https>/api/version`, checklist from the delivery message. `.env` and the volumes are never touched.
 
+## 0.11.0 (05/11/2026)
+
+Update by the procedure of the French text, **with migration**: `sudo docker logs gmao-api --tail 30` shows `[DB] Migration 010_tickets appliquée` then `[APP] API 0.11.0`. No new dependency; both images are rebuilt; Dockerfile, compose, `nginx.conf`, `backup.sh` and `.env` unchanged. Rollback to 0.10.0 without restoring the database.
+
+## 0.10.0 (05/11/2026)
+
+Update with migration `009_sso`; then set up Microsoft sign-in in Parameters (French text and delivery notes).
+
 ## 0.9.1 (03/11/2026)
 
 Fix of 0.9.0 (R1, R2), no migration: `[APP] API 0.9.1 sur le port 3001` in the log. No new dependency. Check: `v0.9.1` at the bottom of the menu, dashboard counters refreshed after a qualification, state spelled out in the audit log. Rollback to 0.9.0 without restoring the database.

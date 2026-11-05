@@ -2,6 +2,14 @@
 
 De Franse tekst is rechtsgeldig. Bijwerkingsprocedure: archief plaatsen, `cd <map>`, `ls -l` van het archief, `sudo bash backup.sh`, `sudo rm -rf backend frontend docs`, `sudo tar xzf … --strip-components=1`, `ls backend frontend`, `sudo docker compose build`, `sudo docker compose up -d`, `sudo docker compose ps`, `curl -sk https://localhost:<https>/api/version`, controlelijst van het leveringsbericht. `.env` en de volumes worden nooit aangeraakt.
 
+## 0.11.0 (05/11/2026)
+
+Update volgens de procedure in de Franse tekst, **met migratie**: `sudo docker logs gmao-api --tail 30` toont `[DB] Migration 010_tickets appliquée` en daarna `[APP] API 0.11.0`. Geen nieuwe afhankelijkheid; beide images worden opnieuw gebouwd; Dockerfile, compose, `nginx.conf`, `backup.sh` en `.env` ongewijzigd. Terugdraaien naar 0.10.0 zonder de databank te herstellen.
+
+## 0.10.0 (05/11/2026)
+
+Update met migratie `009_sso`; daarna de Microsoft-aanmelding instellen in Parameters (Franse tekst en leveringsnota's).
+
 ## 0.9.1 (03/11/2026)
 
 Correctie van 0.9.0 (R1, R2), zonder migratie: `[APP] API 0.9.1 sur le port 3001` in het logboek. Geen nieuwe afhankelijkheid. Controle: `v0.9.1` onderaan het menu, tellers van het dashboard bijgewerkt na een kwalificatie, status voluit in het auditlogboek. Terugkeer naar 0.9.0 zonder de databank terug te zetten.

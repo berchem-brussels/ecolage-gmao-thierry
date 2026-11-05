@@ -22,6 +22,8 @@ function buildApp() {
     next();
   });
 
+  // Tickets : capture jointe en data URL (2 Mo au plus avant encodage), seule exception au plafond de 256 ko (gabarit 1.3.0).
+  app.use('/api/tickets', express.json({ limit: '4mb' }));
   app.use(express.json({ limit: '256kb' }));
 
   const limiter = (limit) => rateLimit({
@@ -57,6 +59,7 @@ function buildApp() {
   app.use('/api/parametres-entite', require('./routes/parametres-entite'));
   app.use('/api/audit', require('./routes/audit'));
   app.use('/api/notes-version', require('./routes/notes-version'));
+  app.use('/api/tickets', require('./routes/tickets'));
 
   const { handleRpc } = require('./mcp');
   const mcpLimiter = rateLimit({
