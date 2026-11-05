@@ -1,6 +1,7 @@
 /** Session de la personne connectée (patron SAGA AuthContext.tsx, session en cookie côté serveur). */
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import api, { setCsrfToken } from '../api';
+import { redirection } from '../connexion';
 import type { LieuChoisi } from '../demandes';
 
 /** Entité où la personne a au moins un rôle actif, avec ses rôles dans cette entité. */
@@ -78,7 +79,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const logout = useCallback(async () => {
-    try { await api.post('/auth/logout', {}); } finally { setCsrfToken(null); setUser(null); }
+    // Retour vers « Vous êtes déconnecté » sans redirection automatique vers Microsoft (section 8.6) ; ni Portal ni Microsoft ne sont fermés.
+    try { await api.post('/auth/logout', {}); } finally { setCsrfToken(null); setUser(null); redirection.vers('/login?deconnecte=1'); }
   }, []);
 
   /** Change l'entité active de la session ; le serveur refuse une entité où la personne n'a aucun rôle. */

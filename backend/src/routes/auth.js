@@ -1,6 +1,6 @@
 /**
- * Connexion locale, session (jeton opaque et jeton anti-CSRF par session), profil. Le SSO Entra ID (mode préconisé) se branche sur le patron
- * OpenID Connect côté serveur de PILOT (src/lib/oidc.js) : non inclus dans ce gabarit (README, « À construire »).
+ * Connexion locale, session (jeton opaque et jeton anti-CSRF par session), profil. La connexion Microsoft compatible avec Portal
+ * (standard, section 8.6) vit dans routes/sso.js (gabarit 1.3.0) ; en mode « sso », le mot de passe n'est accepté que pour l'accès de secours.
  */
 const express = require('express');
 const bcrypt = require('bcryptjs');
@@ -12,6 +12,7 @@ const { ok, fail, handle } = require('../envelope');
 const { logAudit } = require('../audit');
 const { TEST_MODE } = require('../config');
 const S = require('../schemas');
+const { getSetting } = require('../settings');
 const session = require('../services/session');
 
 const router = express.Router();
@@ -26,11 +27,12 @@ const loginLimiter = rateLimit({
 
 router.post('/login', loginLimiter, validate(S.login), handle((req, res) => {
   const db = getDb();
-  const u = db.prepare('SELECT id, password_hash FROM users WHERE email = ? AND is_active = 1').get(req.body.email.trim());
+  const u = db.prepare('SELECT id, password_hash, is_admin_local FROM users WHERE email = ? AND is_active = 1').get(req.body.email.trim());
   if (!u || !u.password_hash || !u.password_hash.startsWith('$2') || !bcrypt.compareSync(req.body.password, u.password_hash)) {
     logAudit(u ? u.id : null, 'login.failure', 'user', u ? u.id : null, null);
     return fail(res, req, 401, 'LOGIN_FAILED');
   }
+  if (getSetting('auth.mode') === 'sso' && !u.is_admin_local) return fail(res, req, 403, 'LOCAL_LOGIN_DISABLED');
   const { token, csrf } = openSession(req, res, u);
   logAudit(u.id, 'login.success', 'user', u.id, { method: 'local' });
   ok(res, { user: session.profil({ id: u.id, sid: fingerprint(token) }), token, csrf_token: csrf }, { resource: 'session' });

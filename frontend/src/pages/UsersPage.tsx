@@ -17,6 +17,8 @@ interface RoleRow { id: number; entite_id: number; role: string; entite_code: st
 interface U {
   id: number; email: string; first_name: string; last_name: string; user_role: 'agent' | 'admin'; entite_id: number | null;
   preferred_lang: 'fr' | 'nl'; is_active: number; is_demo: number; roles: RoleRow[];
+  /** Accès de secours par mot de passe en mode « sso » ; compte déjà rattaché à Microsoft (section 8.6, 0.10.0). */
+  is_admin_local: number; microsoft: number;
 }
 interface Entite { id: number; code: string; nom_fr: string; nom_nl: string; is_active: number }
 
@@ -38,6 +40,7 @@ export default function UsersPage() {
   const [saving, setSaving] = useState(false);
   const [q, setQ] = useState('');
   const [instanceRole, setInstanceRole] = useState<U['user_role']>('agent');
+  const [secours, setSecours] = useState(false);
   const [form] = Form.useForm();
   const fail = (e: unknown) => message.error(e instanceof ApiError ? e.message : t('common.error'));
 
@@ -76,6 +79,7 @@ export default function UsersPage() {
     for (const e of entites) sel[e.id] = u.roles.filter((r) => r.entite_id === e.id).map((r) => r.role);
     setSelection(sel);
     setInstanceRole(u.user_role);
+    setSecours(!!u.is_admin_local);
     setMotif('');
     setRolesOf(u);
   };
@@ -94,7 +98,10 @@ export default function UsersPage() {
     if (removed.length && !motif.trim()) { message.warning(t('users.roles.motif.required')); return; }
     setSaving(true);
     try {
-      if (instanceRole !== rolesOf.user_role) await api.put(`/users/${rolesOf.id}`, { user_role: instanceRole });
+      const fiche: { user_role?: U['user_role']; is_admin_local?: number } = {};
+      if (instanceRole !== rolesOf.user_role) fiche.user_role = instanceRole;
+      if (secours !== !!rolesOf.is_admin_local) fiche.is_admin_local = secours ? 1 : 0;
+      if (Object.keys(fiche).length) await api.put(`/users/${rolesOf.id}`, fiche);
       for (const a of added) await api.post('/roles-utilisateurs', { user_id: rolesOf.id, ...a });
       for (const r of removed) await api.del(`/roles-utilisateurs/${r.id}`, { motif: motif.trim() });
       message.success(t('common.saved'));
@@ -109,6 +116,8 @@ export default function UsersPage() {
       <div>{u.last_name} {u.first_name}{' '}
         {u.user_role === 'admin' && <Tag color="gold">{t('users.role.admin')}</Tag>}
         {u.is_demo ? <Tag color="purple">{t('common.demo')}</Tag> : null}
+        {u.microsoft ? <Tag color="blue">{t('users.microsoft')}</Tag> : null}
+        {u.is_admin_local ? <Tag color="orange">{t('users.secours')}</Tag> : null}
         {!u.is_active && <Tag>{t('common.inactive')}</Tag>}
       </div>
       <Typography.Text type="secondary" style={{ fontSize: 12, wordBreak: 'break-all' }}>{u.email}</Typography.Text>
@@ -189,6 +198,12 @@ export default function UsersPage() {
               <Radio.Group optionType="button" value={instanceRole} options={instanceOptions} aria-label={t('users.instance_role')}
                 onChange={(e) => setInstanceRole(e.target.value)} />
               <Typography.Paragraph type="secondary" style={{ marginTop: 8, marginBottom: 0, fontSize: 12 }}>{t('users.instance_role.help')}</Typography.Paragraph>
+              {(instanceRole === 'admin' || secours) && (
+                <div style={{ marginTop: 12 }}>
+                  <Checkbox checked={secours} onChange={(e) => setSecours(e.target.checked)}>{t('users.secours.field')}</Checkbox>
+                  <Typography.Paragraph type="secondary" style={{ marginTop: 4, marginBottom: 0, fontSize: 12 }}>{t('users.secours.help')}</Typography.Paragraph>
+                </div>
+              )}
             </Card>
             <Typography.Paragraph type="secondary" style={{ marginBottom: 0 }}>{t('users.roles.help')}</Typography.Paragraph>
             {entites.map((e) => (

@@ -1,5 +1,9 @@
 
 
+## 0.10.0
+
+New tools: `get_auth_settings` (Microsoft sign-in settings: mode, tenant, application, public address, domains, redirect address; the secret is never returned, only whether it is set) and `update_auth_settings` (two calls: `prepare_update_auth_settings` then `confirm_update_auth_settings`; mode `sso` refused while no active administrator can sign in). Administrator only.
+
 ## 0.9.1
 
 No new or changed tool.

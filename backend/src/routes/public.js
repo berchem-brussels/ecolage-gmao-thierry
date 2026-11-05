@@ -1,6 +1,7 @@
 /**
  * Routes libres, sans session, en liste écrite et courte (standard v3.2, section 7.3) :
- * santé, version, paramètres publics de l'instance, assistant d'installation tant qu'aucun compte n'existe.
+ * santé, version, paramètres publics de l'instance, assistant d'installation tant qu'aucun compte n'existe ;
+ * connexion Microsoft (routes/sso.js, section 8.6). Le premier administrateur garde l'accès de secours par mot de passe.
  */
 const express = require('express');
 const bcrypt = require('bcryptjs');
@@ -11,6 +12,7 @@ const { openSession } = require('../auth');
 const { logAudit } = require('../audit');
 const { VERSION } = require('../config');
 const S = require('../schemas');
+const { getSetting } = require('../settings');
 const { DEFAULT_ROLE } = require('../roles');
 const { seedEntite } = require('../services/listes-valeurs');
 const categories = require('../services/categories');
@@ -35,7 +37,7 @@ router.get('/settings/public', handle((req, res) => {
       code: m.code, libelle_fr: m.libelle_fr, libelle_nl: m.libelle_nl, description_fr: m.description_fr, description_nl: m.description_nl, actif_defaut: !!m.actif_defaut,
     })),
   };
-  ok(res, { ...s, auth: { mode: 'local' }, installed: estInstalle, version: VERSION, ...extra }, { resource: 'settings' });
+  ok(res, { ...s, auth: { mode: getSetting('auth.mode') }, installed: estInstalle, version: VERSION, ...extra }, { resource: 'settings' });
 }));
 
 /**
@@ -52,8 +54,8 @@ router.post('/install', validate(S.installation), handle((req, res) => {
     const e = db.prepare('INSERT INTO entites (code, nom_fr, nom_nl) VALUES (?, ?, ?)').run(b.entite_code, b.entite_nom_fr, b.entite_nom_nl);
     // La note de version en cours n'est pas montrée à un compte nouveau : version_vue part de la version installée.
     const lang = b.default_lang || parametres.defaut('app.default_lang');
-    const r = db.prepare(`INSERT INTO users (email, first_name, last_name, user_role, entite_id, password_hash, version_vue, preferred_lang)
-      VALUES (?, ?, ?, 'admin', ?, ?, ?, ?)`).run(b.email.trim(), b.first_name, b.last_name, e.lastInsertRowid, hash, VERSION, lang);
+    const r = db.prepare(`INSERT INTO users (email, first_name, last_name, user_role, entite_id, password_hash, version_vue, preferred_lang, is_admin_local)
+      VALUES (?, ?, ?, 'admin', ?, ?, ?, ?, 1)`).run(b.email.trim(), b.first_name, b.last_name, e.lastInsertRowid, hash, VERSION, lang);
     db.prepare('UPDATE entites SET created_by = ?, updated_by = ? WHERE id = ?').run(r.lastInsertRowid, r.lastInsertRowid, e.lastInsertRowid);
     db.prepare('INSERT INTO user_roles (user_id, entite_id, role, created_by, updated_by) VALUES (?, ?, ?, ?, ?)')
       .run(r.lastInsertRowid, e.lastInsertRowid, DEFAULT_ROLE, r.lastInsertRowid, r.lastInsertRowid);
@@ -78,6 +80,7 @@ router.post('/install', validate(S.installation), handle((req, res) => {
   ok(res, { installed: true, csrf_token: csrf }, { resource: 'install' }, null, 201);
 }));
 
-router.PUBLIC_ROUTES = ['GET /api/health', 'GET /api/version', 'GET /api/settings/public', 'POST /api/install', 'POST /api/auth/login'];
+router.PUBLIC_ROUTES = ['GET /api/health', 'GET /api/version', 'GET /api/settings/public', 'POST /api/install', 'POST /api/auth/login',
+  'GET /api/auth/config', 'GET /api/auth/sso/start', 'GET /api/auth/callback'];
 
 module.exports = router;

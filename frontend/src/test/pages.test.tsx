@@ -4,8 +4,8 @@
  */
 import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
-import { MemoryRouter } from 'react-router-dom';
+import { cleanup as cleanupAll, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import axe from 'axe-core';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
@@ -29,7 +29,7 @@ const roles = [
   { code: 'responsable', portee: 'entite', defaut: false, label_fr: 'Responsable du service technique', label_nl: 'Verantwoordelijke technische dienst', description_fr: 'd', description_nl: 'd', permissions: ['entites:membres', 'lieux:lire', 'lieux:gerer', 'listes:lire', 'listes:gerer'] },
   { code: 'admin', portee: 'instance', defaut: false, label_fr: 'Administrateur', label_nl: 'Beheerder', description_fr: 'd', description_nl: 'd', permissions: [] },
 ];
-const users = [{ ...user, is_active: 1, is_demo: 1, roles: [{ id: 1, entite_id: 1, role: 'agent', entite_code: 'AA' }, { id: 2, entite_id: 2, role: 'responsable', entite_code: 'BB' }] }];
+const users = [{ ...user, is_active: 1, is_demo: 1, is_admin_local: 1, microsoft: 1, roles: [{ id: 1, entite_id: 1, role: 'agent', entite_code: 'AA' }, { id: 2, entite_id: 2, role: 'responsable', entite_code: 'BB' }] }];
 const valeurs = [
   { id: 1, entite_id: 1, liste: 'type_lieu', code: 'bureau', libelle_fr: 'Bureau', libelle_nl: 'Kantoor', ordre: 10, is_active: 1, motif_desactivation: null, created_at: '2026-10-21 10:00:00', updated_at: '2026-10-21 10:00:00' },
   { id: 2, entite_id: 1, liste: 'type_lieu', code: 'exterieur', libelle_fr: 'Extérieur', libelle_nl: 'Buitenruimte', ordre: 20, is_active: 0, motif_desactivation: 'x', created_at: '2026-10-21 10:00:00', updated_at: '2026-10-21 10:00:00' },
@@ -131,8 +131,12 @@ vi.mock('../contexts/AuthContext', () => ({
 }));
 
 const page = (data: unknown[]) => ({ data, meta: { envelope: 1 }, pagination: { total: data.length, limit: 200, offset: 0 } });
+// Connexion Microsoft (0.10.0) : mode local par défaut ; les tests de la section 8.6 le changent.
+let authConfig: Record<string, unknown> = { mode: 'local', microsoft: false, installed: true };
+const authSettings = { mode: 'sso_optional', tenant: 'locataire-fictif', client_id: 'application-fictive', public_url: 'https://gmao.exemple.test', domains: 'exemple.test', secret_set: true, redirect_uri: 'https://gmao.exemple.test/api/auth/callback' };
 beforeEach(() => {
   modules = modulesActifs;
+  authConfig = { mode: 'local', microsoft: false, installed: true };
   vi.stubGlobal('fetch', vi.fn(async (url: string) => ({
     ok: true, status: 200, statusText: 'OK',
     json: async () => (url.includes('/membres') ? { data: membres, meta: { envelope: 1 } }
@@ -147,6 +151,8 @@ beforeEach(() => {
       : url.startsWith('/api/jours-feries') ? page(feries)
       : url.startsWith('/api/demandes') ? page([])
       : url.startsWith('/api/echeances') ? { data: echeance, meta: { envelope: 1 } }
+      : url.startsWith('/api/auth/config') ? { data: authConfig, meta: { envelope: 1 } }
+      : url.startsWith('/api/settings/auth') ? { data: authSettings, meta: { envelope: 1 } }
       : url.startsWith('/api/parametres-entite') ? page(parametresEntite)
       : url.startsWith('/api/parametres') ? page(parametres)
       : url.startsWith('/api/modules') ? page(modules)
@@ -164,7 +170,9 @@ import EntitesPage from '../pages/EntitesPage';
 import UsersPage from '../pages/UsersPage';
 import HelpPage from '../pages/HelpPage';
 import AccessibilityPage from '../pages/AccessibilityPage';
-import LoginPage from '../pages/LoginPage';
+import LoginPage, { autoSsoAllowed, ssoStartUrl } from '../pages/LoginPage';
+import { redirection, safeNext } from '../connexion';
+import { AfterLogin, ToLogin } from '../App';
 import PatrimoinePage from '../pages/PatrimoinePage';
 import ListesValeursPage from '../pages/ListesValeursPage';
 import AppLayout from '../components/AppLayout';
@@ -728,5 +736,101 @@ describe('adresse e-mail (0.5.2) : un seul message sous le champ, en FR et en NL
     await waitFor(() => expect(erreurs(email)).toEqual(['Ce champ est obligatoire']));
     fireEvent.change(email, { target: { value: 'agent.ac' } });
     await waitFor(() => expect(erreurs(email)).toEqual(['Adresse e-mail non valide']));
+  });
+});
+
+describe('connexion Microsoft compatible avec Portal (0.10.0, section 8.6)', () => {
+  it('départ automatique en mode sso, sauf déconnexion, erreur ou accès de secours (test du gabarit 1.3.0)', () => {
+    const sso = { mode: 'sso' as const, microsoft: true, installed: true };
+    expect(autoSsoAllowed(sso, new URLSearchParams(''))).toBe(true);
+    expect(autoSsoAllowed(sso, new URLSearchParams('deconnecte=1'))).toBe(false);
+    expect(autoSsoAllowed(sso, new URLSearchParams('erreur=SSO_TOKEN'))).toBe(false);
+    expect(autoSsoAllowed(sso, new URLSearchParams('local=1'))).toBe(false);
+    expect(autoSsoAllowed({ ...sso, mode: 'sso_optional' }, new URLSearchParams(''))).toBe(false);
+    expect(autoSsoAllowed({ ...sso, microsoft: false }, new URLSearchParams(''))).toBe(false);
+    expect(ssoStartUrl('/demandes?id=3')).toBe('/api/auth/sso/start?next=%2Fdemandes%3Fid%3D3');
+    expect(ssoStartUrl('https://exemple.com')).toBe('/api/auth/sso/start?next=%2F');
+  });
+
+  it('retour après une connexion par mot de passe : chemin douteux ramené à /', () => {
+    for (const next of ['https://exemple.com', '//exemple.com', '/\\exemple.com', '/demandes?x=<script>', null]) expect(safeNext(next)).toBe('/');
+    expect(safeNext('/demandes-entite')).toBe('/demandes-entite');
+  });
+
+  it('mode sso : la page de connexion part vers Microsoft sans clic, avec l’écran demandé', async () => {
+    authConfig = { mode: 'sso', microsoft: true, installed: true };
+    const vers = vi.spyOn(redirection, 'vers').mockImplementation(() => {});
+    try {
+      render(wrap(LoginPage, 'fr', FALLBACK_SETTINGS, ['/login?next=%2Fdemandes']));
+      await waitFor(() => expect(vers).toHaveBeenCalledWith('/api/auth/sso/start?next=%2Fdemandes'));
+      expect(screen.getByText('Connexion avec votre compte Microsoft…')).toBeInTheDocument();
+      expect(screen.queryByLabelText('Mot de passe')).toBeNull();
+    } finally { vers.mockRestore(); }
+  });
+
+  for (const [query, attendu] of [
+    ['deconnecte=1', 'Vous êtes déconnecté.'],
+    ['erreur=SSO_UNKNOWN_ACCOUNT', "Aucun compte actif ne correspond à votre compte Microsoft. Contactez l'administrateur de l'application."],
+    ['local=1', null],
+  ] as const) {
+    it(`mode sso, ?${query} : aucune redirection`, async () => {
+      authConfig = { mode: 'sso', microsoft: true, installed: true };
+      const vers = vi.spyOn(redirection, 'vers').mockImplementation(() => {});
+      try {
+        const { container } = render(wrap(LoginPage, 'fr', FALLBACK_SETTINGS, [`/login?${query}`]));
+        expect(await screen.findByRole('button', { name: /Se connecter avec Microsoft/ })).toBeInTheDocument();
+        if (attendu) expect(screen.getByText(attendu)).toBeInTheDocument();
+        // Formulaire par mot de passe seulement pour l'accès de secours.
+        expect(!!screen.queryByLabelText('Mot de passe')).toBe(query === 'local=1');
+        expect(vers).not.toHaveBeenCalled();
+        const r = await axe.run(container, { rules: { 'color-contrast': { enabled: false }, region: { enabled: false } } });
+        expect(r.violations.map((v) => v.id)).toEqual([]);
+      } finally { vers.mockRestore(); }
+    });
+  }
+
+  it('mode sso_optional : bouton Microsoft et mot de passe, sans départ automatique ; en NL', async () => {
+    authConfig = { mode: 'sso_optional', microsoft: true, installed: true };
+    const vers = vi.spyOn(redirection, 'vers').mockImplementation(() => {});
+    try {
+      render(wrap(LoginPage, 'nl', FALLBACK_SETTINGS, ['/login']));
+      fireEvent.click(await screen.findByRole('button', { name: /Aanmelden met Microsoft/ }));
+      expect(vers).toHaveBeenCalledWith('/api/auth/sso/start?next=%2F');
+      expect(screen.getByLabelText('Wachtwoord')).toBeInTheDocument();
+      expect(screen.getByText('of met uw wachtwoord')).toBeInTheDocument();
+    } finally { vers.mockRestore(); }
+  });
+
+  it('Paramètres › Connexion Microsoft : adresse de retour affichée, secret jamais réaffiché, sans violation axe-core', async () => {
+    const { container } = render(wrap(ParametresPage, 'fr', FALLBACK_SETTINGS, ['/parametres?onglet=connexion']));
+    expect(await screen.findByText('https://gmao.exemple.test/api/auth/callback')).toBeInTheDocument();
+    expect(screen.getByText('Un secret est enregistré ; laissez vide pour le garder.')).toBeInTheDocument();
+    expect((screen.getByLabelText('Secret client') as HTMLInputElement).value).toBe('');
+    expect((screen.getByLabelText("Annuaire (locataire)") as HTMLInputElement).value).toBe('locataire-fictif');
+    const r = await axe.run(container, { rules: { 'color-contrast': { enabled: false }, region: { enabled: false } } });
+    expect(r.violations.map((v) => `${v.id}: ${v.nodes.map((n) => n.html.slice(0, 120)).join(' | ')}`)).toEqual([]);
+  });
+
+  it('Utilisateurs : compte rattaché à Microsoft et accès de secours visibles ; case de secours sur la fiche', async () => {
+    render(wrap(UsersPage, 'fr'));
+    expect(await screen.findByText('Microsoft')).toBeInTheDocument();
+    expect(screen.getByText('Accès de secours')).toBeInTheDocument();
+    fireEvent.click(screen.getAllByRole('button', { name: 'Rôles' })[0]);
+    const caseSecours = await screen.findByRole('checkbox', { name: 'Accès de secours par mot de passe' });
+    expect(caseSecours).toBeChecked();
+  });
+
+  it('sans session, l’écran demandé passe à la connexion (?next=) ; après le mot de passe, retour à cet écran s’il est sûr', async () => {
+    const Ici = () => { const l = useLocation(); return <p>{`${l.pathname}${l.search}`}</p>; };
+    const routes = (entree: string, login: React.ReactNode) => render(
+      <MemoryRouter initialEntries={[entree]}><Routes><Route path="/login" element={login} /><Route path="*" element={entree.startsWith('/login') ? <Ici /> : <ToLogin />} /></Routes></MemoryRouter>);
+    routes('/demandes-entite', <Ici />);
+    expect(await screen.findByText('/login?next=%2Fdemandes-entite')).toBeInTheDocument();
+    cleanupAll();
+    routes('/login?next=%2Fdemandes-entite', <AfterLogin />);
+    expect(await screen.findByText('/demandes-entite')).toBeInTheDocument();
+    cleanupAll();
+    routes('/login?next=https%3A%2F%2Fexemple.com', <AfterLogin />);
+    expect(await screen.findByText('/')).toBeInTheDocument();
   });
 });

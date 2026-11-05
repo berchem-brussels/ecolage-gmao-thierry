@@ -2,6 +2,51 @@
 
 Le français fait foi. Grille de la section 10.2 du standard, rejouée à chaque version. « Non joué » veut dire que le contrôle n'a pas tourné.
 
+## 0.10.0 (05/11/2026)
+
+Connexion Microsoft compatible avec Portal (standard, section 8.6), modules du gabarit 1.3.0 repris (DV-99). Environnement : bac à sable de Claude, Node 22.23.4 ; parcours `ci.yml` rejoué sous Node 20.20.2. Aucune dépendance nouvelle ; migration `009_sso`.
+
+| Famille | Contrôle | Résultat |
+| --- | --- | --- |
+| Authentification | Code d'autorisation avec PKCE S256 ; `state`, `nonce` et vérificateur aléatoires, gardés en base (`auth_pending`, 15 minutes) avec le chemin de retour ; cookie d'état `HttpOnly`, `SameSite=Lax`, `Path=/api/auth`, 10 minutes, `Secure` en HTTPS, effacé au retour ; aucun `prompt` ni `max_age` | Conforme (`sso.test.js`) |
+| Authentification | Jeton d'identité : RS256 seul, clé publiée par Microsoft (cache d'une heure), émetteur du locataire, audience, expiration, `nonce` ; jeton à signature fausse, d'un autre locataire, expiré ou au `nonce` différent refusé, sans session ouverte ; état volé ou inconnu refusé | Conforme (`sso.test.js`, contre un faux Microsoft qui signe ses jetons) |
+| Authentification | Rattachement par `oid`, puis par adresse si la fiche n'a pas encore d'`oid` ; compte inconnu ou désactivé refusé (`SSO_UNKNOWN_ACCOUNT`) ; domaines acceptés en paramètre ; compte désactivé : sessions fermées tout de suite | Conforme (`sso.test.js`) |
+| Authentification | Mode `sso` : mot de passe refusé hors accès de secours (`LOCAL_LOGIN_DISABLED`) ; passage en `sso` et retrait du dernier accès de secours refusés sans administrateur joignable (`SSO_NO_ADMIN`) | Conforme (`sso.test.js`) |
+| Session | Cookie de session inchangé (`SameSite=Strict`, `HttpOnly`, `Secure`, 8 heures) ; `appendCookie` : la session et l'effacement du cookie d'état partent ensemble | Conforme (`sso.test.js`, `securite.test.js`) |
+| Redirection ouverte | `next` accepté seulement s'il commence par un seul `/` et ne contient que lettres, chiffres et `-._~/`, sinon `/` (serveur `oidc.safeNext`, interface `connexion.safeNext`) | Conforme (`sso.test.js`, `pages.test.tsx`) |
+| Autorisation | `/api/settings/auth` et ses outils MCP réservés à l'administrateur ; trois routes libres ajoutées à la liste écrite ; toute autre route exige une session | Conforme (`securite.test.js`, `sso.test.js`) |
+| Données | Secret client chiffré (AES-256-GCM, `CONFIG_ENC_KEY`), jamais rendu par l'API ni le MCP (`secret_set` seulement), `***` au journal ; `oid` jamais rendu (`microsoft` : 0 ou 1) ; aucun jeton Microsoft gardé | Conforme (`sso.test.js`) |
+| Interface | Départ automatique vers Microsoft en mode `sso` seulement, sauf `?deconnecte=1`, `?erreur=…`, `?local=1` ; aucun lien visible vers l'accès de secours | Conforme (`pages.test.tsx`) |
+| Injections | Code d'erreur de l'adresse traduit par une clé, texte inconnu remplacé par le message générique ; aucun HTML | Conforme (`pages.test.tsx`) |
+| Secrets commités | `.gitignore` inchangé ; locataire, application, secret et adresse saisis à l'écran | Conforme : aucune valeur Entra ni de NIXUS dans l'archive |
+| Infrastructure | Dockerfile, compose, `nginx.conf` (déjà `X-Forwarded-Proto`), `backup.sh`, `.env`, `ci.yml` inchangés | Conforme |
+| Dépendances | `npm audit --omit=dev` serveur | 0 vulnérabilité ; aucune dépendance nouvelle (E-36) |
+| Dépendances | `npm audit --omit=dev` interface | 3 modérées (E-09), inchangées |
+| LLM et MCP | `get_auth_settings` ; `update_auth_settings` en deux appels, secret masqué dans le résumé ; parité route et outil | Conforme (`sso.test.js`, `mcp.test.js`) |
+| Migration | `009_sso` sur une base 0.9.1 : accès de secours au premier administrateur réel, aucun aux comptes de démonstration ni aux autres ; pas de relance | Conforme (`sso.test.js`) |
+
+Les trois contrôles qui ne restent jamais « non joués » (secrets commités, contrôle d'accès côté serveur, IDOR) ont été joués. Non joué : le vrai Entra ID (recette sur NIXUS).
+
+### Preuve d'échec des nouveaux tests (0.10.0)
+
+Chaque protection retirée seule, suite `sso.test.js` rejouée (13 tests) :
+
+- `prompt=login` ajouté à l'adresse d'autorisation : 1 échec ;
+- contrôle du `nonce` retiré : 1 échec ;
+- contrôle de la signature retiré : 1 échec ;
+- `safeNext` neutralisé : 1 échec ;
+- mot de passe accepté en mode `sso` : 1 échec ;
+- `openSession` sans `appendCookie` (code de la 0.9.1) : 1 échec ;
+- dernier accès de secours retirable : 1 échec ;
+- migration sans accès de secours : 1 échec.
+
+Interface :
+
+- les trois exceptions retirées de `autoSsoAllowed` : 4 échecs ;
+- `ToLogin` sans `next` : 1 échec.
+
+Code de la 0.10.0 : tout réussi.
+
 ## 0.9.1 (03/11/2026)
 
 Correctif de la 0.9.0 (R1 et R2, DV-94), interface seulement. Environnement : bac à sable de Claude, Node 22.23.4 ; parcours `ci.yml` rejoué sous Node 20.20.2. Aucune dépendance nouvelle, aucune migration, aucune route nouvelle ; serveur changé pour le numéro de version et la note de version seulement.

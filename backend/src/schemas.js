@@ -201,6 +201,16 @@ module.exports = {
     user_role: T.en('agent', 'admin'), preferred_lang: T.en('fr', 'nl'), is_active: flag,
     // Lieu de travail habituel (REF-04, DV-42), réglé par l'administrateur ; null l'efface.
     lieu_habituel_id: lieuOuNul,
+    // Accès de secours par mot de passe en mode « sso » (section 8.6), réglé par l'administrateur.
+    is_admin_local: flag,
+  }),
+
+  // Réglages de la connexion Microsoft (gabarit 1.3.0, section 8.6) ; le secret est chiffré et jamais renvoyé.
+  authSettings: obj({
+    mode: T.en('local', 'sso', 'sso_optional'),
+    tenant: T.str(100), client_id: T.str(100), client_secret: { type: 'string', maxLength: 500 },
+    public_url: { type: 'string', maxLength: 300, pattern: '^(https://[^\\s/]+(/[^\\s]*)?)?$' },
+    domains: T.str(500),
   }),
 
   // Demandes d'intervention (DEM-01 à 03, SUI-01) : un lieu, une catégorie, une description de 10 caractères au moins

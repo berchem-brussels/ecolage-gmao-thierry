@@ -3,7 +3,7 @@
  * Patron SAGA App.tsx ; les couleurs viennent des paramètres de l'instance, jamais d'une constante.
  */
 import React, { useCallback, useMemo, useState } from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useLocation, useSearchParams } from 'react-router-dom';
 import { ConfigProvider, Spin, theme as antTheme } from 'antd';
 import frFR from 'antd/locale/fr_FR';
 import nlNL from 'antd/locale/nl_NL';
@@ -17,6 +17,7 @@ import { SettingsProvider, type InstanceSettings } from './contexts/SettingsCont
 import { ROUGE_ERREUR, TEXTE_BOUTON_DANGER } from './couleurs';
 import AppLayout from './components/AppLayout';
 import LoginPage from './pages/LoginPage';
+import { safeNext } from './connexion';
 import { loadSettings, applyThemeVariables } from './settings';
 import { hasPermission, useRoles } from './useRoles';
 import { moduleActif, useModules } from './moduleMap';
@@ -89,14 +90,27 @@ function ModuleGate({ module, children }: { module: string; children: React.Reac
   return moduleActif(modules, module) ? children : <Navigate to="/" replace />;
 }
 
+/** Sans session : renvoi vers la connexion avec l'écran demandé (gabarit 1.3.0, section 8.6). */
+export function ToLogin() {
+  const location = useLocation();
+  const cible = location.pathname + location.search;
+  return <Navigate to={cible === '/' ? '/login' : `/login?next=${encodeURIComponent(cible)}`} replace />;
+}
+
+/** Après une connexion par mot de passe, retour à l'écran demandé s'il est sûr, sinon à l'accueil. */
+export function AfterLogin() {
+  const [params] = useSearchParams();
+  return <Navigate to={safeNext(params.get('next'))} replace />;
+}
+
 function AppRoutes() {
   const { user, loading } = useAuth();
   if (loading) return <Loading />;
   return (
     <React.Suspense fallback={<Loading />}>
       <Routes>
-        <Route path="/login" element={user ? <Navigate to="/" replace /> : <LoginPage />} />
-        <Route path="/" element={user ? <AppLayout /> : <Navigate to="/login" replace />}>
+        <Route path="/login" element={user ? <AfterLogin /> : <LoginPage />} />
+        <Route path="/" element={user ? <AppLayout /> : <ToLogin />}>
           <Route index element={<HomePage />} />
           <Route path="demandes/nouvelle" element={<ModuleGate module="demandes"><NouvelleDemandePage /></ModuleGate>} />
           <Route path="demandes" element={<ModuleGate module="demandes"><DemandesPage perimetre="miennes" /></ModuleGate>} />
@@ -112,7 +126,7 @@ function AppRoutes() {
           <Route path="help" element={<HelpPage />} />
           <Route path="accessibility" element={<AccessibilityPage />} />
         </Route>
-        <Route path="*" element={<Navigate to="/" replace />} />
+        <Route path="*" element={user ? <Navigate to="/" replace /> : <ToLogin />} />
       </Routes>
     </React.Suspense>
   );
