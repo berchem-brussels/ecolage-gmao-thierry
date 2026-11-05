@@ -4,25 +4,58 @@
  * avec la langue par défaut et les modules activés dès le départ (version 0.3.0, écart E-08).
  * 0.7.5 (DV-53) : le bandeau « Identifiants incorrects » s'efface dès que l'adresse change, et quand un nouvel essai est
  * arrêté par le contrôle du formulaire (adresse mal formée, champ vide) : il ne reste jamais à côté d'une autre erreur.
- * Le bouton Microsoft (SSO préconisé) s'ajoute avec le patron OpenID Connect de PILOT : non inclus dans le gabarit.
+ * 0.10.0 : connexion Microsoft compatible avec Portal (standard, section 8.6), reprise du gabarit 1.3.0 (autoSsoAllowed,
+ * ssoStartUrl, bouton Microsoft, messages). En mode « sso », départ automatique vers Microsoft sans clic, sauf après une
+ * déconnexion (?deconnecte=1), une erreur (?erreur=<code>) ou pour l'accès de secours de l'administrateur (?local=1).
+ * Le retour à l'écran demandé (?next=) se fait dans App.tsx après une connexion par mot de passe, côté serveur après Microsoft.
  */
-import { useState } from 'react';
-import { Alert, Button, Card, Checkbox, Divider, Form, Grid, Input, Radio, Select, Space, Typography } from 'antd';
-import { LockOutlined, MailOutlined, UserOutlined } from '@ant-design/icons';
+import { useEffect, useState } from 'react';
+import { Alert, Button, Card, Checkbox, Divider, Form, Grid, Input, Radio, Select, Space, Spin, Typography } from 'antd';
+import { LockOutlined, MailOutlined, UserOutlined, WindowsOutlined } from '@ant-design/icons';
+import { useSearchParams } from 'react-router-dom';
 import api, { ApiError } from '../api';
 import { useAuth } from '../contexts/AuthContext';
 import { useI18n } from '../contexts/I18nContext';
 import { useSettings } from '../contexts/SettingsContext';
 import AppMark from '../components/AppMark';
+import { redirection } from '../connexion';
 import { courriel, obligatoire, texteObligatoire } from '../validation';
+
+export interface AuthConfig { mode: 'local' | 'sso' | 'sso_optional'; microsoft: boolean; installed: boolean }
+
+/** Départ automatique vers Microsoft : mode sso configuré, sauf après une déconnexion, une erreur ou pour l'accès de secours. */
+export function autoSsoAllowed(config: AuthConfig | null, params: URLSearchParams) {
+  return !!config && config.mode === 'sso' && config.microsoft && config.installed
+    && params.get('deconnecte') !== '1' && !params.get('erreur') && params.get('local') !== '1';
+}
+
+export function ssoStartUrl(next: string | null) {
+  return `/api/auth/sso/start?next=${encodeURIComponent(next && next.startsWith('/') ? next : '/')}`;
+}
 
 export default function LoginPage() {
   const { login, refresh } = useAuth();
   const { t, lang, setLang, tField } = useI18n();
   const { settings, reload } = useSettings();
   const screens = Grid.useBreakpoint();
+  const [params] = useSearchParams();
+  const [config, setConfig] = useState<AuthConfig | null>(null);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const next = params.get('next');
+  const disconnected = params.get('deconnecte') === '1';
+  const ssoError = params.get('erreur');
+  const local = params.get('local') === '1';
+
+  useEffect(() => {
+    api.get<AuthConfig>('/auth/config').then(setConfig).catch(() => setConfig({ mode: 'local', microsoft: false, installed: settings.installed }));
+  }, [settings.installed]);
+
+  const autoSso = autoSsoAllowed(config, params);
+  useEffect(() => { if (autoSso) redirection.vers(ssoStartUrl(next)); }, [autoSso, next]);
+  const showLocal = !config || config.mode !== 'sso' || local;
+  const showMicrosoft = !!config && config.microsoft;
+  const ssoMessage = ssoError ? (t(`login.error.${ssoError}`) === `login.error.${ssoError}` ? t('common.error') : t(`login.error.${ssoError}`)) : '';
 
   const run = async (fn: () => Promise<void>) => {
     setLoading(true);
@@ -46,9 +79,19 @@ export default function LoginPage() {
         <Typography.Title level={1} style={{ fontSize: 18, textAlign: 'center', marginBottom: 16 }}>
           {settings.installed ? t('login.title') : t('install.title')}
         </Typography.Title>
+        {disconnected && <Alert type="info" showIcon message={t('login.disconnected')} style={{ marginBottom: 16 }} />}
+        {ssoError && <Alert type="error" showIcon message={ssoMessage} style={{ marginBottom: 16 }} />}
         {error && <Alert message={error} type="error" showIcon closable onClose={() => setError('')} style={{ marginBottom: 16 }} />}
+        {autoSso && <div style={{ textAlign: 'center' }}><Spin /><Typography.Paragraph>{t('login.redirecting')}</Typography.Paragraph></div>}
 
-        {settings.installed ? (
+        {settings.installed ? (!autoSso && (
+          <>
+            {showMicrosoft && (
+              <Button block size="large" icon={<WindowsOutlined />} onClick={() => redirection.vers(ssoStartUrl(next))}
+                style={{ background: '#0078d4', color: '#fff', height: 48, marginBottom: showLocal ? 8 : 0 }}>{t('login.microsoft')}</Button>
+            )}
+            {showMicrosoft && showLocal && <Divider plain>{config?.mode === 'sso' ? t('login.local') : t('login.password_option')}</Divider>}
+            {showLocal && (
           <Form onFinish={onLogin} size="large" layout="vertical" requiredMark={false}
             onValuesChange={(c: Record<string, unknown>) => { if ('email' in c) setError(''); }} onFinishFailed={() => setError('')}>
             <Form.Item name="email" label={t('login.email')} rules={[texteObligatoire(t), courriel(t)]} validateFirst>
@@ -59,7 +102,9 @@ export default function LoginPage() {
             </Form.Item>
             <Button type="primary" htmlType="submit" block loading={loading} style={{ height: 44 }}>{t('login.submit')}</Button>
           </Form>
-        ) : (
+            )}
+          </>
+        )) : (
           <Form onFinish={onInstall} layout="vertical" requiredMark={false}
             initialValues={{ default_lang: settings.app.default_lang || 'fr', modules: installables.filter((m) => m.actif_defaut).map((m) => m.code) }}>
             <Typography.Paragraph type="secondary">{t('install.intro')}</Typography.Paragraph>

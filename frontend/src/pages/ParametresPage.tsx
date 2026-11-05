@@ -4,13 +4,15 @@
  * l'écran ne connaît aucune clé en dur. Chaque réglage s'applique sans redémarrage ; l'en-tête, le menu et la page de
  * connexion se rechargent aussitôt. Choix exclusif en boutons (standard section 12.4). Retour au défaut par réglage.
  * Onglet Modules (ADM-02) : activation pour toute l'instance ; noyau et modules à venir montrés sans réglage.
- * L'onglet ouvert est dans l'adresse de la page (?onglet=modules).
+ * Onglet Connexion Microsoft (0.10.0, section 8.6) : composant ConnexionPanel repris du gabarit 1.3.0.
+ * L'onglet ouvert est dans l'adresse de la page (?onglet=modules, ?onglet=connexion).
  */
 import { useState } from 'react';
 import { Card, List, Popconfirm, Space, Switch, Tabs, Tag, Typography, message } from 'antd';
 import { useSearchParams } from 'react-router-dom';
 import api, { ApiError } from '../api';
 import ReglagesForm from '../components/ReglagesForm';
+import ConnexionPanel from '../components/ConnexionPanel';
 import { useI18n } from '../contexts/I18nContext';
 import { useSettings } from '../contexts/SettingsContext';
 import { type Module, reloadModules, useModules } from '../moduleMap';
@@ -72,7 +74,8 @@ export default function ParametresPage() {
   const { t } = useI18n();
   const { reload } = useSettings();
   const [search, setSearch] = useSearchParams();
-  const onglet = search.get('onglet') === 'modules' ? 'modules' : 'general';
+  const demande = search.get('onglet');
+  const onglet = demande === 'modules' || demande === 'connexion' ? demande : 'general';
   return (
     <div>
       <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, gap: 12, flexWrap: 'wrap' }}>
@@ -82,6 +85,7 @@ export default function ParametresPage() {
       <Tabs activeKey={onglet} onChange={(k) => setSearch(k === 'general' ? {} : { onglet: k }, { replace: true })} items={[
         { key: 'general', label: t('parametres.tab.general'), children: <ReglagesForm endpoint="/parametres" groupes={GROUPES} prefixe="parametres" onSaved={reload} /> },
         { key: 'modules', label: t('parametres.tab.modules'), children: <ModulesPanel /> },
+        { key: 'connexion', label: t('parametres.tab.connexion'), children: <ConnexionPanel /> },
       ]} />
     </div>
   );

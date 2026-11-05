@@ -12,8 +12,9 @@ const { DEFAULT_ROLE } = require('../roles');
 const rolesUtilisateurs = require('./roles-utilisateurs');
 const parametres = require('./parametres');
 const { VERSION } = require('../config');
+const { getSetting } = require('../settings');
 
-const COLUMNS = 'id, email, first_name, last_name, user_role, entite_id, preferred_lang, lieu_habituel_id, is_active, is_demo, must_change_password, created_at, updated_at';
+const COLUMNS = 'id, email, first_name, last_name, user_role, entite_id, preferred_lang, lieu_habituel_id, is_active, is_demo, must_change_password, is_admin_local, (oid IS NOT NULL) AS microsoft, created_at, updated_at';
 
 /** L'entité de rattachement doit exister et être active (cahier des charges ROL-01). */
 function assertEntite(entiteId) {
@@ -85,6 +86,14 @@ function update(user, id, data, channel = 'api') {
   const losesAdmin = target.user_role === 'admin' && target.is_active === 1
     && ((data.user_role && data.user_role !== 'admin') || data.is_active === 0);
   if (losesAdmin && activeAdminCount() <= 1) throw new AppError(409, 'LAST_ADMIN');
+  // En mode « sso », au moins un administrateur actif doit encore pouvoir se connecter (accès de secours ou compte rattaché à Microsoft).
+  if (getSetting('auth.mode') === 'sso' && (data.is_admin_local === 0 || losesAdmin)) {
+    const autres = getDb().prepare(`SELECT COUNT(*) AS n FROM users WHERE user_role = 'admin' AND is_active = 1
+      AND (is_admin_local = 1 OR oid IS NOT NULL) AND id <> ?`).get(id).n;
+    const lui = !losesAdmin && target.user_role === 'admin' && target.is_active === 1
+      && (target.microsoft === 1 || (data.is_admin_local ?? target.is_admin_local) === 1);
+    if (!autres && !lui) throw new AppError(409, 'SSO_NO_ADMIN');
+  }
   if (data.entite_id !== undefined) assertEntite(data.entite_id);
   // Lieu habituel : actif, dans une entité où le compte a un rôle (REF-04, DV-42).
   if (data.lieu_habituel_id !== undefined) require('./demandes').controlerLieuHabituel(id, data.lieu_habituel_id);

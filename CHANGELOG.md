@@ -1,6 +1,17 @@
 # Journal des versions
 
-Version de l'application : **0.9.1** · Mis à jour le 03/11/2026
+Version de l'application : **0.10.0** · Mis à jour le 05/11/2026
+
+## 0.10.0 (05/11/2026)
+
+Connexion Microsoft compatible avec Portal (standard v3.3, section 8.6 ; `SSO-COMPATIBLE-PORTAL.md` 1.0 ; TEC-03 avancé, DV-95, DV-96), modules du gabarit 1.3.0 repris sans réécriture (DV-99). Migration `009_sso`. Aucune dépendance nouvelle.
+
+- Repris tels quels du gabarit : `oidc.js` (PKCE S256, aucun `prompt` ni `max_age`, jeton vérifié en RS256 contre la clé publiée par Microsoft, émetteur, audience, expiration, `nonce`, règle `safeNext`), `settings.js` (réglages en base, secret chiffré), `routes/sso.js` (`/api/auth/config`, `/api/auth/sso/start`, `/api/auth/callback`, `/api/settings/auth`) et `tests/sso.test.js`.
+- Adaptés : migration `009_sso` (partie connexion de la migration du gabarit : `users.oid`, `users.is_admin_local`, table `auth_pending` ; accès de secours au premier administrateur réel) ; `appendCookie` dans `auth.js` (le cookie de session ne remplace plus l'effacement du cookie d'état) ; réglages de connexion dans `services/connexion.js`, partagé avec le MCP (DV-104) ; mot de passe refusé en mode `sso` hors accès de secours ; dernier accès de secours protégé en mode `sso`.
+- Interface : page de connexion avec « Se connecter avec Microsoft », départ automatique en mode `sso` sauf `?deconnecte=1`, `?erreur=…` et `?local=1` ; écran demandé gardé (`/login?next=…`) ; « Se déconnecter » mène à « Vous êtes déconnecté » ; onglet « Connexion Microsoft » dans Paramètres ; case « Accès de secours par mot de passe » et étiquettes « Microsoft », « Accès de secours » dans Utilisateurs ; textes FR et NL ; trois actions et deux familles du journal nommées.
+- MCP : `get_auth_settings`, `update_auth_settings` (deux appels) ; `update_user` prend `is_admin_local`.
+- Note de version : deux lignes pour l'administrateur.
+- Tests : serveur 386 (372 en 0.9.1 ; 13 de `sso.test.js` dont 6 du gabarit et une migration sur une base 0.9.1, 1 pour la note de version), interface 174 (164) ; preuves d'échec dans `docs/fr/SECURITE.md`.
 
 ## 0.9.1 (03/11/2026)
 

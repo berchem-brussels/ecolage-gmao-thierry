@@ -34,6 +34,7 @@ function buildApp() {
 
   const publicRouter = require('./routes/public');
   app.use('/api', publicRouter);
+  app.use('/api', require('./routes/sso'));
   app.use('/api/auth', require('./routes/auth'));
   app.use('/api/entites', require('./routes/entites'));
   app.use('/api/roles', require('./routes/roles'));

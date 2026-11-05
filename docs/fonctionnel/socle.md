@@ -47,7 +47,7 @@ Routes `/api/entites`, `/api/roles`, `/api/roles-utilisateurs`, `/api/users`, `/
 
 ## Limites
 
-Pas encore de SSO (lot L7), ni de lecture de l'annuaire Microsoft (lot L6), ni d'écran de paramètres (version 0.3.0). La note de version n'est pas encore affichée à la première connexion.
+Pas encore de SSO (lot L7), ni de lecture de l'annuaire Microsoft (lot L6), ni d'écran de paramètres (version 0.3.0). La note de version n'est pas encore affichée à la première connexion. Depuis la 0.10.0 : connexion Microsoft compatible avec Portal (`administration.md`, règles 16 à 19) ; la lecture de l'annuaire reste au lot L6.
 
 ## Mode d'emploi
 

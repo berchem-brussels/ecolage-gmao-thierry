@@ -1,8 +1,25 @@
 # Manifeste
 
-Version de l'application : **0.9.1** · Mis à jour le 03/11/2026
+Version de l'application : **0.10.0** · Mis à jour le 05/11/2026
 
 Fichiers changés, dépendances et suites par version. Les décomptes sont recopiés de la sortie des commandes.
+
+## 0.10.0 (05/11/2026)
+
+Fichiers comparés à l'archive 0.9.1 par `diff -rq` (hors `node_modules` et `dist`). Pour le contrôle du `git status` (`GITHUB.md`, section 5) : aucune ligne `D` attendue ; huit lignes `A`, les autres `M`.
+
+- Nouveaux, serveur : `src/oidc.js`, `src/settings.js`, `src/routes/sso.js` (gabarit 1.3.0 ; `oidc.js` et `settings.js` identiques, `sso.js` identique hors réglages passés par le service), `src/services/connexion.js`, `tests/sso.test.js` (gabarit 1.3.0, adapté et complété).
+- Nouveaux, interface : `src/connexion.ts` (`safeNext`, `redirection`), `src/components/ConnexionPanel.tsx` (depuis `SettingsPage.tsx` du gabarit).
+- Nouveau : `NOTES_LIVRAISON_v0.10.0.md`.
+- Modifiés, serveur : `src/app.js` (montage de `routes/sso`), `src/auth.js` (`appendCookie`, `isHttps` exporté), `src/database.js` (migration `009_sso`), `src/i18n-server.js` (`SSO_NO_ADMIN`, `LOCAL_LOGIN_DISABLED`), `src/mcp.js` (deux outils), `src/routes/auth.js` (mot de passe en mode `sso`), `src/routes/public.js` (routes libres, mode réel dans les paramètres publics, accès de secours du premier administrateur), `src/schemas.js` (`authSettings`, `is_admin_local`), `src/services/users.js` (`is_admin_local`, `microsoft`, dernier accès de secours) ; `config/notes-version.json` (note 0.10.0) ; tests `mcp.test.js` (parité étendue à `/api/settings/auth`), `notes-version.test.js`, `categories.test.js`, `numerotation.test.js`, `parametres.test.js` (dernière migration `009_sso`) ; `package.json` (numéro et `sso.test.js`) et `package-lock.json` (numéro seulement).
+- Modifiés, interface : `src/App.tsx` (`ToLogin`, `AfterLogin`), `src/contexts/AuthContext.tsx` (déconnexion vers `/login?deconnecte=1`), `src/pages/LoginPage.tsx`, `src/pages/ParametresPage.tsx` (onglet), `src/pages/UsersPage.tsx`, `src/i18n.ts`, `src/test/pages.test.tsx` ; `package.json` et `package-lock.json` (numéro seulement). `frontend/dist/` reconstruit.
+- Modifiés, documentation : `CHANGELOG.md`, `ECARTS-CDC.md` (E-36 repris, E-39), `ETAT.md`, `MANIFESTE.md` ; `docs/fr/APRES-DEPLOIEMENT.md`, `docs/fr/MCP.md`, `docs/fr/SECURITE.md` ; `docs/en/MCP.md`, `docs/nl/MCP.md` ; `docs/fonctionnel/administration.md`, `docs/fonctionnel/socle.md`.
+- Inchangés : Dockerfile, `nginx.conf`, `docker-entrypoint.sh`, `docker-compose.yml`, `.env.example`, `backup.sh`, `.gitignore`, `ci.yml`.
+- Retirés : aucun fichier.
+- Dépendances : aucune dépendance nouvelle ; verrous inchangés hors numéro de version. Aucun `npm audit fix`.
+- Contrôle DV-09 de la séance, avant toute modification : archive 0.9.1 conforme à `ETAT.md` (2 370 896 octets, 377 entrées, SHA-256 `d25ae2a4…49e22`) ; version 0.9.1 dans les deux `package.json` ; serveur 372/372, `npm audit --omit=dev` 0 ; interface 164/164 sur trois lancements ; construction et accessibilité 0 erreur. Gabarit `gabarit-v3_1_3_0.tar.gz` (234 517 octets, 126 entrées, version 1.3.0). Aucun test instable.
+- Suites de la 0.10.0 (Node 22.23.4) : serveur 386/386 ; interface 174/174 sur trois lancements ; construction et accessibilité 0 erreur ; `npm audit --omit=dev` serveur 0, interface 3 modérées (E-09). Parcours `ci.yml` rejoué sous Node 20.20.2 : Serveur 386/386 ; `npm audit --omit=dev --audit-level=high` **sortie 0** ; interface 174/174, construction et accessibilité 0 erreur.
+- Images Docker : non reconstruites dans le bac à sable ; les deux changent.
 
 ## 0.9.1 (03/11/2026)
 

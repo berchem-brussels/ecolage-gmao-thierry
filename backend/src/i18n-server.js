@@ -13,6 +13,8 @@ const MESSAGES = {
   TRANSITION: { fr: "Ce changement de statut n'est pas permis.", nl: 'Deze statuswijziging is niet toegestaan.' },
   CANCELLED: { fr: 'Élément annulé : plus de modification possible.', nl: 'Geannuleerd element: geen wijziging meer mogelijk.' },
   DUPLICATE: { fr: 'Cette adresse est déjà utilisée.', nl: 'Dit adres wordt al gebruikt.' },
+  SSO_NO_ADMIN: { fr: "Mode Microsoft obligatoire refusé : aucun administrateur actif ne pourrait encore se connecter.", nl: 'Verplichte Microsoft-modus geweigerd: geen enkele actieve beheerder zou nog kunnen aanmelden.' },
+  LOCAL_LOGIN_DISABLED: { fr: 'Connexion par mot de passe désactivée : utilisez votre compte Microsoft.', nl: 'Aanmelden met wachtwoord uitgeschakeld: gebruik uw Microsoft-account.' },
   LAST_ADMIN: { fr: 'Le dernier administrateur actif ne peut être ni désactivé ni rétrogradé.', nl: 'De laatste actieve beheerder kan niet worden gedeactiveerd of gedegradeerd.' },
   CONFIRMATION: { fr: 'Jeton de confirmation absent, expiré ou déjà utilisé.', nl: 'Bevestigingstoken ontbreekt, is verlopen of al gebruikt.' },
   INTERNAL: { fr: 'Erreur interne. Elle a été enregistrée.', nl: 'Interne fout. Ze werd geregistreerd.' },

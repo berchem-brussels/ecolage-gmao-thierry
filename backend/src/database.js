@@ -502,6 +502,23 @@ const MIGRATIONS = [
     );
     CREATE INDEX idx_vues_user ON vues_demandes(user_id, entite_id)
   `, (db) => require('./services/qualification').completerEcheances(db)],
+  // Connexion Microsoft compatible avec Portal (version 0.10.0, standard section 8.6) : partie connexion de la migration
+  // 003_sso_tickets_aide du gabarit 1.3.0 (tickets en 0.11.0). Identifiant Microsoft (oid) gardé au premier passage,
+  // accès de secours par mot de passe, état OpenID Connect gardé côté serveur avec le chemin de retour.
+  // Le premier administrateur créé à l'installation reçoit l'accès de secours, comme dans l'assistant du gabarit.
+  ['009_sso', `
+    ALTER TABLE users ADD COLUMN oid TEXT;
+    ALTER TABLE users ADD COLUMN is_admin_local INTEGER NOT NULL DEFAULT 0 CHECK (is_admin_local IN (0, 1));
+    CREATE UNIQUE INDEX idx_users_oid ON users(oid);
+    CREATE TABLE auth_pending (
+      state TEXT PRIMARY KEY,
+      nonce TEXT NOT NULL,
+      verifier TEXT NOT NULL,
+      next_path TEXT NOT NULL DEFAULT '/',
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+    UPDATE users SET is_admin_local = 1 WHERE id = (SELECT MIN(id) FROM users WHERE user_role = 'admin' AND is_demo = 0)
+  `],
 ];
 
 function migrate() {

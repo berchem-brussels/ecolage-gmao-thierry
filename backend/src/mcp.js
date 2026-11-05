@@ -27,6 +27,7 @@ const pieces = require('./services/pieces');
 const qualification = require('./services/qualification');
 const vues = require('./services/vues-demandes');
 const parametres = require('./services/parametres');
+const connexion = require('./services/connexion');
 const modulesService = require('./services/modules');
 const parametresEntite = require('./services/parametres-entite');
 const journal = require('./services/journal');
@@ -316,6 +317,13 @@ const TOOLS = [
   { name: 'list_parametres', route: 'GET /api/parametres', read: true, schema: S.parametreList,
     fr: "Liste les paramètres de l'instance avec leur valeur, leur défaut, leur description et leurs choix (filtre groupe) (administrateur).", nl: 'Lijst van de parameters van de installatie met hun waarde, standaardwaarde, beschrijving en keuzes (filter groupe) (beheerder).',
     run: page(parametres.list) },
+  { name: 'get_auth_settings', route: 'GET /api/settings/auth', read: true, schema: { type: 'object', properties: {}, additionalProperties: false },
+    fr: "Lit les réglages de la connexion Microsoft : mode, locataire, application, adresse publique, domaines, adresse de retour ; le secret n'est jamais rendu, seul son état « renseigné » l'est (administrateur).", nl: 'Leest de instellingen van de Microsoft-aanmelding: modus, tenant, toepassing, publiek adres, domeinen, terugkeeradres; het geheim wordt nooit teruggegeven, alleen of het ingevuld is (beheerder).',
+    run: (u) => connexion.lire(u) },
+  { name: 'update_auth_settings', route: 'PUT /api/settings/auth', confirm: true, schema: S.authSettings,
+    fr: "Règle la connexion Microsoft : mode local, sso_optional ou sso, locataire, application, secret, adresse publique, domaines (deux appels : prepare_update_auth_settings puis confirm_update_auth_settings). Le mode sso est refusé tant qu'aucun administrateur actif ne peut se connecter (administrateur).", nl: 'Stelt de Microsoft-aanmelding in: modus local, sso_optional of sso, tenant, toepassing, geheim, publiek adres, domeinen (twee oproepen: prepare_update_auth_settings en dan confirm_update_auth_settings). De modus sso wordt geweigerd zolang geen actieve beheerder kan aanmelden (beheerder).',
+    summary: (u, a) => ({ action: 'update_auth_settings', avant: connexion.lire(u), changements: { ...a, client_secret: a.client_secret ? '***' : undefined } }),
+    run: (u, a) => connexion.regler(u, a, 'mcp') },
   { name: 'get_parametre', route: 'GET /api/parametres/:cle', read: true, schema: S.parametreParams,
     fr: "Lit un paramètre de l'instance par sa clé, par exemple app.organisation_fr (administrateur).", nl: 'Leest een parameter van de installatie op basis van zijn sleutel, bijvoorbeeld app.organisation_fr (beheerder).',
     run: (u, a) => parametres.get(u, a.cle) },

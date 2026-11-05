@@ -208,7 +208,7 @@ test('migration 005 sur une base 0.4.1 : tables créées, textes nettoyés, jour
   assert.match(up.stdout, /\[DB\] Espaces retirés sur 1 fiche\(s\)/);
   assert.match(up.stdout, /\[DB\] Migration 005_demandes appliquée/);
   const out = JSON.parse(up.stdout.trim().split('\n').pop());
-  assert.equal(out.migrations.at(-1), '008_qualification');
+  assert.equal(out.migrations.at(-1), '009_sso');
   assert.equal(out.mobilier, 'Mobilier');
   assert.equal(out.journal, 1);
   assert.equal(out.demandes, 0);

@@ -1,5 +1,9 @@
 
 
+## 0.10.0
+
+Nieuwe tools: `get_auth_settings` (instellingen van de Microsoft-aanmelding: modus, tenant, toepassing, publiek adres, domeinen, terugkeeradres; het geheim wordt nooit teruggegeven, alleen of het ingevuld is) en `update_auth_settings` (twee oproepen: `prepare_update_auth_settings` en dan `confirm_update_auth_settings`; modus `sso` geweigerd zolang geen actieve beheerder kan aanmelden). Alleen voor de beheerder.
+
 ## 0.9.1
 
 Geen nieuwe of gewijzigde tool.

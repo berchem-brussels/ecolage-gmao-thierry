@@ -1,12 +1,12 @@
 # Serveur MCP
 
-Version de l'application : **0.9.1** · Mis à jour le 03/11/2026 · Le français fait foi.
+Version de l'application : **0.10.0** · Mis à jour le 05/11/2026 · Le français fait foi.
 
 ## Accès
 
 - Adresse d'acceptance : `https://192.0.2.10:18443/api/mcp` ; en général `https://<adresse>:<port HTTPS>/api/mcp`.
 - Protocole : JSON-RPC 2.0, sans état, dans le processus de l'API (obligatoire avec `sql.js`).
-- Authentification : la session, ou le jeton de session en `Authorization: Bearer`. OAuth 2.1 avec PKCE arrive à l'étape 44 (écart E-10).
+- Authentification : la session, ou le jeton de session en `Authorization: Bearer`. OAuth 2.1 avec PKCE arrive à l'étape 44 (écart E-10). Depuis la 0.10.0, une session ouverte par la connexion Microsoft vaut comme une autre ; le MCP ne passe pas par Microsoft.
 - Limite : 60 appels par minute et par personne (`MCP_RATE_MAX`).
 
 ## Règles
@@ -19,6 +19,10 @@ Version de l'application : **0.9.1** · Mis à jour le 03/11/2026 · Le françai
 - Depuis la 0.4.1, les fiches de catégorie, de priorité, de jour de l'horaire et de jour non ouvré portent `trace` (`etat`, `le`, `par`) : qui les a modifiées en dernier et quand, ou « livrée ». Le nom n'est rendu qu'aux personnes de l'entité. Aucun outil nouveau.
 - Depuis la 0.5.0, le serveur retire les espaces de début et de fin de tout texte reçu, par le MCP comme par l'API, sauf les mots de passe ; un champ obligatoire fait seulement d'espaces est refusé (`VALIDATION`), avant tout jeton de confirmation.
 - Les instructions envoyées au client demandent de commencer par `get_profile` : les données métier sont celles de l'entité active ; `select_entite` la change. Elles disent aussi que le MCP ne transporte aucun fichier, et qu'une demande se dépose par `create_demande`, le lieu proposé d'office étant `lieu_propose` dans `get_profile`, et les derniers lieux de ses demandes `lieux_recents` (0.7.5). Depuis la 0.8.0, elles disent que les pièces du brouillon partent avec la demande suivante, même déposée par `create_demande`, et qu'il faut le dire à la personne.
+
+## 0.10.0
+
+Outils nouveaux : `get_auth_settings` (`GET /api/settings/auth` : mode, locataire, application, adresse publique, domaines, adresse de retour ; le secret n'est jamais rendu, seul `secret_set` l'est) et `update_auth_settings` (`PUT /api/settings/auth`, en deux appels : `prepare_update_auth_settings` rend l'état actuel et les changements, secret masqué, puis `confirm_update_auth_settings` ; mode `sso` refusé tant qu'aucun administrateur actif ne peut se connecter, `SSO_NO_ADMIN`). Administrateur seulement. `update_user` prend `is_admin_local` (accès de secours, 0 ou 1) ; `list_users` et `get_user` rendent `is_admin_local` et `microsoft` (compte rattaché, 0 ou 1), jamais l'identifiant Microsoft. Les trois routes libres de la connexion (`/api/auth/config`, `/api/auth/sso/start`, `/api/auth/callback`) n'ont pas d'outil : ce sont des navigations du navigateur.
 
 ## 0.9.1
 

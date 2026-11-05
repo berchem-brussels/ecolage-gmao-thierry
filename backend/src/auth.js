@@ -1,7 +1,7 @@
 /**
  * Session et contrôle d'accès (standard v3.2, section 8.3, modèle SAGA 0.91.0).
  * - Session : jeton opaque de 32 octets aléatoires ; la base n'en garde que l'empreinte HMAC-SHA256 (clé JWT_SECRET).
- * - Cookie HttpOnly, SameSite=Strict, Secure en HTTPS, 8 heures.
+ * - Cookie HttpOnly, SameSite=Strict, Secure en HTTPS, 8 heures ; ajouté sans écraser le cookie d'état OpenID Connect (section 8.6).
  * - Jeton anti-CSRF propre à chaque session, rendu à la connexion et par /api/auth/me,
  *   exigé dans l'en-tête X-CSRF-Token de toute écriture par cookie, sinon 403 CSRF.
  * - Le même jeton de session est accepté en Authorization: Bearer pour les clients machine et le MCP (pas de CSRF).
@@ -29,6 +29,12 @@ function readCookies(req) {
 }
 
 const isHttps = (req) => req.secure || req.headers['x-forwarded-proto'] === 'https';
+
+/** Ajoute un cookie à la réponse sans écraser ceux déjà posés (session et état OpenID Connect ; gabarit 1.3.0). */
+function appendCookie(res, value) {
+  const prev = res.getHeader('Set-Cookie');
+  res.setHeader('Set-Cookie', prev ? [].concat(prev, value) : value);
+}
 
 function cookie(req, value, maxAge) {
   const parts = [`${COOKIE}=${value}`, 'Path=/', `Max-Age=${maxAge}`, 'SameSite=Strict', 'HttpOnly'];
@@ -59,13 +65,13 @@ function openSession(req, res, user) {
   const csrf = crypto.randomBytes(24).toString('base64url');
   getDb().prepare(`INSERT INTO sessions (id, user_id, entite_id, csrf_token, expires_at) VALUES (?, ?, ?, ?, datetime('now', ?))`)
     .run(fingerprint(token), user.id, defaultEntite(user.id), csrf, `+${SESSION_HOURS} hours`);
-  res.setHeader('Set-Cookie', cookie(req, token, SESSION_HOURS * 3600));
+  appendCookie(res, cookie(req, token, SESSION_HOURS * 3600));
   return { token, csrf };
 }
 
 function closeSession(req, res) {
   if (req.user && req.user.sid) getDb().prepare('DELETE FROM sessions WHERE id = ?').run(req.user.sid);
-  res.setHeader('Set-Cookie', cookie(req, '', 0));
+  appendCookie(res, cookie(req, '', 0));
 }
 
 function csrfOf(sid) {
@@ -125,6 +131,6 @@ function setActiveEntite(user, entiteId) {
 }
 
 module.exports = {
-  COOKIE, readCookies, openSession, closeSession, csrfOf, authMiddleware, requireRole, requireEntiteRole,
+  COOKIE, readCookies, isHttps, appendCookie, openSession, closeSession, csrfOf, authMiddleware, requireRole, requireEntiteRole,
   fingerprint, rolesIn, setActiveEntite, defaultEntite,
 };
