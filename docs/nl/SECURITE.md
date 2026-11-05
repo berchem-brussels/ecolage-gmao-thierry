@@ -2,6 +2,10 @@
 
 De Franse tekst (`docs/fr/SECURITE.md`) is rechtsgeldig en bevat het volledige rooster per versie.
 
+## 0.9.1 (03/11/2026)
+
+Correctie van 0.9.0 (R1, R2), enkel interface: geen nieuwe afhankelijkheid, migratie, route of permissie. Teller herladen via een route die al voorbehouden is aan `demandes:entite`; status vertaald via een vaste tabel, als tekst weergegeven, onbekende code ongewijzigd. `npm audit --omit=dev`: server 0, interface 3 matige (E-09). Bewijs van falen in de Franse tekst.
+
 ## 0.9.0 (02/11/2026)
 
 Technische dienst: dashboard, lijst, kwalificatie, opgeslagen weergaven (stap 8). Geen nieuwe afhankelijkheid, migratie `008_qualification`, zeven nieuwe routes, nieuwe permissie `demandes:qualifier` (beheerder, verantwoordelijke). Kwalificatie enkel met die permissie en in de status « Te kwalificeren » of « Gekwalificeerd »; tussenschot AC en CPAS getest via API en MCP; weergave van een andere persoon 404, van een andere entiteit 403; filters gecontroleerd tegen de catalogus, sortering uit een vaste tabel; instructies en reden nooit aan de aanvrager; logboek zonder vrije tekst. `npm audit --omit=dev`: server 0, interface 3 matige (E-09). Bewijs van falen per verwijderde controle in de Franse tekst.

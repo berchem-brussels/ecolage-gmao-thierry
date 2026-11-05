@@ -61,6 +61,8 @@ const journal = [
     noms: { lieu_id: { type: 'lieu', id: 12, code: 'MC-A-12', nom_fr: 'Bureau 12', nom_nl: 'Kantoor 12', entite_code: 'AA' }, categorie_id: { type: 'categorie', id: 9, code: 'eclairage', nom_fr: 'Éclairage', nom_nl: 'Verlichting', entite_code: 'AA' } } },
   { id: 3, created_at: '2026-10-22 09:00:00', action: 'lieu.update', entity_type: 'lieu', entity_id: 5, channel: 'api', details: { code: 'MC-A', avant: { parent_id: 2 }, apres: { parent_id: 404 } }, entite_id: 2, entite_code: 'BB', user_id: 1, user_email: 'a@exemple.test', user_first_name: 'Ada', user_last_name: 'Admin',
     noms: { 'avant.parent_id': { type: 'lieu', id: 2, code: 'MC', nom_fr: 'Maison communale', nom_nl: 'Gemeentehuis', entite_code: 'AA' }, 'apres.parent_id': { type: 'lieu', id: 404, introuvable: 1 } } },
+  { id: 5, created_at: '2026-10-22 10:00:00', action: 'demande.qualifier', entity_type: 'demande', entity_id: 7, channel: 'api', details: { numero: 'AA-DI-2026-00007', premiere: 1, priorite: 'P2', priorite_confirmee: 0, avant: { etat: 'a_qualifier', priorite: 'P3' }, apres: { etat: 'qualifiee', priorite: 'P2' } }, entite_id: 1, entite_code: 'AA', user_id: 1, user_email: 'a@exemple.test', user_first_name: 'Ada', user_last_name: 'Admin' },
+  { id: 6, created_at: '2026-10-22 10:30:00', action: 'demande.qualifier', entity_type: 'demande', entity_id: 8, channel: 'mcp', details: { numero: 'AA-DI-2026-00008', avant: { etat: 'etat_futur' }, apres: { etat: 'qualifiee' } }, entite_id: 1, entite_code: 'AA', user_id: 1, user_email: 'a@exemple.test', user_first_name: 'Ada', user_last_name: 'Admin' },
   { id: 1, created_at: '2026-10-22 08:00:00', action: 'action.nouvelle', entity_type: null, entity_id: null, channel: 'cli', details: null, entite_id: null, entite_code: null, user_id: null, user_email: null, user_first_name: null, user_last_name: null },
 ];
 const mod = (code: string, extra: Record<string, unknown>) => ({ code, libelle_fr: code, libelle_nl: code, description_fr: 'd', description_nl: 'd', ferme_fr: null, ferme_nl: null, noyau: false, disponible: false, etape: 22, actif: true, updated_at: null, ...extra });
@@ -487,7 +489,7 @@ describe('écrans', () => {
     expect(await screen.findByText('Lieu modifié · AA')).toBeInTheDocument();
     expect(screen.getByText('action.nouvelle')).toBeInTheDocument();
     expect(screen.getByText(/· Système$/)).toBeInTheDocument();
-    expect(screen.getAllByText(/· Ada Admin$/)).toHaveLength(3);
+    expect(screen.getAllByText(/· Ada Admin$/)).toHaveLength(5);
   });
 
   it('le détail du journal nomme le lieu et la catégorie au lieu de leur identifiant, en FR (DV-50)', async () => {
@@ -516,6 +518,18 @@ describe('écrans', () => {
     expect(screen.getByText('Hangt af van : #404 (fiche niet gevonden)')).toBeInTheDocument();
     expect(within(screen.getByText('Gevaar gemeld').closest('tr') as HTMLElement).getByText('Nee')).toBeInTheDocument();
   });
+
+  for (const [lang, a, q, inconnu] of [['fr', 'À qualifier', 'Qualifiée', 'etat_futur'], ['nl', 'Te kwalificeren', 'Gekwalificeerd', 'etat_futur']] as const) {
+    it(`R2 (0.9.1, DV-94) : l’état d’une demande s’affiche par son libellé du service dans « Avant » et « Après » (${lang})`, async () => {
+      const { container } = render(wrap(JournalPage, lang));
+      await screen.findAllByText(lang === 'fr' ? /Demande qualifiée/ : /Aanvraag gekwalificeerd/);
+      container.querySelectorAll<HTMLButtonElement>('button.ant-table-row-expand-icon').forEach((b) => fireEvent.click(b));
+      expect((await screen.findAllByText(new RegExp(`: ${a}( ·|$)`))).length).toBeGreaterThan(0);
+      expect(screen.getAllByText(new RegExp(`: ${q}( ·|$)`)).length).toBe(2);
+      expect(screen.queryByText(/a_qualifier|: qualifiee/)).toBeNull();
+      expect(screen.getByText(new RegExp(`: ${inconnu}$`))).toBeInTheDocument();
+    });
+  }
 
   it('le journal lit ses filtres dans l’adresse de la page et les envoie à l’API', async () => {
     render(wrap(JournalPage, 'nl', FALLBACK_SETTINGS, ['/journal?action=lieu&canal=mcp&du=2026-10-01']));

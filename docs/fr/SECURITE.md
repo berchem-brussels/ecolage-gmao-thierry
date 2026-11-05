@@ -2,6 +2,27 @@
 
 Le français fait foi. Grille de la section 10.2 du standard, rejouée à chaque version. « Non joué » veut dire que le contrôle n'a pas tourné.
 
+## 0.9.1 (03/11/2026)
+
+Correctif de la 0.9.0 (R1 et R2, DV-94), interface seulement. Environnement : bac à sable de Claude, Node 22.23.4 ; parcours `ci.yml` rejoué sous Node 20.20.2. Aucune dépendance nouvelle, aucune migration, aucune route nouvelle ; serveur changé pour le numéro de version et la note de version seulement.
+
+| Famille | Contrôle | Résultat |
+| --- | --- | --- |
+| Authentification, autorisation, IDOR, cloison | Aucune route ni permission changée ; suites de la 0.9.0 rejouées en entier | Conforme (test généré sur toutes les routes, `cloison.test.js`) |
+| Données | Le compteur rechargé lit `GET /api/demandes/tableau-bord`, déjà réservé à `demandes:entite` ; le journal traduit un code par une table fixe (`CODES`) et la clé de traduction, sans HTML | Conforme (`demandes.test.tsx`, `pages.test.tsx`) |
+| Injections | Libellé rendu comme texte par React ; code inconnu affiché tel quel, jamais interprété | Conforme (test R2 avec un code inconnu) |
+| Secrets commités | `.gitignore` inchangé | Conforme : seul `.env.example`, aucune base, aucun `dist/`, aucune valeur de NIXUS ; copie de `STANDARD.md` v3.3 avec les valeurs d'exemple |
+| Infrastructure | Dockerfile, compose, `nginx.conf`, `backup.sh`, `.env`, `ci.yml` inchangés | Conforme |
+| Dépendances | `npm audit --omit=dev` serveur | 0 vulnérabilité |
+| Dépendances | `npm audit --omit=dev` interface | 3 modérées (E-09), inchangées |
+| LLM et MCP | Aucun outil changé | Conforme (`mcp.test.js`) |
+
+Les trois contrôles qui ne restent jamais « non joués » (secrets commités, contrôle d'accès côté serveur, IDOR) ont été joués.
+
+### Preuve d'échec des nouveaux tests (0.9.1)
+
+Correction R1 retirée (la page ne demande plus le rechargement du tableau de bord) : 1 test échoue (« R1 (0.9.1, DV-94) »). Correction R2 retirée (code de l'état affiché brut) : 2 tests échouent (« R2 », FR et NL). Code de la 0.9.1 : tout réussi.
+
 ## 0.9.0 (02/11/2026)
 
 Service technique : tableau de bord, liste, qualification, vues enregistrées (étape 8 ; GES-01, GES-02, GES-04, PRI-01, PRI-03 ; DV-88 à DV-93) et correction du contrôle 7 de la 0.8.0 (DV-86). Environnement : bac à sable de Claude, Node 22.23.4 ; parcours `ci.yml` rejoué sous Node 20.20.2. Aucune dépendance nouvelle. Migration `008_qualification`. Routes nouvelles : `GET /api/demandes/tableau-bord`, `POST /api/demandes/:id/qualifier`, cinq routes `/api/vues-demandes`. Permission nouvelle `demandes:qualifier` (gestionnaire, responsable).

@@ -2,6 +2,22 @@
   "_description": "Notes de version pour les utilisateurs, en FR et en NL, sans terme technique (standard v3.2, sections 13.1 et 17.8 ; écart E-07). Une note par version, de la plus récente à la plus ancienne. Chaque ligne a un public : « tous », « admin » (administrateur de l'application) ou une permission du catalogue des rôles (par exemple « parametres:gerer »), lue dans l'entité active. La note de la version installée s'affiche une fois à la première connexion qui suit la mise à jour ; toutes restent relisibles dans Aide, Nouveautés.",
   "notes": [
     {
+      "version": "0.9.1",
+      "date": "2026-11-03",
+      "lignes": [
+        {
+          "public": "demandes:entite",
+          "fr": "Demandes de l'entité : les compteurs du tableau de bord se mettent à jour dès qu'une demande est qualifiée.",
+          "nl": "Aanvragen van de entiteit: de tellers van het dashboard worden bijgewerkt zodra een aanvraag gekwalificeerd is."
+        },
+        {
+          "public": "admin",
+          "fr": "Dans le journal d'audit, l'état d'une demande s'affiche en toutes lettres (« À qualifier », « Qualifiée ») dans « Avant » et « Après ».",
+          "nl": "In het auditlogboek wordt de status van een aanvraag voluit getoond (« Te kwalificeren », « Gekwalificeerd ») in « Voor » en « Na »."
+        }
+      ]
+    },
+    {
       "version": "0.9.0",
       "date": "2026-11-02",
       "lignes": [

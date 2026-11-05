@@ -1025,6 +1025,23 @@ describe('service technique (0.9.0, GES-01, GES-02, GES-04, PRI-01, PRI-03)', ()
     } finally { remettre(); }
   });
 
+  it('R1 (0.9.1, DV-94) : après une qualification, les compteurs du tableau de bord se rechargent avec la liste', async () => {
+    ficheData = service(2, 'AA-DI-2026-00002', 'a_qualifier');
+    reponsePost = { status: 200, json: { data: service(2, 'AA-DI-2026-00002', 'qualifiee'), meta: { envelope: 1 } } };
+    try {
+      render(wrap(DemandesEntite, 'fr', ['/demandes-entite?demande=2']));
+      expect(await screen.findByRole('link', { name: /4\s*À qualifier/ })).toBeInTheDocument();
+      const avant = gets.filter((u) => u.startsWith('/api/demandes/tableau-bord')).length;
+      fireEvent.click(await screen.findByRole('button', { name: 'Qualifier' }));
+      await screen.findByText(/Priorité proposée : P3/);
+      bordData = { ...BORD, a_qualifier: 3 };
+      fireEvent.click(screen.getAllByRole('button', { name: 'Qualifier' }).slice(-1)[0]);
+      await waitFor(() => expect(posts.some((p) => p.url === '/api/demandes/2/qualifier')).toBe(true));
+      expect(await screen.findByRole('link', { name: /3\s*À qualifier/ })).toHaveAttribute('href', expect.stringContaining('etats=a_qualifier'));
+      expect(gets.filter((u) => u.startsWith('/api/demandes/tableau-bord')).length).toBe(avant + 1);
+    } finally { remettre(); }
+  });
+
   for (const lang of ['fr', 'nl'] as const) {
     it(`formulaire de qualification (${lang}) sans violation axe-core`, async () => {
       ficheData = service(2, 'AA-DI-2026-00002', 'a_qualifier');

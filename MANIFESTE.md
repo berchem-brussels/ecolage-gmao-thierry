@@ -1,8 +1,27 @@
 # Manifeste
 
-Version de l'application : **0.9.0** · Mis à jour le 02/11/2026
+Version de l'application : **0.9.1** · Mis à jour le 03/11/2026
 
 Fichiers changés, dépendances et suites par version. Les décomptes sont recopiés de la sortie des commandes.
+
+## 0.9.1 (03/11/2026)
+
+Fichiers comparés à l'archive 0.9.0 par `diff -rq` (hors `node_modules` et `dist`). Pour le contrôle du `git status` (`GITHUB.md`, section 5) : aucune ligne `D` attendue ; une ligne `A` (`NOTES_LIVRAISON_v0.9.1.md`), les autres `M`.
+
+- Nouveau : `NOTES_LIVRAISON_v0.9.1.md`.
+- Modifiés, serveur : `config/notes-version.json` (note 0.9.1) ; `tests/notes-version.test.js` (listes de versions du responsable et de l'administrateur, test de la note 0.9.1) ; `package.json` et `package-lock.json` (numéro seulement).
+- Modifiés, interface : `src/components/demandes/TableauBord.tsx` (R1, `rafraichir`) ; `src/pages/GestionDemandesPage.tsx` (R1) ; `src/pages/JournalPage.tsx` (R2, `CODES`) ; `src/test/demandes.test.tsx` (test R1) ; `src/test/pages.test.tsx` (deux lignes de journal et tests R2) ; `package.json` et `package-lock.json` (numéro seulement). `frontend/dist/` reconstruit.
+- Modifiés, documentation : `STANDARD.md` (v3.3, valeurs d'exemple), `README.md`, `README.nl.md`, `README.en.md`, `CHANGELOG.md`, `MANIFESTE.md`, `ETAT.md`, `ECARTS-CDC.md` ; `docs/fr`, `docs/nl`, `docs/en` (`SECURITE.md`, `MCP.md`, `APRES-DEPLOIEMENT.md`) ; `docs/fonctionnel/service-technique.md` (règle 7), `docs/fonctionnel/administration.md` (règle 15).
+- Inchangés : les deux Dockerfile, `nginx.conf`, `docker-entrypoint.sh`, `docker-compose.yml`, `.env.example`, `backup.sh`, `.gitignore`, `.github/workflows/ci.yml`, tout `backend/src`.
+- Retirés : aucun fichier.
+- Dépendances : aucune dépendance nouvelle ; verrous inchangés hors numéro de version. Aucun `npm audit fix`.
+- Contrôle DV-09 de la séance, avant toute modification : archive 0.9.0 conforme à `ETAT.md` (2 365 485 octets, 376 entrées, SHA-256 `fcdd538f…f682d649`) ; serveur 371/371 ; `npm audit --omit=dev` du serveur 0 ; interface 161/161 sur trois lancements consécutifs ; construction et accessibilité 0 erreur. Aucun test instable.
+- Suites (Node 22.23.4, bac à sable, après `npm ci`) : serveur `npm test` 372 tests, 372 réussis, 0 échec, 0 sauté (371 en 0.9.0) ; interface `npm test` 5 fichiers, 164 tests, 164 réussis sur trois lancements consécutifs ; `npm run build` réussi ; `npm run a11y` 0 erreur.
+- Parcours du travail `tests` (`ci.yml`) rejoué sous Node 20.20.2 sur une copie ne contenant que les fichiers que Git verse : voir `ETAT.md`, section 2.
+- `npm audit --omit=dev` : serveur 0 vulnérabilité ; interface 3 modérées (E-09), inchangées.
+- Preuves d'échec : `docs/fr/SECURITE.md`, section 0.9.1.
+- Navigateur réel : non joué pour ce correctif ; la recette sur NIXUS en tient lieu.
+- Images Docker : non reconstruites dans le bac à sable.
 
 ## 0.9.0 (02/11/2026)
 

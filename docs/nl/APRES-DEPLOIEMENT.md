@@ -2,6 +2,10 @@
 
 De Franse tekst is rechtsgeldig. Bijwerkingsprocedure: archief plaatsen, `cd <map>`, `ls -l` van het archief, `sudo bash backup.sh`, `sudo rm -rf backend frontend docs`, `sudo tar xzf … --strip-components=1`, `ls backend frontend`, `sudo docker compose build`, `sudo docker compose up -d`, `sudo docker compose ps`, `curl -sk https://localhost:<https>/api/version`, controlelijst van het leveringsbericht. `.env` en de volumes worden nooit aangeraakt.
 
+## 0.9.1 (03/11/2026)
+
+Correctie van 0.9.0 (R1, R2), zonder migratie: `[APP] API 0.9.1 sur le port 3001` in het logboek. Geen nieuwe afhankelijkheid. Controle: `v0.9.1` onderaan het menu, tellers van het dashboard bijgewerkt na een kwalificatie, status voluit in het auditlogboek. Terugkeer naar 0.9.0 zonder de databank terug te zetten.
+
 ## 0.9.0 (02/11/2026)
 
 Bijwerking met migratie `008_qualification` (`[DB] Migration 008_qualification appliquée` in `sudo docker logs gmao-api --tail 30`). Geen nieuwe afhankelijkheid; beide images worden herbouwd. De migratie berekent de vervaldata van bestaande aanvragen. Controle: dashboard op de startpagina van de beheerder, gefilterde lijst « Aanvragen van de entiteit », « Kwalificeren » op een fiche, groep « Bijlagen bij aanvragen » in de Instellingen van de entiteit. Terugkeer naar 0.8.0 zonder de databank te herstellen.
