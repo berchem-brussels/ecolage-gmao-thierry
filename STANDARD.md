@@ -1,6 +1,6 @@
-# Standard des applications communales v3.2
+# Standard des applications communales v3.3
 
-Version 3.2 · 12/10/2026 · Commune de Berchem-Sainte-Agathe et CPAS de Berchem-Sainte-Agathe · EUPL-1.2
+Version 3.3 · 02/11/2026 · Commune de Berchem-Sainte-Agathe et CPAS de Berchem-Sainte-Agathe · EUPL-1.2
 
 > Copie publiée avec le code de l'application : l'adresse, les ports et les dossiers de l'hôte d'acceptance y sont remplacés par des valeurs d'exemple (`192.0.2.10`, ports 18xxx, `/volume1/docker/app-a`, `monapp`). La version de référence, avec les valeurs réelles, reste celle des fichiers du projet.
 
@@ -117,7 +117,7 @@ Ce que le redéveloppement corrige : les écarts de sécurité de la section 10.
 
 ### 2.4 Gabarit v3
 
-Une application nouvelle part du gabarit v3 (`gabarit-v3_1_0_0.tar.gz`, version 1.0.0 du 12/10/2026). Il contient la couche d'accès aux données de SAGA, la session en cookie et le contrat de réponse de PILOT, l'identité visuelle de SAGA paramétrée par l'instance, une ressource d'exemple complète (API, MCP en deux appels pour l'annulation, écrans, tests), la gestion des comptes, l'installation du premier administrateur, le compose, les Dockerfile, `backup.sh` et `verifier-ports.sh`. Son `README.md` dit ce qui reste à construire avant une production : PostgreSQL, SSO Entra ID, OAuth du MCP, écrans RGPD et d'affichage. Les variables CSS y portent le préfixe `--app-*` au lieu de `--saga-*`.
+Une application nouvelle part du gabarit v3 (`gabarit-v3_1_3_0.tar.gz`, version 1.3.0 du 02/11/2026). Il contient la couche d'accès aux données de SAGA, la session en cookie et le contrat de réponse de PILOT, l'identité visuelle de SAGA paramétrée par l'instance, une ressource d'exemple complète (API, MCP en deux appels pour l'annulation, écrans, tests), la gestion des comptes, l'installation du premier administrateur, la connexion Microsoft compatible avec Portal (section 8.6), l'aide par écran (section 13.1), les tickets (section 13.5), le compose, les Dockerfile, `backup.sh` et `verifier-ports.sh`. Son `README.md` dit ce qui reste à construire avant une production : PostgreSQL, OAuth du MCP, écrans RGPD et d'affichage. Les variables CSS y portent le préfixe `--app-*` au lieu de `--saga-*`.
 
 ### 2.5 Erreurs constatées et règles qui les interdisent
 
@@ -226,6 +226,8 @@ Les tailles sont celles des archives lues le 11/10/2026. L'état courant de chaq
 | `xlsx`, `hyparquet`, `proj4`, `@huggingface/transformers` | Classeurs externes, Parquet, projections, recherche sémantique sur CPU |  |  | PILOT seulement, pour le même besoin |
 | Modules natifs `crypto`, `fs`, `path`, `fetch`, `node:test` | Chiffrement, fichiers, appels sortants, tests | oui | oui | oui |
 
+Réception de fichiers : `multer` 2.x remplace la version 1.4 LTS, dépréciée par son éditeur pour des failles corrigées seulement en 2.x (accord du 28/10/2026 pour les projets d'écolage, sur la question posée dans deux projets). `express.raw` n'est pas retenu : un fichier à la fois et un plafond bas bloqueraient les pièces jointes. La généralisation de `multer` 2.x à toutes les applications se décide au premier projet mis en production.
+
 Déclarées sans usage, à retirer : `swagger-ui-express` (SAGA), `uuid` et `express-rate-limit` (STEGA).
 
 ### 4.3 Interface
@@ -269,6 +271,13 @@ Déclarées sans usage dans SAGA, à retirer : `d3`, `@ant-design/charts`, `@typ
 | Remplacer une brique qu'un projet utilise déjà | On garde ce que le projet utilise |
 
 `npm audit fix` est interdit : il change de génération sans le dire (pendant la 0.89.0 de SAGA, il a retiré Vite et Vitest et monté TypeScript en version 6). Une faille se corrige paquet par paquet par `npm update <paquet>` dans la même génération ; un changement de génération demande l'accord écrit de Renaud. Après toute mise à jour : `npm ls` des outils de construction et de test ; ensuite les suites complètes.
+
+Règles de mise à jour, précisées par les projets d'écolage d'octobre 2026 :
+
+- **Montée de génération** (version majeure) d'un composant ou d'un outil : accord écrit du responsable informatique, demandé par un courriel qui donne les raisons précises (avis de sécurité, abandon par l'éditeur, limite fonctionnelle) et l'impact sur le standard. En écolage, l'accord se donne projet par projet ; la généralisation au parc se décide au premier projet mis en production. Accords donnés en écolage : `multer` 2.x ; `vite` et `vitest` à la génération suivante, sous réserve du courriel justificatif.
+- **Correctif de sécurité dans la génération** : version dédiée, `npm update` ciblé du seul paquet en cause, sans toucher aux `package.json`, test qui garde les versions minimales attendues, jamais `npm audit fix` (pratique validée sur `body-parser`, GMAO 0.7.3).
+- **Dependabot et CodeQL** sont actifs d'office sur chaque dépôt de l'organisation. Leurs alertes se gardent et s'examinent : `npm audit` ne voit pas tout (dix alertes hautes sur `multer` 1.x signalées par Dependabot seulement). Une demande de fusion Dependabot qui change de génération n'est jamais fusionnée sans l'accord ci-dessus. Une alerte CodeQL jugée faux positif est documentée dans `ECARTS-CDC.md` et revérifiée après la mise en production.
+- **Questions ouvertes** avant l'usage en production : accord écrit ou non pour une mise à jour dans la même génération ; délai de correction d'un avis haut ou critique ; conduite à tenir quand aucun correctif n'existe dans la génération ; personne qui suit les avis entre deux versions ; Dependabot limité aux correctifs dans la génération ou alertes seules (section 19).
 
 ### 4.5 Hébergement et outillage constatés
 
@@ -570,6 +579,27 @@ Aucune des trois applications ne l'a (À construire, sur ce stack et selon ce st
 | Mode autonome | Une application déployée seule chez un pouvoir local doit fonctionner : la forme est à décider (section 19) |
 | Elle-même au standard | API et MCP en CRUD, bilingue, paramétrable, testée, documentée |
 
+### 8.6 Connexion compatible avec Portal
+
+Un agent connecté à Portal avec Microsoft 365 ouvre une application depuis Portal et arrive sur l'écran demandé sans nouvelle saisie. Portal ne transmet ni jeton ni cookie : chaque application garde sa session et sa propre connexion OpenID Connect avec Entra ID. L'absence de saisie vient de la session déjà ouverte chez Microsoft : l'application lance sa connexion automatiquement, sans paramètre qui force une saisie ; Microsoft répond sans écran. Le détail figure dans `SSO-COMPATIBLE-PORTAL.md` (version 1.0 du 30/10/2026) ; le gabarit 1.3.0 l'applique.
+
+| Règle |
+| --- |
+| Code d'autorisation avec PKCE (`S256`), `scope` `openid profile email`, `response_mode=query` ; échange du code côté serveur |
+| Aucun paramètre `prompt` ni `max_age` dans l'adresse d'autorisation (`login`, `select_account`, `consent` et `none` compris) |
+| Mode `sso` : tout écran demandé sans session lance la connexion Microsoft sans clic (`/api/auth/sso/start?next=<écran>`) ; l'API répond 401 `NO_TOKEN` et ne redirige jamais |
+| Trois exceptions sans redirection : retour de déconnexion (`/login?deconnecte=1`), erreur de connexion (`/login?erreur=<code>`, message traduit et bouton Microsoft), accès de secours de l'administrateur (`/login?local=1`, aucun lien visible ailleurs) |
+| Retour à l'écran demandé : `next` gardé côté serveur avec l'état ; accepté seulement s'il commence par un seul `/` et ne contient que lettres, chiffres et `-._~/`, sinon `/` |
+| Cookie d'état `HttpOnly`, `Secure`, `SameSite=Lax`, `Path=/api/auth`, 10 minutes, effacé au retour ; cookie de session `SameSite=Strict` (section 8.3) |
+| Jeton d'identité vérifié : RS256 seul, clé publiée par Microsoft, émetteur du locataire, audience, expiration, `nonce` ; aucun repli sans vérification |
+| Rattachement par `oid` d'abord, adresse ensuite ; `oid` gardé sur la fiche au premier passage ; compte inconnu ou désactivé refusé avec un message qui dit qui contacter |
+| Une inscription Entra ID par application, avec son secret, l'adresse de retour `https://<adresse>/api/auth/callback`, le consentement administrateur pour `openid`, `profile`, `email` et les seuls comptes du locataire ; locataire, application et secret saisis dans l'administration, secret chiffré, jamais réaffiché |
+| Passage en mode `sso` refusé tant qu'aucun administrateur actif ne peut se connecter (compte local de secours ou compte rattaché à Microsoft) |
+| Déconnexion : ferme la session de l'application seule, ni Portal ni Microsoft ; retour vers `/login?deconnecte=1` |
+| Interdit : partager le cookie de Portal ; faire passer un jeton ou une identité dans une adresse |
+
+Recette en navigation privée avant toute mise en production : ouverture depuis Portal sans saisie ; ouverture d'un écran précis depuis Portal ; ouverture directe avec une seule saisie ; déconnexion qui laisse Portal connecté ; `next` vers un autre site ramené à `/` ; compte désactivé refusé ; adresse d'autorisation sans `prompt` ni `max_age`. Tests automatiques : PKCE, `state` et `nonce` présents, `prompt` et `max_age` absents ; jeton à signature fausse, d'un autre locataire, expiré ou au `nonce` différent refusé ; `next` douteux remplacé ; aucune redirection après les trois exceptions ; attributs des deux cookies. Ils se jouent contre un faux Microsoft lancé par la suite de tests.
+
 ## 9. RGPD by design et by default
 
 Aucune application n'entre en production sans analyse d'impact, registre des traitements, durées de conservation appliquées par le code et avis du DPO. Tout réglage livré est le plus protecteur. SAGA est la référence (`routes/gdpr.js`, `pages/GDPRPage.tsx`, `AIPD_SAGA.md` du 22/07/2026) ; PILOT apporte la conservation en configuration ; STEGA l'export et le journal des consultations.
@@ -594,6 +624,8 @@ Aucune application n'entre en production sans analyse d'impact, registre des tra
 | Aucune donnée personnelle chez un tiers sans base légale, inscription à l'analyse d'impact et accord du DPO | À corriger dans SAGA : codes QR envoyés à `api.qrserver.com`, police chez Google, assistant IA, webhooks |
 | Données hébergées dans l'Union européenne | Exigence |
 | Aucune donnée réelle de personnes dans les tests, les démonstrations, l'aide ou la FAQ | À corriger : SAGA cite des agents par leur nom |
+
+Exception admise au journal d'audit : les brouillons qu'un formulaire enregistre automatiquement pendant la saisie n'y sont pas inscrits. Seul leur auteur les voit ; ils disparaissent à l'envoi ou après 30 jours. L'envoi du formulaire, lui, est inscrit (décision du 30/10/2026).
 
 Suppression réelle d'une donnée personnelle déposée : une photo ou un document déposé par un gestionnaire se supprime réellement. Le fichier est effacé du disque, le lien vidé, l'opération notée au journal d'audit, après une confirmation qui dit que l'effacement est définitif. C'est l'exception prévue à l'annulation logique de la section 7.1 (minimisation et droit à l'effacement). Le dépôt d'un nouveau fichier efface le précédent, y compris quand son extension diffère (une photo `.jpg` restait sur le disque de SAGA après le dépôt d'un `.png`).
 
@@ -674,7 +706,7 @@ Les outils d'analyse extérieurs (images, balayage dynamique, analyse statique h
 | API | Logique contournable | Statuts, transitions et montants vérifiés côté serveur avant l'écriture | Transition interdite, étape sautée, valeur calculée envoyée : refusées |
 | API | Race conditions | `transaction()`, contraintes `UNIQUE` | Deux validations simultanées : une seule aboutit |
 | API | CSRF | Cookie `SameSite` et en-tête exigé | Écriture sans l'en-tête : 403 |
-| Dépendances | CVE connues | Aucune vulnérabilité haute ou critique | `npm audit --omit=dev` recopié dans `docs/SECURITE.md` |
+| Dépendances | CVE connues | Aucune vulnérabilité haute ou critique, ni dans npm audit ni dans les alertes Dependabot du dépôt | `npm audit --omit=dev` recopié dans `docs/SECURITE.md` |
 | Dépendances | Paquet halluciné | Stack fermé ; manifeste « aucune dépendance nouvelle » ou accord cité | Dépendances des `package.json` toutes dans la section 4 |
 | Dépendances | Pas de verrou | `package-lock.json` livré, `npm ci` dans les Dockerfile | Aucun `npm install` dans un Dockerfile |
 | Dépendances | CDN | Aucun script, style ni police chez un tiers | `index.html` et CSS construits sans URL externe |
@@ -835,6 +867,8 @@ L'interface est en React 18 et TypeScript, construite par Vite 5 avec Ant Design
 | Teintes d'état | `#e6f7ef`, `#fff8f0`, `#f6ffed` | `#12302c`, `#2b2111`, `#162312` | `--saga-tint-*` |
 | Bouton Microsoft sur la page de connexion | `#0078d4` |  | `LoginPage.tsx` |
 
+Couleur d'erreur : le rouge par défaut d'Ant Design (`#ff4d4f`) n'offre qu'un contraste d'environ 3,3:1 sur fond blanc, sous le minimum de 4,5:1. Le thème clair fixe `colorError` à `#cf1322` (environ 5,9:1), ce qui fonce aussi les boutons de danger. L'accessibilité prime sur l'identité visuelle (décision du 28/10/2026) ; toute couleur de la palette se contrôle au contraste AA avant d'être adoptée.
+
 ### 12.2 Typographie et formes
 
 | Élément | Valeur | Où |
@@ -925,15 +959,17 @@ Le menu Aide réunit le mode d'emploi, la FAQ, les documents de référence, les
 
 ### 13.1 Aide
 
-| Règle | Source |
-| --- | --- |
-| Page d'aide à onglets : FAQ, Documents de référence, Mode d'emploi, Contact | SAGA `HelpPage.tsx` |
-| Mode d'emploi : une rubrique par module, en FR et en NL, pas à pas, décrivant l'application telle qu'elle est dans la version installée ; une rubrique n'apparaît que si le module est actif et le rôle y a accès | SAGA 12 rubriques, STEGA 22 sections ; filtre à construire |
-| Aide par bloc d'écran et lien de chaque écran vers sa rubrique | PILOT |
-| FAQ FR et NL avec recherche et mots-clés, au moins une question par fonctionnalité ; l'administrateur ajoute, corrige et retire une question sans livraison | SAGA 20 questions dans le code : passage en données à construire |
-| Aucune réponse ne nomme une personne : elle renvoie à un service ou à un contact en paramètre | À corriger dans SAGA |
-| Contacts du support en paramètres | À corriger dans SAGA |
-| Notes de version pour les utilisateurs, FR et NL, affichées à la première connexion après la mise à jour | À construire |
+| Règle |
+| --- |
+| Une fiche d'aide par écran, dans `frontend/src/help/topics/`, au schéma `HelpTopic` contrôlé par le typage : identifiant, route, groupe du menu, rôles, rôle de l'écran en 2 à 4 phrases, zones de l'écran reliées aux repères de la capture, au moins deux procédures (cas d'usage, étapes, résultat, erreurs et solutions), questions propres à l'écran, renvois ; FR et NL côte à côte |
+| Bouton « Aide » dans l'en-tête commun de chaque écran : la fiche s'ouvre dans un panneau latéral sans quitter l'écran ; centre d'aide `/help` avec parcours, recherche plein texte et impression complète du mode d'emploi |
+| Un bouton ou un menu se cite par sa clé de traduction (`{{clé}}`) : l'aide affiche le libellé réel, dans la langue de l'utilisateur ; `[[n]]` affiche le repère n de la capture |
+| Captures annotées FR et NL produites par un script Playwright sur les données de démonstration, jamais à la main ; un onglet se vise par sa clé, jamais par son rang |
+| Chaque champ à encoder porte une explication réelle FR et NL derrière l'icône « ? » : ce qu'il faut encoder et d'où vient la valeur ; jamais « Le champ X permet de… » |
+| Rédaction : dire quoi faire et ce qui se passera ; aucune abréviation ; aucune réponse ne nomme une personne, elle renvoie à un service ou à un contact en paramètre |
+| FAQ locale, documents de référence et contacts en base : l'administrateur ajoute, corrige et retire sans livraison ; ils s'affichent à côté des questions du code ; API et MCP |
+| Contrôles bloquants à chaque version : chaque route du menu a sa fiche ; au moins deux procédures ; aucune clé inconnue ni sans traduction néerlandaise ; aucune capture absente en FR ou en NL ; aucun champ sans explication, aucune explication de moins de 12 caractères |
+| Notes de version pour les utilisateurs, FR et NL, affichées à la première connexion après la mise à jour |
 
 ### 13.2 Documents de référence
 
@@ -981,6 +1017,23 @@ L'utilisateur voit les documents qu'il a le droit de voir, par catégorie et dan
 | Accès SQL | Lecture par un compte dédié sur des vues documentées | PILOT, outil `sql` exclu | Avec PostgreSQL seulement |
 
 Règles communes : chaque interface a son écran de réglage et son bouton d'essai ; ses secrets sont chiffrés en base ; chaque échange s'inscrit dans un journal avec son résultat (table `integration_logs` de SAGA, existante mais vide) ; son test rejoue une réponse réelle de l'outil tiers ; une interface simulée porte le mot « simulé ».
+
+### 13.5 Tickets
+
+Chaque application reçoit ses propres tickets : un utilisateur signale un incident, un bug, une question métier ou un souhait sans quitter l'écran ; les administrateurs de l'application les traitent selon ITIL. À terme, le connecteur MCP de l'application rend à Claude les tickets à traiter pour cette application.
+
+| Règle |
+| --- |
+| Bouton « Signaler » dans l'en-tête de chaque écran : type (incident, bug, question métier, souhait), titre, ce que je faisais, ce que j'attendais et ce qui s'est passé (incident et bug), qui est touché (moi, mon service, toute l'institution), gravité (bloquant, gênant, confort), capture PNG ou JPEG facultative contrôlée sur son contenu |
+| Contexte joint sans saisie : écran (nommé par sa fiche d'aide), version, langue, navigateur, date, dernière erreur de l'API ; tronqué par le serveur |
+| Référence `TCK-AAAA-NNNNN` numérotée par année ; le demandeur suit ses tickets, répond, clôt, rouvre avec motif pendant un délai en paramètre, annule avec motif |
+| Files : question métier vers l'administration métier de l'application ; incident, bug et souhait vers l'administration IT ; rôles de chaque file en paramètre ; transfert motivé d'une file à l'autre |
+| Priorité ITIL impact × urgence (P1 à P4) ; délais de prise en charge et de résolution par priorité en paramètre ; échéance dépassée signalée |
+| Cycle de vie contrôlé par une table des transitions : nouveau, pris en charge, en attente du demandeur, résolu, rejeté, annulé, clos ; motif obligatoire pour l'attente, la résolution, le rejet, l'annulation et la réouverture ; un ticket fermé n'accepte plus ni modification ni message |
+| Fil d'échanges avec notes internes invisibles du demandeur ; chaque action écrit un événement FR et NL dans le fil ; journal d'audit ; rien n'est supprimé |
+| Pilotage : compteurs (en cours, délai dépassé, sans responsable, résolus en 30 jours), volumes par type, priorité et écran, export |
+| API et MCP complets, dont un outil qui liste les tickets à traiter de l'application avec leur contexte ; une question métier résolue peut devenir une entrée de la FAQ locale |
+| Aucune donnée personnelle hors du demandeur ; texte et capture soumis à la conservation RGPD |
 
 ## 14. Tests, versioning, livraison et documentation
 
@@ -1334,7 +1387,7 @@ Ce volet décrit ce que toute application offre à l'utilisateur et à l'adminis
 | Ce que voit l'utilisateur | Source |
 | --- | --- |
 | Page de connexion avec sélecteur de langue, nom et logo de l'institution issus des paramètres | SAGA `LoginPage.tsx` (logo fixe aujourd'hui) |
-| Bouton « Se connecter avec Microsoft 365 » quand le SSO est actif ; champ « Email ou matricule » et mot de passe quand la connexion locale est permise ; en SSO obligatoire, message qui renvoie au bouton Microsoft | SAGA |
+| Bouton « Se connecter avec Microsoft 365 » quand le SSO est actif ; champ « Email ou matricule » et mot de passe quand la connexion locale est permise ; en SSO obligatoire, départ automatique vers Microsoft, sauf après une déconnexion, une erreur ou pour l'accès de secours (section 8.6) | SAGA |
 | Compte Microsoft inconnu : message qui dit qui contacter | SAGA |
 | Changement de mot de passe à la première connexion quand le gestionnaire l'a demandé en créant le compte (case « Obliger le changement de mot de passe à la première connexion ») ; onglet « Sécurité » du profil ; courriel de confirmation | SAGA |
 | Lien « Mot de passe oublié » à usage unique | À construire |
@@ -1526,6 +1579,17 @@ Ces points ne se tranchent ni par le code des trois projets ni par une décision
 | 16 | Propriété intellectuelle et publication | Droits du personnel mis à disposition (IRISteam) ; base d'amorçage de PILOT dans l'archive ; modèle de revenus compatible avec l'EUPL | À trancher avec le juridique | Lettre de non-revendication du prestataire avant la première publication, conditions du fournisseur d'IA archivées ; base d'amorçage retirée du dépôt public |
 | 17 | Ordre de correction des écarts de sécurité | 44 écarts (section 10.3) | Ordre de priorité | D'abord les trois de SAGA en production : rôle modifiable par un `admin_rh`, mot de passe commun des nouveaux comptes, photos sans session ; puis l'IDOR des évaluations et des fiches |
 
+Points ouverts par les projets d'écolage d'octobre 2026, à trancher avant le premier usage en production :
+
+| Point | État |
+| --- | --- |
+| Interface livrée compilée (`dist/` dans l'archive, environ un quart d'heure de construction gagné sur NIXUS) | Gardée telle quelle pendant l'écolage ; `dist/` reste hors du dépôt GitHub par `.gitignore` ; à rediscuter avant l'usage réel (30/10/2026) |
+| Généralisation de `multer` 2.x, `vite` et `vitest` à la génération suivante | Accordée projet par projet en écolage ; à décider pour le parc |
+| Mises à jour de sécurité | Quatre questions de la section 4.4 |
+| Dependabot | Alertes gardées, aucune fusion hors génération ; limiter ou non aux correctifs dans la génération |
+| Alertes CodeQL jugées faux positifs | À revérifier après la mise en production |
+| Avertissement GitHub sur les actions qui tournent sous Node 20 (`actions/checkout@v4`, `actions/setup-node@v4`) | Sans effet sur les résultats ; les applications restent en Node 20 |
+
 Point tranché depuis les standards v2 : la documentation technique existe en français, néerlandais et anglais (décision du 06/10/2026), le standard v2.0 la limitant au français. Points tranchés le 12/10/2026 pour la version 3.2 : cookie de session SameSite=Strict avec jeton anti-CSRF par session (modèle SAGA), comptes créés sur le modèle Microsoft 365 pour toutes les applications, /api/health et /api/version enveloppés comme toute route.
 
 ## 20. Annexes
@@ -1574,7 +1638,7 @@ Point tranché depuis les standards v2 : la documentation technique existe en fr
 
 ```markdown
 Tu travailles sur l'application <nom> (dossier NIXUS /volume1/docker/<dossier>), version courante <X.Y.Z>.
-Lis en entier le « Standard des applications communales v3.2 » (STANDARD.md) puis README, CHANGELOG, MANIFESTE, ETAT, ECARTS-CDC et les dernières notes de livraison.
+Lis en entier le « Standard des applications communales v3.3 » (STANDARD.md) puis README, CHANGELOG, MANIFESTE, ETAT, ECARTS-CDC et les dernières notes de livraison.
 Relève dans le code joint : package.json du serveur et de l'interface, Dockerfile, docker-compose.yml, nginx.conf, thème (App.tsx, index.css, main.tsx, AppLayout.tsx) et couche d'accès aux données. Écris ce relevé avant tout code.
 Stack fermé : Express 4 en JavaScript CommonJS, SQL écrit à la main par getDb().prepare(), React 18, TypeScript 5, Vite 5, Ant Design 5, Node 20, Docker Compose, PostgreSQL 16 en production (sql.js pour le maquettage seulement), réponses { data, meta, pagination }, connexion OpenID Connect côté serveur avec SSO Entra ID préconisé. Aucune brique hors de la section 4 sans mon accord écrit. Aucun ORM. Aucun kit d'interface autre qu'Ant Design.
 Identité visuelle, noms de conteneurs, ports, dossier, volumes et procédure NIXUS de l'application inchangés.
@@ -1599,6 +1663,6 @@ Pose tes questions avant de coder et attends mon « go ».
 
 | Version | Date | Contenu |
 | --- | --- | --- |
-| 3.0 | 11/10/2026 | Version 3.2 (12/10/2026) : propositions issues de la mise au standard de SAGA 0.89.0 à 0.92.0 (session, comptes, enveloppe, pages imprimables, suppression des fichiers personnels, mode test, procédure NIXUS, images Docker, dépendances, livraison, arbitrages). Version 3.1 : moteur, contrat d'API et connexion tranchés le 11/10/2026. Version 3.0 : fusion des trois standards v2 et des décisions du 06/10/2026, contrôlée contre le code des trois archives ; ajout de la stratégie, de l'identité visuelle relevée dans SAGA, des règles de redéveloppement et du prompt de session |
+| 3.0 | 11/10/2026 | Version 3.3 (02/11/2026) : connexion Microsoft compatible avec Portal (8.6), aide par écran sur le modèle de STEGA (13.1), tickets dans chaque application (13.5), gabarit 1.3.0 ; décisions issues de l'écolage : multer 2.x, montée de génération sur accord motivé, correctifs de sécurité ciblés, Dependabot et CodeQL, couleur d'erreur accessible, brouillons hors journal d'audit, points ouverts (section 19). Version 3.2 (12/10/2026) : propositions issues de la mise au standard de SAGA 0.89.0 à 0.92.0 (session, comptes, enveloppe, pages imprimables, suppression des fichiers personnels, mode test, procédure NIXUS, images Docker, dépendances, livraison, arbitrages). Version 3.1 : moteur, contrat d'API et connexion tranchés le 11/10/2026. Version 3.0 : fusion des trois standards v2 et des décisions du 06/10/2026, contrôlée contre le code des trois archives ; ajout de la stratégie, de l'identité visuelle relevée dans SAGA, des règles de redéveloppement et du prompt de session |
 | 2.0 | 11/10/2026 | Trois standards v2 écrits à partir du code |
 | 1.0 | 06/10/2026 | Bible écrite sans le code, retirée |

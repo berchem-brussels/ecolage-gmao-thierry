@@ -1,6 +1,6 @@
 {
   "name": "gmao-backend",
-  "version": "0.9.0",
+  "version": "0.9.1",
   "description": "GMAO communale : serveur (standard v3.2)",
   "license": "EUPL-1.2",
   "main": "src/index.js",

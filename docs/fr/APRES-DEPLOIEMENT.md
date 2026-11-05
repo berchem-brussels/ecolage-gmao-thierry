@@ -1,6 +1,6 @@
 # Après déploiement : installer et mettre à jour la GMAO sur NIXUS
 
-Version de l'application : **0.9.0** · Mis à jour le 02/11/2026 · Le français fait foi.
+Version de l'application : **0.9.1** · Mis à jour le 03/11/2026 · Le français fait foi.
 
 Procédure pas à pas depuis un PC Windows, sans passer par DSM. Une commande à la fois ; on attend son résultat avant la suivante. Si un résultat diffère de l'attendu, on s'arrête et on colle la sortie dans la conversation.
 
@@ -178,6 +178,10 @@ Attendu : `[gmao] … : sauvegarde terminée (photos copiées, aucune pièce joi
 Suivie une seule fois, avec la 0.1.0. Elle reste décrite dans `docs/fr/INSTALLATION.md` et `NOTES_LIVRAISON_v0.1.0.md` de l'archive. Ordre : dossier `/volume1/docker/monapp` créé, archive copiée, extraction, `sudo sh verifier-ports.sh 18443 18080` (attendu : deux fois `LIBRE` ; le 18444 est occupé par la GRC), création du `.env` (une seule fois, `DEMO_ALLOWED=1` en acceptance, `chmod 600`), `build`, `up -d`, assistant d'installation dans le navigateur (nom du pouvoir local, entité AC, premier administrateur), création de l'entité CPAS dans Administration, Entités, comptes de démonstration.
 
 ## 8. Notes par version
+
+### 0.9.1 (03/11/2026)
+
+Correctif de la 0.9.0 (R1 et R2, DV-94). Mise à jour par la section 3, **sans migration** : `sudo docker logs gmao-api --tail 30` montre `[APP] API 0.9.1 sur le port 3001`, sans ligne `[DB] Migration`. Aucune dépendance nouvelle ; seule l'image de l'interface change réellement (`frontend/dist/`), celle du serveur se reconstruit pour le numéro de version et la note ; Dockerfile, compose, `nginx.conf`, `backup.sh` et `.env` inchangés ; `--no-cache` inutile. Contrôle : bas du menu `v0.9.1` ; compteurs de « Demandes de l'entité » mis à jour après une qualification ; « À qualifier » et « Qualifiée » en toutes lettres dans le détail du journal. Retour arrière vers la 0.9.0 sans restaurer la base.
 
 ### 0.9.0 (02/11/2026)
 

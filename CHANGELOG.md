@@ -1,6 +1,16 @@
 # Journal des versions
 
-Version de l'application : **0.9.0** · Mis à jour le 02/11/2026
+Version de l'application : **0.9.1** · Mis à jour le 03/11/2026
+
+## 0.9.1 (03/11/2026)
+
+Correctif des deux défauts mineurs de la recette de la 0.9.0 (DV-94), première version de l'étape 8 bis (DV-95). Aucune migration, aucune dépendance nouvelle.
+
+- R1 : sur « Demandes de l'entité », les compteurs du tableau de bord se rechargent après une qualification. Cause racine : `TableauBord` ne chargeait les compteurs qu'à son affichage et au changement d'entité ; la page rechargeait la liste sans le prévenir. La page lui passe désormais un compteur `rafraichir`, augmenté après chaque qualification ; les nombres restent affichés pendant le rechargement.
+- R2 : dans le détail du journal d'audit, l'état d'une demande (« Avant », « Après ») s'affiche par son libellé du service technique (« À qualifier », « Qualifiée ») dans la langue de l'écran. Cause racine : `JournalPage` traduisait les cases à cocher et les noms trouvés par le serveur, mais rendait tout autre texte brut. Une table fixe (`CODES`) relie le champ `etat` aux libellés `demande.etat_service.*` ; un code sans libellé reste affiché tel quel. Le journal enregistré ne change pas.
+- Tests de non-régression : un pour R1, deux pour R2 (FR et NL, avec un code inconnu), qui échouent sans la correction ; note de version 0.9.1 (une ligne pour le service technique, une pour l'administrateur) et son test.
+- Copie de `STANDARD.md` passée en v3.3 (valeurs d'exemple à la place de celles de NIXUS) ; écarts E-16, E-26, E-27, E-31 et E-32 fermés ou constatés alignés au standard v3.3 ; écarts E-36 à E-38 relevés sur le gabarit 1.3.0.
+- Tests : serveur 372 (371 en 0.9.0), interface 164 (161).
 
 ## 0.9.0 (02/11/2026)
 

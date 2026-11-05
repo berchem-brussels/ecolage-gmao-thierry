@@ -9,6 +9,8 @@
  * valeur composée (avant, après) s'affiche champ par champ au lieu du texte JSON.
  * 0.7.5 (DV-76) : une case à cocher (danger, actif, obligatoire…) s'affiche « Oui » ou « Non » au lieu de 1 ou 0 ; un
  * champ vide est masqué, sauf « Avant » et « Après », où le vide se dit « aucun ».
+ * 0.9.1 (R2, DV-94) : un champ qui porte un code (l'état d'une demande, « a_qualifier », « qualifiee ») s'affiche par son
+ * libellé du service technique, dans la langue de l'écran ; un code sans libellé reste affiché tel quel.
  */
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Button, Card, DatePicker, Descriptions, Grid, Radio, Select, Space, Table, Tag, Typography, message } from 'antd';
@@ -36,6 +38,8 @@ const PAGE = 50;
 // 0.9.0 : qualification d'une demande (première, priorité confirmée, photos visibles ; motif et consignes notés par 1).
 const BOOLEENS = new Set(['danger', 'beneficiaire_texte', 'is_active', 'obligatoire', 'remarque', 'brouillon', 'premiere', 'priorite_confirmee', 'photos_visibles', 'motif_priorite', 'consignes']);
 const VIDE_DIT = new Set(['avant', 'apres']);
+/** Champs du détail qui portent un code traduit (R2, 0.9.1) : nom du champ → préfixe de la clé de traduction. */
+export const CODES: Record<string, string> = { etat: 'demande.etat_service' };
 const vide = (v: unknown) => v === null || v === undefined || v === '';
 /** Date de la base (UTC, « 2026-10-22 08:00:00 ») vers l'heure locale. */
 export const depuisBase = (d: string) => dayjs(`${d.replace(' ', 'T')}Z`);
@@ -112,6 +116,7 @@ export default function JournalPage() {
     }
     const cle = chemin.split('.').pop() || '';
     if (BOOLEENS.has(cle) && (v === 0 || v === 1 || typeof v === 'boolean')) return t(v ? 'yes' : 'no');
+    if (CODES[cle] && typeof v === 'string' && translations[`${CODES[cle]}.${v}`]) return t(`${CODES[cle]}.${v}`);
     if (vide(v)) return t('audit.aucun');
     return brut(v);
   };

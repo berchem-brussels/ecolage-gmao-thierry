@@ -1,6 +1,6 @@
 # Service technique : tableau de bord, liste et qualification des demandes
 
-Version 0.9.0 · Fiche fonctionnelle (modèle du standard, section 17.8).
+Version 0.9.1 · Fiche fonctionnelle (modèle du standard, section 17.8).
 
 ## Objet
 
@@ -31,7 +31,7 @@ Donner au gestionnaire technique et au responsable du service technique de chaqu
 | 4 | Priorité proposée : celle de la catégorie, ou P1 si un danger est signalé ; la changer exige un motif, gardé sur la fiche ; revenir à la priorité proposée efface le motif | DV-91, PRI-01 |
 | 5 | Date convenue seulement pour une priorité sans délai de fin (P4 livrée), d'aujourd'hui à deux ans ; elle devient l'échéance de fin | DV-90 |
 | 6 | Consignes, motif, durée et auteur de la qualification sont internes au service technique ; le journal note un changement de consignes ou de motif sans leur texte | DV-90, RGPD-07 |
-| 7 | Tableau de bord : quatre compteurs, chacun égal au total de la liste filtrée qu'il ouvre ; « dans les deux jours ouvrés » suit le calendrier de l'entité | DV-92, GES-01 |
+| 7 | Tableau de bord : quatre compteurs, chacun égal au total de la liste filtrée qu'il ouvre ; « dans les deux jours ouvrés » suit le calendrier de l'entité ; sur « Demandes de l'entité », les compteurs se rechargent après chaque qualification, sans recharger la page (0.9.1) | DV-92, DV-94, GES-01 |
 | 8 | Vues enregistrées : à chaque personne dans chaque entité, vingt au plus, noms distincts ; personne d'autre ne les voit ; la suppression d'une vue ne touche aucune demande | DV-93, GES-02 |
 
 ## Écrans

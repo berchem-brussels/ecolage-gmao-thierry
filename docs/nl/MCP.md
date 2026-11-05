@@ -1,5 +1,9 @@
 
 
+## 0.9.1
+
+Geen nieuwe of gewijzigde tool.
+
 ## 0.9.0
 
 Nieuwe tools: `get_tableau_bord` (dashboard van de technische dienst: te kwalificeren, te laat, open P1 en P2, vervaldatum binnen twee werkdagen), `qualifier_demande` (categorie, plaats en prioriteit verplicht; reden als de prioriteit verschilt van de voorgestelde; geschatte duur, instructies, zichtbaarheid van de foto's van de dienst, afgesproken datum; permissie `demandes:qualifier`), `list_vues_demandes`, `get_vue_demandes`, `create_vue_demandes`, `update_vue_demandes`, `prepare_delete_vue_demandes` en `confirm_delete_vue_demandes` (opgeslagen weergaven van de persoon in de actieve entiteit). `list_demandes` neemt de filters van de lijst van de dienst (`etats`, `priorites`, `categorie_id`, `batiment_id`, `echeance`, `canal`, `danger`, `tri`, `ordre`); elke aanvraag voor de dienst draagt `echeance_courante`, `echeance_type` en `retard`. Instructies en reden worden nooit aan de aanvrager gegeven.

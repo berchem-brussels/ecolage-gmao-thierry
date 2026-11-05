@@ -2,6 +2,10 @@
 
 The French text (`docs/fr/SECURITE.md`) prevails and holds the full grid per version.
 
+## 0.9.1 (03/11/2026)
+
+Fix of 0.9.0 (R1, R2), interface only: no new dependency, migration, route or permission. Counter reloaded through a route already restricted to `demandes:entite`; state translated through a fixed table, rendered as text, unknown code shown unchanged. `npm audit --omit=dev`: server 0, interface 3 moderate (E-09). Proof of failure in the French text.
+
 ## 0.9.0 (02/11/2026)
 
 Technical department: dashboard, list, qualification, saved views (step 8). No new dependency, migration `008_qualification`, seven new routes, new permission `demandes:qualifier` (manager, head of department). Qualification only with that permission and in the « À qualifier » or « Qualifiée » state; AC and CPAS partition tested through the API and MCP; another person's view 404, another entity's view 403; filters checked against the catalogue, sorting from a fixed table; instructions and reason never returned to the requester; audit log without free text. `npm audit --omit=dev`: server 0, interface 3 moderate (E-09). Proof of failure for each removed control in the French text.

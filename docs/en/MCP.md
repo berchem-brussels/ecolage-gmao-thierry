@@ -1,5 +1,9 @@
 
 
+## 0.9.1
+
+No new or changed tool.
+
 ## 0.9.0
 
 New tools: `get_tableau_bord` (technical department dashboard: to qualify, overdue, open P1 and P2, due within two working days), `qualifier_demande` (category, place and priority required; reason when the priority differs from the proposed one; estimated duration, instructions, visibility of the department's photos, agreed date; permission `demandes:qualifier`), `list_vues_demandes`, `get_vue_demandes`, `create_vue_demandes`, `update_vue_demandes`, `prepare_delete_vue_demandes` and `confirm_delete_vue_demandes` (saved views of the person in the active entity). `list_demandes` takes the department list filters (`etats`, `priorites`, `categorie_id`, `batiment_id`, `echeance`, `canal`, `danger`, `tri`, `ordre`); each request returned to the department carries `echeance_courante`, `echeance_type` and `retard`. Instructions and reason are never returned to the requester.

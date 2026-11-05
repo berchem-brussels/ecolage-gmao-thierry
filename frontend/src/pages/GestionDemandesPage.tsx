@@ -75,6 +75,8 @@ export default function GestionDemandesPage() {
   const [vues, setVues] = useState<VueDemandes[]>([]);
   const [nomVue, setNomVue] = useState<string | null>(null);
   const [q, setQ] = useState(f.q || '');
+  /** R1 (0.9.1, DV-94) : augmenté après une qualification pour recharger les compteurs du tableau de bord. */
+  const [bordAJour, setBordAJour] = useState(0);
 
   /** Change des filtres dans l'adresse ; revient à la première page ; une vue choisie ne s'applique plus telle quelle. */
   const changer = (patch: Partial<Record<keyof FiltresGestion | 'page' | 'vue' | 'demande', string | number | undefined>>, garderVue = false) => {
@@ -225,7 +227,7 @@ export default function GestionDemandesPage() {
         <Typography.Title level={1} style={{ fontSize: 22, margin: 0 }}>{t('demande.entite.title')}</Typography.Title>
       </div>
       <Typography.Paragraph type="secondary">{t('gest.intro')}</Typography.Paragraph>
-      <div style={{ marginBottom: 16 }}><TableauBord titre={false} /></div>
+      <div style={{ marginBottom: 16 }}><TableauBord titre={false} rafraichir={bordAJour} /></div>
 
       <Card size="small" style={{ marginBottom: 12 }}>
         {mobile ? (
@@ -287,7 +289,7 @@ export default function GestionDemandesPage() {
         extra={fiche && !qualifier && peutQualifier && QUALIFIABLES.includes(fiche.etat)
           ? <Button type="primary" onClick={() => setQualifier(true)}>{fiche.etat === 'a_qualifier' ? t('qualif.bouton') : t('qualif.bouton.modifier')}</Button> : null}>
         {fiche && (qualifier
-          ? <QualificationForm d={fiche} onCancel={() => setQualifier(false)} onDone={(d) => { setFiche(d); setQualifier(false); charger(); }} />
+          ? <QualificationForm d={fiche} onCancel={() => setQualifier(false)} onDone={(d) => { setFiche(d); setQualifier(false); charger(); setBordAJour((n) => n + 1); }} />
           : <FicheDemande d={fiche} avecDemandeur service onChange={chargerFiche} />)}
       </Drawer>
 
