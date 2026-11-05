@@ -1,4 +1,14 @@
+# Architecture
 
+Application version: **0.11.0** · The French text prevails (`docs/fr/ARCHITECTURE.md`); this file summarises each version.
+
+## Tickets (0.11.0)
+
+Tables `tickets` (reference `TCK-YYYY-NNNNN`, type, queue `business` or `it`, priority P1 to P4, status, requester's `entite_id` when reporting, screenshot without metadata) and `ticket_messages` (messages, events, internal notes), migration `010_tickets`. Service, routes, schemas and nine MCP tools from template 1.3.0; the business queue follows the person's roles in their active entity, the IT queue the administrator for all entities. Settings in the instance parameters, group `tickets`. "Report" button in the header, Tickets screen in the Help menu.
+
+## Microsoft sign-in (0.10.0)
+
+Table `auth_pending`, columns `users.oid` and `users.is_admin_local` (migration `009_sso`); `oidc.js`, `settings.js`, `routes/sso.js` from template 1.3.0; settings through `services/connexion.js`.
 
 ## Technical department: dashboard, list and qualification (0.9.0)
 

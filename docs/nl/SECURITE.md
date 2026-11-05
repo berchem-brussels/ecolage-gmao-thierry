@@ -2,6 +2,14 @@
 
 De Franse tekst (`docs/fr/SECURITE.md`) is rechtsgeldig en bevat het volledige rooster per versie.
 
+## 0.11.0 (05/11/2026)
+
+Tickets (standaard, sectie 13.5), modules uit het sjabloon 1.3.0 overgenomen en aangepast aan de rollen per entiteit. Getest: een functionele vraag wordt alleen gelezen en behandeld door de technische dienst van de entiteit van het ticket en door de aanvrager (API en MCP, andere entiteit 403); interne nota onzichtbaar voor de aanvrager; toewijzing alleen aan een behandelaar van de wachtrij in die entiteit; overgangen en verplichte redenen; schermafbeelding gecontroleerd op de eerste bytes en ontdaan van metagegevens, nooit zonder sessie; ticketparameters nooit zonder sessie. Microsoft-aanmelding: geheim-id geweigerd (`SECRET_IS_ID`), enkel de foutcode `AADSTS` in het logboek. Geen nieuwe afhankelijkheid; migratie `010_tickets`, terugdraaien naar 0.10.0 getest. `npm audit --omit=dev`: server 0, interface 3 matige (E-09). Negentien bewijzen van falen in de Franse tekst.
+
+## 0.10.0 (05/11/2026)
+
+Microsoft-aanmelding compatibel met Portal (standaard, sectie 8.6): PKCE, geen `prompt` of `max_age`, token gecontroleerd (RS256, uitgever, publiek, vervaldatum, `nonce`), veilige terugkeer, twee cookies, koppeling via `oid`, noodtoegang van een beheerder. Geen nieuwe afhankelijkheid; migratie `009_sso`. Bewijzen van falen in de Franse tekst.
+
 ## 0.9.1 (03/11/2026)
 
 Correctie van 0.9.0 (R1, R2), enkel interface: geen nieuwe afhankelijkheid, migratie, route of permissie. Teller herladen via een route die al voorbehouden is aan `demandes:entite`; status vertaald via een vaste tabel, als tekst weergegeven, onbekende code ongewijzigd. `npm audit --omit=dev`: server 0, interface 3 matige (E-09). Bewijs van falen in de Franse tekst.

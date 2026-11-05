@@ -519,6 +519,56 @@ const MIGRATIONS = [
     );
     UPDATE users SET is_admin_local = 1 WHERE id = (SELECT MIN(id) FROM users WHERE user_role = 'admin' AND is_demo = 0)
   `],
+  // 0.11.0 (standard, section 13.5) : tables des tickets de la migration 003_sso_tickets_aide du gabarit 1.3.0, reprises
+  // telles quelles, plus entite_id : entité active du demandeur au signalement, qui cloisonne la file métier (DV-97, DV-107).
+  ['010_tickets', `
+    CREATE TABLE tickets (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      reference TEXT NOT NULL UNIQUE,
+      type TEXT NOT NULL CHECK (type IN ('incident', 'bug', 'question', 'wish')),
+      title TEXT NOT NULL CHECK (length(title) BETWEEN 1 AND 200),
+      description TEXT,
+      expected TEXT,
+      actual TEXT,
+      queue TEXT NOT NULL CHECK (queue IN ('business', 'it')),
+      impact INTEGER NOT NULL CHECK (impact IN (1, 2, 3)),
+      urgency INTEGER NOT NULL CHECK (urgency IN (1, 2, 3)),
+      priority TEXT NOT NULL CHECK (priority IN ('P1', 'P2', 'P3', 'P4')),
+      status TEXT NOT NULL DEFAULT 'new' CHECK (status IN ('new', 'in_progress', 'waiting_requester', 'resolved', 'rejected', 'cancelled', 'closed')),
+      status_reason TEXT,
+      resolution TEXT,
+      wish_status TEXT CHECK (wish_status IS NULL OR wish_status IN ('study', 'planned', 'delivered', 'refused')),
+      fixed_version TEXT,
+      requester_id INTEGER NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
+      assignee_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+      entite_id INTEGER REFERENCES entites(id) ON DELETE RESTRICT,
+      screen TEXT,
+      context_json TEXT,
+      screenshot TEXT,
+      due_response_at TEXT,
+      due_resolution_at TEXT,
+      first_response_at TEXT,
+      resolved_at TEXT,
+      closed_at TEXT,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+    CREATE INDEX idx_tickets_status ON tickets(status);
+    CREATE INDEX idx_tickets_requester ON tickets(requester_id);
+    CREATE INDEX idx_tickets_assignee ON tickets(assignee_id);
+    CREATE INDEX idx_tickets_entite ON tickets(entite_id);
+    CREATE TABLE ticket_messages (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      ticket_id INTEGER NOT NULL REFERENCES tickets(id) ON DELETE RESTRICT,
+      author_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+      kind TEXT NOT NULL DEFAULT 'message' CHECK (kind IN ('message', 'event')),
+      body TEXT NOT NULL,
+      is_internal INTEGER NOT NULL DEFAULT 0,
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+    CREATE INDEX idx_ticket_messages_ticket ON ticket_messages(ticket_id);
+    CREATE INDEX idx_ticket_messages_author ON ticket_messages(author_id)
+  `],
 ];
 
 function migrate() {

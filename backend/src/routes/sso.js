@@ -70,7 +70,7 @@ router.get('/auth/callback', handle(async (req, res) => {
     const idToken = await oidc.exchangeCode({ tenant: c.tenant, clientId: c.clientId, clientSecret: c.clientSecret, redirectUri: redirectUri(c), code: String(req.query.code), verifier: pending.verifier });
     claims = await oidc.verifyIdToken(idToken, { tenant: c.tenant, clientId: c.clientId, nonce: pending.nonce });
   } catch (e) {
-    logAudit(null, 'sso.refused', 'user', null, { reason: e.message });
+    logAudit(null, 'sso.refused', 'user', null, e.microsoftCode ? { reason: e.message, microsoft_code: e.microsoftCode } : { reason: e.message });
     return fail302('SSO_TOKEN');
   }
   const email = String(claims.email || claims.preferred_username || '').toLowerCase();

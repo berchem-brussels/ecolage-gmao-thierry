@@ -5,6 +5,12 @@
  * Réponses à l'enveloppe { data, meta, pagination } reconnue par meta.envelope === 1.
  */
 let csrfToken: string | null = null;
+/** Dernière erreur de l'API, jointe au contexte d'un ticket (standard, section 13.5 ; repris du gabarit 1.3.0, 0.11.0). */
+let lastApiError: { status: number; route: string; code: string; message: string; at: string } | null = null;
+export const getLastApiError = () => lastApiError;
+const noterErreur = (status: number, method: string, path: string, json: { code?: string; message?: string } | null, texte: string) => {
+  lastApiError = { status, route: `${method} ${path.split('?')[0]}`, code: json?.code || 'INTERNAL', message: String(json?.message || texte).slice(0, 300), at: new Date().toISOString() };
+};
 export function setCsrfToken(t: string | null | undefined) { csrfToken = t || null; }
 export class ApiError extends Error {
   constructor(public status: number, public code: string, message: string, public details?: string[]) {
@@ -22,6 +28,7 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
   const json = await res.json().catch(() => null);
   if (!res.ok || !json || json.error) {
     if (res.status === 401 && path !== '/auth/login' && path !== '/auth/me') window.dispatchEvent(new Event('app-unauthorized'));
+    noterErreur(res.status, method, path, json, res.statusText);
     throw new ApiError(res.status, json?.code || 'INTERNAL', json?.message || res.statusText, json?.details);
   }
   if (json.meta?.envelope !== 1) throw new ApiError(res.status, 'INTERNAL', 'Réponse hors enveloppe');
@@ -44,6 +51,7 @@ async function upload<T>(path: string, blob: Blob, nom = 'fichier'): Promise<T> 
   const json = await res.json().catch(() => null);
   if (!res.ok || !json || json.error) {
     if (res.status === 401) window.dispatchEvent(new Event('app-unauthorized'));
+    noterErreur(res.status, 'POST', path, json, res.statusText);
     throw new ApiError(res.status, json?.code || 'INTERNAL', json?.message || res.statusText, json?.details);
   }
   return json.data as T;

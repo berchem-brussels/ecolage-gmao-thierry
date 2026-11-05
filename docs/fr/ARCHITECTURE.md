@@ -1,6 +1,6 @@
 # Architecture
 
-Version 0.9.0 · Le français fait foi.
+Version 0.11.0 · Le français fait foi.
 
 ## Services
 
@@ -11,7 +11,7 @@ Version 0.9.0 · Le français fait foi.
 
 Base `sql.js` dans le volume `db-data` (`/app/data/app.db`), écrite par le seul processus `api`. Photos des lieux dans le même volume (`/app/data/photos`, variable `PHOTOS_DIR`) et, depuis la 0.8.0, pièces jointes des demandes (`/app/data/pieces`, variable `PIECES_DIR`), hors de la racine web, lues par des routes authentifiées. Certificat dans le volume `ssl-certs`. PostgreSQL 16 arrive au lot L7 (standard, section 5).
 
-## Tables (migrations `001_noyau` à `008_qualification`)
+## Tables (migrations `001_noyau` à `010_tickets`)
 
 | Table | Rôle | Points clés |
 | --- | --- | --- |
@@ -36,6 +36,9 @@ Base `sql.js` dans le volume `db-data` (`/app/data/app.db`), écrite par le seul
 | `demande_reponses` | Réponses d'une demande aux questions (0.7.0) | (`demande_id`, `question_id`) unique ; `valeur` (`oui`, `non`, `1` à `6`) ; copie de `question_fr`, `question_nl`, `reponse_fr`, `reponse_nl` au dépôt ; `ordre` |
 | `jours_non_ouvres` | Congés et fermetures par entité (0.4.0) | `nature` `conge` (`mois_jour` `MM-JJ`, chaque année) ou `fermeture` (`date_debut`, `date_fin`) ; libellés FR et NL ; `is_active`, `motif_desactivation`. Les jours fériés légaux sont calculés, sans table |
 | `vues_demandes` | Vues enregistrées de la liste du service technique (0.9.0) | (`user_id`, `entite_id`, `nom`) unique, `nom` 1 à 60 caractères ; `filtres` JSON (mêmes clés que les filtres de `GET /api/demandes`) ; vingt au plus par personne et par entité ; suppression réelle (préférence d'affichage) |
+| `auth_pending` | Connexions Microsoft en cours (0.10.0) | `state`, `nonce`, vérificateur PKCE et chemin de retour, 15 minutes au plus ; `users.oid` (identifiant Microsoft, unique) et `users.is_admin_local` (accès de secours) ajoutés par `009_sso` |
+| `tickets` | Tickets de l'application (0.11.0, standard 13.5) | `reference` unique `TCK-AAAA-NNNNN` ; `type` (`incident`, `bug`, `question`, `wish`), `queue` (`business`, `it`), impact, gravité et priorité P1 à P4, `status` en table des transitions ; `entite_id` : entité active du demandeur au signalement, qui cloisonne la file métier ; capture en data URL nettoyée ; échéances de prise en charge et de résolution |
+| `ticket_messages` | Fil d'un ticket (0.11.0) | `kind` `message` ou `event` (événement codé, traduit à l'écran), `is_internal` (note interne invisible du demandeur) ; rien n'est supprimé |
 | `schema_migrations` | Journal des migrations | |
 
 ## Rôles
@@ -278,4 +281,22 @@ Après l'envoi d'une demande, les boutons « Mes demandes » et « Faire une aut
 `frontend/src/validation.ts` donne les règles communes des formulaires Ant Design : `texteObligatoire(t)` (`required` et `whitespace`) pour un texte, `obligatoire(t)` (`required` seul) pour un choix, un nombre, une date ou un mot de passe, qui garde ses espaces (DV-37) ; message unique `form.obligatoire` (« Ce champ est obligatoire », « Dit veld is verplicht »). Les champs hors formulaire (motifs de désactivation, description d'une demande) utilisent `seulementEspaces()` et `components/ErreurObligatoire.tsx`, avec `aria-invalid` et `aria-describedby`. Le serveur garde son propre contrôle (`nettoyer()` et schémas) : l'interface évite seulement le message général « Données invalides ».
 
 `components/demandes/LieuPicker.tsx` : le bouton « Parcourir la liste des bâtiments » porte `aria-expanded` et ouvre ou referme la carte de l'arbre ; la carte a un bouton « Masquer la liste » qui rend le focus au bouton d'ouverture.
+
+## Tickets (0.11.0)
+
+Repris du gabarit 1.3.0 (`services/tickets.js`, `routes/tickets.js`, schémas, neuf outils MCP, `ReportTicketModal.tsx`, `TicketsPage.tsx`, `TicketDrawer.tsx`), adaptés aux rôles par entité (DV-97, DV-107) :
+
+- portée d'une personne sur une file (`scope`) : `all` si son rôle d'instance (`admin`) figure parmi les rôles de la file, l'entité active si l'un de ses rôles dans cette entité y figure ; la file métier se lit donc entité par entité ;
+- réglages dans le catalogue des paramètres de l'instance, groupe `tickets` (`tickets.business_roles`, `tickets.it_roles`, `tickets.reopen_days`, `tickets.sla_json`), contrôlés par format et jamais servis sans session ; les défauts de `settings.js` du gabarit ne servent plus (E-41) ;
+- affectation contrôlée (`ASSIGNEE_INVALIDE`), question sans entité active refusée (`NO_ENTITE`), transfert vers une file non traitée confirmé sans le contenu ;
+- capture réduite dans le navigateur (`photo.ts`) et nettoyée par `cleanPhoto` (`images.js`) ;
+- bouton « Signaler » dans l'en-tête (`AppLayout.tsx`), écran nommé par son libellé du menu jusqu'à l'aide par écran (0.12.0) ; dernière erreur de l'API gardée par `api.ts` (`getLastApiError`) ;
+- écran Tickets (menu Aide), onglet Tickets de Paramètres.
+
+| Route | Droit | Service |
+| --- | --- | --- |
+| `GET /api/tickets`, `GET /api/tickets/:id`, `GET /api/tickets/:id/screenshot` | session ; ses tickets et ceux des files qu'on traite | `services/tickets.js` |
+| `GET /api/tickets/stats`, `GET /api/tickets/to-handle` | personne qui traite une file | `services/tickets.js` |
+| `POST /api/tickets` | session | `services/tickets.js` |
+| `PUT /api/tickets/:id`, `POST /api/tickets/:id/status`, `POST /api/tickets/:id/messages` | demandeur ou personne qui traite la file, selon le champ et la transition | `services/tickets.js` |
 

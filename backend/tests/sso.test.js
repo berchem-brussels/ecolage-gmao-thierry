@@ -41,6 +41,11 @@ before(async () => {
     }
     if (req.url.endsWith('/oauth2/v2.0/token')) {
       res.setHeader('Content-Type', 'application/json');
+      if (nextClaims.refus) {
+        // Réponse de Microsoft quand l'ID du secret a été saisi à la place de sa valeur (recette de la 0.10.0).
+        res.statusCode = 401;
+        return res.end(JSON.stringify({ error: 'invalid_client', error_description: 'AADSTS7000215: Invalid client secret provided. Trace ID: 00000000-0000-0000-0000-000000000000' }));
+      }
       return res.end(JSON.stringify({ id_token: nextClaims.token }));
     }
     res.statusCode = 404; res.end();
@@ -117,6 +122,17 @@ test('jetons refusés : signature fausse, autre locataire, expiré, nonce diffé
   }
 });
 
+test('échange refusé par Microsoft : code AADSTS gardé au journal avec OIDC_EXCHANGE, sans le reste du message (0.11.0)', async () => {
+  const { state, nonce } = await start();
+  nextClaims.refus = true;
+  let res;
+  try { res = await callback(state, state, claimsFor(nonce)); } finally { nextClaims.refus = false; }
+  assert.equal(res.headers.get('location'), '/login?erreur=SSO_TOKEN');
+  const l = getDb().prepare("SELECT details_json FROM audit_log WHERE action = 'sso.refused' ORDER BY id DESC LIMIT 1").get();
+  assert.deepEqual(JSON.parse(l.details_json), { reason: 'OIDC_EXCHANGE', microsoft_code: 'AADSTS7000215' });
+  assert.doesNotMatch(l.details_json, /Trace ID|Invalid client/);
+});
+
 test('état volé ou inconnu refusé ; compte inconnu refusé', async () => {
   const { state, nonce } = await start();
   assert.equal((await callback(state, 'autre-etat', claimsFor(nonce))).headers.get('location'), '/login?erreur=SSO_STATE');
@@ -153,6 +169,28 @@ test('réglages : secret jamais renvoyé ; mode sso refusé sans administrateur 
 
 const parse = (r) => (r.body.result ? JSON.parse(r.body.result.content[0].text) : r.body);
 const mcp = async (c, name, args = {}) => parse(await c.mcp('tools/call', { name, arguments: args }));
+
+test('réglages : ID du secret refusé (API et MCP), réglage gardé ; « Enregistré le … par … » rendu (0.11.0)', async () => {
+  const avant = (await admin.get('/api/settings/auth')).body.data;
+  assert.ok(avant.enregistre && avant.enregistre.le, JSON.stringify(avant));
+  assert.match(avant.enregistre.le, /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/);
+  assert.equal(avant.enregistre.par, 'Ada Admin');
+  const id = '3f2b8c1e-9a4d-4e7b-b1c2-0d5e6f7a8b9c';
+  const r = await admin.put('/api/settings/auth', { client_secret: id });
+  assert.equal(r.status, 400);
+  assert.equal(r.body.code, 'SECRET_IS_ID');
+  assert.match(r.body.message, /colonne Valeur/);
+  assert.equal((await admin.put('/api/settings/auth', { client_secret: id.toUpperCase() })).body.code, 'SECRET_IS_ID');
+  assert.equal((await mcp(admin, 'prepare_update_auth_settings', { client_secret: id })).code, 'SECRET_IS_ID');
+  const { getSetting } = require('../src/settings');
+  assert.equal(getSetting('auth.client_secret'), 'secret-de-test');
+  const n = getDb().prepare("SELECT COUNT(*) AS n FROM audit_log WHERE action = 'settings.auth' AND details_json LIKE ?").get(`%${id}%`).n;
+  assert.equal(n, 0);
+  // Une valeur réelle (lettres, chiffres, ~ . _ -) passe ; l'auteur suit le dernier enregistrement.
+  assert.equal((await admin.put('/api/settings/auth', { client_secret: 'Ab8Q~exemple.de_valeur-fictive' })).status, 200);
+  assert.equal(getSetting('auth.client_secret'), 'Ab8Q~exemple.de_valeur-fictive');
+  await admin.put('/api/settings/auth', { client_secret: 'secret-de-test' });
+});
 
 test('paramètres publics : le mode de connexion est celui réglé', async () => {
   assert.equal((await client(srv.base).get('/api/settings/public')).body.data.auth.mode, 'sso');

@@ -118,28 +118,46 @@ const membres = [{ id: 1, first_name: 'Ada', last_name: 'Admin', email: 'a@exemp
 const setEntite = vi.fn(async () => {});
 const login = vi.fn(async (_e: string, _p: string) => {});
 const nouveautesLues = vi.fn(async () => {});
+const savePreferences = vi.fn(async (_p: Record<string, unknown>) => {});
 const notesVersion = [
   { version: '0.3.0', date: '2026-10-22', lignes: [{ fr: 'Nouveauté fictive A', nl: 'Fictieve nieuwigheid A' }] },
   { version: '0.2.0', date: '2026-10-21', lignes: [{ fr: 'Nouveauté fictive B', nl: 'Fictieve nieuwigheid B' }] },
 ];
 vi.mock('../contexts/AuthContext', () => ({
   useAuth: () => ({
-    user, loading: false, isAdmin: true, login, logout: async () => {}, refresh: async () => {}, savePreferences: async () => {},
+    user, loading: false, isAdmin: true, login, logout: async () => {}, refresh: async () => {}, savePreferences,
     setEntite, nouveautesLues, entite: (user.entites as { roles: string[] }[])[0], roles: (user.entites as { roles: string[] }[])[0].roles,
   }),
   AuthProvider: ({ children }: { children: React.ReactNode }) => children,
 }));
 
 const page = (data: unknown[]) => ({ data, meta: { envelope: 1 }, pagination: { total: data.length, limit: 200, offset: 0 } });
+// Tickets (0.11.0) : une question métier de l'entité AA, à traiter par la personne connectée.
+const ticketsListe = [{ id: 7, reference: 'TCK-2026-00007', type: 'question', title: 'Comment changer la catégorie ?', priority: 'P3', status: 'new', queue: 'business', overdue: 0, updated_at: '2026-11-05 10:00:00', requester_name: 'Prénom Nom', entite_id: 1 }];
+const ticketBase = {
+  id: 7, reference: 'TCK-2026-00007', type: 'question', title: 'Comment changer la catégorie ?', description: 'Je qualifiais une demande', expected: null, actual: null,
+  queue: 'business', priority: 'P3', status: 'new', screen: '/demandes-entite', context: { path: '/demandes-entite', version: '0.11.0' }, entite_id: 1,
+  has_screenshot: false, messages: [{ id: 1, kind: 'event', body: 'created', is_internal: 0, created_at: '2026-11-05 10:00:00', author_name: 'Prénom Nom' }],
+  can_handle: true, can_reopen: false, requester_id: 99, resolution: null, created_at: '2026-11-05 10:00:00',
+};
+let ticketDetail: Record<string, unknown> = { ...ticketBase };
+const dernierDialogue = () => { const d = screen.getAllByRole('dialog'); return d[d.length - 1]; };
 // Connexion Microsoft (0.10.0) : mode local par défaut ; les tests de la section 8.6 le changent.
 let authConfig: Record<string, unknown> = { mode: 'local', microsoft: false, installed: true };
-const authSettings = { mode: 'sso_optional', tenant: 'locataire-fictif', client_id: 'application-fictive', public_url: 'https://gmao.exemple.test', domains: 'exemple.test', secret_set: true, redirect_uri: 'https://gmao.exemple.test/api/auth/callback' };
+const authSettings = { mode: 'sso_optional', tenant: 'locataire-fictif', client_id: 'application-fictive', public_url: 'https://gmao.exemple.test', domains: 'exemple.test', secret_set: true, redirect_uri: 'https://gmao.exemple.test/api/auth/callback', enregistre: { le: '2026-11-05T11:24:00Z', par: 'Ada Admin' } };
 beforeEach(() => {
   modules = modulesActifs;
   authConfig = { mode: 'local', microsoft: false, installed: true };
-  vi.stubGlobal('fetch', vi.fn(async (url: string) => ({
+  ticketDetail = { ...ticketBase };
+  vi.stubGlobal('fetch', vi.fn(async (url: string, init?: RequestInit) => ({
     ok: true, status: 200, statusText: 'OK',
     json: async () => (url.includes('/membres') ? { data: membres, meta: { envelope: 1 } }
+      // Tickets (0.11.0) : compteurs, fiche, liste ; un transfert (PUT) vers une file non traitée rend la confirmation seule.
+      : url.startsWith('/api/tickets/stats') ? { data: { open: 2, overdue: 1, unassigned: 1, resolved_30d: 3, by_priority: [], by_type: [], by_screen: [] }, meta: { envelope: 1 } }
+      : /^\/api\/tickets\/\d+$/.test(url) && init?.method === 'PUT' ? { data: { id: 7, reference: 'TCK-2026-00007', queue: 'it', transferred: true }, meta: { envelope: 1 } }
+      : /^\/api\/tickets\/\d+$/.test(url) ? { data: ticketDetail, meta: { envelope: 1 } }
+      : url.startsWith('/api/tickets') && init?.method === 'POST' ? { data: { id: 8, reference: 'TCK-2026-00008' }, meta: { envelope: 1 } }
+      : url.startsWith('/api/tickets') ? page(ticketsListe)
       : url.startsWith('/api/lieux/arbre') ? { data: arbre, meta: { envelope: 1 } }
       : url.startsWith('/api/listes-valeurs') ? page(valeurs)
       : url.startsWith('/api/categories/arbre') ? { data: arbreCategories, meta: { envelope: 1 } }
@@ -180,11 +198,13 @@ import ParametresPage from '../pages/ParametresPage';
 import ReglagesEntitePage from '../pages/ReglagesEntitePage';
 import JournalPage from '../pages/JournalPage';
 import ReferentielPage from '../pages/ReferentielPage';
+import TicketsPage from '../pages/TicketsPage';
 import { reloadModules } from '../moduleMap';
 
 const PAGES: [string, React.ComponentType][] = [
   ['Home', HomePage], ['Entites', EntitesPage], ['Users', UsersPage], ['Help', HelpPage], ['Accessibility', AccessibilityPage], ['Login', LoginPage],
   ['Patrimoine', PatrimoinePage], ['ListesValeurs', ListesValeursPage], ['Parametres', ParametresPage], ['ReglagesEntite', ReglagesEntitePage], ['Journal', JournalPage], ['Referentiel', ReferentielPage],
+  ['Tickets', TicketsPage],
 ];
 
 function wrap(C: React.ComponentType, lang: 'fr' | 'nl', settings = FALLBACK_SETTINGS, entries: string[] = ['/']) {
@@ -557,6 +577,76 @@ describe('écrans', () => {
     } finally { delete user.nouveautes; }
   });
 
+  it('nouveautés (0.11.0) : un clic hors de la fenêtre ne la ferme pas ; la langue se change dans la fenêtre sans la marquer lue', async () => {
+    user.nouveautes = [notesVersion[0]];
+    nouveautesLues.mockClear();
+    savePreferences.mockClear();
+    try {
+      render(wrap(AppLayout, 'fr'));
+      expect(await screen.findByText('Nouveauté fictive A')).toBeInTheDocument();
+      const fond = document.querySelector('.ant-modal-wrap') as HTMLElement;
+      fireEvent.mouseDown(fond);
+      fireEvent.mouseUp(fond);
+      fireEvent.click(fond);
+      expect(nouveautesLues).not.toHaveBeenCalled();
+      const groupe = screen.getByRole('dialog').querySelector('[aria-label="Langue"]') as HTMLElement;
+      fireEvent.click(within(groupe).getByText('NL'));
+      expect(await screen.findByText('Fictieve nieuwigheid A')).toBeInTheDocument();
+      expect(savePreferences).toHaveBeenCalledWith({ preferred_lang: 'nl' });
+      expect(nouveautesLues).not.toHaveBeenCalled();
+      expect(screen.getByText('Nieuwigheden van versie 0.3.0')).toBeInTheDocument();
+    } finally { delete user.nouveautes; }
+  });
+
+  it('tickets (0.11.0) : « Signaler » dans l’en-tête joint l’écran et le contexte ; titre obligatoire ; file annoncée selon le type', async () => {
+    render(wrap(AppLayout, 'fr'));
+    fireEvent.click(await screen.findByRole('button', { name: /Signaler/ }));
+    expect(await screen.findByText('Accueil', { selector: 'strong' })).toBeInTheDocument();
+    expect(screen.getByText('Traité par le service technique de votre entité.')).toBeInTheDocument();
+    fireEvent.click(within(screen.getByRole('dialog')).getByText('Bug'));
+    expect(await screen.findByText("Traité par l'administrateur de l'application.")).toBeInTheDocument();
+    expect(screen.getByLabelText("Ce que j'attendais")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Envoyer' }));
+    expect(await screen.findByText('Ce champ est obligatoire')).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText('Titre'), { target: { value: 'La liste ne se charge pas' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Envoyer' }));
+    await waitFor(() => expect((fetch as unknown as { mock: { calls: [string, RequestInit?][] } }).mock.calls.some(([u, o]) => u === '/api/tickets' && o?.method === 'POST')).toBe(true));
+    const [, o] = (fetch as unknown as { mock: { calls: [string, RequestInit?][] } }).mock.calls.find(([u, x]) => u === '/api/tickets' && x?.method === 'POST')!;
+    const corps = JSON.parse(String(o!.body));
+    expect(corps).toMatchObject({ type: 'bug', title: 'La liste ne se charge pas', impact: 'person', urgency: 'annoying', screen: '/' });
+    expect(corps.context).toMatchObject({ path: '/', screen: 'Accueil', lang: 'fr' });
+    expect('lastApiError' in corps.context).toBe(true);
+    expect(corps.screenshot).toBeUndefined();
+  });
+
+  it('tickets (0.11.0) : le traitant prend en charge ; le demandeur annule avec un motif ; un transfert hors de sa file ferme le panneau', async () => {
+    render(wrap(TicketsPage, 'fr', FALLBACK_SETTINGS, ['/tickets?id=7']));
+    expect(await screen.findByText('Je qualifiais une demande')).toBeInTheDocument();
+    expect(screen.getByText('AA', { selector: '.ant-descriptions-item-content' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Prendre en charge' }));
+    await waitFor(() => expect((fetch as unknown as { mock: { calls: [string, RequestInit?][] } }).mock.calls
+      .some(([u, o]) => u === '/api/tickets/7/status' && o?.method === 'POST' && JSON.parse(String(o.body)).to === 'in_progress')).toBe(true));
+    fireEvent.click(screen.getByRole('button', { name: "Transférer vers l'autre file" }));
+    const motif = await screen.findByLabelText('Motif');
+    fireEvent.change(motif, { target: { value: 'Problème technique' } });
+    fireEvent.click(within(dernierDialogue()).getByRole('button', { name: 'Enregistrer' }));
+    expect(await screen.findByText("Ticket transféré vers l'autre file.")).toBeInTheDocument();
+    cleanupAll();
+    ticketDetail = { ...ticketBase, can_handle: false, requester_id: 1 };
+    render(wrap(TicketsPage, 'nl', FALLBACK_SETTINGS, ['/tickets?id=7']));
+    expect(await screen.findByText('Je qualifiais une demande')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'In behandeling nemen' })).toBeNull();
+    expect(screen.queryByText('Interne nota')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Ticket annuleren' }));
+    const reden = await screen.findByLabelText('Reden');
+    const ok = within(dernierDialogue()).getByRole('button', { name: 'Opslaan' });
+    expect(ok).toBeDisabled();
+    fireEvent.change(reden, { target: { value: 'Dubbel' } });
+    fireEvent.click(ok);
+    await waitFor(() => expect((fetch as unknown as { mock: { calls: [string, RequestInit?][] } }).mock.calls
+      .some(([u, o]) => u === '/api/tickets/7/status' && JSON.parse(String(o!.body)).to === 'cancelled' && JSON.parse(String(o!.body)).reason === 'Dubbel')).toBe(true));
+  });
+
   it('sans nouveautés, aucune fenêtre', async () => {
     render(wrap(AppLayout, 'fr'));
     await screen.findByLabelText('Entité active');
@@ -804,11 +894,27 @@ describe('connexion Microsoft compatible avec Portal (0.10.0, section 8.6)', () 
   it('Paramètres › Connexion Microsoft : adresse de retour affichée, secret jamais réaffiché, sans violation axe-core', async () => {
     const { container } = render(wrap(ParametresPage, 'fr', FALLBACK_SETTINGS, ['/parametres?onglet=connexion']));
     expect(await screen.findByText('https://gmao.exemple.test/api/auth/callback')).toBeInTheDocument();
-    expect(screen.getByText('Un secret est enregistré ; laissez vide pour le garder.')).toBeInTheDocument();
+    expect(screen.getByText(/Un secret est enregistré ; laissez vide pour le garder\./)).toBeInTheDocument();
     expect((screen.getByLabelText('Secret client') as HTMLInputElement).value).toBe('');
     expect((screen.getByLabelText("Annuaire (locataire)") as HTMLInputElement).value).toBe('locataire-fictif');
     const r = await axe.run(container, { rules: { 'color-contrast': { enabled: false }, region: { enabled: false } } });
     expect(r.violations.map((v) => `${v.id}: ${v.nodes.map((n) => n.html.slice(0, 120)).join(' | ')}`)).toEqual([]);
+  });
+
+  it('Paramètres › Connexion Microsoft (0.11.0) : colonne Valeur, ID du secret refusé avant l’envoi, « Enregistré le … par … » en FR et en NL', async () => {
+    render(wrap(ParametresPage, 'fr', FALLBACK_SETTINGS, ['/parametres?onglet=connexion']));
+    expect(await screen.findByText('Enregistré le 05/11/2026 à 12:24 par Ada Admin')).toBeInTheDocument();
+    expect(screen.getByText(/copiez la colonne Valeur, jamais l'ID du secret/)).toBeInTheDocument();
+    const appels = () => (fetch as unknown as { mock: { calls: [string, RequestInit?][] } }).mock.calls
+      .filter(([u, o]) => u.startsWith('/api/settings/auth') && o && o.method === 'PUT').length;
+    const avant = appels();
+    fireEvent.change(screen.getByLabelText('Secret client'), { target: { value: '3f2b8c1e-9a4d-4e7b-b1c2-0d5e6f7a8b9c' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Enregistrer' }));
+    expect(await screen.findByText("Cette valeur est l'ID du secret. Copiez la colonne Valeur.")).toBeInTheDocument();
+    expect(appels()).toBe(avant);
+    cleanupAll();
+    render(wrap(ParametresPage, 'nl', FALLBACK_SETTINGS, ['/parametres?onglet=connexion']));
+    expect(await screen.findByText('Opgeslagen op 05/11/2026 om 12:24 door Ada Admin')).toBeInTheDocument();
   });
 
   it('Utilisateurs : compte rattaché à Microsoft et accès de secours visibles ; case de secours sur la fiche', async () => {

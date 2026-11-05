@@ -31,7 +31,8 @@ test('liste des paramètres : catalogue complet, libellés et descriptions FR et
   const r = await admin.get('/api/parametres');
   assert.equal(r.status, 200);
   const cles = r.body.data.map((p) => p.cle);
-  assert.deepEqual(cles, ['app.name_fr', 'app.name_nl', 'app.organisation_fr', 'app.organisation_nl', 'app.support_contact', 'app.default_lang', 'app.default_ui_mode']);
+  assert.deepEqual(cles, ['app.name_fr', 'app.name_nl', 'app.organisation_fr', 'app.organisation_nl', 'app.support_contact', 'app.default_lang', 'app.default_ui_mode',
+    'tickets.business_roles', 'tickets.it_roles', 'tickets.reopen_days', 'tickets.sla_json']);
   for (const p of r.body.data) {
     for (const f of ['libelle_fr', 'libelle_nl', 'description_fr', 'description_nl']) assert.ok(p[f], `${p.cle} ${f}`);
     assert.notEqual(p.defaut, undefined, `${p.cle} a un défaut livré`);
@@ -40,7 +41,7 @@ test('liste des paramètres : catalogue complet, libellés et descriptions FR et
   assert.equal(org.valeur, INSTALL.organisation_fr, 'valeur saisie à l’installation');
   assert.equal(org.est_defaut, false);
   assert.equal(r.body.data.find((p) => p.cle === 'app.default_lang').est_defaut, true);
-  assert.equal(r.body.pagination.total, 7);
+  assert.equal(r.body.pagination.total, 11);
   assert.equal((await admin.get('/api/parametres?groupe=affichage')).body.data.length, 2);
 });
 
@@ -156,7 +157,7 @@ test('migration 003_parametres sur une base 0.2.0 : comptes existants à 0.2.0, 
   assert.equal(up.status, 0, up.stderr);
   assert.match(up.stdout, /\[DB\] Migration 003_parametres appliquée/);
   const out = JSON.parse(up.stdout.trim().split('\n').pop());
-  assert.deepEqual(out.migrations, ['001_noyau', '002_lieux', '003_parametres', '004_referentiel_demandes', '005_demandes', '006_demandes_formulaire', '007_pieces_jointes', '008_qualification', '009_sso']);
+  assert.deepEqual(out.migrations, ['001_noyau', '002_lieux', '003_parametres', '004_referentiel_demandes', '005_demandes', '006_demandes_formulaire', '007_pieces_jointes', '008_qualification', '009_sso', '010_tickets']);
   assert.deepEqual(out.users, [{ email: 'ancien@exemple.test', version_vue: '0.2.0' }, { email: 'nouveau@exemple.test', version_vue: VERSION }]);
   assert.deepEqual(out.audit, { action: 'ancienne.ligne', entite_id: null }, 'journal existant gardé');
   assert.equal(out.tables, 1);

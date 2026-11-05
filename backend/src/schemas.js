@@ -267,4 +267,26 @@ module.exports = {
   demandeSuivre: obj({ remarque: T.str(5000) }),
   // Lieu de travail habituel choisi par la personne dans « Mon profil » ; null l'efface.
   lieuHabituel: obj({ lieu_id: lieuOuNul }, ['lieu_id']),
+
+  // Tickets (standard, section 13.5 ; 0.11.0) : schémas du gabarit 1.3.0 repris à l'identique.
+  ticketList: listQuery({
+    status: T.en('new', 'in_progress', 'waiting_requester', 'resolved', 'rejected', 'cancelled', 'closed'),
+    type: T.en('incident', 'bug', 'question', 'wish'), queue: T.en('business', 'it'),
+    open_only: { type: 'boolean' }, mine: { type: 'boolean' },
+  }),
+  ticketCreate: obj({
+    type: T.en('incident', 'bug', 'question', 'wish'), title: T.reqStr(200),
+    description: T.text(8000), expected: T.text(4000), actual: T.text(4000),
+    impact: T.en('person', 'service', 'organisation'), urgency: T.en('blocking', 'annoying', 'comfort'),
+    screen: T.str(200), context: { type: 'object' }, screenshot: { type: 'string', maxLength: 2900000 },
+  }, ['type', 'title']),
+  ticketUpdate: obj({
+    title: T.reqStr(200), description: T.text(8000), expected: T.text(4000), actual: T.text(4000),
+    assignee_id: { type: ['integer', 'null'], minimum: 1 }, impact: T.en('person', 'service', 'organisation'),
+    urgency: T.en('blocking', 'annoying', 'comfort'), priority: T.en('P1', 'P2', 'P3', 'P4'),
+    wish_status: T.en('study', 'planned', 'delivered', 'refused'), fixed_version: T.str(30),
+    queue: T.en('business', 'it'), reason: T.str(2000),
+  }),
+  ticketStatus: obj({ to: T.en('in_progress', 'waiting_requester', 'resolved', 'rejected', 'cancelled', 'closed', 'reopen'), reason: T.str(4000) }, ['to']),
+  ticketMessage: obj({ body: T.reqStr(8000), is_internal: { type: 'boolean' } }, ['body']),
 };

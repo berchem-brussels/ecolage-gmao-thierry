@@ -107,7 +107,9 @@ test('statique : aucune interpolation de valeur dans une requête SQL', () => {
   const files = [];
   const walk = (d) => fs.readdirSync(d).forEach((f) => { const p = path.join(d, f); fs.statSync(p).isDirectory() ? walk(p) : files.push(p); });
   walk(dir);
-  const permis = /\$\{(COLUMNS|PROFILE|FROM|clause|sets\.join\(', '\)|k|t\[\d\])\}/;
+  // 0.11.0 : interpolations du service des tickets, reprises de la liste du gabarit 1.3.0 (constantes du module, clauses
+  // faites de constantes et de « ? »), plus handled.sql (handledClause : files et alias constants, valeurs en paramètres).
+  const permis = /\$\{(COLUMNS|LIST_COLUMNS|PROFILE|FROM|clause|inQ|sql|col|handled\.sql|sets\.join\(', '\)|k|t\[\d\]|handler \? '' : 'AND m\.is_internal = 0'|extra\.length \? ', ' \+ extra\.join\(', '\) : '')\}/;
   for (const f of files.filter((x) => x.endsWith('.js'))) {
     const src = fs.readFileSync(f, 'utf8');
     for (const m of src.matchAll(/prepare\(`([^`]*)`\)/g)) {

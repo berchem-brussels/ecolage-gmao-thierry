@@ -36,7 +36,7 @@ interface Entite { id: number; code: string; nom_fr: string; nom_nl: string }
 const PAGE = 50;
 /** Champs du détail qui valent 0 ou 1 (cases à cocher) ; « reponses » est un nombre et n'en fait pas partie. */
 // 0.9.0 : qualification d'une demande (première, priorité confirmée, photos visibles ; motif et consignes notés par 1).
-const BOOLEENS = new Set(['danger', 'beneficiaire_texte', 'is_active', 'obligatoire', 'remarque', 'brouillon', 'premiere', 'priorite_confirmee', 'photos_visibles', 'motif_priorite', 'consignes']);
+const BOOLEENS = new Set(['danger', 'beneficiaire_texte', 'is_active', 'obligatoire', 'remarque', 'brouillon', 'premiere', 'priorite_confirmee', 'photos_visibles', 'motif_priorite', 'consignes', 'internal']);
 const VIDE_DIT = new Set(['avant', 'apres']);
 /** Champs du détail qui portent un code traduit (R2, 0.9.1) : nom du champ → préfixe de la clé de traduction. */
 export const CODES: Record<string, string> = { etat: 'demande.etat_service' };

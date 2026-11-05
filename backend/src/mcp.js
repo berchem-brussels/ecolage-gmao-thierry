@@ -24,6 +24,7 @@ const echeances = require('./services/echeances');
 const demandes = require('./services/demandes');
 const brouillons = require('./services/brouillons');
 const pieces = require('./services/pieces');
+const tickets = require('./services/tickets');
 const qualification = require('./services/qualification');
 const vues = require('./services/vues-demandes');
 const parametres = require('./services/parametres');
@@ -53,6 +54,7 @@ const page = (fn) => (u, a) => { const { rows, pagination } = fn(u, { limit: 50,
  * Registre des outils. route = route REST couverte (contrôlée par le test de parité).
  * confirm = action irréversible ou destructrice : exposée en prepare_* et confirm_*.
  */
+const statusSchema = withId(S.ticketStatus);
 const TOOLS = [
   { name: 'get_profile', route: 'GET /api/auth/me', read: true, schema: { type: 'object', properties: {}, additionalProperties: false },
     fr: "Lit le profil de la personne connectée : ses entités, ses rôles dans chacune et l'entité active ; protection_donnees : mentions d'information RGPD de l'entité active en FR et en NL et contact du DPO.",
@@ -322,7 +324,11 @@ const TOOLS = [
     run: (u) => connexion.lire(u) },
   { name: 'update_auth_settings', route: 'PUT /api/settings/auth', confirm: true, schema: S.authSettings,
     fr: "Règle la connexion Microsoft : mode local, sso_optional ou sso, locataire, application, secret, adresse publique, domaines (deux appels : prepare_update_auth_settings puis confirm_update_auth_settings). Le mode sso est refusé tant qu'aucun administrateur actif ne peut se connecter (administrateur).", nl: 'Stelt de Microsoft-aanmelding in: modus local, sso_optional of sso, tenant, toepassing, geheim, publiek adres, domeinen (twee oproepen: prepare_update_auth_settings en dan confirm_update_auth_settings). De modus sso wordt geweigerd zolang geen actieve beheerder kan aanmelden (beheerder).',
-    summary: (u, a) => ({ action: 'update_auth_settings', avant: connexion.lire(u), changements: { ...a, client_secret: a.client_secret ? '***' : undefined } }),
+    summary: (u, a) => {
+      // ID du secret refusé dès le premier appel (0.11.0, DV-106) ; le second appel le refuse aussi par connexion.regler.
+      if (a.client_secret && connexion.ID_SECRET.test(a.client_secret)) throw new AppError(400, 'SECRET_IS_ID');
+      return { action: 'update_auth_settings', avant: connexion.lire(u), changements: { ...a, client_secret: a.client_secret ? '***' : undefined } };
+    },
     run: (u, a) => connexion.regler(u, a, 'mcp') },
   { name: 'get_parametre', route: 'GET /api/parametres/:cle', read: true, schema: S.parametreParams,
     fr: "Lit un paramètre de l'instance par sa clé, par exemple app.organisation_fr (administrateur).", nl: 'Leest een parameter van de installatie op basis van zijn sleutel, bijvoorbeeld app.organisation_fr (beheerder).',
@@ -385,6 +391,36 @@ const TOOLS = [
     fr: 'Désactive un compte et ferme ses sessions (administrateur).', nl: 'Deactiveert een account en sluit zijn sessies (beheerder).',
     summary: (u, a) => { admin(u); return { action: 'deactivate_user', user: users.get(u, a.id) }; },
     run: (u, a) => { admin(u); return users.deactivate(u, a.id, 'mcp'); } },
+  // Tickets (standard, section 13.5 ; 0.11.0) : outils du gabarit 1.3.0 repris à l'identique ; la cloison par entité est dans le service.
+  { name: 'list_tickets_to_handle', route: 'GET /api/tickets/to-handle', read: true, schema: { type: 'object', properties: {}, additionalProperties: false },
+    fr: "Liste les tickets ouverts de cette application que la personne connectée peut traiter, avec leur contexte (écran, version, dernière erreur).",
+    nl: 'Lijst van de open tickets van deze toepassing die de aangemelde persoon kan behandelen, met hun context (scherm, versie, laatste fout).',
+    run: (u) => tickets.toHandle(u) },
+  { name: 'list_tickets', route: 'GET /api/tickets', read: true, schema: S.ticketList,
+    fr: 'Liste les tickets visibles (filtres status, type, queue, open_only, mine, q).', nl: 'Lijst van de zichtbare tickets (filters status, type, queue, open_only, mine, q).',
+    run: (u, a) => tickets.list(u, { limit: 50, offset: 0, ...a }) },
+  { name: 'ticket_stats', route: 'GET /api/tickets/stats', read: true, schema: { type: 'object', properties: {}, additionalProperties: false },
+    fr: 'Compteurs de pilotage des tickets (traitants).', nl: 'Stuurcijfers van de tickets (behandelaars).',
+    run: (u) => tickets.stats(u) },
+  { name: 'get_ticket', route: 'GET /api/tickets/:id', read: true, schema: idSchema,
+    fr: "Lit un ticket et son fil d'échanges.", nl: 'Leest een ticket en zijn berichtenreeks.',
+    run: (u, a) => tickets.get(u, a.id) },
+  { name: 'get_ticket_screenshot', route: 'GET /api/tickets/:id/screenshot', read: true, schema: idSchema,
+    fr: "Rend la capture jointe au ticket (data URL).", nl: 'Geeft de schermafbeelding van het ticket terug (data-URL).',
+    run: (u, a) => ({ screenshot: tickets.screenshot(u, a.id) }) },
+  { name: 'create_ticket', route: 'POST /api/tickets', schema: S.ticketCreate,
+    fr: 'Crée un ticket au nom de la personne connectée.', nl: 'Maakt een ticket aan namens de aangemelde persoon.',
+    run: (u, a) => tickets.create(u, a, 'mcp') },
+  { name: 'update_ticket', route: 'PUT /api/tickets/:id', schema: withId(S.ticketUpdate),
+    fr: 'Modifie un ticket (contenu par le demandeur tant que nouveau, traitement par le traitant).', nl: 'Wijzigt een ticket (inhoud door de aanvrager zolang nieuw, behandeling door de behandelaar).',
+    run: (u, { id, ...a }) => tickets.update(u, id, a, 'mcp') },
+  { name: 'change_ticket_status', route: 'POST /api/tickets/:id/status', confirm: true, schema: statusSchema,
+    fr: 'Change le statut d’un ticket selon les transitions permises, avec motif si requis.', nl: 'Wijzigt de status van een ticket volgens de toegestane overgangen, met reden indien vereist.',
+    summary: (u, a) => ({ action: 'change_ticket_status', ticket: tickets.get(u, a.id).reference, to: a.to, reason: a.reason }),
+    run: (u, { id, ...a }) => tickets.changeStatus(u, id, a, 'mcp') },
+  { name: 'add_ticket_message', route: 'POST /api/tickets/:id/messages', schema: withId(S.ticketMessage),
+    fr: "Ajoute un message ou une note interne au fil d'un ticket.", nl: 'Voegt een bericht of interne nota toe aan een ticket.',
+    run: (u, { id, ...a }) => tickets.addMessage(u, id, a, 'mcp') },
 ];
 
 const validators = new Map(TOOLS.map((t) => [t.name, ajv.compile(t.schema)]));

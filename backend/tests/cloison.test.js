@@ -37,6 +37,9 @@ const RESSOURCES = [
   { route: 'GET /api/questions-categorie/:id', tool: 'get_question_categorie', id: (ent) => objets[ent.code].question },
   { route: 'GET /api/pieces/:id', tool: 'get_piece', id: (ent) => objets[ent.code].piece },
   { route: 'GET /api/pieces/:id/fichier', tool: null, id: (ent) => objets[ent.code].piece },
+  // 0.11.0 (DV-97, DV-107) : question métier de l'entité, lue par son service technique et par personne d'autre.
+  { route: 'GET /api/tickets/:id', tool: 'get_ticket', id: (ent) => objets[ent.code].ticket },
+  { route: 'GET /api/tickets/:id/screenshot', tool: 'get_ticket_screenshot', id: (ent) => objets[ent.code].ticket, statusOwn: 404 },
 ];
 
 /** Écritures cloisonnées : même attente, 403 depuis l'autre entité, et l'objet n'a pas bougé. */
@@ -58,6 +61,10 @@ const ECRITURES = [
   { route: 'DELETE /api/pieces/:id', body: {}, tool: 'prepare_delete_piece', id: (ent) => objets[ent.code].piece },
   // 0.9.0 (GES-04) : qualification d'une demande de l'autre entité, avec une catégorie et un lieu de l'autre entité.
   { route: 'POST /api/demandes/:id/qualifier', body: { categorie_id: 1, lieu_id: 1, priorite: 'P3' }, tool: 'qualifier_demande', id: (ent) => objets[ent.code].demande },
+  // 0.11.0 : traitement d'une question métier de l'autre entité.
+  { route: 'PUT /api/tickets/:id', body: { priority: 'P1', reason: 'Piraté' }, tool: 'update_ticket', id: (ent) => objets[ent.code].ticket },
+  { route: 'POST /api/tickets/:id/status', body: { to: 'in_progress' }, tool: 'prepare_change_ticket_status', id: (ent) => objets[ent.code].ticket },
+  { route: 'POST /api/tickets/:id/messages', body: { body: 'Piraté' }, tool: 'add_ticket_message', id: (ent) => objets[ent.code].ticket },
 ];
 
 /** Dépôt d'une pièce jointe au brouillon (formulaire multipart), comme le navigateur. */
@@ -90,7 +97,11 @@ before(async () => {
     assert.equal(demande.body.data.pieces.length, 1, 'la pièce du brouillon passe à la demande');
     const plomberie = (await c.get('/api/categories?niveau=domaine&q=plomberie')).body.data[0];
     const question = (await c.get(`/api/categories/${plomberie.id}/questions`)).body.data[0];
-    objets[ent.code] = { lieu: lieu.body.data.id, valeur: valeur.id, categorie: categorie.id, jour: jour.id, demande: demande.body.data.id, question: question.id, piece: piece.body.data.id };
+    // Question métier déposée par un demandeur de l'entité : le gestionnaire de l'entité la traite, ce n'est pas la sienne.
+    const demandeur = await person(srv.base, admin, `demandeur.${ent.code}@exemple.test`, ent.id);
+    const ticket = await demandeur.post('/api/tickets', { type: 'question', title: `Question ${ent.code}` });
+    assert.equal(ticket.status, 201, JSON.stringify(ticket.body));
+    objets[ent.code] = { lieu: lieu.body.data.id, valeur: valeur.id, categorie: categorie.id, jour: jour.id, demande: demande.body.data.id, question: question.id, piece: piece.body.data.id, ticket: ticket.body.data.id };
   }
 });
 after(() => srv.stop());
@@ -155,6 +166,10 @@ for (const w of ECRITURES) {
     const demande = (await gestB.get(`/api/demandes/${objets.BB.demande}`)).body.data;
     assert.equal(demande.etat, 'a_qualifier', 'la demande n’a pas été qualifiée');
     assert.equal(demande.qualifiee_par, null);
+    const ticket = (await gestB.get(`/api/tickets/${objets.BB.ticket}`)).body.data;
+    assert.equal(ticket.status, 'new', 'le ticket n’a pas été pris en charge');
+    assert.equal(ticket.priority, 'P4');
+    assert.equal(ticket.messages.filter((m) => m.kind === 'message').length, 0, 'aucun message ajouté');
   });
 }
 
@@ -265,6 +280,6 @@ test('toute route qui porte un identifiant d’entité figure dans la liste des 
     const key = `${r.method} ${r.path}`;
     if (/^\/api\/entites\/:id/.test(r.path) && !instance.has(key)) assert.ok(declared.has(key), `${key} hors de la liste`);
     // Ressources métier rattachées à une entité : toute route à identifiant est essayée depuis l'autre entité.
-    if (/^\/api\/(lieux|listes-valeurs|categories|questions-categorie|jours-non-ouvres|demandes|pieces)\/:id/.test(r.path)) assert.ok(declared.has(key) || ecritures.has(key), `${key} hors de la liste`);
+    if (/^\/api\/(lieux|listes-valeurs|categories|questions-categorie|jours-non-ouvres|demandes|pieces|tickets)\/:id/.test(r.path)) assert.ok(declared.has(key) || ecritures.has(key), `${key} hors de la liste`);
   }
 });

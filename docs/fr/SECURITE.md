@@ -2,6 +2,61 @@
 
 Le français fait foi. Grille de la section 10.2 du standard, rejouée à chaque version. « Non joué » veut dire que le contrôle n'a pas tourné.
 
+## 0.11.0 (05/11/2026)
+
+Tickets (standard, section 13.5), modules du gabarit 1.3.0 repris et adaptés aux rôles par entité (DV-97, DV-107) ; quatre remarques de la recette de la 0.10.0 (DV-106). Environnement : bac à sable de Claude, Node 22.23.4 ; parcours `ci.yml` rejoué sous Node 20.20.2. Aucune dépendance nouvelle ; migration `010_tickets`.
+
+| Famille | Contrôle | Résultat |
+| --- | --- | --- |
+| Autorisation (IDOR) | Question métier lue, traitée, commentée et modifiée par le seul service technique de l'entité du ticket, et par son demandeur ; incident, bug et souhait par l'administrateur ; autre entité 403, par l'API et par le MCP ; une personne habilitée dans les deux entités ne traite que l'entité active | Conforme (`tickets.test.js`, `cloison.test.js` : 2 lectures et 3 écritures de plus) |
+| Autorisation | Note interne invisible du demandeur et refusée à qui ne traite pas la file ; demandeur limité à son contenu tant que le ticket est nouveau ; affectation à une personne qui ne traite pas la file dans l'entité du ticket refusée (`ASSIGNEE_INVALIDE`) ; question sans entité active refusée (`NO_ENTITE`) | Conforme (`tickets.test.js`) |
+| Autorisation | Transfert vers une file que la personne ne traite pas : confirmation sans le contenu du ticket | Conforme (`tickets.test.js`) |
+| Logique | Transitions contrôlées par une table ; motif obligatoire pour l'attente, la résolution, le rejet, l'annulation, la réouverture, le changement de priorité ou de file ; ticket fermé sans modification ni message (`TICKET_CLOSED`) ; réouverture dans le délai réglé | Conforme (`tickets.test.js`, tests du gabarit) |
+| Validation | Schémas `ajv` du gabarit (`additionalProperties: false`) ; paramètres des files contrôlés : rôles connus seulement, délai de 1 à 365 jours, délais P1 à P4 cohérents | Conforme (`tickets.test.js`, `parametres.test.js`) |
+| Fichiers | Capture : PNG ou JPEG reconnu sur ses premiers octets, 2 Mo au plus, structure parcourue et métadonnées retirées par `cleanPhoto` (EXIF, GPS, commentaire) ; image mal formée refusée ; servie avec `Content-Security-Policy: default-src 'none'`, par le cookie de session, jamais sans session | Conforme (`tickets.test.js`) |
+| API | Corps de `/api/tickets` limité à 4 Mo (capture), toutes les autres routes à 256 ko | Conforme (revue de `app.js`) |
+| Injections | Requêtes paramétrées ; interpolations du service des tickets limitées à des constantes et à `handledClause` (files et alias constants, valeurs en paramètres) | Conforme (`securite.test.js`, liste élargie) |
+| Données | Paramètres des tickets jamais servis sans session (`/api/settings/public` limité à l'identité et à la palette) ; journal d'audit des tickets sans le titre ni le texte, avec l'entité du ticket | Conforme (`tickets.test.js`) |
+| Authentification | Secret client à la forme d'un identifiant refusé (`SECRET_IS_ID`) par l'API et dès le premier appel du MCP ; secret enregistré inchangé, valeur absente du journal | Conforme (`sso.test.js`) |
+| Journaux | Code d'erreur de Microsoft gardé seul (`AADSTS` suivi de chiffres), sans le reste du message (identifiant de trace) | Conforme (`sso.test.js`) |
+| Secrets commités | `.gitignore` inchangé ; aucune valeur de NIXUS ni d'Entra dans l'archive | Conforme |
+| Infrastructure | Dockerfile, compose, `nginx.conf`, `backup.sh`, `.env`, `ci.yml` inchangés ; les captures sont en base et partent avec la sauvegarde | Conforme |
+| Dépendances | `npm audit --omit=dev` serveur | 0 vulnérabilité ; aucune dépendance nouvelle |
+| Dépendances | `npm audit --omit=dev` interface | 3 modérées (E-09), inchangées |
+| LLM et MCP | Neuf outils des tickets sous les droits de la personne ; changement de statut en deux appels ; parité route et outil ; lecture par le navigateur de la personne sur le réseau interne (DV-108) : aucun jeton ne passe par l'assistant, contenu d'un ticket traité comme une donnée | Conforme (`mcp.test.js`, `tickets.test.js`) ; lecture par le navigateur vérifiée dans Chromium |
+| Migration | `010_tickets` : tables créées ; base 0.11.0 ouverte par le serveur 0.10.0 puis de nouveau par la 0.11.0 | Conforme (connexion, comptes et tickets corrects dans les deux sens) |
+
+Les trois contrôles qui ne restent jamais « non joués » (secrets commités, contrôle d'accès côté serveur, IDOR) ont été joués.
+
+### Preuve d'échec des nouveaux tests (0.11.0)
+
+Chaque protection retirée seule, suites rejouées :
+
+- cloison du traitant retirée (`canHandle` sans l'entité) : 10 échecs (`tickets.test.js`, `cloison.test.js`) ;
+- cloison des listes retirée (`handledClause` sans l'entité) : 1 échec ;
+- contrôle de l'affectation retiré : 1 échec ;
+- question sans entité active permise : 1 échec ;
+- groupe des tickets servi sans session : 1 échec ;
+- formats des paramètres des tickets non contrôlés : 1 échec ;
+- nettoyage de la capture retiré : 1 échec ;
+- refus de l'ID du secret retiré de l'API : 1 échec (`sso.test.js`) ;
+- refus de l'ID du secret retiré du MCP : 1 échec ;
+- code `AADSTS` non gardé : 1 échec ;
+- mention « Enregistré le … » retirée du serveur : 1 échec.
+
+Interface (`pages.test.tsx`) :
+
+- fenêtre des nouveautés fermée par un clic à côté : 1 échec ;
+- choix de la langue retiré de la fenêtre : 1 échec ;
+- règle du secret retirée : 1 échec ;
+- mention « Enregistré le … » retirée : 1 échec ;
+- bouton « Signaler » inerte : 1 échec ;
+- contexte sans la dernière erreur de l'API : 1 échec ;
+- actions du traitant montrées sans contrôle : 1 échec ;
+- transfert hors de sa file non géré : 1 échec.
+
+Code de la 0.11.0 : tout réussi.
+
 ## 0.10.0 (05/11/2026)
 
 Connexion Microsoft compatible avec Portal (standard, section 8.6), modules du gabarit 1.3.0 repris (DV-99). Environnement : bac à sable de Claude, Node 22.23.4 ; parcours `ci.yml` rejoué sous Node 20.20.2. Aucune dépendance nouvelle ; migration `009_sso`.

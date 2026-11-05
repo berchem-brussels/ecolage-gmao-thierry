@@ -2,6 +2,37 @@
   "_description": "Notes de version pour les utilisateurs, en FR et en NL, sans terme technique (standard v3.2, sections 13.1 et 17.8 ; écart E-07). Une note par version, de la plus récente à la plus ancienne. Chaque ligne a un public : « tous », « admin » (administrateur de l'application) ou une permission du catalogue des rôles (par exemple « parametres:gerer »), lue dans l'entité active. La note de la version installée s'affiche une fois à la première connexion qui suit la mise à jour ; toutes restent relisibles dans Aide, Nouveautés.",
   "notes": [
     {
+      "version": "0.11.0",
+      "date": "2026-11-05",
+      "lignes": [
+        {
+          "public": "tous",
+          "fr": "Bouton « Signaler » en haut de chaque écran : signalez un problème, posez une question sur l'application ou proposez une amélioration sans quitter l'écran. Vous suivez vos signalements dans Aide, Tickets.",
+          "nl": "Knop « Melden » bovenaan elk scherm: meld een probleem, stel een vraag over de toepassing of stel een verbetering voor zonder het scherm te verlaten. U volgt uw meldingen in Help, Tickets."
+        },
+        {
+          "public": "tous",
+          "fr": "La fenêtre des nouveautés ne se ferme plus par un clic à côté ; vous y changez la langue sans la fermer.",
+          "nl": "Het venster met de nieuwigheden sluit niet meer door ernaast te klikken; u wijzigt er de taal zonder het te sluiten."
+        },
+        {
+          "public": "demandes:qualifier",
+          "fr": "Aide, Tickets : les questions des agents de votre entité sur l'application arrivent chez vous. Répondez dans le fil du ticket, puis marquez-le résolu.",
+          "nl": "Help, Tickets: de vragen van de medewerkers van uw entiteit over de toepassing komen bij u terecht. Antwoord in de berichtenreeks van het ticket en markeer het daarna als opgelost."
+        },
+        {
+          "public": "admin",
+          "fr": "Aide, Tickets : les incidents, bugs et souhaits des deux entités arrivent chez vous. Paramètres, onglet « Tickets » : qui traite chaque file et les délais.",
+          "nl": "Help, Tickets: de incidenten, bugs en wensen van beide entiteiten komen bij u terecht. Parameters, tabblad « Tickets »: wie elke wachtrij behandelt en de termijnen."
+        },
+        {
+          "public": "admin",
+          "fr": "Paramètres, onglet « Connexion Microsoft » : la date et l'auteur du dernier enregistrement s'affichent, et l'ID d'un secret saisi à la place de sa valeur est refusé.",
+          "nl": "Parameters, tabblad « Microsoft-aanmelding »: de datum en de auteur van de laatste opslag worden getoond, en de id van een geheim die in plaats van de waarde wordt ingegeven, wordt geweigerd."
+        }
+      ]
+    },
+    {
       "version": "0.10.0",
       "date": "2026-11-05",
       "lignes": [

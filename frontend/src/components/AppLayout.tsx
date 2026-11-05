@@ -3,6 +3,8 @@
  * menu latéral sombre de 230 px replié à 80 px, tiroir de 260 px sous 768 px, en-tête blanc de 56 px collant,
  * bascule Simple ou Complet, langue, thème, menu de l'utilisateur, lien d'évitement, chatbot.
  * Sélecteur de l'entité active en boutons (choix exclusif, standard section 12.4 ; cahier des charges ROL-03).
+ * Bouton « Signaler » sur chaque écran (standard, section 13.5 ; gabarit 1.3.0, 0.11.0) : l'écran est nommé par son
+ * libellé dans le menu ; sur téléphone, l'icône seule avec son nom accessible.
  */
 import { useState } from 'react';
 import { Avatar, Button, Drawer, Dropdown, Grid, Layout, Menu, Segmented, Select, Tag, Tooltip, message } from 'antd';
@@ -10,7 +12,7 @@ import type { MenuProps } from 'antd';
 import {
   HomeOutlined, ApartmentOutlined, TeamOutlined, QuestionCircleOutlined, EyeOutlined, MenuFoldOutlined, MenuUnfoldOutlined,
   LogoutOutlined, LockOutlined, SunOutlined, MoonOutlined, ControlOutlined, BankOutlined, UnorderedListOutlined, SettingOutlined, AuditOutlined, FieldTimeOutlined,
-  PlusOutlined, ProfileOutlined, InboxOutlined, EnvironmentOutlined,
+  PlusOutlined, ProfileOutlined, InboxOutlined, EnvironmentOutlined, AlertOutlined, FlagOutlined,
 } from '@ant-design/icons';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -21,6 +23,7 @@ import Chatbot from './Chatbot';
 import PasswordModal from './PasswordModal';
 import NouveautesModal from './NouveautesModal';
 import LieuHabituelModal from './LieuHabituelModal';
+import ReportTicketModal from './ReportTicketModal';
 import { hasPermission, useRoles } from '../useRoles';
 import { routeActive, useModules } from '../moduleMap';
 
@@ -34,6 +37,7 @@ export default function AppLayout() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [pwdOpen, setPwdOpen] = useState(false);
   const [lieuOpen, setLieuOpen] = useState(false);
+  const [reportOpen, setReportOpen] = useState(false);
   const { user, isAdmin, logout, savePreferences, setEntite, entite, roles } = useAuth();
   const catalogue = useRoles();
   const can = (p: string) => hasPermission(catalogue, roles, p);
@@ -69,9 +73,15 @@ export default function AppLayout() {
     ] }] : []),
     { type: 'group', label: t('nav.group.help'), children: [
       { key: '/help', icon: <QuestionCircleOutlined />, label: t('nav.help') },
+      { key: '/tickets', icon: <AlertOutlined />, label: t('nav.tickets') },
       { key: '/accessibility', icon: <EyeOutlined />, label: t('nav.accessibility') },
     ] },
   ];
+
+  // Nom de l'écran joint au ticket : libellé du menu de l'adresse la plus proche ; la fiche d'aide le donnera en 0.12.0.
+  const entrees = (menuItems || []).flatMap((g) => ((g as { children?: { key: string; label: string }[] }).children || []));
+  const ecran = entrees.filter((e) => e.key === location.pathname || (e.key !== '/' && location.pathname.startsWith(`${e.key}/`)))
+    .sort((a, b) => b.key.length - a.key.length)[0]?.label || (location.pathname === '/' ? t('nav.home') : location.pathname);
 
   const go: MenuProps['onClick'] = ({ key }) => { navigate(key); setDrawerOpen(false); };
   const changeLang = (l: 'fr' | 'nl') => { setLang(l); savePreferences({ preferred_lang: l }); };
@@ -130,6 +140,7 @@ export default function AppLayout() {
       <a className="skip-link" href="#main-content">{t('layout.skip')}</a>
       <NouveautesModal />
       <LieuHabituelModal open={lieuOpen} onClose={() => setLieuOpen(false)} />
+      <ReportTicketModal open={reportOpen} onClose={() => setReportOpen(false)} screenName={ecran} />
       <PasswordModal open={pwdOpen || user?.must_change_password === 1} forced={user?.must_change_password === 1} onClose={() => setPwdOpen(false)} />
       {!isMobile && (
         <Sider trigger={null} collapsible collapsed={collapsed} width={230}
@@ -156,6 +167,10 @@ export default function AppLayout() {
                 {isMobile ? null : t('nav.demande.nouvelle')}
               </Button>
             )}
+            <Button size={isMobile ? 'middle' : 'small'} icon={<FlagOutlined />} onClick={() => setReportOpen(true)}
+              aria-label={isMobile ? t('tickets.report') : undefined}>
+              {isMobile ? null : t('tickets.report')}
+            </Button>
             {entiteSelector}
             {!isMobile && <Segmented size="small" aria-label={t('layout.mode')} value={user?.ui_mode || 'simple'}
               onChange={(v) => savePreferences({ ui_mode: v as 'simple' | 'complet' })}

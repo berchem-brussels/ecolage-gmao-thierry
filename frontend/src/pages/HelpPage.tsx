@@ -17,7 +17,7 @@ import { moduleActif, useModules } from '../moduleMap';
  * Questions de la FAQ ; une question rattachée à un module n'apparaît que si le module est actif, une question réservée
  * (administrateur ou permission) seulement à qui peut agir.
  */
-const FAQ: { n: number; module?: string; admin?: boolean; permission?: string }[] = [
+const FAQ: { n: number; module?: string; admin?: boolean; permission?: string; traitant?: boolean }[] = [
   { n: 1 }, { n: 2 }, { n: 3 }, { n: 4, module: 'patrimoine' }, { n: 5, module: 'patrimoine' }, { n: 6, module: 'patrimoine' }, { n: 7 },
   { n: 8, admin: true }, { n: 9, admin: true }, { n: 10 }, { n: 11, permission: 'parametres:gerer' },
   { n: 12 }, { n: 13 }, { n: 14, permission: 'delais:gerer' }, { n: 15, permission: 'categories:gerer' },
@@ -29,6 +29,8 @@ const FAQ: { n: number; module?: string; admin?: boolean; permission?: string }[
   { n: 25, module: 'demandes' }, { n: 26, module: 'demandes' },
   // 0.9.0 : tableau de bord et qualification, pour le service technique.
   { n: 27, permission: 'demandes:entite' }, { n: 28, permission: 'demandes:entite' },
+  // 0.11.0 : tickets ; le traitement pour qui traite une file (service technique ou administrateur).
+  { n: 29 }, { n: 30, traitant: true },
 ];
 const ONGLETS = ['guide', 'faq', 'nouveautes', 'contact'];
 
@@ -83,6 +85,7 @@ export default function HelpPage() {
               { key: 'entite', label: t('layout.entite'), children: <Typography.Paragraph>{t('help.guide.entite')}</Typography.Paragraph> },
               ...(can('lieux:lire') && on('patrimoine') ? [{ key: 'patrimoine', label: t('nav.patrimoine'), children: <Typography.Paragraph>{t('help.guide.patrimoine')}</Typography.Paragraph> }] : []),
               { key: 'nouveautes', label: t('help.nouveautes'), children: <Typography.Paragraph>{t('help.guide.nouveautes')}</Typography.Paragraph> },
+              { key: 'tickets', label: t('nav.tickets'), children: <Typography.Paragraph>{t('help.guide.tickets')}</Typography.Paragraph> },
               { key: 'delais', label: t('help.guide.delais.titre'), children: <Typography.Paragraph>{t('help.guide.delais')}</Typography.Paragraph> },
               ...(can('categories:gerer') ? [{ key: 'referentiel', label: t('nav.referentiel'), children: <Typography.Paragraph>{t('help.guide.referentiel')}</Typography.Paragraph> }] : []),
               ...(can('parametres:gerer') ? [
@@ -100,7 +103,7 @@ export default function HelpPage() {
             ]} />
           ) },
           { key: 'faq', label: t('help.faq'), children: (
-            <Collapse items={FAQ.filter((f) => on(f.module) && (!f.admin || isAdmin) && (!f.permission || can(f.permission))).map(({ n }) => ({ key: String(n), label: t(`help.faq.q${n}`), children: <Typography.Paragraph>{t(`help.faq.a${n}`)}</Typography.Paragraph> }))} />
+            <Collapse items={FAQ.filter((f) => on(f.module) && (!f.admin || isAdmin) && (!f.permission || can(f.permission)) && (!f.traitant || isAdmin || can('demandes:qualifier'))).map(({ n }) => ({ key: String(n), label: t(`help.faq.q${n}`), children: <Typography.Paragraph>{t(`help.faq.a${n}`)}</Typography.Paragraph> }))} />
           ) },
           { key: 'nouveautes', label: t('help.nouveautes'), children: (
             <List loading={notes === null} dataSource={notes || []} rowKey="version" locale={{ emptyText: t('common.nodata') }} renderItem={(n) => (

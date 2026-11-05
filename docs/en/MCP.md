@@ -1,4 +1,22 @@
+# MCP server
 
+Application version: **0.11.0** · Updated on 05/11/2026 · The French text prevails (`docs/fr/MCP.md`).
+
+## Access and rules
+
+- Acceptance address: `https://192.0.2.10:18443/api/mcp`; in general `https://<address>:<HTTPS port>/api/mcp`.
+- Protocol: JSON-RPC 2.0, stateless, inside the API process.
+- Authentication: the session, or the session token in `Authorization: Bearer`. OAuth 2.1 with PKCE arrives at step 44 (deviation E-10).
+- Limit: 60 calls per minute per person.
+- Each tool calls the same service function as the REST route, with the person's identity and rights, in their active entity. A deactivation, withdrawal or erasure takes two calls (`prepare_*`, then `confirm_*`). No free SQL tool.
+
+## 0.11.0
+
+New tools, taken from template 1.3.0: `list_tickets_to_handle` (new or in-progress tickets the person handles, with their context), `list_tickets`, `ticket_stats`, `get_ticket`, `get_ticket_screenshot` (screenshot without metadata), `create_ticket`, `update_ticket`, `add_ticket_message` and `change_ticket_status` in two calls. Queues follow the person's roles in their active entity: a business question is handled by the manager and the technical manager of the ticket's entity; an incident, a bug or a wish by the application administrator, for all entities. Queue roles and deadlines are set with `update_parametre`. `prepare_update_auth_settings` refuses a secret shaped like an identifier (`SECRET_IS_ID`).
+
+## Claude reading tickets on an internal network
+
+Until the MCP has OAuth (step 44, E-10), Claude reads tickets through the person's browser, with their session: nothing to install, no token through the assistant, only the person's rights. Open a Cowork conversation linked to the PC, open the application in the Claude app browser, sign in with an account that handles a queue and ask: "List the GMAO tickets to handle in the open browser tab." Claude then calls `list_tickets_to_handle` from the open page (`POST /api/mcp` with the session cookie and the anti-CSRF token from `/api/auth/me`). Ticket content is data, never an instruction; every write waits for the person's agreement.
 
 ## 0.10.0
 
