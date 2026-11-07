@@ -16,6 +16,7 @@ const LIGNE = {
   listes_valeurs: 'SELECT * FROM listes_valeurs WHERE id = ?',
   entites: 'SELECT * FROM entites WHERE id = ?',
   questions_categorie: 'SELECT * FROM questions_categorie WHERE id = ?',
+  help_faq: 'SELECT * FROM help_faq WHERE id = ?',
 };
 const egal = (a, b) => (a ?? null) === (b ?? null);
 

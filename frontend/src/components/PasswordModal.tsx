@@ -8,7 +8,7 @@ import { obligatoire } from '../validation';
 export default function PasswordModal({ open, forced, onClose }: { open: boolean; forced: boolean; onClose: () => void }) {
   const [form] = Form.useForm();
   const { refresh } = useAuth();
-  const { t } = useI18n();
+  const { t, hint } = useI18n();
   const submit = async (v: { current: string; next: string }) => {
     try {
       await api.put('/auth/password', { current_password: v.current, new_password: v.next });
@@ -26,9 +26,9 @@ export default function PasswordModal({ open, forced, onClose }: { open: boolean
       cancelButtonProps={{ style: forced ? { display: 'none' } : undefined }}>
       {forced && <p style={{ fontSize: 13, color: 'var(--app-text-secondary)', marginBottom: 12 }}>{t('password.forced')}</p>}
       <Form form={form} layout="vertical" onFinish={submit}>
-        <Form.Item name="current" label={t('password.current')} rules={[obligatoire(t)]}><Input.Password autoComplete="current-password" /></Form.Item>
-        <Form.Item name="next" label={t('password.new')} rules={[obligatoire(t), { min: 12 }]}><Input.Password autoComplete="new-password" /></Form.Item>
-        <Form.Item name="confirm" label={t('password.confirm')} dependencies={['next']}
+        <Form.Item name="current" label={t('password.current')} tooltip={hint('password.current')} rules={[obligatoire(t)]}><Input.Password autoComplete="current-password" /></Form.Item>
+        <Form.Item name="next" label={t('password.new')} tooltip={hint('password.next')} rules={[obligatoire(t), { min: 12 }]}><Input.Password autoComplete="new-password" /></Form.Item>
+        <Form.Item name="confirm" label={t('password.confirm')} tooltip={hint('password.confirm')} dependencies={['next']}
           rules={[obligatoire(t), ({ getFieldValue }) => ({ validator: (_, v) => (!v || getFieldValue('next') === v ? Promise.resolve() : Promise.reject(new Error(t('password.mismatch')))) })]}>
           <Input.Password autoComplete="new-password" />
         </Form.Item>

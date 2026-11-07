@@ -25,7 +25,7 @@ const MAX = 10;
 export default function QuestionsFiche({ categorie, heritees, onChange }: {
   categorie: Categorie; heritees: QuestionPosee[]; onChange: () => void;
 }) {
-  const { t, lang } = useI18n();
+  const { t, lang, hint } = useI18n();
   const [questions, setQuestions] = useState<QuestionCategorie[]>([]);
   const [edition, setEdition] = useState<QuestionCategorie | 'nouvelle' | null>(null);
   const [motif, setMotif] = useState('');
@@ -136,9 +136,9 @@ export default function QuestionsFiche({ categorie, heritees, onChange }: {
         title={edition === 'nouvelle' ? t('ref.q.ajouter') : t('ref.q.modifier')}>
         {enEdition && <Typography.Paragraph style={{ fontSize: 12 }}><TraceFiche trace={enEdition.trace} /></Typography.Paragraph>}
         <Form key={enEdition?.id ?? 'nouvelle'} form={form} layout="vertical" onFinish={enregistrer} preserve={false} initialValues={initiales(edition)}>
-          <Form.Item name="question_fr" label={t('ref.q.question_fr')} rules={[texteObligatoire(t), { max: 200 }]}><Input lang="fr" /></Form.Item>
-          <Form.Item name="question_nl" label={t('ref.q.question_nl')} rules={[texteObligatoire(t), { max: 200 }]}><Input lang="nl" /></Form.Item>
-          <Form.Item name="type" label={t('ref.q.type')}>
+          <Form.Item name="question_fr" label={t('ref.q.question_fr')} tooltip={hint('ref.q.question')} rules={[texteObligatoire(t), { max: 200 }]}><Input lang="fr" /></Form.Item>
+          <Form.Item name="question_nl" label={t('ref.q.question_nl')} tooltip={hint('ref.q.question')} rules={[texteObligatoire(t), { max: 200 }]}><Input lang="nl" /></Form.Item>
+          <Form.Item name="type" label={t('ref.q.type')} tooltip={hint('ref.q.type')}>
             <Radio.Group optionType="button" aria-label={t('ref.q.type')}
               options={[{ value: 'oui_non', label: t('ref.q.type.oui_non') }, { value: 'choix', label: t('ref.q.type.choix') }]} />
           </Form.Item>
@@ -171,7 +171,7 @@ export default function QuestionsFiche({ categorie, heritees, onChange }: {
               )}
             </Form.List>
           )}
-          <Form.Item name="obligatoire" valuePropName="checked" extra={t('ref.q.obligatoire.help')}>
+          <Form.Item name="obligatoire" valuePropName="checked" label={t('ref.q.exigence')} tooltip={hint('ref.q.obligatoire')} extra={t('ref.q.obligatoire.help')}>
             <Checkbox>{t('ref.q.obligatoire')}</Checkbox>
           </Form.Item>
           <Button type="primary" htmlType="submit">{t('common.save')}</Button>

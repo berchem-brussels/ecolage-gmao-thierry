@@ -1,8 +1,27 @@
 # Manifeste
 
-Version de l'application : **0.11.0** · Mis à jour le 05/11/2026
+Version de l'application : **0.12.0** · Mis à jour le 06/11/2026
 
 Fichiers changés, dépendances et suites par version. Les décomptes sont recopiés de la sortie des commandes.
+
+## 0.12.0 (06/11/2026)
+
+Fichiers comparés à l'archive 0.11.0 par `diff -rq` (hors `node_modules` et `dist`). Pour le contrôle du `git status` (`GITHUB.md`, section 5) : aucune ligne `D` attendue ; 70 lignes `A` (34 fichiers et 36 captures), les autres `M`. Fichiers versés : 333 (263 en 0.11.0).
+
+- Nouveaux, racine : `recette.sh` ; `NOTES_LIVRAISON_v0.12.0.md`.
+- Nouveaux, serveur : `src/services/faq.js`, `src/routes/faq.js` (gabarit 1.3.0, adaptés aux entités), `src/services/refus-reglage.js` (R2), `src/recette-api.js` (contrôles après installation), `tests/faq.test.js`.
+- Nouveaux, interface : `src/help/` (`types.ts`, `index.ts`, `RichText.tsx`, `TopicView.tsx`, `HelpButton.tsx`, `FaqModal.tsx`, seize fiches dans `topics/`), `src/hints.ts`, `src/test/help.test.ts`, `help-capture/capture.spec.ts` et `playwright.help.config.ts`, `public/aide-captures/fr/` et `nl/` (18 captures chacun).
+- Nouveau, documentation : `docs/fonctionnel/aide.md`.
+- Modifiés, serveur : `config/notes-version.json` (note 0.12.0), `config/parametres-instance.json` (explication des rôles des files, R3), `config/roles.json` (`faq:gerer`) ; `src/app.js`, `src/audit.js` (`help_faq`), `src/database.js` (migration `011_faq`), `src/envelope.js` (texte propre à un refus, `messageOf`), `src/i18n-server.js` (`FAQ_SOURCE`, `FAQ_DEJA`), `src/mcp.js` (six outils), `src/routes/tickets.js`, `src/schemas.js`, `src/services/parametres.js` et `parametres-entite.js` (R2, R3), `src/services/session.js` (`files_tickets`, R6), `src/services/tickets.js` (`toFaq`, `faq_id`, `can_faq`) ; tests `categories`, `cloison`, `mcp`, `notes-version`, `numerotation`, `parametres`, `parametres-entite`, `tickets` ; `package.json` (version, `faq.test.js` dans `npm test`) et verrou (version).
+- Modifiés, interface : `components/AppLayout.tsx` (bouton « Aide », écran nommé par sa fiche, thème dans le menu sur téléphone), `ReglagesForm.tsx` (R1, R2), `ReportTicketModal.tsx`, `TicketDrawer.tsx` (« Ajouter à la FAQ »), `ConnexionPanel.tsx`, `PasswordModal.tsx`, `demandes/QualificationForm.tsx`, `referentiel/CalendrierTab.tsx`, `CategoriesTab.tsx`, `PrioritesTab.tsx`, `QuestionsFiche.tsx`, `SimulateurTab.tsx` (« ? ») ; `contexts/AuthContext.tsx`, `I18nContext.tsx` (`hint`) ; `pages/HelpPage.tsx` (centre d'aide), `HomePage.tsx`, `JournalPage.tsx` (R4), `TicketsPage.tsx` (R6), `EntitesPage.tsx`, `ListesValeursPage.tsx`, `LoginPage.tsx`, `PatrimoinePage.tsx`, `UsersPage.tsx` (« ? ») ; `i18n.ts` (libellés nouveaux, 18 rubriques d'avant retirées), `index.css` ; tests `i18n.test.ts`, `pages.test.tsx` ; `vitest.config.ts` (suites de `src/` seulement) ; `package.json` (version, `@playwright/test`, `help:capture`, `help:check`) et verrou ; `dist/` reconstruit.
+- Modifiés, documentation et racine : `.gitignore` (rapports des captures) ; `README.md`, `README.nl.md`, `README.en.md` ; `docs/fr`, `docs/nl`, `docs/en` (`APRES-DEPLOIEMENT.md`, `ARCHITECTURE.md`, `EXPLOITATION.md`, `MCP.md`, `SECURITE.md`) ; `ETAT.md`, `ECARTS-CDC.md`, `CHANGELOG.md`, `MANIFESTE.md`.
+- Inchangés : les deux Dockerfile, `nginx.conf`, `docker-entrypoint.sh`, `docker-compose.yml`, `.env.example`, `backup.sh`, `verifier-ports.sh`, `ci.yml`. La construction n'a pas besoin de `--no-cache`.
+- Retirés : aucun fichier.
+- Dépendances : `@playwright/test` ^1.56.1 en développement seulement (verrou : 1.65.0, avec `playwright` et `playwright-core`) ; serveur inchangé. Aucun `npm audit fix`.
+- Contrôle DV-09 de la séance, avant toute modification : archive 0.11.0 conforme à `ETAT.md` (2 460 201 octets, 396 entrées, SHA-256 `db46cd39…4c073`) ; serveur 410/410 ; audit du serveur 0 ; interface 181/181 sur trois lancements consécutifs ; construction et accessibilité 0 erreur. Aucun test instable.
+- Suites de la 0.12.0 : serveur 427/427 ; interface 217/217 sur trois lancements (et `help:check` 10/10) ; construction et accessibilité 0 erreur ; parcours `ci.yml` rejoué sous Node 20.20.2 sur les 333 fichiers versés : serveur 427/427, audit 0, interface 217/217, construction et accessibilité 0 erreur.
+- Navigateur réel : Chromium du bac à sable, serveur réel sur une base jetable de démonstration ; 36 captures produites, bouton « Aide » de chaque écran, en-tête à 360 px, image servie dans le panneau ; `recette.sh` joué contre cette base (neuf `OK`).
+- Images Docker : non reconstruites dans le bac à sable.
 
 ## 0.11.0 (05/11/2026)
 

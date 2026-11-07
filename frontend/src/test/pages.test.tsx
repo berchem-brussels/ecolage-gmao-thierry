@@ -22,6 +22,8 @@ const user: Record<string, unknown> & { nouveautes?: unknown[] } = {
   entites: [{ ...entites[0], roles: ['agent', 'gestionnaire'] }, { ...entites[1], roles: ['responsable'] }], entite_active_id: 1,
   protection_donnees: { mention_courte_fr: 'Vos données servent à traiter votre demande.', mention_courte_nl: 'Uw gegevens dienen voor uw aanvraag.',
     mention_fr: 'Administration fictive traite les données de cette demande.', mention_nl: 'Fictief bestuur verwerkt de gegevens van deze aanvraag.', dpo_contact: null },
+  // 0.12.0 (R6) : files de tickets traitées dans l'entité active ; un test la vide pour un agent qui n'en traite aucune.
+  files_tickets: ['business'],
 };
 const roles = [
   { code: 'agent', portee: 'entite', defaut: true, label_fr: 'Demandeur', label_nl: 'Aanvrager', description_fr: 'd', description_nl: 'd', permissions: ['lieux:lire', 'listes:lire'] },
@@ -141,6 +143,11 @@ const ticketBase = {
   can_handle: true, can_reopen: false, requester_id: 99, resolution: null, created_at: '2026-11-05 10:00:00',
 };
 let ticketDetail: Record<string, unknown> = { ...ticketBase };
+// FAQ locale (0.12.0) : une question commune générale et une question de l'entité AA rattachée à l'écran Tickets.
+const faqLocale = [
+  { id: 1, entite_id: null, entite_code: null, topic_id: null, question_fr: 'Qui contacter le week-end ?', question_nl: 'Wie contacteren in het weekend?', answer_fr: 'Le numéro d’urgence de votre entité.', answer_nl: 'Het noodnummer van uw entiteit.', is_active: 1, motif_desactivation: null, can_manage: true, source_ticket_reference: null },
+  { id: 2, entite_id: 1, entite_code: 'AA', topic_id: 'tickets', question_fr: 'Où voir la réponse à ma question ?', question_nl: 'Waar zie ik het antwoord op mijn vraag?', answer_fr: 'Dans le fil du ticket.', answer_nl: 'In de berichten van het ticket.', is_active: 1, motif_desactivation: null, can_manage: true, source_ticket_reference: 'TCK-2026-00001' },
+];
 const dernierDialogue = () => { const d = screen.getAllByRole('dialog'); return d[d.length - 1]; };
 // Connexion Microsoft (0.10.0) : mode local par défaut ; les tests de la section 8.6 le changent.
 let authConfig: Record<string, unknown> = { mode: 'local', microsoft: false, installed: true };
@@ -156,6 +163,9 @@ beforeEach(() => {
       : url.startsWith('/api/tickets/stats') ? { data: { open: 2, overdue: 1, unassigned: 1, resolved_30d: 3, by_priority: [], by_type: [], by_screen: [] }, meta: { envelope: 1 } }
       : /^\/api\/tickets\/\d+$/.test(url) && init?.method === 'PUT' ? { data: { id: 7, reference: 'TCK-2026-00007', queue: 'it', transferred: true }, meta: { envelope: 1 } }
       : /^\/api\/tickets\/\d+$/.test(url) ? { data: ticketDetail, meta: { envelope: 1 } }
+      : /^\/api\/tickets\/\d+\/faq$/.test(url) ? { data: { ...faqLocale[1], id: 3 }, meta: { envelope: 1 } }
+      : url.startsWith('/api/faq') && init?.method && init.method !== 'GET' ? { data: faqLocale[0], meta: { envelope: 1 } }
+      : url.startsWith('/api/faq') ? page(url.includes('topic_id=tickets') ? [faqLocale[1]] : faqLocale)
       : url.startsWith('/api/tickets') && init?.method === 'POST' ? { data: { id: 8, reference: 'TCK-2026-00008' }, meta: { envelope: 1 } }
       : url.startsWith('/api/tickets') ? page(ticketsListe)
       : url.startsWith('/api/lieux/arbre') ? { data: arbre, meta: { envelope: 1 } }
@@ -326,7 +336,8 @@ describe('écrans', () => {
       expect(await screen.findByRole('textbox', { name: fr ? 'Réponse en français 1' : 'Antwoord in het Frans 1' })).toBeInTheDocument();
       expect(screen.getByRole('textbox', { name: fr ? 'Réponse en néerlandais 2' : 'Antwoord in het Nederlands 2' })).toBeInTheDocument();
       expect(screen.getByRole('button', { name: fr ? 'Retirer la réponse 1' : 'Het antwoord verwijderen 1' })).toBeDisabled();
-      expect(screen.getByRole('checkbox', { name: fr ? 'Obligatoire' : 'Verplicht' })).not.toBeChecked();
+      // 0.12.0 : la case a un libellé de champ (« Exigence ») et son « ? » ; son nom accessible garde le texte visible.
+      expect(screen.getByRole('checkbox', { name: fr ? /Obligatoire/ : /Verplicht/ })).not.toBeChecked();
       const modal = document.querySelector('.ant-modal') as HTMLElement;
       const r2 = await axe.run(modal, { rules: { 'color-contrast': { enabled: false }, region: { enabled: false } } });
       expect(r2.violations.map((v) => `${v.id}: ${v.nodes.map((n) => n.html.slice(0, 200)).join(' | ')}`)).toEqual([]);
@@ -938,5 +949,262 @@ describe('connexion Microsoft compatible avec Portal (0.10.0, section 8.6)', () 
     cleanupAll();
     routes('/login?next=https%3A%2F%2Fexemple.com', <AfterLogin />);
     expect(await screen.findByText('/')).toBeInTheDocument();
+  });
+});
+
+describe('remarques de la recette de la 0.11.0 (0.12.0, DV-109)', () => {
+  const appels = () => (fetch as unknown as { mock: { calls: [string, RequestInit?][] } }).mock.calls;
+
+  it('R1 : « valeur par défaut » est un texte discret à côté du libellé, pas une étiquette qui ressemble à un bouton (FR et NL)', async () => {
+    const { container, unmount } = render(wrap(ReglagesEntitePage, 'fr'));
+    const etat = (await screen.findAllByText('(valeur par défaut)'))[0];
+    expect(etat.closest('.ant-tag')).toBeNull();
+    expect(etat.closest('button')).toBeNull();
+    expect(container.querySelector('.ant-form .ant-tag')).toBeNull();
+    unmount();
+    render(wrap(ReglagesEntitePage, 'nl'));
+    expect((await screen.findAllByText('(standaardwaarde)')).length).toBeGreaterThan(0);
+  });
+
+  it('R2 : un refus du serveur s’affiche sous le réglage refusé avec le message qui nomme le réglage et la valeur', async () => {
+    const avant = fetch as unknown as (u: string, i?: RequestInit) => Promise<unknown>;
+    const refus = 'Valeur refusée pour « Nom du service en français » : 200 caractères au plus (201 tapés).';
+    vi.stubGlobal('fetch', vi.fn(async (url: string, init?: RequestInit) => (url.startsWith('/api/parametres-entite/') && init?.method === 'PUT'
+      ? { ok: false, status: 400, statusText: 'Bad Request', json: async () => ({ error: true, code: 'VALIDATION', message: refus, details: ['valeur: 200 caractères au plus (201 tapés)'] }) }
+      : avant(url, init))));
+    render(wrap(ReglagesEntitePage, 'fr'));
+    const champ = await screen.findByDisplayValue('Service technique fictif');
+    fireEvent.change(champ, { target: { value: 'Service corrigé' } });
+    fireEvent.click(within(champ.closest('.ant-card') as HTMLElement).getByRole('button', { name: 'Enregistrer' }));
+    const sous = await waitFor(() => { const e = champ.closest('.ant-form-item')!.querySelector('.ant-form-item-explain-error'); expect(e).not.toBeNull(); return e!; });
+    expect(sous.textContent).toBe(refus);
+    expect(screen.queryByText(/Données invalides/)).toBeNull();
+  });
+
+  for (const [lang, attendus, absents] of [
+    ['fr', ['Mode de connexion', 'Microsoft facultatif', 'Annuaire (locataire)', 'Secret client', 'masqué', "Adresse publique de l'application", 'Bug', 'Champs modifiés', 'Gravité, File', 'Compte Microsoft', 'Adresse hors des domaines acceptés'], ['mode', 'tenant', 'client_id', 'public_url', 'bug', 'sso_optional', '***', 'urgency, queue', 'domain']],
+    ['nl', ['Aanmeldmodus', 'Microsoft facultatief', 'Clientgeheim', 'verborgen', 'Bug', 'Ernst, Wachtrij', 'Microsoft-account'], ['tenant', 'client_id', 'sso_optional', 'urgency, queue']],
+  ] as const) {
+    it(`R4 : le détail du journal ne montre ni clé ni code brut (${lang})`, async () => {
+      const ada = { entite_id: null, entite_code: null, user_id: 1, user_email: 'a@exemple.test', user_first_name: 'Ada', user_last_name: 'Admin', channel: 'api', entity_id: null };
+      const lignes = [
+        { ...ada, id: 91, created_at: '2026-11-06 07:00:00', action: 'settings.auth', entity_type: 'settings', details: { mode: 'sso_optional', tenant: 'locataire-fictif', client_id: 'application-fictive', client_secret: '***', public_url: 'https://gmao.exemple.test' } },
+        { ...ada, id: 92, created_at: '2026-11-06 07:10:00', action: 'ticket.create', entity_type: 'ticket', entity_id: 2, details: { type: 'bug', priority: 'P3' } },
+        { ...ada, id: 93, created_at: '2026-11-06 07:20:00', action: 'ticket.update', entity_type: 'ticket', entity_id: 2, details: { fields: ['urgency', 'queue'] } },
+        { ...ada, id: 94, created_at: '2026-11-06 07:30:00', action: 'login.success', entity_type: 'user', details: { method: 'sso' } },
+        { ...ada, id: 95, created_at: '2026-11-06 07:40:00', action: 'sso.refused', entity_type: 'user', user_id: null, details: { reason: 'domain' } },
+      ];
+      (journal as unknown as Record<string, unknown>[]).push(...lignes);
+      try {
+        const { container } = render(wrap(JournalPage, lang));
+        await screen.findAllByText(lang === 'fr' ? /Réglages de la connexion Microsoft modifiés/ : /Instellingen van de Microsoft-aanmelding gewijzigd/);
+        container.querySelectorAll<HTMLButtonElement>('button.ant-table-row-expand-icon').forEach((b) => fireEvent.click(b));
+        await screen.findByText('locataire-fictif');
+        const cellules = [...container.querySelectorAll('.ant-descriptions-item-label, .ant-descriptions-item-content')].map((c) => c.textContent);
+        for (const a of attendus) expect(cellules, a).toContain(a);
+        for (const a of absents) expect(cellules, a).not.toContain(a);
+      } finally { journal.splice(journal.length - lignes.length, lignes.length); }
+    });
+  }
+
+  it('R6 : la page Tickets ne demande les compteurs qu’à qui traite une file', async () => {
+    const files = user.files_tickets;
+    user.files_tickets = [];
+    try {
+      render(wrap(TicketsPage, 'fr', FALLBACK_SETTINGS, ['/tickets']));
+      expect(await screen.findByText('Comment changer la catégorie ?')).toBeInTheDocument();
+      expect(appels().some(([u]) => u.startsWith('/api/tickets/stats'))).toBe(false);
+      cleanupAll();
+      user.files_tickets = ['business'];
+      render(wrap(TicketsPage, 'fr', FALLBACK_SETTINGS, ['/tickets']));
+      await waitFor(() => expect(appels().some(([u]) => u.startsWith('/api/tickets/stats'))).toBe(true));
+    } finally { user.files_tickets = files; }
+  });
+});
+
+describe('aide par écran (0.12.0, standard 13.1, DV-100)', () => {
+  const appels = () => (fetch as unknown as { mock: { calls: [string, RequestInit?][] } }).mock.calls;
+
+  it('bouton « Aide » de l’en-tête : fiche de l’écran Tickets, question locale de l’écran, lien vers le mode d’emploi complet', async () => {
+    const { container } = render(wrap(AppLayout, 'fr', FALLBACK_SETTINGS, ['/tickets']));
+    fireEvent.click(await screen.findByRole('button', { name: /Aide/ }));
+    const panneau = await screen.findByRole('dialog');
+    expect(within(panneau).getByRole('heading', { name: 'Tickets', level: 2 })).toBeInTheDocument();
+    expect(within(panneau).getByText('Signaler un problème depuis un écran')).toBeInTheDocument();
+    expect(within(panneau).getByText('Traiter un ticket de sa file')).toBeInTheDocument();
+    expect(await within(panneau).findByText('Où voir la réponse à ma question ?')).toBeInTheDocument();
+    expect(appels().some(([u]) => u.startsWith('/api/faq?') && u.includes('topic_id=tickets'))).toBe(true);
+    expect(within(panneau).getByRole('link', { name: "Mode d'emploi complet" })).toHaveAttribute('href', '/help?fiche=tickets');
+    const r = await axe.run(container, { rules: { 'color-contrast': { enabled: false }, region: { enabled: false } } });
+    expect(r.violations.map((v) => `${v.id}: ${v.nodes.map((n) => n.html.slice(0, 120)).join(' | ')}`)).toEqual([]);
+  }, 30000);
+
+  it('« Signaler » nomme l’écran par le titre de sa fiche ; « ? » à côté de chaque champ du formulaire (fin d’E-39)', async () => {
+    render(wrap(AppLayout, 'nl', FALLBACK_SETTINGS, ['/tickets']));
+    fireEvent.click(await screen.findByRole('button', { name: /Melden/ }));
+    const d = await screen.findByRole('dialog');
+    expect(within(d).getByText('Tickets', { selector: 'strong' })).toBeInTheDocument();
+    expect(d.querySelectorAll('.ant-form-item-tooltip').length).toBeGreaterThanOrEqual(6);
+  });
+
+  it('procédure réservée masquée à qui ne traite aucune file', async () => {
+    const files = user.files_tickets;
+    user.files_tickets = [];
+    try {
+      render(wrap(HelpPage, 'fr', FALLBACK_SETTINGS, ['/help?fiche=tickets']));
+      expect(await screen.findByText('Signaler un problème depuis un écran')).toBeInTheDocument();
+      expect(screen.queryByText('Traiter un ticket de sa file')).toBeNull();
+    } finally { user.files_tickets = files; }
+  });
+
+  it('centre d’aide : recherche sans accents dans les fiches et les questions, en FR et en NL', async () => {
+    const { unmount } = render(wrap(HelpPage, 'fr'));
+    const champ = await screen.findByRole('searchbox', { name: "Chercher dans l'aide" });
+    fireEvent.change(champ, { target: { value: 'IMPRIMER' } });
+    expect(await screen.findByText("Imprimer le mode d'emploi", { selector: '.ant-collapse-header-text' })).toBeInTheDocument();
+    expect(screen.queryByText('Signaler un problème depuis un écran')).toBeNull();
+    fireEvent.change(champ, { target: { value: 'delais des demandes' } });
+    expect(await screen.findByText('Délais des demandes', { selector: '.ant-collapse-header-text' })).toBeInTheDocument();
+    fireEvent.change(champ, { target: { value: 'week-end' } });
+    fireEvent.click(screen.getByRole('tab', { name: /Questions fréquentes \(\d+\)/ }));
+    expect(await screen.findByText('Qui contacter le week-end ?')).toBeInTheDocument();
+    fireEvent.change(champ, { target: { value: 'zzzz' } });
+    expect((await screen.findAllByText('Rien ne correspond à la recherche.')).length).toBeGreaterThan(0);
+    unmount();
+    render(wrap(HelpPage, 'nl'));
+    fireEvent.change(await screen.findByRole('searchbox', { name: 'Zoeken in de hulp' }), { target: { value: 'afdrukken' } });
+    expect(await screen.findByText('De handleiding afdrukken', { selector: '.ant-collapse-header-text' })).toBeInTheDocument();
+  });
+
+  it('FAQ locale : ajout par qui la gère, retrait avec motif obligatoire, sans violation axe-core', async () => {
+    render(wrap(HelpPage, 'fr', FALLBACK_SETTINGS, ['/help?onglet=faq']));
+    fireEvent.click(await screen.findByText('Qui contacter le week-end ?'));
+    fireEvent.click(await screen.findByRole('button', { name: /Retirer/ }));
+    const d = await screen.findByRole('dialog');
+    fireEvent.click(within(d).getByRole('button', { name: /Retirer/ }));
+    expect(await within(d).findByText('Ce champ est obligatoire')).toBeInTheDocument();
+    expect(appels().some(([u, o]) => u === '/api/faq/1' && o?.method === 'DELETE')).toBe(false);
+    fireEvent.change(within(d).getByLabelText('Motif du retrait'), { target: { value: 'Réponse dépassée' } });
+    fireEvent.click(within(d).getByRole('button', { name: /Retirer/ }));
+    await waitFor(() => expect(appels().some(([u, o]) => u === '/api/faq/1' && o?.method === 'DELETE' && JSON.parse(String(o.body)).motif === 'Réponse dépassée')).toBe(true));
+    cleanupAll();
+    const { container } = render(wrap(HelpPage, 'fr', FALLBACK_SETTINGS, ['/help?onglet=faq']));
+    fireEvent.click(await screen.findByRole('button', { name: /Ajouter une question/ }));
+    const ajout = await screen.findByRole('dialog');
+    expect(within(ajout).getByText('Les deux entités')).toBeInTheDocument();
+    fireEvent.change(within(ajout).getByLabelText('Question en français'), { target: { value: 'Q ?' } });
+    fireEvent.change(within(ajout).getByLabelText('Question en néerlandais'), { target: { value: 'V?' } });
+    fireEvent.change(within(ajout).getByLabelText('Réponse en français'), { target: { value: 'R.' } });
+    fireEvent.change(within(ajout).getByLabelText('Réponse en néerlandais'), { target: { value: 'A.' } });
+    fireEvent.click(within(ajout).getByRole('button', { name: 'Enregistrer' }));
+    await waitFor(() => expect(appels().some(([u, o]) => u === '/api/faq' && o?.method === 'POST' && JSON.parse(String(o.body)).portee === 'commune')).toBe(true));
+    const r = await axe.run(container, { rules: { 'color-contrast': { enabled: false }, region: { enabled: false } } });
+    expect(r.violations.map((v) => `${v.id}: ${v.nodes.map((n) => n.html.slice(0, 120)).join(' | ')}`)).toEqual([]);
+  }, 30000);
+
+  it('impression : tout déplié, sans onglets ni recherche, impression lancée', async () => {
+    const imprimer = vi.spyOn(window, 'print').mockImplementation(() => {});
+    try {
+      render(wrap(HelpPage, 'fr', FALLBACK_SETTINGS, ['/help?print=1']));
+      expect(await screen.findByText('Signaler un problème depuis un écran')).toBeInTheDocument();
+      expect(screen.queryByRole('tab')).toBeNull();
+      expect(screen.queryByRole('searchbox')).toBeNull();
+      expect(screen.getByText(/Mode d'emploi imprimé le/)).toBeInTheDocument();
+      expect(screen.getAllByText('Ouvrez le ticket et cliquez sur', { exact: false }).length).toBeGreaterThan(0);
+      await waitFor(() => expect(imprimer).toHaveBeenCalled(), { timeout: 2000 });
+    } finally { imprimer.mockRestore(); }
+  });
+
+  it('question métier résolue : « Ajouter à la FAQ » préremplit la question et l’envoie au ticket', async () => {
+    ticketDetail = { ...ticketBase, status: 'resolved', resolution: 'Menu Catégorie, puis Enregistrer.', can_faq: true };
+    render(wrap(TicketsPage, 'fr', FALLBACK_SETTINGS, ['/tickets?id=7']));
+    fireEvent.click(await screen.findByRole('button', { name: 'Ajouter à la FAQ' }));
+    await screen.findByText(/La question deviendra une entrée de la FAQ de AA/);
+    const d = dernierDialogue();
+    expect(within(d).getByLabelText('Question en français')).toHaveValue('Comment changer la catégorie ?');
+    expect(within(d).getByLabelText('Réponse en français')).toHaveValue('Menu Catégorie, puis Enregistrer.');
+    expect(within(d).queryByText('Les deux entités')).toBeNull();
+    fireEvent.change(within(d).getByLabelText('Question en néerlandais'), { target: { value: 'Hoe wijzig ik de categorie?' } });
+    fireEvent.change(within(d).getByLabelText('Réponse en néerlandais'), { target: { value: 'Menu Categorie.' } });
+    fireEvent.click(within(d).getByRole('button', { name: 'Enregistrer' }));
+    await waitFor(() => expect(appels().some(([u, o]) => u === '/api/tickets/7/faq' && o?.method === 'POST')).toBe(true));
+    cleanupAll();
+    ticketDetail = { ...ticketBase, status: 'closed', faq_id: 3, can_faq: false };
+    render(wrap(TicketsPage, 'fr', FALLBACK_SETTINGS, ['/tickets?id=7']));
+    expect(await screen.findByRole('link', { name: 'Entrée de la FAQ' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Ajouter à la FAQ' })).toBeNull();
+  });
+});
+
+describe('fiches des écrans du demandeur (0.12.0, point 3)', () => {
+  for (const [lang, chemin, titre, procedure] of [
+    ['fr', '/', 'Accueil', 'Choisir son lieu de travail habituel'],
+    ['fr', '/demandes/nouvelle', 'Nouvelle demande', 'Signaler un danger'],
+    ['fr', '/demandes', 'Mes demandes', 'Retrouver une demande et voir où elle en est'],
+    ['fr', '/accessibility', 'Accessibilité', 'Signaler un obstacle d’accessibilité'],
+    ['nl', '/', 'Startpagina', 'Van actieve entiteit wisselen'],
+    ['nl', '/demandes/nouvelle', 'Nieuwe aanvraag', 'Hetzelfde probleem is al gemeld: « Ik ook »'],
+    ['nl', '/demandes', 'Mijn aanvragen', 'Een per vergissing toegevoegde foto verwijderen'],
+  ] as const) {
+    it(`bouton « Aide » sur ${chemin} (${lang}) : la fiche de l’écran`, async () => {
+      render(wrap(AppLayout, lang, FALLBACK_SETTINGS, [chemin]));
+      fireEvent.click(await screen.findByRole('button', { name: lang === 'fr' ? /^Aide$/ : /^Help$/ }));
+      const panneau = await screen.findByRole('dialog');
+      expect(within(panneau).getByRole('heading', { name: titre, level: 2 })).toBeInTheDocument();
+      expect(within(panneau).getByText(procedure)).toBeInTheDocument();
+      expect(within(panneau).queryByText(/\{\{|\[\[/)).toBeNull();
+    });
+  }
+
+  it('centre d’aide : les anciennes rubriques du demandeur ont laissé place aux fiches ; la page de connexion a la sienne', async () => {
+    render(wrap(HelpPage, 'fr'));
+    expect(await screen.findByText('Demander et suivre')).toBeInTheDocument();
+    expect(screen.queryByText('Mon lieu de travail', { selector: '.ant-collapse-header-text' })).toBeNull();
+    expect(screen.getByText('Connexion', { selector: '.ant-collapse-header-text' })).toBeInTheDocument();
+  });
+});
+
+describe('fiches du service technique et de l’administration (0.12.0, point 4)', () => {
+  // Modules rechargés : un test précédent peut avoir éteint le patrimoine dans le cache de moduleMap.
+  beforeEach(() => { reloadModules(); });
+  for (const [lang, chemin, titre, procedure] of [
+    ['fr', '/patrimoine', 'Patrimoine', 'Ajouter la photo d’un lieu'],
+    ['fr', '/users', 'Utilisateurs et rôles', 'Donner ou retirer un rôle'],
+    ['nl', '/parametres', 'Parameters', 'Een module uit- of inschakelen'],
+    ['nl', '/journal', 'Auditlogboek', 'Een wijziging terugvinden'],
+    ['nl', '/entites', 'Entiteiten', 'Een entiteit aanmaken'],
+  ] as const) {
+    it(`bouton « Aide » sur ${chemin} (${lang}) : la fiche de l’écran`, async () => {
+      render(wrap(AppLayout, lang, FALLBACK_SETTINGS, [chemin]));
+      fireEvent.click(await screen.findByRole('button', { name: lang === 'fr' ? /^Aide$/ : /^Help$/ }));
+      const panneau = await screen.findByRole('dialog');
+      expect(within(panneau).getByRole('heading', { name: titre, level: 2 })).toBeInTheDocument();
+      expect(within(panneau).getByText(procedure)).toBeInTheDocument();
+      expect(within(panneau).queryByText(/\{\{|\[\[/)).toBeNull();
+    });
+  }
+
+  it('sans le droit de l’écran (catalogue de test : ni catégories, ni listes, ni réglages de l’entité), « Aide » mène au mode d’emploi, sans la fiche', async () => {
+    const Ici = () => { const l = useLocation(); return <p data-testid="ici">{l.pathname}</p>; };
+    render(
+      <SettingsProvider value={{ settings: FALLBACK_SETTINGS, reload: async () => {} }}>
+        <I18nProvider defaultLang="fr"><MemoryRouter initialEntries={['/referentiel']}><Routes><Route path="/" element={<AppLayout />}><Route path="*" element={<Ici />} /></Route></Routes></MemoryRouter></I18nProvider>
+      </SettingsProvider>,
+    );
+    fireEvent.click(await screen.findByRole('button', { name: /^Aide$/ }));
+    expect(await screen.findByText('/help')).toBeInTheDocument();
+    expect(screen.queryByRole('dialog')).toBeNull();
+  });
+
+  it('centre d’aide : fiches rangées en trois groupes, plus aucune ancienne rubrique d’écran ; « ? » sur le formulaire d’une entité', async () => {
+    const { unmount } = render(wrap(HelpPage, 'fr'));
+    for (const g of ['Demander et suivre', 'Service technique', 'Administration', 'Aide']) expect(await screen.findByText(g, { selector: 'h2' })).toBeInTheDocument();
+    const autres = screen.getByRole('region', { name: 'Pour tous les écrans' });
+    expect(within(autres).getAllByRole('button').map((b) => b.textContent)).toEqual(['Protection de vos données', 'Délais des demandes']);
+    unmount();
+    render(wrap(EntitesPage, 'fr'));
+    fireEvent.click(await screen.findByRole('button', { name: /Créer/ }));
+    const d = await screen.findByRole('dialog');
+    expect(d.querySelectorAll('.ant-form-item-tooltip').length).toBe(3);
   });
 });

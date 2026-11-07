@@ -38,7 +38,7 @@ export function PrioriteTag({ code, priorites }: { code: string; priorites: Prio
 
 /** Aperçu des tuiles : domaines, puis natures du domaine choisi. */
 function Tuiles({ arbre }: { arbre: Categorie[] }) {
-  const { t, tField } = useI18n();
+  const { t, tField, hint } = useI18n();
   const [domaine, setDomaine] = useState<Categorie | null>(null);
   // Aperçu des questions (0.7.0) : la catégorie dont on montre les questions et des réponses d'essai, jamais enregistrées.
   const [apercu, setApercu] = useState<Categorie | null>(null);
@@ -78,7 +78,7 @@ function Tuiles({ arbre }: { arbre: Categorie[] }) {
 }
 
 export default function CategoriesTab({ priorites }: { priorites: PrioriteFiche[] }) {
-  const { t, tField } = useI18n();
+  const { t, tField, hint } = useI18n();
   const { user } = useAuth();
   const simple = user?.ui_mode !== 'complet';
   const [arbre, setArbre] = useState<Categorie[]>([]);
@@ -196,39 +196,39 @@ export default function CategoriesTab({ priorites }: { priorites: PrioriteFiche[
         {ouvert && (
           <Form key={current?.id ?? `new-${creation?.parent?.id ?? 0}`} form={form} layout="vertical" onFinish={enregistrer} preserve={false}
             initialValues={valeurs(current, creation?.parent ?? null)} disabled={!!current && !current.is_active}>
-            <Form.Item name="libelle_fr" label={t('ref.cat.libelle_fr')} rules={[texteObligatoire(t), { max: 200 }]}><Input lang="fr" /></Form.Item>
-            <Form.Item name="libelle_nl" label={t('ref.cat.libelle_nl')} rules={[texteObligatoire(t), { max: 200 }]}><Input lang="nl" /></Form.Item>
+            <Form.Item name="libelle_fr" label={t('ref.cat.libelle_fr')} tooltip={hint('ref.cat.libelle')} rules={[texteObligatoire(t), { max: 200 }]}><Input lang="fr" /></Form.Item>
+            <Form.Item name="libelle_nl" label={t('ref.cat.libelle_nl')} tooltip={hint('ref.cat.libelle')} rules={[texteObligatoire(t), { max: 200 }]}><Input lang="nl" /></Form.Item>
             {creation && !simple && (
-              <Form.Item name="code" label={t('ref.cat.code')} extra={t('listes.field.code.help')} rules={[{ pattern: /^[a-z][a-z0-9_]{1,39}$/, message: t('listes.field.code.help') }]}>
+              <Form.Item name="code" label={t('ref.cat.code')} tooltip={hint('ref.cat.code')} extra={t('listes.field.code.help')} rules={[{ pattern: /^[a-z][a-z0-9_]{1,39}$/, message: t('listes.field.code.help') }]}>
                 <Input maxLength={40} autoComplete="off" />
               </Form.Item>
             )}
             {nature && current && (
-              <Form.Item name="parent_id" label={t('ref.cat.domaine')} extra={t('ref.cat.domaine.help')}>
+              <Form.Item name="parent_id" label={t('ref.cat.domaine')} tooltip={hint('ref.cat.domaine')} extra={t('ref.cat.domaine.help')}>
                 <Select showSearch optionFilterProp="label" aria-label={t('ref.cat.domaine')}
                   options={domainesActifs.map((d) => ({ value: d.id, label: lbl(d) }))} />
               </Form.Item>
             )}
-            <Form.Item name="icone" label={t('ref.cat.icone')}>
+            <Form.Item name="icone" label={t('ref.cat.icone')} tooltip={hint('ref.cat.icone')}>
               <Radio.Group className="ref-icones" aria-label={t('ref.cat.icone')}>
                 {ICONE_CODES.map((c) => (
                   <Radio.Button key={c} value={c} aria-label={t(`ref.icone.${c}`)} title={t(`ref.icone.${c}`)}><Icone code={c} /></Radio.Button>
                 ))}
               </Radio.Group>
             </Form.Item>
-            <Form.Item name="priorite_defaut" label={t('ref.cat.priorite')} extra={t('ref.cat.priorite.help')}>
+            <Form.Item name="priorite_defaut" label={t('ref.cat.priorite')} tooltip={hint('ref.cat.priorite')} extra={t('ref.cat.priorite.help')}>
               <Radio.Group optionType="button" aria-label={t('ref.cat.priorite')}
                 options={[...(nature ? [{ value: HERITE, label: t('ref.cat.herite') }] : []), ...PRIORITES.map((p) => ({ value: p, label: p }))]} />
             </Form.Item>
-            <Form.Item name="validation" label={t('ref.cat.validation')} extra={t('ref.cat.validation.help')}>
+            <Form.Item name="validation" label={t('ref.cat.validation')} tooltip={hint('ref.cat.validation')} extra={t('ref.cat.validation.help')}>
               <Radio.Group optionType="button" aria-label={t('ref.cat.validation')}
                 options={[...(nature ? [{ value: HERITE, label: t('ref.cat.herite') }] : []),
                   { value: '0', label: t('ref.cat.validation.directe') }, { value: '1', label: t('ref.cat.validation.chef') }]} />
             </Form.Item>
-            <Form.Item name="delai_fin_jours" label={t('ref.cat.delai')} extra={t('ref.cat.delai.help')}>
+            <Form.Item name="delai_fin_jours" label={t('ref.cat.delai')} tooltip={hint('ref.cat.delai')} extra={t('ref.cat.delai.help')}>
               <InputNumber min={1} max={365} style={{ width: 160 }} />
             </Form.Item>
-            {!simple && <Form.Item name="ordre" label={t('listes.field.ordre')} extra={t('listes.field.ordre.help')}><InputNumber min={0} max={100000} step={10} /></Form.Item>}
+            {!simple && <Form.Item name="ordre" label={t('listes.field.ordre')} tooltip={hint('ref.ordre')} extra={t('listes.field.ordre.help')}><InputNumber min={0} max={100000} step={10} /></Form.Item>}
             <Space wrap>
               <Button type="primary" htmlType="submit">{t('common.save')}</Button>
               {current && current.niveau === 'domaine' && current.is_active === 1 && (

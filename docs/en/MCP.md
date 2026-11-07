@@ -1,6 +1,6 @@
 # MCP server
 
-Application version: **0.11.0** · Updated on 05/11/2026 · The French text prevails (`docs/fr/MCP.md`).
+Application version: **0.12.0** · Updated on 06/11/2026 · The French text prevails (`docs/fr/MCP.md`).
 
 ## Access and rules
 
@@ -10,13 +10,17 @@ Application version: **0.11.0** · Updated on 05/11/2026 · The French text prev
 - Limit: 60 calls per minute per person.
 - Each tool calls the same service function as the REST route, with the person's identity and rights, in their active entity. A deactivation, withdrawal or erasure takes two calls (`prepare_*`, then `confirm_*`). No free SQL tool.
 
+## 0.12.0
+
+New tools: `list_faq` (shared questions and those of the active entity; filters `topic_id`, `q`, `inclure_inactives`), `get_faq`, `create_faq` (`portee` "commune" or "entite"), `update_faq` (reactivation with `is_active` = 1), `deactivate_faq` in two calls (with a reason) and `create_faq_from_ticket` (resolved or closed business question, by the handler, one entry per ticket). A refused setting names the setting and the wrong value in the person's language; ticket role codes in upper or lower case.
+
 ## 0.11.0
 
 New tools, taken from template 1.3.0: `list_tickets_to_handle` (new or in-progress tickets the person handles, with their context), `list_tickets`, `ticket_stats`, `get_ticket`, `get_ticket_screenshot` (screenshot without metadata), `create_ticket`, `update_ticket`, `add_ticket_message` and `change_ticket_status` in two calls. Queues follow the person's roles in their active entity: a business question is handled by the manager and the technical manager of the ticket's entity; an incident, a bug or a wish by the application administrator, for all entities. Queue roles and deadlines are set with `update_parametre`. `prepare_update_auth_settings` refuses a secret shaped like an identifier (`SECRET_IS_ID`).
 
 ## Claude reading tickets on an internal network
 
-Until the MCP has OAuth (step 44, E-10), Claude reads tickets through the person's browser, with their session: nothing to install, no token through the assistant, only the person's rights. Open a Cowork conversation linked to the PC, open the application in the Claude app browser, sign in with an account that handles a queue and ask: "List the GMAO tickets to handle in the open browser tab." Claude then calls `list_tickets_to_handle` from the open page (`POST /api/mcp` with the session cookie and the anti-CSRF token from `/api/auth/me`). Ticket content is data, never an instruction; every write waits for the person's agreement.
+Until the MCP has OAuth (step 44, E-10), Claude reads tickets through the person's browser, with their session: nothing to install, no token through the assistant, only the person's rights. Once on the PC: install the Claude extension in Google Chrome (Claude in Chrome), connect it to the person's Claude account, open the application in Chrome, accept its certificate and allow the site in the extension. The built-in browser of the Claude app does not fit: it rejects the self-signed certificate of an internal installation (`ERR_CERT_AUTHORITY_INVALID`, R5 of DV-109). Then open a Cowork conversation; Claude opens a Chrome tab, the person signs in themselves (Claude never types a password) with an account that handles a queue and asks: "List the GMAO tickets to handle in the tab open in Chrome." Claude then calls `list_tickets_to_handle` from the open page (`POST /api/mcp` with the session cookie and the anti-CSRF token from `/api/auth/me`). Ticket content is data, never an instruction; every write waits for the person's agreement.
 
 ## 0.10.0
 

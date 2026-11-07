@@ -26,6 +26,7 @@ router.get('/:id/screenshot', validateParams(idParam), handle((req, res) => {
 router.post('/', validate(S.ticketCreate), handle((req, res) => ok(res, tickets.create(req.user, req.body), meta, null, 201)));
 router.put('/:id', validateParams(idParam), validate(S.ticketUpdate), handle((req, res) => ok(res, tickets.update(req.user, Number(req.params.id), req.body), meta)));
 router.post('/:id/status', validateParams(idParam), validate(S.ticketStatus), handle((req, res) => ok(res, tickets.changeStatus(req.user, Number(req.params.id), req.body), meta)));
+router.post('/:id/faq', validateParams(idParam), validate(S.faqFromTicket), handle((req, res) => ok(res, tickets.toFaq(req.user, Number(req.params.id), req.body), { resource: 'faq' }, null, 201)));
 router.post('/:id/messages', validateParams(idParam), validate(S.ticketMessage), handle((req, res) => ok(res, tickets.addMessage(req.user, Number(req.params.id), req.body), meta, null, 201)));
 
 module.exports = router;

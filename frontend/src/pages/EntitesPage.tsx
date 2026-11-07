@@ -18,7 +18,7 @@ interface Entite { id: number; code: string; nom_fr: string; nom_nl: string; is_
 const CODE_RULE = { pattern: /^[A-Z][A-Z0-9]{1,9}$/ };
 
 export default function EntitesPage() {
-  const { t, tField } = useI18n();
+  const { t, tField, hint } = useI18n();
   const { refresh, user } = useAuth();
   const [rows, setRows] = useState<Entite[]>([]);
   const [loading, setLoading] = useState(false);
@@ -66,12 +66,12 @@ export default function EntitesPage() {
   const statusTag = (e: Entite) => (e.is_active ? <Tag color="green">{t('common.active')}</Tag> : <Tag>{t('common.inactive')}</Tag>);
   const fields = (
     <>
-      <Form.Item name="code" label={t('entites.field.code')} extra={t('entites.field.code.help')}
+      <Form.Item name="code" label={t('entites.field.code')} tooltip={hint('entites.code')} extra={t('entites.field.code.help')}
         normalize={(v: string) => (v || '').toUpperCase().replace(/\s/g, '')} rules={[texteObligatoire(t), { ...CODE_RULE, message: t('entites.field.code.help') }]}>
         <Input maxLength={10} />
       </Form.Item>
-      <Form.Item name="nom_fr" label={t('entites.field.nom_fr')} rules={[texteObligatoire(t), { max: 200 }]}><Input lang="fr" /></Form.Item>
-      <Form.Item name="nom_nl" label={t('entites.field.nom_nl')} rules={[texteObligatoire(t), { max: 200 }]}><Input lang="nl" /></Form.Item>
+      <Form.Item name="nom_fr" label={t('entites.field.nom_fr')} tooltip={hint('entites.nom')} rules={[texteObligatoire(t), { max: 200 }]}><Input lang="fr" /></Form.Item>
+      <Form.Item name="nom_nl" label={t('entites.field.nom_nl')} tooltip={hint('entites.nom')} rules={[texteObligatoire(t), { max: 200 }]}><Input lang="nl" /></Form.Item>
     </>
   );
 

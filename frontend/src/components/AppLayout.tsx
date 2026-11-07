@@ -5,6 +5,8 @@
  * Sélecteur de l'entité active en boutons (choix exclusif, standard section 12.4 ; cahier des charges ROL-03).
  * Bouton « Signaler » sur chaque écran (standard, section 13.5 ; gabarit 1.3.0, 0.11.0) : l'écran est nommé par son
  * libellé dans le menu ; sur téléphone, l'icône seule avec son nom accessible.
+ * Bouton « Aide » à côté (standard, section 13.1 ; 0.12.0, DV-100) : la fiche d'aide de l'écran ; « Signaler » nomme
+ * l'écran par le titre de sa fiche quand elle existe (section 13.5).
  */
 import { useState } from 'react';
 import { Avatar, Button, Drawer, Dropdown, Grid, Layout, Menu, Segmented, Select, Tag, Tooltip, message } from 'antd';
@@ -24,6 +26,8 @@ import PasswordModal from './PasswordModal';
 import NouveautesModal from './NouveautesModal';
 import LieuHabituelModal from './LieuHabituelModal';
 import ReportTicketModal from './ReportTicketModal';
+import HelpButton from '../help/HelpButton';
+import { topicForPath } from '../help';
 import { hasPermission, useRoles } from '../useRoles';
 import { routeActive, useModules } from '../moduleMap';
 
@@ -78,9 +82,10 @@ export default function AppLayout() {
     ] },
   ];
 
-  // Nom de l'écran joint au ticket : libellé du menu de l'adresse la plus proche ; la fiche d'aide le donnera en 0.12.0.
+  // Nom de l'écran joint au ticket : titre de sa fiche d'aide (0.12.0), sinon libellé du menu de l'adresse la plus proche.
   const entrees = (menuItems || []).flatMap((g) => ((g as { children?: { key: string; label: string }[] }).children || []));
-  const ecran = entrees.filter((e) => e.key === location.pathname || (e.key !== '/' && location.pathname.startsWith(`${e.key}/`)))
+  const fiche = topicForPath(location.pathname);
+  const ecran = fiche ? t(fiche.titleKey) : entrees.filter((e) => e.key === location.pathname || (e.key !== '/' && location.pathname.startsWith(`${e.key}/`)))
     .sort((a, b) => b.key.length - a.key.length)[0]?.label || (location.pathname === '/' ? t('nav.home') : location.pathname);
 
   const go: MenuProps['onClick'] = ({ key }) => { navigate(key); setDrawerOpen(false); };
@@ -122,12 +127,14 @@ export default function AppLayout() {
     items: [
       // Sur téléphone, la bascule Simple ou Complet passe dans ce menu : elle reste accessible (standard section 12.5).
       ...(isMobile ? [{ key: 'mode', icon: <ControlOutlined />, label: `${t('layout.mode')} : ${user?.ui_mode === 'complet' ? t('layout.mode.simple') : t('layout.mode.complet')}` }] : []),
+      ...(isMobile ? [{ key: 'theme', icon: dark ? <SunOutlined /> : <MoonOutlined />, label: dark ? t('layout.theme.light') : t('layout.theme.dark') }] : []),
       ...(entite ? [{ key: 'lieu', icon: <EnvironmentOutlined />, label: t('profil.lieu.title') }] : []),
       { key: 'password', icon: <LockOutlined />, label: t('layout.password') },
       { key: 'logout', icon: <LogoutOutlined />, label: t('layout.logout') },
     ],
     onClick: ({ key }) => {
       if (key === 'mode') savePreferences({ ui_mode: user?.ui_mode === 'complet' ? 'simple' : 'complet' });
+      else if (key === 'theme') savePreferences({ theme: dark ? 'clair' : 'sombre' });
       else if (key === 'lieu') setLieuOpen(true);
       else if (key === 'password') setPwdOpen(true);
       else logout();
@@ -171,16 +178,20 @@ export default function AppLayout() {
               aria-label={isMobile ? t('tickets.report') : undefined}>
               {isMobile ? null : t('tickets.report')}
             </Button>
+            <HelpButton />
             {entiteSelector}
             {!isMobile && <Segmented size="small" aria-label={t('layout.mode')} value={user?.ui_mode || 'simple'}
               onChange={(v) => savePreferences({ ui_mode: v as 'simple' | 'complet' })}
               options={[{ label: t('layout.mode.simple'), value: 'simple' }, { label: t('layout.mode.complet'), value: 'complet' }]} />}
             <Select size="small" aria-label={t('layout.lang')} value={lang} onChange={changeLang} style={{ width: 64 }}
               options={[{ value: 'fr', label: 'FR' }, { value: 'nl', label: 'NL' }]} />
-            <Tooltip title={dark ? t('layout.theme.light') : t('layout.theme.dark')}>
-              <Button type="text" aria-label={dark ? t('layout.theme.light') : t('layout.theme.dark')}
-                icon={dark ? <SunOutlined /> : <MoonOutlined />} onClick={() => savePreferences({ theme: dark ? 'clair' : 'sombre' })} />
-            </Tooltip>
+            {/* 0.12.0 : avec le bouton « Aide », l'en-tête dépassait 360 px ; sur téléphone, le thème passe dans le menu de la personne. */}
+            {!isMobile && (
+              <Tooltip title={dark ? t('layout.theme.light') : t('layout.theme.dark')}>
+                <Button type="text" aria-label={dark ? t('layout.theme.light') : t('layout.theme.dark')}
+                  icon={dark ? <SunOutlined /> : <MoonOutlined />} onClick={() => savePreferences({ theme: dark ? 'clair' : 'sombre' })} />
+              </Tooltip>
+            )}
             <Dropdown menu={userMenu} trigger={['click']}>
               <Button type="text" style={{ display: 'flex', alignItems: 'center', gap: 6, height: 44 }}>
                 <Avatar size={30} style={{ background: 'var(--app-primary)', flexShrink: 0 }}>{user?.first_name?.[0]}{user?.last_name?.[0]}</Avatar>

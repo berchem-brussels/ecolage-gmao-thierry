@@ -1,6 +1,6 @@
 # Architecture
 
-Version 0.11.0 · Le français fait foi.
+Version 0.12.0 · Le français fait foi.
 
 ## Services
 
@@ -300,3 +300,11 @@ Repris du gabarit 1.3.0 (`services/tickets.js`, `routes/tickets.js`, schémas, n
 | `POST /api/tickets` | session | `services/tickets.js` |
 | `PUT /api/tickets/:id`, `POST /api/tickets/:id/status`, `POST /api/tickets/:id/messages` | demandeur ou personne qui traite la file, selon le champ et la transition | `services/tickets.js` |
 
+
+## Aide par écran et FAQ locale (0.12.0)
+
+- Fiches d'aide dans le code de l'interface (`frontend/src/help/` : `types.ts`, `index.ts`, `TopicView.tsx`, `HelpButton.tsx`, `FaqModal.tsx`, `topics/*.ts`), une par écran, FR et NL, reprises du gabarit 1.3.0 ; accès d'une fiche ou d'une procédure comme le menu (module, permission, administrateur, file de tickets). Explications des champs dans `frontend/src/hints.ts`, affichées par le « ? » d'Ant Design (`Form.Item tooltip`). Contrôles bloquants dans `src/test/help.test.ts`.
+- Captures produites par `npm run help:capture` (`frontend/help-capture/`, `@playwright/test`, développement seulement) dans `frontend/public/aide-captures/<langue>/`, copiées dans `dist/`. Jamais sous `public/help/` : nginx servirait le dossier au lieu de l'écran `/help` (`try_files $uri $uri/`).
+- Table `help_faq` (migration `011_faq`) : `entite_id` (nul : entrée commune), `topic_id` (fiche d'un écran), question et réponse FR et NL, `source_ticket_id` (une entrée au plus par ticket), `is_active` et `motif_desactivation`. Service `services/faq.js`, routes `/api/faq`, `POST /api/tickets/:id/faq`, six outils MCP. Permission `faq:gerer` (gestionnaire, responsable).
+- Refus d'un réglage nommé (`services/refus-reglage.js`) : `AppError` porte un texte FR et NL propre au refus, rendu à la place du message général du code par l'API et le MCP (`messageOf`).
+- Contrôles après installation : `recette.sh` (racine) et `backend/src/recette-api.js` (dans le conteneur de l'API, lecture seule).

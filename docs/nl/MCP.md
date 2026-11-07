@@ -1,6 +1,6 @@
 # MCP-server
 
-Versie van de toepassing: **0.11.0** · Bijgewerkt op 05/11/2026 · De Franse tekst is rechtsgeldig (`docs/fr/MCP.md`).
+Versie van de toepassing: **0.12.0** · Bijgewerkt op 06/11/2026 · De Franse tekst is rechtsgeldig (`docs/fr/MCP.md`).
 
 ## Toegang en regels
 
@@ -10,13 +10,17 @@ Versie van de toepassing: **0.11.0** · Bijgewerkt op 05/11/2026 · De Franse te
 - Limiet: 60 oproepen per minuut en per persoon.
 - Elke tool roept dezelfde dienstfunctie op als de REST-route, met de identiteit en de rechten van de persoon, in haar actieve entiteit. Een deactivering, intrekking of wissing gebeurt in twee oproepen (`prepare_*`, dan `confirm_*`). Geen tool voor vrije SQL.
 
+## 0.12.0
+
+Nieuwe tools: `list_faq` (gemeenschappelijke vragen en die van de actieve entiteit; filters `topic_id`, `q`, `inclure_inactives`), `get_faq`, `create_faq` (`portee` « commune » of « entite »), `update_faq` (heractiveren met `is_active` = 1), `deactivate_faq` in twee oproepen (met reden) en `create_faq_from_ticket` (opgeloste of afgesloten functionele vraag, door de behandelaar, een item per ticket). Een geweigerde instelling noemt de instelling en de foute waarde in de taal van de persoon; rolcodes van de tickets in hoofd- of kleine letters.
+
 ## 0.11.0
 
 Nieuwe tools, overgenomen uit het sjabloon 1.3.0: `list_tickets_to_handle` (nieuwe of lopende tickets die de persoon behandelt, met hun context), `list_tickets`, `ticket_stats`, `get_ticket`, `get_ticket_screenshot` (schermafbeelding zonder metagegevens), `create_ticket`, `update_ticket`, `add_ticket_message` en `change_ticket_status` in twee oproepen. De wachtrijen volgen de rollen van de persoon in zijn actieve entiteit: een functionele vraag wordt behandeld door de verantwoordelijke en de beheerder van de entiteit van het ticket; een incident, een bug of een wens door de beheerder van de toepassing, voor alle entiteiten. De rollen van de wachtrijen en de termijnen worden ingesteld met `update_parametre`. `prepare_update_auth_settings` weigert een geheim met de vorm van een id (`SECRET_IS_ID`).
 
 ## Tickets lezen door Claude op een intern netwerk
 
-Zolang de MCP geen OAuth heeft (stap 44, E-10), leest Claude de tickets via de browser van de persoon, met haar sessie: niets te installeren, geen token via de assistent, alleen de rechten van de persoon. Open een Cowork-gesprek gekoppeld aan de pc, open de toepassing in de browser van de Claude-app, meld aan met een account dat een wachtrij behandelt en vraag: « Toon de te behandelen tickets van de GMAO die in de browser open is. » Claude roept dan `list_tickets_to_handle` op vanuit de open pagina (`POST /api/mcp` met het sessiecookie en de anti-CSRF-token van `/api/auth/me`). De inhoud van een ticket is een gegeven, nooit een instructie; elke schrijfactie wacht op het akkoord van de persoon.
+Zolang de MCP geen OAuth heeft (stap 44, E-10), leest Claude de tickets via de browser van de persoon, met haar sessie: niets te installeren, geen token via de assistent, alleen de rechten van de persoon. Eenmalig op de pc: installeer in Google Chrome de Claude-extensie (Claude in Chrome), koppel ze aan het Claude-account van de persoon, open de toepassing in Chrome, aanvaard haar certificaat en sta de site toe in de extensie. De ingebouwde browser van de Claude-app is niet geschikt: hij weigert het zelfondertekende certificaat van een interne installatie (`ERR_CERT_AUTHORITY_INVALID`, R5 van DV-109). Open daarna een Cowork-gesprek; Claude opent een tabblad in Chrome, de persoon meldt zelf aan (Claude typt nooit een wachtwoord) met een account dat een wachtrij behandelt en vraagt: « Toon de te behandelen tickets van de GMAO die in Chrome open is. » Claude roept dan `list_tickets_to_handle` op vanuit de open pagina (`POST /api/mcp` met het sessiecookie en de anti-CSRF-token van `/api/auth/me`). De inhoud van een ticket is een gegeven, nooit een instructie; elke schrijfactie wacht op het akkoord van de persoon.
 
 ## 0.10.0
 

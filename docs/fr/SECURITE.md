@@ -2,6 +2,64 @@
 
 Le français fait foi. Grille de la section 10.2 du standard, rejouée à chaque version. « Non joué » veut dire que le contrôle n'a pas tourné.
 
+## 0.12.0 (06/11/2026)
+
+Aide par écran et FAQ locale (standard, section 13.1 ; DV-100), modules du gabarit 1.3.0 repris et adaptés aux entités (E-44, E-45) ; remarques R1 à R6 de la recette de la 0.11.0 (DV-109) ; script de contrôles après installation (DV-110). Environnement : bac à sable de Claude, Node 22.23.4 ; parcours `ci.yml` rejoué sous Node 20.20.2. Migration `011_faq`. Dépendance nouvelle de développement seulement : `@playwright/test` ^1.56.1 (E-37), absente des images.
+
+| Famille | Contrôle | Résultat |
+| --- | --- | --- |
+| Autorisation (IDOR) | Entrée de la FAQ d'une entité lue seulement dans cette entité ; modifiée, retirée ou rétablie par le gestionnaire et le responsable de l'entité active (permission `faq:gerer`) ou par l'administrateur ; autre entité 403, par l'API et par le MCP ; entrée commune écrite par l'administrateur seul | Conforme (`faq.test.js`, `cloison.test.js` : 1 lecture et 3 écritures de plus) |
+| Autorisation | Question métier transformée en entrée seulement par une personne qui traite le ticket, seulement résolue ou close, une seule fois (`FAQ_SOURCE`, `FAQ_DEJA`) ; le ticket n'est pas modifié (un ticket clos n'accepte rien) | Conforme (`faq.test.js`) |
+| Autorisation | Compteurs des tickets demandés par l'écran seulement à qui traite une file (R6) ; le refus du serveur reste | Conforme (`tickets.test.js`, `pages.test.tsx`) |
+| Logique | Rien ne se supprime : retrait avec motif, rétablissement par `is_active` = 1 ; entrée retirée invisible d'un agent | Conforme (`faq.test.js`) |
+| Validation | Schémas `ajv` (`additionalProperties: false`) : textes de 1 à 300 et 4 000 caractères, `topic_id` en forme d'identifiant, motif obligatoire ; recherche avec `%` et `_` pris à la lettre | Conforme (`faq.test.js`) |
+| Validation | Refus d'un réglage nommé, en FR et en NL, sans changer le code ni le détail (R2) ; code de rôle reconnu quelle que soit la casse, enregistré tel que le catalogue l'écrit (R3) | Conforme (`tickets.test.js`, `parametres-entite.test.js`) |
+| Injections | Requêtes paramétrées ; `LIKE … ESCAPE` ; colonnes de mise à jour tirées du schéma (`safeBuildUpdate`) ; table `help_faq` ajoutée à la liste fermée de `changements()` | Conforme (`securite.test.js`) |
+| Données | Journal de la FAQ avec l'entité de l'entrée et les seuls champs changés ; détail du journal sans clé ni code brut à l'écran (R4) ; secret masqué dit « masqué » | Conforme (`faq.test.js`, `pages.test.tsx`) |
+| Interface | Écran `/help` jamais masqué par un dossier statique (captures sous `/aide-captures`) ; aucune fiche d'un écran que la personne ne peut ouvrir ; procédures réservées masquées | Conforme (`help.test.ts`, `pages.test.tsx`, `recette.sh` contrôle 2) |
+| Secrets commités | `.gitignore` complété (rapports des captures, résultats de Playwright) ; mot de passe des captures et de `recette.sh` par l'environnement ou tapé sans affichage, jamais dans un fichier ; aucune valeur de NIXUS dans l'archive | Conforme |
+| Exploitation | `recette.sh` et `recette-api.js` : lecture seule pour les données (base lue en mémoire), connexion du compte de démonstration seule inscrite au journal, session fermée à la fin | Conforme (joué contre la base jetable) |
+| Infrastructure | Dockerfile, compose, `nginx.conf`, `backup.sh`, `.env`, `ci.yml` inchangés ; la FAQ est en base et part avec la sauvegarde | Conforme |
+| Dépendances | `npm audit --omit=dev` serveur | 0 vulnérabilité |
+| Dépendances | `npm audit --omit=dev` interface | 3 modérées (E-09), inchangées ; `@playwright/test` hors production |
+| LLM et MCP | Six outils de la FAQ sous les droits de la personne ; retrait en deux appels ; parité route et outil ; contenu de la FAQ et des tickets traité comme une donnée | Conforme (`mcp.test.js`, `faq.test.js`) |
+| Migration | `011_faq` : table créée ; base 0.12.0 ouverte par le serveur 0.11.0 puis de nouveau par la 0.12.0 | Conforme (connexion, comptes, demandes et tickets en 0.11.0 ; FAQ retrouvée en 0.12.0) |
+
+Les trois contrôles qui ne restent jamais « non joués » (secrets commités, contrôle d'accès côté serveur, IDOR) ont été joués.
+
+### Preuve d'échec des nouveaux tests (0.12.0)
+
+Chaque protection retirée seule, suites concernées rejouées (script de mutation du bac à sable), puis remise en place :
+
+- cloison de la FAQ retirée en lecture : 4 échecs (`faq.test.js`, `cloison.test.js`) ;
+- liste de la FAQ sans filtre d'entité : 1 échec ;
+- permission `faq:gerer` non contrôlée : 5 échecs ;
+- entrée commune ouverte au service technique : 4 échecs ;
+- transformation d'un ticket sans contrôle du traitant : 1 échec ;
+- transformation d'un incident ou d'une question non résolue : 1 échec ;
+- deuxième entrée pour le même ticket : 1 échec ;
+- retrait sans motif enregistré : 1 échec ;
+- journal de la FAQ sans l'entité : 1 échec ;
+- R2, message propre au refus ignoré : 2 échecs (`tickets.test.js`, `parametres-entite.test.js`) ;
+- R3, casse des codes gardée : 1 échec ;
+- R6, files du profil toujours vides : 1 échec.
+
+Interface (`pages.test.tsx`, `help.test.ts`) :
+
+- R1, étiquette remise en bouton : 1 échec ;
+- R2, refus non affiché sous le réglage : 1 échec ;
+- R4, codes par action non traduits : 2 échecs (FR et NL) ;
+- R6, compteurs demandés à tous : 1 échec ;
+- procédure réservée montrée à tous : 1 échec ;
+- fiche d'un écran sans droit ouverte par « Aide » : 1 échec ;
+- fiche d'un écran retirée : 4 échecs ;
+- « ? » retiré d'un champ : 2 échecs ;
+- captures remises sous `/help` : 1 échec ;
+- recherche sensible aux accents : 1 échec ;
+- retrait d'une question sans motif : 1 échec.
+
+Code de la 0.12.0 : tout réussi (serveur 427/427, interface 217/217, un test des captures joué par `npm run help:check`).
+
 ## 0.11.0 (05/11/2026)
 
 Tickets (standard, section 13.5), modules du gabarit 1.3.0 repris et adaptés aux rôles par entité (DV-97, DV-107) ; quatre remarques de la recette de la 0.10.0 (DV-106). Environnement : bac à sable de Claude, Node 22.23.4 ; parcours `ci.yml` rejoué sous Node 20.20.2. Aucune dépendance nouvelle ; migration `010_tickets`.

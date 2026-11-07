@@ -10,6 +10,7 @@ const { rolesIn, setActiveEntite } = require('../auth');
 const notes = require('./notes-version');
 const demandes = require('./demandes');
 const parametresEntite = require('./parametres-entite');
+const tickets = require('./tickets');
 
 const PROFILE = 'id, email, first_name, last_name, user_role, entite_id, preferred_lang, ui_mode, theme, must_change_password, lieu_habituel_id';
 
@@ -36,7 +37,10 @@ function profil(user) {
   const telephone_urgence = active ? (parametresEntite.valeur(active, 'urgence.telephone') || parametresEntite.valeur(active, 'contact.telephone') || null) : null;
   // Mentions d'information et contact du DPO de l'entité active (RGPD-10, 0.7.0) : formulaire, aide et MCP.
   const protection_donnees = active ? parametresEntite.protectionDonnees(active) : null;
-  return { ...p, entites, entite_active_id: active, nouveautes, lieu_propose, lieux_recents, telephone_urgence, protection_donnees };
+  // Files de tickets que la personne traite dans l'entité active (R6, 0.12.0) : l'écran Tickets ne demande les compteurs
+  // qu'à qui traite au moins une file, au lieu d'essuyer un refus joint ensuite comme « dernière erreur » à ses tickets.
+  const files_tickets = tickets.handlerQueues({ id: user.id, role: p.user_role, entiteId: active, roles: active ? rolesIn(user.id, active) : [] });
+  return { ...p, entites, entite_active_id: active, nouveautes, lieu_propose, lieux_recents, telephone_urgence, protection_donnees, files_tickets };
 }
 
 function choisirEntite(user, entiteId, channel = 'api') {

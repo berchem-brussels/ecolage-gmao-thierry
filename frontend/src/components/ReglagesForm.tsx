@@ -5,9 +5,12 @@
  * retour à la valeur livrée par réglage. Choix exclusif en boutons (standard v3.2, section 12.4).
  * 0.7.0 : type texte_long (zone de plusieurs lignes, sans compteur qui recouvrirait l'explication ; variables permises
  * rappelées et contrôlées comme au serveur).
+ * 0.12.0 (DV-109) : R1, « valeur par défaut » est un état, écrit en texte discret à côté du libellé, et non une étiquette
+ * qui ressemblait à un bouton ; R2, un refus du serveur s'affiche sous le réglage refusé, avec le message du serveur qui
+ * nomme le réglage et la valeur fautive, au lieu de « Données invalides ».
  */
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Button, Card, Form, Input, InputNumber, Popconfirm, Radio, Space, Tag, Typography, message } from 'antd';
+import { Button, Card, Form, Input, InputNumber, Popconfirm, Radio, Space, Typography, message } from 'antd';
 import { UndoOutlined } from '@ant-design/icons';
 import api, { ApiError, qs } from '../api';
 import { useI18n } from '../contexts/I18nContext';
@@ -63,12 +66,19 @@ export default function ReglagesForm({ endpoint, groupes, prefixe, onSaved, relo
     const changed = items.filter((p) => texte(form.getFieldValue(p.cle)) !== (p.valeur ?? ''));
     if (!changed.length) { message.info(t('parametres.nochange')); return; }
     setSaving(g);
+    let enCours: Reglage | null = null;
     try {
-      for (const p of changed) await api.put(`${endpoint}/${p.cle}`, { valeur: texte(form.getFieldValue(p.cle)) });
+      for (const p of changed) { enCours = p; await api.put(`${endpoint}/${p.cle}`, { valeur: texte(form.getFieldValue(p.cle)) }); }
+      enCours = null;
       message.success(t('common.saved'));
       await load();
       await onSaved?.();
-    } catch (e) { fail(e); } finally { setSaving(null); }
+    } catch (e) {
+      // R2 : le refus est montré sous le réglage concerné ; les réglages enregistrés avant lui le restent (un appel chacun).
+      const refuse = enCours as Reglage | null;
+      if (refuse && e instanceof ApiError && e.code === 'VALIDATION') form.setFields([{ name: refuse.cle, errors: [e.message] }]);
+      fail(e);
+    } finally { setSaving(null); }
   };
 
   const reset = async (p: Reglage) => {
@@ -106,8 +116,8 @@ export default function ReglagesForm({ endpoint, groupes, prefixe, onSaved, relo
   };
 
   const field = (p: Reglage) => (
-    <Form.Item key={p.cle} name={p.cle} rules={rules(p)}
-      label={<Space size={8} wrap><span>{lbl(p, 'libelle')}</span>{p.est_defaut && <Tag>{t('parametres.default.tag')}</Tag>}</Space>}
+    <Form.Item key={p.cle} name={p.cle} rules={rules(p)} tooltip={lbl(p, 'description')}
+      label={<Space size={8} wrap><span>{lbl(p, 'libelle')}</span>{p.est_defaut && <Typography.Text type="secondary" className="reglage-defaut" style={{ fontWeight: 'normal', fontSize: 12 }}>({t('parametres.default.tag')})</Typography.Text>}</Space>}
       extra={<>
         <div>{lbl(p, 'description')}</div>
         {p.type === 'texte_long' && p.variables && p.variables.length > 0 && (

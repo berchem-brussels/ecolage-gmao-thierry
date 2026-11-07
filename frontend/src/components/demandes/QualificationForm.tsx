@@ -23,7 +23,7 @@ const GROUPE_RADIO = { role: 'radiogroup' } as Record<string, string>;
 interface Valeurs { priorite: string; motif_priorite?: string; duree_heures?: number | null; consignes?: string; photos_visibles: boolean; date_convenue?: Dayjs | null }
 
 export default function QualificationForm({ d, onDone, onCancel }: { d: Demande; onDone: (d: Demande) => void; onCancel: () => void }) {
-  const { t, lang } = useI18n();
+  const { t, lang, hint } = useI18n();
   const [form] = Form.useForm<Valeurs>();
   const [arbre, setArbre] = useState<Categorie[] | null>(null);
   const [priorites, setPriorites] = useState<PrioriteFiche[]>([]);
@@ -94,7 +94,7 @@ export default function QualificationForm({ d, onDone, onCancel }: { d: Demande;
           value={categorieId} onChange={choisirCategorie} treeData={arbreSelect} loading={arbre === null} style={{ width: '100%' }}
           placeholder={t('qualif.categorie.placeholder')} />
       </Form.Item>
-      <Form.Item name="priorite" label={t('qualif.priorite')} rules={[obligatoire(t)]}
+      <Form.Item name="priorite" label={t('qualif.priorite')} tooltip={hint('qualif.priorite')} rules={[obligatoire(t)]}
         extra={proposee ? `${t('qualif.proposee')} ${proposee}${d.danger === 1 ? ` (${t('qualif.proposee.danger')})` : ''}` : undefined}>
         <Radio.Group {...GROUPE_RADIO} optionType="button" buttonStyle="solid" aria-label={t('qualif.priorite')}
           options={(priorites.length ? priorites.map((p) => p.code) : ['P1', 'P2', 'P3', 'P4']).map((code) => {
@@ -103,7 +103,7 @@ export default function QualificationForm({ d, onDone, onCancel }: { d: Demande;
           })} />
       </Form.Item>
       {motifRequis && (
-        <Form.Item name="motif_priorite" label={t('qualif.motif')} extra={t('qualif.motif.aide')}
+        <Form.Item name="motif_priorite" label={t('qualif.motif')} tooltip={hint('qualif.motif')} extra={t('qualif.motif.aide')}
           rules={[{ required: true, whitespace: true, message: t('qualif.motif.requis') }]}>
           <Input.TextArea rows={2} maxLength={500} />
         </Form.Item>
@@ -111,18 +111,18 @@ export default function QualificationForm({ d, onDone, onCancel }: { d: Demande;
       <Form.Item label={t('qualif.lieu')} required>
         <LieuPicker value={lieu} onChange={setLieu} />
       </Form.Item>
-      <Form.Item name="duree_heures" label={t('qualif.duree')} extra={t('qualif.duree.aide')}>
+      <Form.Item name="duree_heures" label={t('qualif.duree')} tooltip={hint('qualif.duree')} extra={t('qualif.duree.aide')}>
         <InputNumber min={0.25} max={168} step={0.25} decimalSeparator="," addonAfter={t('qualif.duree.heures')} style={{ width: 200 }} />
       </Form.Item>
       {sansFin && (
-        <Form.Item name="date_convenue" label={t('qualif.date_convenue')} extra={t('qualif.date_convenue.aide')}>
+        <Form.Item name="date_convenue" label={t('qualif.date_convenue')} tooltip={hint('qualif.date_convenue')} extra={t('qualif.date_convenue.aide')}>
           <DatePicker format="DD/MM/YYYY" disabledDate={(j) => j.isBefore(dayjs(), 'day') || j.isAfter(dayjs().add(2, 'year'))} />
         </Form.Item>
       )}
-      <Form.Item name="consignes" label={t('qualif.consignes')} extra={t('qualif.consignes.aide')}>
+      <Form.Item name="consignes" label={t('qualif.consignes')} tooltip={hint('qualif.consignes')} extra={t('qualif.consignes.aide')}>
         <Input.TextArea rows={3} maxLength={2000} />
       </Form.Item>
-      <Form.Item name="photos_visibles" label={t('qualif.photos')} valuePropName="checked" extra={t('qualif.photos.aide')}>
+      <Form.Item name="photos_visibles" label={t('qualif.photos')} tooltip={hint('qualif.photos')} valuePropName="checked" extra={t('qualif.photos.aide')}>
         <Switch aria-label={t('qualif.photos')} checkedChildren={t('qualif.oui')} unCheckedChildren={t('qualif.non')} />
       </Form.Item>
       {erreur && <Alert type="error" showIcon message={erreur} style={{ marginBottom: 12 }} role="alert" />}

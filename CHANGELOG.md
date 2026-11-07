@@ -1,6 +1,18 @@
 # Journal des versions
 
-Version de l'application : **0.11.0** · Mis à jour le 05/11/2026
+Version de l'application : **0.12.0** · Mis à jour le 06/11/2026
+
+## 0.12.0 (06/11/2026)
+
+Aide par écran et FAQ locale (standard v3.3, section 13.1 ; DV-100), regroupant les anciennes 0.12.0 et 0.12.1 (DV-110) ; six remarques de la recette de la 0.11.0 (DV-109) ; contrôles automatiques après installation (DV-110). Migration `011_faq`. Dépendance de développement `@playwright/test` ^1.56.1 (E-37), absente des images.
+
+- Remarques de la recette de la 0.11.0 : R1 « (valeur par défaut) » en texte discret, plus en étiquette qui ressemblait à un bouton ; R2 un réglage refusé nomme le réglage et la valeur fautive, en FR et en NL, sous le champ, par l'écran comme par l'assistant ; R3 codes de rôle des files acceptés en majuscules ou en minuscules, dit dans l'explication ; R4 plus de clé ni de code brut dans le détail du journal (champs de la connexion Microsoft, champs modifiés d'un ticket, type, mode, méthode, motif d'un refus de Microsoft, secret « masqué ») ; R5 procédure de lecture des tickets par Claude passée par Claude in Chrome (`MCP.md`) ; R6 compteurs des tickets demandés seulement à qui traite une file (`files_tickets` dans le profil).
+- FAQ locale en base (migration `011_faq`, repris du gabarit et adapté, E-44) : entrées communes (administrateur) ou d'une entité (gestionnaire et responsable, permission `faq:gerer`), cloison entre entités, recherche, retrait avec motif et rétablissement, journal avec l'entité ; question métier résolue ou close transformée en entrée de son entité (`POST /api/tickets/:id/faq`, « Ajouter à la FAQ ») ; six outils MCP.
+- Aide par écran (repris du gabarit et adapté, E-45) : bouton « Aide » dans l'en-tête de chaque écran (panneau avec la fiche de l'écran et ses questions) ; seize fiches FR et NL (demandeur, service technique, administration, aide) qui remplacent les rubriques d'avant ; centre `/help` avec ses onglets, recherche sans accents, impression complète ; « ? » à côté de chaque champ (`hints.ts`, fin d'E-39) ; « Signaler » nomme l'écran par le titre de sa fiche ; en-tête tenu dans 360 px (thème dans le menu de la personne sur téléphone).
+- Captures de l'aide : 18 par langue, produites par `npm run help:capture` sur une base de démonstration, servies sous `/aide-captures` (sous `/help`, nginx aurait servi le dossier au lieu de l'écran) ; trois défauts du script du gabarit corrigés (E-37).
+- `recette.sh` et `backend/src/recette-api.js` : neuf contrôles après installation, en lecture seule, mot de passe de démonstration tapé sans affichage.
+- Aide et note de version : fiche fonctionnelle `docs/fonctionnel/aide.md` ; note (deux lignes pour tous, une pour le service technique, deux pour l'administrateur).
+- Tests : serveur 427 (410 en 0.11.0 ; `faq.test.js` : 7), interface 217 et un contrôle des captures (181) ; contrôles bloquants de l'aide dans `help.test.ts` ; preuves d'échec dans `docs/fr/SECURITE.md`.
 
 ## 0.11.0 (05/11/2026)
 

@@ -35,7 +35,7 @@ export function ssoStartUrl(next: string | null) {
 
 export default function LoginPage() {
   const { login, refresh } = useAuth();
-  const { t, lang, setLang, tField } = useI18n();
+  const { t, lang, setLang, tField, hint } = useI18n();
   const { settings, reload } = useSettings();
   const screens = Grid.useBreakpoint();
   const [params] = useSearchParams();
@@ -94,10 +94,10 @@ export default function LoginPage() {
             {showLocal && (
           <Form onFinish={onLogin} size="large" layout="vertical" requiredMark={false}
             onValuesChange={(c: Record<string, unknown>) => { if ('email' in c) setError(''); }} onFinishFailed={() => setError('')}>
-            <Form.Item name="email" label={t('login.email')} rules={[texteObligatoire(t), courriel(t)]} validateFirst>
+            <Form.Item name="email" label={t('login.email')} tooltip={hint('login.email')} rules={[texteObligatoire(t), courriel(t)]} validateFirst>
               <Input prefix={<UserOutlined />} autoComplete="username" />
             </Form.Item>
-            <Form.Item name="password" label={t('login.password')} rules={[obligatoire(t)]}>
+            <Form.Item name="password" label={t('login.password')} tooltip={hint('login.password')} rules={[obligatoire(t)]}>
               <Input.Password prefix={<LockOutlined />} autoComplete="current-password" />
             </Form.Item>
             <Button type="primary" htmlType="submit" block loading={loading} style={{ height: 44 }}>{t('login.submit')}</Button>
@@ -109,23 +109,23 @@ export default function LoginPage() {
             initialValues={{ default_lang: settings.app.default_lang || 'fr', modules: installables.filter((m) => m.actif_defaut).map((m) => m.code) }}>
             <Typography.Paragraph type="secondary">{t('install.intro')}</Typography.Paragraph>
             <Divider orientation="left" plain>{t('install.section.organisation')}</Divider>
-            <Form.Item name="organisation_fr" label={t('install.organisation_fr')} rules={[texteObligatoire(t), { max: 200 }]}><Input lang="fr" /></Form.Item>
-            <Form.Item name="organisation_nl" label={t('install.organisation_nl')} rules={[texteObligatoire(t), { max: 200 }]}><Input lang="nl" /></Form.Item>
+            <Form.Item name="organisation_fr" label={t('install.organisation_fr')} tooltip={hint('install.organisation_fr')} rules={[texteObligatoire(t), { max: 200 }]}><Input lang="fr" /></Form.Item>
+            <Form.Item name="organisation_nl" label={t('install.organisation_nl')} tooltip={hint('install.organisation_nl')} rules={[texteObligatoire(t), { max: 200 }]}><Input lang="nl" /></Form.Item>
             <Divider orientation="left" plain>{t('install.section.entite')}</Divider>
             <Typography.Paragraph type="secondary" style={{ fontSize: 13 }}>{t('install.entite.help')}</Typography.Paragraph>
-            <Form.Item name="entite_code" label={t('entites.field.code')} extra={t('entites.field.code.help')}
+            <Form.Item name="entite_code" label={t('entites.field.code')} tooltip={hint('install.entite_code')} extra={t('entites.field.code.help')}
               normalize={(v: string) => (v || '').toUpperCase().replace(/\s/g, '')}
               rules={[texteObligatoire(t), { pattern: /^[A-Z][A-Z0-9]{1,9}$/, message: t('entites.field.code.help') }]}>
               <Input maxLength={10} />
             </Form.Item>
-            <Form.Item name="entite_nom_fr" label={t('entites.field.nom_fr')} rules={[texteObligatoire(t), { max: 200 }]}><Input lang="fr" /></Form.Item>
-            <Form.Item name="entite_nom_nl" label={t('entites.field.nom_nl')} rules={[texteObligatoire(t), { max: 200 }]}><Input lang="nl" /></Form.Item>
+            <Form.Item name="entite_nom_fr" label={t('entites.field.nom_fr')} tooltip={hint('install.entite_nom_fr')} rules={[texteObligatoire(t), { max: 200 }]}><Input lang="fr" /></Form.Item>
+            <Form.Item name="entite_nom_nl" label={t('entites.field.nom_nl')} tooltip={hint('install.entite_nom_nl')} rules={[texteObligatoire(t), { max: 200 }]}><Input lang="nl" /></Form.Item>
             <Divider orientation="left" plain>{t('install.section.reglages')}</Divider>
-            <Form.Item name="default_lang" label={t('install.default_lang')} extra={t('install.default_lang.help')}>
+            <Form.Item name="default_lang" label={t('install.default_lang')} tooltip={hint('install.default_lang')} extra={t('install.default_lang.help')}>
               <Radio.Group optionType="button" buttonStyle="solid" options={[{ value: 'fr', label: t('install.lang.fr') }, { value: 'nl', label: t('install.lang.nl') }]} />
             </Form.Item>
             {installables.length > 0 && (
-              <Form.Item name="modules" label={t('install.modules')} extra={t('install.modules.help')}>
+              <Form.Item name="modules" label={t('install.modules')} tooltip={hint('install.modules')} extra={t('install.modules.help')}>
                 <Checkbox.Group style={{ width: '100%' }}>
                   <Space direction="vertical">
                     {installables.map((m) => (
@@ -139,10 +139,10 @@ export default function LoginPage() {
               </Form.Item>
             )}
             <Divider orientation="left" plain>{t('install.section.admin')}</Divider>
-            <Form.Item name="email" label={t('users.field.email')} rules={[texteObligatoire(t), courriel(t)]} validateFirst><Input prefix={<MailOutlined />} autoComplete="email" /></Form.Item>
-            <Form.Item name="first_name" label={t('users.field.first_name')} rules={[texteObligatoire(t)]}><Input autoComplete="given-name" /></Form.Item>
-            <Form.Item name="last_name" label={t('users.field.last_name')} rules={[texteObligatoire(t)]}><Input autoComplete="family-name" /></Form.Item>
-            <Form.Item name="password" label={t('login.password')} extra={t('install.password.help')} rules={[obligatoire(t), { min: 12 }]}>
+            <Form.Item name="email" label={t('users.field.email')} tooltip={hint('install.email')} rules={[texteObligatoire(t), courriel(t)]} validateFirst><Input prefix={<MailOutlined />} autoComplete="email" /></Form.Item>
+            <Form.Item name="first_name" label={t('users.field.first_name')} tooltip={hint('install.first_name')} rules={[texteObligatoire(t)]}><Input autoComplete="given-name" /></Form.Item>
+            <Form.Item name="last_name" label={t('users.field.last_name')} tooltip={hint('install.last_name')} rules={[texteObligatoire(t)]}><Input autoComplete="family-name" /></Form.Item>
+            <Form.Item name="password" label={t('login.password')} tooltip={hint('install.password')} extra={t('install.password.help')} rules={[obligatoire(t), { min: 12 }]}>
               <Input.Password autoComplete="new-password" />
             </Form.Item>
             <Button type="primary" htmlType="submit" block loading={loading} style={{ height: 44 }}>{t('install.submit')}</Button>

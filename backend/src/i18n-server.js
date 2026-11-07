@@ -21,6 +21,8 @@ const MESSAGES = {
   LOCAL_LOGIN_DISABLED: { fr: 'Connexion par mot de passe désactivée : utilisez votre compte Microsoft.', nl: 'Aanmelden met wachtwoord uitgeschakeld: gebruik uw Microsoft-account.' },
   LAST_ADMIN: { fr: 'Le dernier administrateur actif ne peut être ni désactivé ni rétrogradé.', nl: 'De laatste actieve beheerder kan niet worden gedeactiveerd of gedegradeerd.' },
   CONFIRMATION: { fr: 'Jeton de confirmation absent, expiré ou déjà utilisé.', nl: 'Bevestigingstoken ontbreekt, is verlopen of al gebruikt.' },
+  FAQ_SOURCE: { fr: "Seule une question métier résolue ou close, rattachée à une entité, peut devenir une entrée de la FAQ.", nl: 'Alleen een opgeloste of afgesloten functionele vraag, verbonden aan een entiteit, kan een item van de FAQ worden.' },
+  FAQ_DEJA: { fr: 'Ce ticket a déjà donné une entrée de la FAQ.', nl: 'Dit ticket heeft al een item van de FAQ opgeleverd.' },
   INTERNAL: { fr: 'Erreur interne. Elle a été enregistrée.', nl: 'Interne fout. Ze werd geregistreerd.' },
   BAD_JSON: { fr: 'Contenu illisible : JSON invalide.', nl: 'Onleesbare inhoud: ongeldige JSON.' },
   PAYLOAD_TOO_LARGE: { fr: 'Contenu trop volumineux.', nl: 'Inhoud te groot.' },

@@ -92,7 +92,7 @@ export default function HomePage() {
               )} />
           </Card>
         )}
-        <Card>
+        <Card className="home-entite">
           {!entite && <Typography.Paragraph style={{ fontSize: 16, marginBottom: 8 }}>{t('home.welcome')} {user?.first_name}</Typography.Paragraph>}
           {entite ? (
             <>

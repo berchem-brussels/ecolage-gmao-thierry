@@ -1,12 +1,15 @@
 /** Langue et traduction (patron SAGA I18nContext.tsx) ; dictionnaire dans src/i18n.ts. */
 import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
 import { translations, type Lang } from '../i18n';
+import { hintText } from '../hints';
 
 interface I18nContextType {
   lang: Lang;
   setLang: (l: Lang) => void;
   t: (key: string) => string;
   tField: (obj: Record<string, unknown> | null | undefined, field: string) => string;
+  /** Explication d'un champ (hints.ts, 0.12.0), affichée par le « ? » à côté du libellé. */
+  hint: (key: string) => string;
 }
 
 const I18nContext = createContext<I18nContextType>(null!);
@@ -20,7 +23,8 @@ export function I18nProvider({ children, defaultLang = 'fr' }: { children: React
     if (!obj) return '';
     return String(obj[`${field}_${lang}`] ?? obj[`${field}_fr`] ?? obj[field] ?? '');
   }, [lang]);
-  return <I18nContext.Provider value={{ lang, setLang, t, tField }}>{children}</I18nContext.Provider>;
+  const hint = useCallback((key: string) => hintText(key, lang), [lang]);
+  return <I18nContext.Provider value={{ lang, setLang, t, tField, hint }}>{children}</I18nContext.Provider>;
 }
 
 export function useI18n() { return useContext(I18nContext); }
