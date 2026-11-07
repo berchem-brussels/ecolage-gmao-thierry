@@ -14,6 +14,7 @@ const fs = require('fs');
 const path = require('path');
 const { getDb } = require('../database');
 const { AppError } = require('../envelope');
+const { refuser } = require('./refus-reglage');
 const { logAudit } = require('../audit');
 const { rolesWith } = require('../roles');
 
@@ -68,29 +69,31 @@ function get(user, cle) {
   return fiche(entiteActive(user), trouver(cle));
 }
 
-/** Contrôle selon le type du catalogue ; rend la valeur nettoyée (texte) ou lève VALIDATION avec le motif. */
+/** Contrôle selon le type du catalogue ; rend la valeur nettoyée ou refuse en nommant le réglage et le motif (R2, 0.12.0). */
 function controler(p, brute) {
   const v = String(brute ?? '').trim();
-  const non = (motif) => { throw new AppError(400, 'VALIDATION', [`valeur: ${motif}`]); };
+  const non = (fr, nl) => refuser(p, fr, nl || fr);
   if (p.type === 'entier') {
-    if (!/^\d+$/.test(v)) non('nombre entier attendu');
+    if (!/^\d+$/.test(v)) non(`« ${v} » n'est pas un nombre entier`, `"${v}" is geen geheel getal`);
     const n = Number(v);
-    if ((p.min !== undefined && n < p.min) || (p.max !== undefined && n > p.max)) non(`entre ${p.min} et ${p.max}`);
+    if ((p.min !== undefined && n < p.min) || (p.max !== undefined && n > p.max)) non(`${n} hors limites : entre ${p.min} et ${p.max}`, `${n} buiten de grenzen: tussen ${p.min} en ${p.max}`);
     return String(n);
   }
   if (p.type === 'choix') {
-    if (!p.choix.some((c) => c.valeur === v)) non(p.choix.map((c) => c.valeur).join(', '));
+    const permis = p.choix.map((c) => c.valeur).join(', ');
+    if (!p.choix.some((c) => c.valeur === v)) non(`choix permis : ${permis}`, `toegelaten keuzes: ${permis}`);
     return v;
   }
-  if (p.requis && !v) non('valeur obligatoire');
-  if (p.motif && v && !new RegExp(p.motif).test(v)) non(`format attendu ${p.motif}`);
-  if (p.type === 'telephone' && v && !TELEPHONE.test(v)) non('numéro de téléphone attendu');
-  if (p.type === 'courriel' && (v.length > 200 || (v && !COURRIEL.test(v)))) non('adresse électronique attendue');
-  if (p.max && (p.type === 'texte' || p.type === 'texte_long') && v.length > p.max) non(`${p.max} caractères au plus`);
+  if (p.requis && !v) non('valeur obligatoire', 'waarde verplicht');
+  if (p.motif && v && !new RegExp(p.motif).test(v)) non(`« ${v} » n'a pas la forme attendue`, `"${v}" heeft niet de verwachte vorm`);
+  if (p.type === 'telephone' && v && !TELEPHONE.test(v)) non(`« ${v} » n'est pas un numéro de téléphone`, `"${v}" is geen telefoonnummer`);
+  if (p.type === 'courriel' && (v.length > 200 || (v && !COURRIEL.test(v)))) non(`« ${v.slice(0, 60)} » n'est pas une adresse électronique`, `"${v.slice(0, 60)}" is geen e-mailadres`);
+  if (p.max && (p.type === 'texte' || p.type === 'texte_long') && v.length > p.max) non(`${p.max} caractères au plus (${v.length} tapés)`, `hoogstens ${p.max} tekens (${v.length} getypt)`);
   if (p.type === 'texte_long') {
     // Seules les variables du catalogue ({entite}, {dpo}) : une faute de frappe se verrait telle quelle à l'écran.
     const inconnues = [...v.matchAll(/\{([^{}]*)\}/g)].map((m) => m[1]).filter((x) => !(p.variables || []).includes(x));
-    if (inconnues.length) non(`variable inconnue {${inconnues[0]}} ; permises : ${(p.variables || []).map((x) => `{${x}}`).join(', ')}`);
+    const permises = (p.variables || []).map((x) => `{${x}}`).join(', ');
+    if (inconnues.length) non(`variable inconnue {${inconnues[0]}} ; permises : ${permises}`, `onbekende variabele {${inconnues[0]}}; toegelaten: ${permises}`);
   }
   return v;
 }

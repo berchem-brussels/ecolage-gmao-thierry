@@ -237,3 +237,36 @@ test('journal d’audit : chaque action d’un ticket porte l’entité du ticke
   assert.ok(lignes.every((l) => l.entite_id === ea.id));
   assert.ok(lignes.every((l) => !/confidentiel/.test(l.details_json || '')));
 });
+
+// 0.12.0, remarques de la recette de la 0.11.0 (DV-109).
+test('R3 : code de rôle reconnu quelle que soit la casse, enregistré tel que le catalogue l’écrit', async () => {
+  const r = await admin.put('/api/parametres/tickets.it_roles', { valeur: 'Admin' });
+  assert.equal(r.status, 200);
+  assert.equal(r.body.data.valeur, 'admin');
+  const m = await admin.put('/api/parametres/tickets.business_roles', { valeur: 'RESPONSABLE, Gestionnaire, responsable' });
+  assert.equal(m.body.data.valeur, 'responsable,gestionnaire');
+  const p = (await admin.get('/api/parametres/tickets.it_roles')).body.data;
+  assert.match(p.description_fr, /majuscules et minuscules indifférentes/);
+  assert.match(p.description_nl, /hoofd- en kleine letters maken niet uit/);
+  await admin.del('/api/parametres/tickets.business_roles', {});
+  await admin.del('/api/parametres/tickets.it_roles', {});
+});
+
+test('R2 : refus d’un réglage de l’instance qui nomme le réglage et la valeur fautive', async () => {
+  const r = await admin.put('/api/parametres/tickets.it_roles', { valeur: 'admin, Chef' });
+  assert.equal(r.status, 400);
+  assert.equal(r.body.code, 'VALIDATION');
+  assert.match(r.body.message, /^Valeur refusée pour « Rôles qui traitent les incidents, bugs et souhaits » : rôle inconnu « Chef » ; codes connus : agent, .*admin\.$/);
+  assert.equal((await admin.put('/api/parametres/tickets.reopen_days', { valeur: '400' })).body.message,
+    "Valeur refusée pour « Délai de réouverture d'un ticket résolu (jours) » : « 400 » n'est pas un nombre de 1 à 365.");
+  assert.match((await admin.put('/api/parametres/tickets.sla_json', { valeur: '{P1' })).body.message, /texte illisible/);
+  assert.match((await admin.put('/api/parametres/app.default_lang', { valeur: 'de' })).body.message, /choix permis : fr, nl/);
+  assert.equal((await admin.get('/api/parametres/tickets.it_roles')).body.data.valeur, 'admin', 'rien enregistré');
+});
+
+test('R6 : le profil dit quelles files la personne traite ; un agent sans file n’en a aucune', async () => {
+  assert.deepEqual((await a1.get('/api/auth/me')).body.data.files_tickets, []);
+  assert.deepEqual((await respA.get('/api/auth/me')).body.data.files_tickets, ['business']);
+  assert.deepEqual((await admin.get('/api/auth/me')).body.data.files_tickets, ['it']);
+  assert.equal((await a1.get('/api/tickets/stats')).status, 403, 'le refus du serveur reste en place');
+});

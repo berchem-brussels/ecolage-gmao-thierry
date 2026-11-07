@@ -20,7 +20,7 @@ const HM = 'HH:mm';
 
 /** Une ligne de l'horaire : ouvré ou non, début et fin, enregistrement et retour à l'horaire livré. */
 function LigneHoraire({ h, onSaved }: { h: Horaire; onSaved: () => void }) {
-  const { t } = useI18n();
+  const { t, hint } = useI18n();
   const [ouvre, setOuvre] = useState(!!h.debut);
   const [debut, setDebut] = useState<Dayjs | null>(h.debut ? dayjs(h.debut, HM) : null);
   const [fin, setFin] = useState<Dayjs | null>(h.fin ? dayjs(h.fin, HM) : null);
@@ -57,7 +57,7 @@ function LigneHoraire({ h, onSaved }: { h: Horaire; onSaved: () => void }) {
 interface JourForm { nature: 'conge' | 'fermeture'; libelle_fr: string; libelle_nl: string; jour?: Dayjs; periode?: [Dayjs, Dayjs] }
 
 export default function CalendrierTab() {
-  const { t, tField, lang } = useI18n();
+  const { t, tField, lang, hint } = useI18n();
   const { user } = useAuth();
   const annee0 = dayjs().year();
   const [horaires, setHoraires] = useState<Horaire[]>([]);
@@ -146,21 +146,21 @@ export default function CalendrierTab() {
       <Modal open={creer} destroyOnClose title={t('ref.cal.nouveau')} okText={t('common.save')} cancelText={t('common.cancel')}
         onOk={() => form.submit()} onCancel={() => setCreer(false)}>
         <Form form={form} layout="vertical" onFinish={ajouter} preserve={false} initialValues={{ nature: 'fermeture' }}>
-          <Form.Item name="nature" label={t('ref.cal.nature')}>
+          <Form.Item name="nature" label={t('ref.cal.nature')} tooltip={hint('ref.cal.nature')}>
             <Radio.Group optionType="button" aria-label={t('ref.cal.nature')}
               options={[{ value: 'fermeture', label: t('ref.cal.nature.fermeture') }, { value: 'conge', label: t('ref.cal.nature.conge') }]} />
           </Form.Item>
           {natureForm === 'conge' ? (
-            <Form.Item name="jour" label={t('ref.cal.jour')} extra={t('ref.cal.chaque_annee')} rules={[obligatoire(t)]}>
+            <Form.Item name="jour" label={t('ref.cal.jour')} tooltip={hint('ref.cal.jour')} extra={t('ref.cal.chaque_annee')} rules={[obligatoire(t)]}>
               <DatePicker format="D MMMM" aria-label={t('ref.cal.jour')} />
             </Form.Item>
           ) : (
-            <Form.Item name="periode" label={t('ref.cal.periode')} rules={[obligatoire(t)]}>
+            <Form.Item name="periode" label={t('ref.cal.periode')} tooltip={hint('ref.cal.periode')} rules={[obligatoire(t)]}>
               <DatePicker.RangePicker format="DD/MM/YYYY" aria-label={t('ref.cal.periode')} />
             </Form.Item>
           )}
-          <Form.Item name="libelle_fr" label={t('ref.cal.libelle_fr')} rules={[texteObligatoire(t), { max: 200 }]}><Input lang="fr" /></Form.Item>
-          <Form.Item name="libelle_nl" label={t('ref.cal.libelle_nl')} rules={[texteObligatoire(t), { max: 200 }]}><Input lang="nl" /></Form.Item>
+          <Form.Item name="libelle_fr" label={t('ref.cal.libelle_fr')} tooltip={hint('ref.cal.libelle')} rules={[texteObligatoire(t), { max: 200 }]}><Input lang="fr" /></Form.Item>
+          <Form.Item name="libelle_nl" label={t('ref.cal.libelle_nl')} tooltip={hint('ref.cal.libelle')} rules={[texteObligatoire(t), { max: 200 }]}><Input lang="nl" /></Form.Item>
         </Form>
       </Modal>
 
@@ -176,8 +176,8 @@ export default function CalendrierTab() {
             <Typography.Paragraph style={{ fontSize: 12, marginTop: -8 }}><TraceFiche trace={current.trace} /></Typography.Paragraph>
             <Form key={`${current.id}-${current.updated_at}`} layout="vertical" onFinish={renommer} preserve={false}
               initialValues={{ libelle_fr: current.libelle_fr, libelle_nl: current.libelle_nl }} disabled={!current.is_active}>
-              <Form.Item name="libelle_fr" label={t('ref.cal.libelle_fr')} rules={[texteObligatoire(t), { max: 200 }]}><Input lang="fr" /></Form.Item>
-              <Form.Item name="libelle_nl" label={t('ref.cal.libelle_nl')} rules={[texteObligatoire(t), { max: 200 }]}><Input lang="nl" /></Form.Item>
+              <Form.Item name="libelle_fr" label={t('ref.cal.libelle_fr')} tooltip={hint('ref.cal.libelle')} rules={[texteObligatoire(t), { max: 200 }]}><Input lang="fr" /></Form.Item>
+              <Form.Item name="libelle_nl" label={t('ref.cal.libelle_nl')} tooltip={hint('ref.cal.libelle')} rules={[texteObligatoire(t), { max: 200 }]}><Input lang="nl" /></Form.Item>
               <Button type="primary" htmlType="submit">{t('common.save')}</Button>
             </Form>
             {current.is_active ? (

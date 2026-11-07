@@ -22,7 +22,7 @@ export function texteDelai(t: (k: string) => string, n: number | null, unite: Un
 }
 
 function CartePriorite({ p, onSaved }: { p: PrioriteFiche; onSaved: (p: PrioriteFiche) => void }) {
-  const { t, tField } = useI18n();
+  const { t, tField, hint } = useI18n();
   const [form] = Form.useForm<FormValues>();
   const convenue = Form.useWatch('convenue', form);
   const fail = (e: unknown) => message.error(e instanceof ApiError ? `${e.message}${e.details ? ` (${e.details.join(', ')})` : ''}` : t('common.error'));
@@ -45,20 +45,20 @@ function CartePriorite({ p, onSaved }: { p: PrioriteFiche; onSaved: (p: Priorite
       <Form key={`${p.code}-${p.updated_at}`} form={form} layout="vertical" onFinish={enregistrer} preserve={false}
         initialValues={{ ...p, description_fr: p.description_fr ?? '', description_nl: p.description_nl ?? '', convenue: p.fin === null }}>
         <div className="ref-deux">
-          <Form.Item name="libelle_fr" label={t('ref.prio.libelle_fr')} rules={[texteObligatoire(t), { max: 100 }]}><Input lang="fr" /></Form.Item>
-          <Form.Item name="libelle_nl" label={t('ref.prio.libelle_nl')} rules={[texteObligatoire(t), { max: 100 }]}><Input lang="nl" /></Form.Item>
-          <Form.Item name="description_fr" label={t('ref.prio.description_fr')} rules={[{ max: 500 }]}><Input.TextArea lang="fr" rows={2} /></Form.Item>
-          <Form.Item name="description_nl" label={t('ref.prio.description_nl')} rules={[{ max: 500 }]}><Input.TextArea lang="nl" rows={2} /></Form.Item>
+          <Form.Item name="libelle_fr" label={t('ref.prio.libelle_fr')} tooltip={hint('ref.prio.libelle')} rules={[texteObligatoire(t), { max: 100 }]}><Input lang="fr" /></Form.Item>
+          <Form.Item name="libelle_nl" label={t('ref.prio.libelle_nl')} tooltip={hint('ref.prio.libelle')} rules={[texteObligatoire(t), { max: 100 }]}><Input lang="nl" /></Form.Item>
+          <Form.Item name="description_fr" label={t('ref.prio.description_fr')} tooltip={hint('ref.prio.description')} rules={[{ max: 500 }]}><Input.TextArea lang="fr" rows={2} /></Form.Item>
+          <Form.Item name="description_nl" label={t('ref.prio.description_nl')} tooltip={hint('ref.prio.description')} rules={[{ max: 500 }]}><Input.TextArea lang="nl" rows={2} /></Form.Item>
         </div>
-        <Form.Item name="unite" label={t('ref.prio.unite')} extra={t('ref.prio.unite.help')}>
+        <Form.Item name="unite" label={t('ref.prio.unite')} tooltip={hint('ref.prio.unite')} extra={t('ref.prio.unite.help')}>
           <Radio.Group optionType="button" aria-label={t('ref.prio.unite')} options={UNITES.map((u) => ({ value: u, label: t(`ref.unite.${u}`) }))} />
         </Form.Item>
         <Space wrap align="start">
-          <Form.Item name="prise_en_charge" label={t('ref.prio.prise')} rules={[obligatoire(t)]}><InputNumber min={1} max={720} /></Form.Item>
-          <Form.Item name="fin" label={t('ref.prio.fin')}><InputNumber min={1} max={720} disabled={convenue} /></Form.Item>
-          <Form.Item name="convenue" valuePropName="checked" label={t('ref.prio.convenue')}><Checkbox aria-label={t('ref.prio.convenue')} /></Form.Item>
+          <Form.Item name="prise_en_charge" label={t('ref.prio.prise')} tooltip={hint('ref.prio.prise')} rules={[obligatoire(t)]}><InputNumber min={1} max={720} /></Form.Item>
+          <Form.Item name="fin" label={t('ref.prio.fin')} tooltip={hint('ref.prio.fin')}><InputNumber min={1} max={720} disabled={convenue} /></Form.Item>
+          <Form.Item name="convenue" valuePropName="checked" label={t('ref.prio.convenue')} tooltip={hint('ref.prio.convenue')}><Checkbox aria-label={t('ref.prio.convenue')} /></Form.Item>
         </Space>
-        <Form.Item name="couleur" label={t('ref.prio.couleur')}>
+        <Form.Item name="couleur" label={t('ref.prio.couleur')} tooltip={hint('ref.prio.couleur')}>
           <Radio.Group aria-label={t('ref.prio.couleur')} className="ref-couleurs">
             {COULEURS.map((c) => <Radio key={c} value={c} aria-label={t(`ref.couleur.${c}`)}><Tag color={c}>{t(`ref.couleur.${c}`)}</Tag></Radio>)}
           </Radio.Group>
@@ -81,7 +81,7 @@ function CartePriorite({ p, onSaved }: { p: PrioriteFiche; onSaved: (p: Priorite
 }
 
 export default function PrioritesTab({ priorites, onChange }: { priorites: PrioriteFiche[]; onChange: (p: PrioriteFiche) => void }) {
-  const { t } = useI18n();
+  const { t, hint } = useI18n();
   return (
     <div>
       <Typography.Paragraph type="secondary">{t('ref.prio.intro')}</Typography.Paragraph>

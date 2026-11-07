@@ -1,6 +1,6 @@
 # Serveur MCP
 
-Version de l'application : **0.11.0** · Mis à jour le 05/11/2026 · Le français fait foi.
+Version de l'application : **0.12.0** · Mis à jour le 06/11/2026 · Le français fait foi.
 
 ## Accès
 
@@ -20,6 +20,19 @@ Version de l'application : **0.11.0** · Mis à jour le 05/11/2026 · Le frança
 - Depuis la 0.5.0, le serveur retire les espaces de début et de fin de tout texte reçu, par le MCP comme par l'API, sauf les mots de passe ; un champ obligatoire fait seulement d'espaces est refusé (`VALIDATION`), avant tout jeton de confirmation.
 - Les instructions envoyées au client demandent de commencer par `get_profile` : les données métier sont celles de l'entité active ; `select_entite` la change. Elles disent aussi que le MCP ne transporte aucun fichier, et qu'une demande se dépose par `create_demande`, le lieu proposé d'office étant `lieu_propose` dans `get_profile`, et les derniers lieux de ses demandes `lieux_recents` (0.7.5). Depuis la 0.8.0, elles disent que les pièces du brouillon partent avec la demande suivante, même déposée par `create_demande`, et qu'il faut le dire à la personne.
 
+## 0.12.0
+
+Outils nouveaux de la FAQ locale (standard, section 13.1 ; repris du gabarit 1.3.0 et adaptés, E-44) :
+
+- `list_faq` (`GET /api/faq`) : questions actives communes et de l'entité active ; filtres `topic_id` (fiche d'aide d'un écran, par exemple `nouvelle-demande`), `q` (recherche dans les questions et les réponses FR et NL), `inclure_inactives` (questions retirées, pour qui les gère) ; chaque ligne dit `can_manage`.
+- `get_faq` (`GET /api/faq/:id`) : une entrée de l'autre entité est refusée (`FORBIDDEN`).
+- `create_faq` (`POST /api/faq`) : `portee` « commune » (administrateur seul) ou « entite » (entité active : administrateur, gestionnaire ou responsable, permission `faq:gerer`), question et réponse en FR et en NL, `topic_id` facultatif.
+- `update_faq` (`PUT /api/faq/:id`) : modification, ou réactivation par `is_active` = 1 (le motif du retrait s'efface).
+- `deactivate_faq` en deux appels (`prepare_deactivate_faq` avec un motif, puis `confirm_deactivate_faq`) : rien n'est supprimé.
+- `create_faq_from_ticket` (`POST /api/tickets/:id/faq`) : une question métier résolue ou close devient une entrée de la FAQ de l'entité du ticket, par une personne qui traite ce ticket, une fois (`FAQ_SOURCE`, `FAQ_DEJA`) ; le ticket ne change pas et `get_ticket` rend `faq_id` et `can_faq`.
+
+Autres changements : un réglage refusé par `update_parametre` ou `update_parametre_entite` nomme le réglage et la valeur fautive, en FR ou en NL selon la personne (code toujours `VALIDATION`, détail inchangé) ; les codes de rôles des files de tickets s'écrivent en majuscules ou en minuscules ; `get_profile` rend `files_tickets`, les files que la personne traite dans l'entité active. Exemple : « Ajoute à la FAQ la réponse du ticket TCK-2026-00001 » : l'assistant lit le ticket par `get_ticket`, propose la question et la réponse en FR et en NL, sans donnée personnelle, puis appelle `create_faq_from_ticket` après accord.
+
 ## 0.11.0
 
 Outils nouveaux, repris du gabarit 1.3.0 : `list_tickets_to_handle` (`GET /api/tickets/to-handle` : tickets nouveaux ou pris en charge que la personne traite, avec leur contexte), `list_tickets`, `ticket_stats`, `get_ticket`, `get_ticket_screenshot` (capture en data URL, nettoyée de ses métadonnées), `create_ticket`, `update_ticket`, `add_ticket_message` et `change_ticket_status` en deux appels (`prepare_change_ticket_status`, puis `confirm_change_ticket_status`). Les files suivent les rôles de la personne dans son entité active : une question métier est traitée par le responsable et le gestionnaire de l'entité du ticket ; un incident, un bug ou un souhait par l'administrateur, pour toutes les entités (DV-97, DV-107). Un transfert vers une file que la personne ne traite pas rend `transferred: true` sans le contenu du ticket. Les rôles des files et les délais se règlent par `update_parametre` (clés `tickets.business_roles`, `tickets.it_roles`, `tickets.reopen_days`, `tickets.sla_json`). `prepare_update_auth_settings` refuse un secret qui a la forme d'un identifiant (`SECRET_IS_ID`).
@@ -28,9 +41,9 @@ Outils nouveaux, repris du gabarit 1.3.0 : `list_tickets_to_handle` (`GET /api/t
 
 Tant que le MCP n'a pas l'OAuth de l'étape 44 (E-10), un assistant hébergé chez son éditeur ne joint pas une installation du réseau interne. Claude lit alors les tickets par le navigateur de la personne, avec sa session (choix (a) du 05/11/2026, DV-108) : rien n'est installé, aucun jeton ne passe par l'assistant et Claude n'a que les droits de la personne.
 
-1. Dans l'application Claude, ouvrir une conversation Cowork liée au PC.
-2. Dans le navigateur de l'application Claude, ouvrir l'application (`https://<adresse>:<port HTTPS>/`) et s'y connecter avec un compte qui traite une file : administrateur pour les incidents, bugs et souhaits, responsable ou gestionnaire pour les questions métier de l'entité active.
-3. Demander à Claude, par exemple : « Liste les tickets à traiter de la GMAO ouverte dans le navigateur. »
+1. Une fois pour toutes sur le PC : installer dans Google Chrome l'extension Claude (Claude in Chrome) et la connecter au compte Claude de la personne ; ouvrir l'application dans Chrome (`https://<adresse>:<port HTTPS>/`) et accepter son certificat (Avancé, puis Continuer) ; autoriser le site dans l'extension. Le navigateur intégré de l'application Claude ne convient pas : il refuse le certificat auto-signé d'une installation interne (`ERR_CERT_AUTHORITY_INVALID`, recette de la 0.11.0, R5 de DV-109).
+2. Chrome ouvert et l'extension connectée, ouvrir dans l'application Claude une conversation Cowork ; Claude ouvre un onglet de Chrome sur l'application, et la personne s'y connecte elle-même (Claude ne tape jamais de mot de passe) avec un compte qui traite une file : administrateur pour les incidents, bugs et souhaits, responsable ou gestionnaire pour les questions métier de l'entité active.
+3. Demander à Claude, par exemple : « Liste les tickets à traiter de la GMAO ouverte dans Chrome. »
 4. Claude exécute dans la page ouverte un appel du MCP, avec le cookie de session de la page et le jeton anti-CSRF lu par `/api/auth/me` :
 
 ```js

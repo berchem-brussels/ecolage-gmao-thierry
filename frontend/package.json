@@ -1,6 +1,6 @@
 {
   "name": "gmao-frontend",
-  "version": "0.11.0",
+  "version": "0.12.0",
   "private": true,
   "license": "EUPL-1.2",
   "type": "module",
@@ -8,7 +8,9 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "test": "vitest run",
-    "a11y": "eslint -c .eslintrc.a11y.json --no-eslintrc --ext .tsx src"
+    "a11y": "eslint -c .eslintrc.a11y.json --no-eslintrc --ext .tsx src",
+    "help:capture": "playwright test -c help-capture/playwright.help.config.ts",
+    "help:check": "HELP_STRICT=1 vitest run src/test/help.test.ts"
   },
   "dependencies": {
     "@ant-design/icons": "^5.5.0",
@@ -20,6 +22,7 @@
     "react-router-dom": "^6.28.0"
   },
   "devDependencies": {
+    "@playwright/test": "^1.56.1",
     "@testing-library/jest-dom": "^7.0.0",
     "@testing-library/react": "^16.3.2",
     "@types/node": "^26.1.1",

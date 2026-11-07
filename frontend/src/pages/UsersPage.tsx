@@ -23,7 +23,7 @@ interface U {
 interface Entite { id: number; code: string; nom_fr: string; nom_nl: string; is_active: number }
 
 export default function UsersPage() {
-  const { t, tField } = useI18n();
+  const { t, tField, hint } = useI18n();
   const { refresh, user } = useAuth();
   const simple = user?.ui_mode !== 'complet';
   // Sous 768 px, une seule colonne empilée : personne, rôles puis actions (standard section 12.7).
@@ -169,22 +169,22 @@ export default function UsersPage() {
         ) : (
           <Form form={form} layout="vertical" onFinish={create}
             initialValues={{ user_role: 'agent', preferred_lang: 'fr', password_mode: 'generated', must_change_password: false, entite_id: entites[0]?.id }}>
-            <Form.Item name="email" label={t('users.field.email')} rules={[texteObligatoire(t), courriel(t)]} validateFirst><Input /></Form.Item>
-            <Form.Item name="first_name" label={t('users.field.first_name')} rules={[texteObligatoire(t)]}><Input /></Form.Item>
-            <Form.Item name="last_name" label={t('users.field.last_name')} rules={[texteObligatoire(t)]}><Input /></Form.Item>
-            <Form.Item name="entite_id" label={t('users.field.entite')} extra={t('users.field.entite.help')} rules={[obligatoire(t)]}>
+            <Form.Item name="email" label={t('users.field.email')} tooltip={hint('users.email')} rules={[texteObligatoire(t), courriel(t)]} validateFirst><Input /></Form.Item>
+            <Form.Item name="first_name" label={t('users.field.first_name')} tooltip={hint('users.first_name')} rules={[texteObligatoire(t)]}><Input /></Form.Item>
+            <Form.Item name="last_name" label={t('users.field.last_name')} tooltip={hint('users.last_name')} rules={[texteObligatoire(t)]}><Input /></Form.Item>
+            <Form.Item name="entite_id" label={t('users.field.entite')} tooltip={hint('users.entite')} extra={t('users.field.entite.help')} rules={[obligatoire(t)]}>
               <Radio.Group optionType="button" options={entiteOptions} />
             </Form.Item>
-            <Form.Item name="preferred_lang" label={t('users.field.lang')}><Radio.Group optionType="button" options={[{ value: 'fr', label: 'FR' }, { value: 'nl', label: 'NL' }]} /></Form.Item>
-            <Form.Item name="user_role" label={t('users.instance_role')}><Radio.Group optionType="button" options={instanceOptions} /></Form.Item>
+            <Form.Item name="preferred_lang" label={t('users.field.lang')} tooltip={hint('users.lang')}><Radio.Group optionType="button" options={[{ value: 'fr', label: 'FR' }, { value: 'nl', label: 'NL' }]} /></Form.Item>
+            <Form.Item name="user_role" label={t('users.instance_role')} tooltip={hint('users.role')}><Radio.Group optionType="button" options={instanceOptions} /></Form.Item>
             {/* Modèle Microsoft 365 (standard v3.2, section 8.1) */}
-            <Form.Item name="password_mode" label={t('users.password.mode')}>
+            <Form.Item name="password_mode" label={t('users.password.mode')} tooltip={hint('users.password_mode')}>
               <Radio.Group optionType="button" options={[{ value: 'generated', label: t('users.password.generated') }, { value: 'manual', label: t('users.password.manual') }]} />
             </Form.Item>
             {mode === 'manual' && (
-              <Form.Item name="password" label={t('users.password.value')} rules={[obligatoire(t), { min: 8 }]}><Input.Password autoComplete="new-password" /></Form.Item>
+              <Form.Item name="password" label={t('users.password.value')} tooltip={hint('users.password')} rules={[obligatoire(t), { min: 8 }]}><Input.Password autoComplete="new-password" /></Form.Item>
             )}
-            <Form.Item name="must_change_password" valuePropName="checked"><Checkbox>{t('users.password.must_change')}</Checkbox></Form.Item>
+            <Form.Item name="must_change_password" valuePropName="checked" label={t('users.password.premiere')} tooltip={hint('users.must_change')}><Checkbox>{t('users.password.must_change')}</Checkbox></Form.Item>
           </Form>
         )}
       </Modal>

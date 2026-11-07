@@ -6,7 +6,7 @@
  * À construire avant la production : OAuth 2.1 avec PKCE sur le patron PILOT src/mcp/oauth.js.
  */
 const crypto = require('crypto');
-const { AppError } = require('./envelope');
+const { AppError, messageOf } = require('./envelope');
 const { L } = require('./i18n-server');
 const { ajv, nettoyer } = require('./validation');
 const S = require('./schemas');
@@ -25,6 +25,7 @@ const demandes = require('./services/demandes');
 const brouillons = require('./services/brouillons');
 const pieces = require('./services/pieces');
 const tickets = require('./services/tickets');
+const faq = require('./services/faq');
 const qualification = require('./services/qualification');
 const vues = require('./services/vues-demandes');
 const parametres = require('./services/parametres');
@@ -421,6 +422,29 @@ const TOOLS = [
   { name: 'add_ticket_message', route: 'POST /api/tickets/:id/messages', schema: withId(S.ticketMessage),
     fr: "Ajoute un message ou une note interne au fil d'un ticket.", nl: 'Voegt een bericht of interne nota toe aan een ticket.',
     run: (u, { id, ...a }) => tickets.addMessage(u, id, a, 'mcp') },
+  { name: 'create_faq_from_ticket', route: 'POST /api/tickets/:id/faq', schema: withId(S.faqFromTicket),
+    fr: "Transforme une question métier résolue ou close en entrée de la FAQ de l'entité du ticket : question et réponse réécrites en FR et en NL, sans donnée personnelle du demandeur ; topic_id facultatif (personne qui traite le ticket).",
+    nl: 'Zet een opgeloste of afgesloten functionele vraag om in een item van de FAQ van de entiteit van het ticket: vraag en antwoord herschreven in het FR en het NL, zonder persoonsgegevens van de aanvrager; topic_id facultatief (behandelaar van het ticket).',
+    run: (u, { id, ...a }) => tickets.toFaq(u, id, a, 'mcp') },
+
+  // FAQ locale (standard, section 13.1 ; 0.12.0).
+  { name: 'list_faq', route: 'GET /api/faq', read: true, schema: S.faqList,
+    fr: "Liste les questions de la FAQ locale : communes et de l'entité active (filtres topic_id, q ; inclure_inactives pour qui les gère).",
+    nl: 'Lijst van de vragen van de lokale FAQ: gemeenschappelijk en van de actieve entiteit (filters topic_id, q; inclure_inactives voor wie ze beheert).',
+    run: (u, a) => faq.list(u, { limit: 200, offset: 0, ...a }) },
+  { name: 'get_faq', route: 'GET /api/faq/:id', read: true, schema: idSchema,
+    fr: 'Lit une question de la FAQ locale.', nl: 'Leest een vraag van de lokale FAQ.', run: (u, a) => faq.get(u, a.id) },
+  { name: 'create_faq', route: 'POST /api/faq', schema: S.faqCreate,
+    fr: "Ajoute une question à la FAQ locale : portee « commune » (administrateur) ou « entite » (entité active ; administrateur, gestionnaire ou responsable), question et réponse en FR et en NL, topic_id facultatif.",
+    nl: 'Voegt een vraag toe aan de lokale FAQ: portee „commune” (beheerder) of „entite” (actieve entiteit; beheerder, technisch beheerder of verantwoordelijke), vraag en antwoord in het FR en het NL, topic_id facultatief.',
+    run: (u, a) => faq.create(u, a, 'mcp') },
+  { name: 'update_faq', route: 'PUT /api/faq/:id', schema: withId(S.faqUpdate),
+    fr: 'Modifie une question de la FAQ locale ou la réactive avec is_active = 1 (qui la gère).', nl: 'Wijzigt een vraag van de lokale FAQ of heractiveert ze met is_active = 1 (wie ze beheert).',
+    run: (u, { id, ...a }) => faq.update(u, id, a, 'mcp') },
+  { name: 'deactivate_faq', route: 'DELETE /api/faq/:id', confirm: true, schema: withId(S.faqDeactivate),
+    fr: "Retire une question de la FAQ locale avec un motif (désactivation, rien n'est supprimé).", nl: 'Trekt een vraag van de lokale FAQ in met een reden (deactivering, niets wordt verwijderd).',
+    summary: (u, a) => { const f = faq.get(u, a.id); if (!f.can_manage) throw new AppError(403, 'FORBIDDEN'); return { action: 'deactivate_faq', faq: { id: f.id, question_fr: f.question_fr, entite_code: f.entite_code }, motif: a.motif }; },
+    run: (u, a) => faq.deactivate(u, a.id, a.motif, 'mcp') },
 ];
 
 const validators = new Map(TOOLS.map((t) => [t.name, ajv.compile(t.schema)]));
@@ -495,7 +519,7 @@ function handleRpc(msg, { user, version }) {
       } catch (e) {
         const code = e instanceof AppError ? e.code : 'INTERNAL';
         if (!(e instanceof AppError)) console.error('[MCP]', e);
-        return reply({ isError: true, content: [{ type: 'text', text: JSON.stringify({ error: true, code, message: L(user.lang, code), details: e.details }) }] });
+        return reply({ isError: true, content: [{ type: 'text', text: JSON.stringify({ error: true, code, message: e instanceof AppError ? messageOf(user.lang, e) : L(user.lang, code), details: e.details }) }] });
       }
     }
     default:

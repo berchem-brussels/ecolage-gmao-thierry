@@ -10,6 +10,7 @@ const fs = require('fs');
 const path = require('path');
 const { getDb } = require('../database');
 const { AppError } = require('../envelope');
+const { refuser } = require('./refus-reglage');
 const { logAudit } = require('../audit');
 const { ROLES } = require('../roles');
 
@@ -90,37 +91,48 @@ function get(user, cle) {
  * Rend la valeur normalisée ou lève VALIDATION avec le motif.
  */
 const FORMATS = {
-  roles: (v) => {
-    const codes = v.split(',').map((x) => x.trim()).filter(Boolean);
-    const inconnus = codes.filter((c) => !ROLES.some((r) => r.code === c));
-    if (!codes.length || inconnus.length) throw new AppError(400, 'VALIDATION', [`valeur: rôles inconnus ${inconnus.join(', ')}`.trim()]);
-    return [...new Set(codes)].join(',');
+  // R3 (0.12.0) : un code de rôle se reconnaît quelle que soit sa casse (« Admin » vaut « admin ») ; il est enregistré
+  // tel que le catalogue des rôles l'écrit.
+  roles: (v, p) => {
+    const tapes = v.split(',').map((x) => x.trim()).filter(Boolean);
+    const connu = (c) => ROLES.find((r) => r.code.toLowerCase() === c.toLowerCase());
+    const inconnus = tapes.filter((c) => !connu(c));
+    const liste = ROLES.map((r) => r.code).join(', ');
+    if (!tapes.length) refuser(p, `aucun code de rôle ; codes connus : ${liste}`, `geen rolcode; gekende codes: ${liste}`);
+    if (inconnus.length) {
+      const plus = inconnus.length > 1;
+      refuser(p, `${plus ? 'rôles inconnus' : 'rôle inconnu'} ${inconnus.map((c) => `« ${c} »`).join(', ')} ; codes connus : ${liste}`,
+        `${plus ? 'onbekende rollen' : 'onbekende rol'} ${inconnus.map((c) => `"${c}"`).join(', ')}; gekende codes: ${liste}`);
+    }
+    return [...new Set(tapes.map((c) => connu(c).code))].join(',');
   },
-  entier: (v) => {
-    if (!/^\d{1,3}$/.test(v) || Number(v) < 1 || Number(v) > 365) throw new AppError(400, 'VALIDATION', ['valeur: nombre de 1 à 365']);
+  entier: (v, p) => {
+    if (!/^\d{1,3}$/.test(v) || Number(v) < 1 || Number(v) > 365) refuser(p, `« ${v} » n'est pas un nombre de 1 à 365`, `"${v}" is geen getal van 1 tot 365`);
     return String(Number(v));
   },
-  delais: (v) => {
+  delais: (v, p) => {
     let o;
-    try { o = JSON.parse(v); } catch (e) { throw new AppError(400, 'VALIDATION', ['valeur: JSON illisible']); }
+    try { o = JSON.parse(v); } catch (e) { refuser(p, 'texte illisible ; recopiez l\'exemple de l\'explication et changez seulement les nombres', 'onleesbare tekst; kopieer het voorbeeld uit de uitleg en wijzig alleen de getallen'); }
     const ok = o && typeof o === 'object' && !Array.isArray(o) && Object.keys(o).sort().join() === 'P1,P2,P3,P4'
       && Object.values(o).every((d) => Array.isArray(d) && d.length === 2 && d.every((h) => Number.isInteger(h) && h >= 1 && h <= 8760) && d[0] <= d[1]);
-    if (!ok) throw new AppError(400, 'VALIDATION', ['valeur: P1 à P4, chacun [prise en charge, résolution] en heures, de 1 à 8760']);
+    if (!ok) refuser(p, 'P1 à P4 attendus, chacun [prise en charge, résolution] en heures entières de 1 à 8760, la prise en charge au plus égale à la résolution',
+      'P1 tot P4 verwacht, elk [tenlasteneming, oplossing] in hele uren van 1 tot 8760, de tenlasteneming hoogstens gelijk aan de oplossing');
     return JSON.stringify({ P1: o.P1, P2: o.P2, P3: o.P3, P4: o.P4 });
   },
 };
 
-/** Contrôle de la valeur selon le catalogue ; rend la valeur nettoyée ou lève VALIDATION avec le motif. */
+/** Contrôle de la valeur selon le catalogue ; rend la valeur nettoyée ou refuse en nommant le réglage et le motif (R2). */
 function controler(p, brute) {
   const v = typeof brute === 'string' ? brute.trim() : brute;
   if (p.type === 'choix') {
-    if (!p.choix.some((c) => c.valeur === v)) throw new AppError(400, 'VALIDATION', [`valeur: ${p.choix.map((c) => c.valeur).join(', ')}`]);
+    const permis = p.choix.map((c) => c.valeur).join(', ');
+    if (!p.choix.some((c) => c.valeur === v)) refuser(p, `choix permis : ${permis}`, `toegelaten keuzes: ${permis}`);
     return v;
   }
-  if (typeof v !== 'string') throw new AppError(400, 'VALIDATION', ['valeur: texte attendu']);
-  if (p.requis && !v) throw new AppError(400, 'VALIDATION', ['valeur: obligatoire']);
-  if (p.max && v.length > p.max) throw new AppError(400, 'VALIDATION', [`valeur: ${p.max} caractères au plus`]);
-  return p.format ? FORMATS[p.format](v) : v;
+  if (typeof v !== 'string') refuser(p, 'texte attendu', 'tekst verwacht');
+  if (p.requis && !v) refuser(p, 'valeur obligatoire', 'waarde verplicht');
+  if (p.max && v.length > p.max) refuser(p, `${p.max} caractères au plus (${v.length} tapés)`, `hoogstens ${p.max} tekens (${v.length} getypt)`);
+  return p.format ? FORMATS[p.format](v, p) : v;
 }
 
 function ecrire(user, cle, v) {

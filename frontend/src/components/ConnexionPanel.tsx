@@ -22,7 +22,7 @@ export interface AuthSettings {
 export const ID_SECRET = /^\s*[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\s*$/i;
 
 export default function ConnexionPanel() {
-  const { t } = useI18n();
+  const { t, hint } = useI18n();
   const [form] = Form.useForm();
   const [data, setData] = useState<AuthSettings | null>(null);
   const [saving, setSaving] = useState(false);
@@ -49,19 +49,19 @@ export default function ConnexionPanel() {
       <Typography.Paragraph type="secondary">{t('connexion.intro')}</Typography.Paragraph>
       {data && <Typography.Paragraph type="secondary" className="connexion-enregistre" style={{ fontSize: 12 }}>{enregistre()}</Typography.Paragraph>}
       <Form form={form} layout="vertical" onFinish={save} style={{ maxWidth: 640 }}>
-        <Form.Item name="mode" label={t('settings.mode')} extra={t('connexion.mode.help')}>
+        <Form.Item name="mode" label={t('settings.mode')} tooltip={hint('settings.mode')} extra={t('connexion.mode.help')}>
           <Radio.Group optionType="button" aria-label={t('settings.mode')}
             options={(['local', 'sso_optional', 'sso'] as const).map((m) => ({ value: m, label: t(`settings.mode.${m}`) }))} />
         </Form.Item>
-        <Form.Item name="tenant" label={t('settings.tenant')} extra={t('connexion.tenant.help')}><Input autoComplete="off" /></Form.Item>
-        <Form.Item name="client_id" label={t('settings.client_id')} extra={t('connexion.client_id.help')}><Input autoComplete="off" /></Form.Item>
-        <Form.Item name="client_secret" label={t('settings.client_secret')} extra={aideSecret}
+        <Form.Item name="tenant" label={t('settings.tenant')} tooltip={hint('settings.tenant')} extra={t('connexion.tenant.help')}><Input autoComplete="off" /></Form.Item>
+        <Form.Item name="client_id" label={t('settings.client_id')} tooltip={hint('settings.client_id')} extra={t('connexion.client_id.help')}><Input autoComplete="off" /></Form.Item>
+        <Form.Item name="client_secret" label={t('settings.client_secret')} tooltip={hint('settings.client_secret')} extra={aideSecret}
           rules={[{ validator: (_r, v) => (v && ID_SECRET.test(String(v)) ? Promise.reject(new Error(t('connexion.client_secret.id'))) : Promise.resolve()) }]}>
           <Input.Password autoComplete="new-password" />
         </Form.Item>
-        <Form.Item name="public_url" label={t('settings.public_url')} extra={t('connexion.public_url.help')}
+        <Form.Item name="public_url" label={t('settings.public_url')} tooltip={hint('settings.public_url')} extra={t('connexion.public_url.help')}
           rules={[{ pattern: /^(https:\/\/[^\s/]+(\/\S*)?)?$/, message: t('connexion.public_url.invalid') }]}><Input placeholder="https://" inputMode="url" /></Form.Item>
-        <Form.Item name="domains" label={t('settings.domains')} extra={t('connexion.domains.help')}><Input /></Form.Item>
+        <Form.Item name="domains" label={t('settings.domains')} tooltip={hint('settings.domains')} extra={t('connexion.domains.help')}><Input /></Form.Item>
         {data?.redirect_uri && <Alert type="info" showIcon style={{ marginBottom: 16 }} message={t('settings.redirect_uri')} description={<Typography.Text copyable code style={{ wordBreak: 'break-all' }}>{data.redirect_uri}</Typography.Text>} />}
         <Button type="primary" htmlType="submit" loading={saving}>{t('common.save')}</Button>
       </Form>

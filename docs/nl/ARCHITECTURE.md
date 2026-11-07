@@ -1,6 +1,10 @@
 # Architectuur
 
-Versie van de toepassing: **0.11.0** · De Franse tekst is rechtsgeldig (`docs/fr/ARCHITECTURE.md`); dit bestand vat elke versie samen.
+Versie van de toepassing: **0.12.0** · De Franse tekst is rechtsgeldig (`docs/fr/ARCHITECTURE.md`); dit bestand vat elke versie samen.
+
+## Hulp per scherm en lokale FAQ (0.12.0)
+
+Fiches per scherm in de interface (`frontend/src/help/`), uitleg van de velden in `hints.ts` (« ? »), blokkerende controles in `help.test.ts`; schermafbeeldingen via `npm run help:capture` in `frontend/public/aide-captures/` (nooit onder `public/help/`). Tabel `help_faq` (migratie `011_faq`) met `entite_id` (leeg: gemeenschappelijk), `topic_id`, vraag en antwoord FR en NL, `source_ticket_id`, deactivering met reden; routes `/api/faq`, `POST /api/tickets/:id/faq`, zes MCP-tools; permissie `faq:gerer`. Geweigerde instelling met naam en foute waarde (`refus-reglage.js`). Controles na installatie: `recette.sh` en `backend/src/recette-api.js`.
 
 ## Tickets (0.11.0)
 

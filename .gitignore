@@ -28,3 +28,7 @@ npm-debug.log*
 .DS_Store
 Thumbs.db
 desktop.ini
+# Rapports du script de captures de l'aide (0.12.0) : les captures elles-mêmes sont versées (public/help).
+frontend/help-capture/rapport-*.txt
+frontend/test-results/
+frontend/playwright-report/

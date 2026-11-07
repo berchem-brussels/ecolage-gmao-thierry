@@ -7,6 +7,26 @@ import { answer } from '../components/Chatbot';
 import { ICONE_CODES } from '../referentiel';
 import { ETATS } from '../demandes';
 import { GROUPES as GROUPES_REGLAGES } from '../pages/ReglagesEntitePage';
+import { topicById } from '../help';
+import type { L } from '../help/types';
+
+/**
+ * Texte complet d'une fiche d'aide dans une langue, libellés {{clé}} remplacés (0.12.0) : les rubriques help.guide.*
+ * des versions précédentes sont devenues des fiches par écran ; leurs contrôles portent maintenant sur les fiches.
+ */
+const fiche = (id: string): { fr: string; nl: string } => {
+  const tp = topicById(id)!;
+  const tous: L[] = [tp.purpose, ...tp.layout, ...tp.procedures.flatMap((p) => [p.title, p.when, p.result, ...p.steps, ...(p.errors || []).flatMap((e) => [e.problem, e.solution])]), ...tp.faq.flatMap((f) => [f.q, f.a])];
+  const txt = (lang: 'fr' | 'nl') => tous.map((l) => l[lang]).join(' ').replace(/\{\{([a-z0-9_.]+)\}\}/g, (_, k) => translations[k]?.[lang] || k);
+  return { fr: txt('fr'), nl: txt('nl') };
+};
+const AIDE: Record<string, string> = {
+  'help.guide.demande': 'nouvelle-demande', 'help.guide.mesdemandes': 'mes-demandes', 'help.guide.lieuhabituel': 'accueil',
+  'help.guide.demandesentite': 'demandes-entite', 'help.guide.numerotation': 'reglages-entite', 'help.guide.reglages': 'reglages-entite',
+  'help.guide.referentiel': 'referentiel', 'help.guide.journal': 'journal', 'help.guide.tickets': 'tickets',
+};
+/** Texte d'aide : la fiche qui a remplacé une ancienne rubrique, sinon la clé de traduction. */
+const aide = (k: string): { fr: string; nl: string } => (AIDE[k] ? fiche(AIDE[k]) : translations[k]);
 
 const SRC = path.resolve(process.cwd(), 'src');
 const tsx = (dir: string): string[] => fs.readdirSync(dir).flatMap((f) => {
@@ -103,7 +123,7 @@ describe('traductions', () => {
   it('0.4.1 : la question 15 explique la mention « Modifié le … par … » en FR et en NL ; le journal parle des champs changés', () => {
     expect(translations['help.faq.a15'].fr).toMatch(/Modifié le JJ\/MM\/AAAA à HH:MM par/);
     expect(translations['help.faq.a15'].nl).toMatch(/Gewijzigd op DD\/MM\/JJJJ om UU:MM door/);
-    expect(translations['help.guide.journal'].fr).toMatch(/seuls les champs changés/);
+    expect(aide('help.guide.journal').fr).toMatch(/champs changés/);
     expect(translations['ref.trace.retablie'].nl).toBe('Geleverde waarde, hersteld op {date} om {heure}');
   });
 
@@ -141,10 +161,10 @@ describe('traductions', () => {
       expect(translations[k]?.fr && translations[k]?.nl, k).toBeTruthy();
       expect(`${translations[k].fr} ${translations[k].nl}`, k).not.toMatch(/GMAO|\bOT\b|RGPD|AVG|MCP|multer/);
     }
-    for (const [m, fr, nl] of [['help.guide.demande', /Ajouter une photo ou un document/, /Foto of document toevoegen/], ['help.guide.demande', /plaque d'immatriculation/, /nummerplaat/],
-      ['help.guide.reglages', /Pièces jointes des demandes/, /Bijlagen bij aanvragen/]] as [string, RegExp, RegExp][]) {
-      expect(translations[m].fr, m).toMatch(fr);
-      expect(translations[m].nl, m).toMatch(nl);
+    for (const [m, fr, nl] of [['help.guide.demande', /Ajouter une photo ou un document/, /Foto of document toevoegen/], ['help.guide.demande', /plaque d.immatriculation/, /nummerplaat/],
+      ['help.guide.reglages', /Pièces jointes/, /Bijlagen/]] as [string, RegExp, RegExp][]) {
+      expect(aide(m).fr, m).toMatch(fr);
+      expect(aide(m).nl, m).toMatch(nl);
     }
     expect(answer('comment ajouter une photo à ma demande').key).toBe('chat.intent.piecesdemande');
     expect(answer('bijlage toevoegen').key).toBe('chat.intent.piecesdemande');
@@ -158,8 +178,8 @@ describe('traductions', () => {
     }
     for (const [m, fr, nl] of [['help.guide.demande', /Moi aussi/, /Ik ook/], ['help.guide.demande', /Danger pour les personnes/, /Gevaar voor personen/], ['help.guide.demande', /Reprendre/, /Verdergaan/],
       ['help.guide.referentiel', /Ajouter une question/, /Een vraag toevoegen/], ['help.guide.reglages', /\{dpo\}/, /\{dpo\}/]] as [string, RegExp, RegExp][]) {
-      expect(translations[m].fr, m).toMatch(fr);
-      expect(translations[m].nl, m).toMatch(nl);
+      expect(aide(m).fr, m).toMatch(fr);
+      expect(aide(m).nl, m).toMatch(nl);
     }
     expect(answer('moi aussi, déjà signalé').key).toBe('chat.intent.moiaussi');
     expect(answer('il y a un danger, câble à nu').key).toBe('chat.intent.danger');
@@ -172,18 +192,18 @@ describe('traductions', () => {
   it('0.5.0 : aide des demandes, questions 16 à 19 et rubriques en FR et en NL, sans jargon (ERG-08)', () => {
     for (const k of ['help.guide.demande', 'help.guide.mesdemandes', 'help.guide.lieuhabituel', 'help.guide.demandesentite', 'help.guide.numerotation',
       'help.faq.q16', 'help.faq.a16', 'help.faq.q17', 'help.faq.a17', 'help.faq.q18', 'help.faq.a18', 'help.faq.q19', 'help.faq.a19']) {
-      expect(translations[k]?.fr && translations[k]?.nl, k).toBeTruthy();
+      expect(aide(k)?.fr && aide(k)?.nl, k).toBeTruthy();
     }
     for (const k of ['help.guide.demande', 'help.guide.mesdemandes', 'help.faq.a16', 'help.faq.a17', 'help.faq.a18']) {
-      expect(`${translations[k].fr} ${translations[k].nl}`, k).not.toMatch(/GMAO|\bOT\b/);
+      expect(`${aide(k).fr} ${aide(k).nl}`, k).not.toMatch(/GMAO|\bOT\b/);
     }
-    expect(translations['help.guide.demande'].fr).toMatch(/AC-DI-2026-00001/);
+    expect(aide('help.guide.demande').fr).toMatch(/AC-DI-2026-00001/);
   });
 
   it('0.11.0 : aide, FAQ et chatbot des tickets en FR et en NL ; « bug » et « l’application » mènent à Tickets, pas une panne', () => {
     for (const k of ['help.faq.q29', 'help.faq.a29', 'help.faq.q30', 'help.faq.a30', 'help.guide.tickets', 'chat.intent.tickets', 'nav.tickets', 'tickets.report']) {
-      expect(translations[k]?.fr, k).toBeTruthy();
-      expect(translations[k]?.nl, k).toBeTruthy();
+      expect(aide(k)?.fr, k).toBeTruthy();
+      expect(aide(k)?.nl, k).toBeTruthy();
     }
     expect(translations['help.faq.a29'].fr).toMatch(/« Signaler »/);
     expect(translations['help.faq.a29'].nl).toMatch(/« Melden »/);

@@ -34,6 +34,8 @@ export interface User {
   telephone_urgence?: string | null;
   /** Mentions d'information RGPD de l'entité active (0.7.0, RGPD-10), prêtes à afficher, et contact du DPO. */
   protection_donnees?: ProtectionDonnees | null;
+  /** Files de tickets que la personne traite dans l'entité active (0.12.0, R6) : 'business', 'it', ou aucune. */
+  files_tickets?: string[];
 }
 
 export interface ProtectionDonnees {

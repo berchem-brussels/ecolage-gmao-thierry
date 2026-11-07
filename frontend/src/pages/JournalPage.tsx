@@ -11,6 +11,10 @@
  * champ vide est masqué, sauf « Avant » et « Après », où le vide se dit « aucun ».
  * 0.9.1 (R2, DV-94) : un champ qui porte un code (l'état d'une demande, « a_qualifier », « qualifiee ») s'affiche par son
  * libellé du service technique, dans la langue de l'écran ; un code sans libellé reste affiché tel quel.
+ * 0.12.0 (R4, DV-109) : plus de clé ni de code brut. Les champs des réglages de connexion (mode, annuaire, identifiant,
+ * adresse publique, domaines, secret) et des tickets (champs modifiés, file, gravité…) ont un libellé ; les codes d'une
+ * action donnée se traduisent par action (type d'un ticket, mode de connexion, méthode, motif d'un refus de Microsoft),
+ * une liste de noms de champs s'affiche par leurs libellés, et le secret masqué se dit « masqué ».
  */
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Button, Card, DatePicker, Descriptions, Grid, Radio, Select, Space, Table, Tag, Typography, message } from 'antd';
@@ -40,6 +44,20 @@ const BOOLEENS = new Set(['danger', 'beneficiaire_texte', 'is_active', 'obligato
 const VIDE_DIT = new Set(['avant', 'apres']);
 /** Champs du détail qui portent un code traduit (R2, 0.9.1) : nom du champ → préfixe de la clé de traduction. */
 export const CODES: Record<string, string> = { etat: 'demande.etat_service' };
+/**
+ * Codes traduits selon l'action (R4, 0.12.0) : le même nom de champ porte des codes différents selon l'action (« type »
+ * d'un ticket ou d'une pièce jointe), d'où une table par action : action → champ → préfixe de la clé de traduction.
+ */
+export const CODES_ACTION: Record<string, Record<string, string>> = {
+  'ticket.create': { type: 'tickets.type' },
+  'settings.auth': { mode: 'settings.mode' },
+  'login.success': { method: 'audit.methode' },
+  'sso.refused': { reason: 'audit.raison' },
+};
+/** Champs dont la valeur est une liste de noms de champs, affichés par leurs libellés (R4). */
+const LISTES_CHAMPS = new Set(['fields']);
+/** Valeur masquée par le serveur (secret client), dite en clair (R4). */
+const MASQUE = '***';
 const vide = (v: unknown) => v === null || v === undefined || v === '';
 /** Date de la base (UTC, « 2026-10-22 08:00:00 ») vers l'heure locale. */
 export const depuisBase = (d: string) => dayjs(`${d.replace(' ', 'T')}Z`);
@@ -116,7 +134,10 @@ export default function JournalPage() {
     }
     const cle = chemin.split('.').pop() || '';
     if (BOOLEENS.has(cle) && (v === 0 || v === 1 || typeof v === 'boolean')) return t(v ? 'yes' : 'no');
-    if (CODES[cle] && typeof v === 'string' && translations[`${CODES[cle]}.${v}`]) return t(`${CODES[cle]}.${v}`);
+    if (LISTES_CHAMPS.has(cle) && Array.isArray(v)) return v.map((x) => cleDetail(String(x))).join(', ');
+    if (v === MASQUE) return t('audit.masque');
+    const prefixe = CODES_ACTION[l.action]?.[cle] || CODES[cle];
+    if (prefixe && typeof v === 'string' && translations[`${prefixe}.${v}`]) return t(`${prefixe}.${v}`);
     if (vide(v)) return t('audit.aucun');
     return brut(v);
   };

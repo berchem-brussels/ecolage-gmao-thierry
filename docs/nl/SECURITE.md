@@ -2,6 +2,10 @@
 
 De Franse tekst (`docs/fr/SECURITE.md`) is rechtsgeldig en bevat het volledige rooster per versie.
 
+## 0.12.0 (06/11/2026)
+
+Hulp per scherm en lokale FAQ (standaard, sectie 13.1), migratie `011_faq`. Getest: een item van een entiteit wordt alleen gelezen in die entiteit en beheerd door haar technische dienst of de beheerder (API en MCP, andere entiteit 403); een gemeenschappelijk item alleen door de beheerder; een vraag wordt alleen door de behandelaar en alleen opgelost of afgesloten omgezet, één keer; intrekken met reden, niets verwijderd, logboek met de entiteit; geweigerde instelling met naam en waarde; geen rauwe code meer in het logboek; tellers alleen voor wie een wachtrij behandelt. Elke bescherming apart verwijderd: minstens één fout. Geen nieuwe productie-afhankelijkheid (`@playwright/test` enkel voor ontwikkeling).
+
 ## 0.11.0 (05/11/2026)
 
 Tickets (standaard, sectie 13.5), modules uit het sjabloon 1.3.0 overgenomen en aangepast aan de rollen per entiteit. Getest: een functionele vraag wordt alleen gelezen en behandeld door de technische dienst van de entiteit van het ticket en door de aanvrager (API en MCP, andere entiteit 403); interne nota onzichtbaar voor de aanvrager; toewijzing alleen aan een behandelaar van de wachtrij in die entiteit; overgangen en verplichte redenen; schermafbeelding gecontroleerd op de eerste bytes en ontdaan van metagegevens, nooit zonder sessie; ticketparameters nooit zonder sessie. Microsoft-aanmelding: geheim-id geweigerd (`SECRET_IS_ID`), enkel de foutcode `AADSTS` in het logboek. Geen nieuwe afhankelijkheid; migratie `010_tickets`, terugdraaien naar 0.10.0 getest. `npm audit --omit=dev`: server 0, interface 3 matige (E-09). Negentien bewijzen van falen in de Franse tekst.

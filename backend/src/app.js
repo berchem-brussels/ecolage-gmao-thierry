@@ -60,6 +60,7 @@ function buildApp() {
   app.use('/api/audit', require('./routes/audit'));
   app.use('/api/notes-version', require('./routes/notes-version'));
   app.use('/api/tickets', require('./routes/tickets'));
+  app.use('/api/faq', require('./routes/faq'));
 
   const { handleRpc } = require('./mcp');
   const mcpLimiter = rateLimit({
@@ -80,7 +81,7 @@ function buildApp() {
   // Gestionnaire d'erreurs unique : code et libellé traduit, détail au journal seulement.
   // eslint-disable-next-line no-unused-vars
   app.use((err, req, res, next) => {
-    if (err instanceof AppError) return fail(res, req, err.status, err.code, err.details);
+    if (err instanceof AppError) return fail(res, req, err.status, err.code, err.details, err.texte);
     if (err && err.type === 'entity.parse.failed') return fail(res, req, 400, 'BAD_JSON');
     if (err && err.type === 'entity.too.large') return fail(res, req, 413, 'PAYLOAD_TOO_LARGE');
     if (err && /FOREIGN KEY constraint failed/i.test(String(err.message))) return fail(res, req, 409, 'REFERENCE_INVALID');

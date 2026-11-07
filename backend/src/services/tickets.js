@@ -20,6 +20,7 @@ const { logAudit } = require('../audit');
 const { valeur } = require('./parametres');
 const { ROLES } = require('../roles');
 const { cleanPhoto } = require('../images');
+const faq = require('./faq');
 
 const getSetting = (cle) => String(valeur(cle) ?? '');
 const listSetting = (cle) => getSetting(cle).split(',').map((x) => x.trim()).filter(Boolean);
@@ -142,7 +143,10 @@ function get(user, id) {
   const reopenDays = Number(getSetting('tickets.reopen_days')) || 14;
   const canReopen = t.requester_id === user.id && t.status === 'resolved'
     && !!getDb().prepare("SELECT 1 FROM tickets WHERE id = ? AND resolved_at > datetime('now', ?)").get(id, `-${reopenDays} days`);
-  return { ...rest, context, has_screenshot: !!screenshot, messages, can_handle: handler, can_reopen: canReopen };
+  // 0.12.0 : entrée de la FAQ née de ce ticket, et possibilité d'en créer une (question métier résolue ou close, traitant).
+  const entree = t.type === 'question' ? faq.deTicket(id) : null;
+  const canFaq = handler && t.type === 'question' && ['resolved', 'closed'].includes(t.status) && !entree && t.entite_id !== null;
+  return { ...rest, context, has_screenshot: !!screenshot, messages, can_handle: handler, can_reopen: canReopen, faq_id: entree ? entree.id : null, can_faq: canFaq };
 }
 
 function create(user, data, channel = 'api') {
@@ -298,4 +302,18 @@ function toHandle(user) {
     ORDER BY priority, created_at LIMIT 100`).all(...handled.params);
 }
 
-module.exports = { list, get, create, update, changeStatus, addMessage, screenshot, stats, toHandle, priorityOf, TRANSITIONS, handlerQueues };
+/**
+ * Question métier résolue ou close transformée en entrée de la FAQ de l'entité du ticket (standard, section 13.5 ;
+ * 0.12.0). Par une personne qui traite le ticket ; une seule entrée par ticket ; le ticket lui-même ne change pas.
+ * La question et la réponse sont réécrites par la personne, en FR et en NL, sans donnée personnelle du demandeur.
+ */
+function toFaq(user, id, data, channel = 'api') {
+  const t = load(id);
+  if (!canSee(user, t)) throw new AppError(403, 'FORBIDDEN');
+  if (!canHandle(user, t)) throw new AppError(403, 'FORBIDDEN');
+  if (t.type !== 'question' || !['resolved', 'closed'].includes(t.status) || t.entite_id === null) throw new AppError(409, 'FAQ_SOURCE');
+  if (faq.deTicket(id)) throw new AppError(409, 'FAQ_DEJA');
+  return faq.create(user, { ...data, portee: 'entite' }, channel, t);
+}
+
+module.exports = { toFaq, list, get, create, update, changeStatus, addMessage, screenshot, stats, toHandle, priorityOf, TRANSITIONS, handlerQueues };

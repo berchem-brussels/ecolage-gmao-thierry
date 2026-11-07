@@ -40,6 +40,8 @@ const RESSOURCES = [
   // 0.11.0 (DV-97, DV-107) : question métier de l'entité, lue par son service technique et par personne d'autre.
   { route: 'GET /api/tickets/:id', tool: 'get_ticket', id: (ent) => objets[ent.code].ticket },
   { route: 'GET /api/tickets/:id/screenshot', tool: 'get_ticket_screenshot', id: (ent) => objets[ent.code].ticket, statusOwn: 404 },
+  // 0.12.0 : entrée de la FAQ propre à une entité (les entrées communes se lisent partout).
+  { route: 'GET /api/faq/:id', tool: 'get_faq', id: (ent) => objets[ent.code].faq },
 ];
 
 /** Écritures cloisonnées : même attente, 403 depuis l'autre entité, et l'objet n'a pas bougé. */
@@ -65,6 +67,10 @@ const ECRITURES = [
   { route: 'PUT /api/tickets/:id', body: { priority: 'P1', reason: 'Piraté' }, tool: 'update_ticket', id: (ent) => objets[ent.code].ticket },
   { route: 'POST /api/tickets/:id/status', body: { to: 'in_progress' }, tool: 'prepare_change_ticket_status', id: (ent) => objets[ent.code].ticket },
   { route: 'POST /api/tickets/:id/messages', body: { body: 'Piraté' }, tool: 'add_ticket_message', id: (ent) => objets[ent.code].ticket },
+  // 0.12.0 : FAQ de l'autre entité, et question métier de l'autre entité transformée en entrée.
+  { route: 'PUT /api/faq/:id', body: { question_fr: 'Piraté' }, tool: 'update_faq', id: (ent) => objets[ent.code].faq },
+  { route: 'DELETE /api/faq/:id', body: { motif: 'Piraté' }, tool: 'prepare_deactivate_faq', id: (ent) => objets[ent.code].faq },
+  { route: 'POST /api/tickets/:id/faq', body: { question_fr: 'Piraté', question_nl: 'Piraté', answer_fr: 'Piraté', answer_nl: 'Piraté' }, tool: 'create_faq_from_ticket', id: (ent) => objets[ent.code].ticket },
 ];
 
 /** Dépôt d'une pièce jointe au brouillon (formulaire multipart), comme le navigateur. */
@@ -101,7 +107,9 @@ before(async () => {
     const demandeur = await person(srv.base, admin, `demandeur.${ent.code}@exemple.test`, ent.id);
     const ticket = await demandeur.post('/api/tickets', { type: 'question', title: `Question ${ent.code}` });
     assert.equal(ticket.status, 201, JSON.stringify(ticket.body));
-    objets[ent.code] = { lieu: lieu.body.data.id, valeur: valeur.id, categorie: categorie.id, jour: jour.id, demande: demande.body.data.id, question: question.id, piece: piece.body.data.id, ticket: ticket.body.data.id };
+    const faq = await c.post('/api/faq', { question_fr: `Question ${ent.code}`, question_nl: `Vraag ${ent.code}`, answer_fr: 'Réponse', answer_nl: 'Antwoord' });
+    assert.equal(faq.status, 201, JSON.stringify(faq.body));
+    objets[ent.code] = { lieu: lieu.body.data.id, valeur: valeur.id, categorie: categorie.id, jour: jour.id, demande: demande.body.data.id, question: question.id, piece: piece.body.data.id, ticket: ticket.body.data.id, faq: faq.body.data.id };
   }
 });
 after(() => srv.stop());
@@ -170,6 +178,10 @@ for (const w of ECRITURES) {
     assert.equal(ticket.status, 'new', 'le ticket n’a pas été pris en charge');
     assert.equal(ticket.priority, 'P4');
     assert.equal(ticket.messages.filter((m) => m.kind === 'message').length, 0, 'aucun message ajouté');
+    assert.equal(ticket.faq_id, null, 'aucune entrée de FAQ née du ticket');
+    const faq = (await gestB.get(`/api/faq/${objets.BB.faq}`)).body.data;
+    assert.equal(faq.question_fr, 'Question BB');
+    assert.equal(faq.is_active, 1);
   });
 }
 

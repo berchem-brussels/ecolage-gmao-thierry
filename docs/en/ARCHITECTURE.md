@@ -1,6 +1,10 @@
 # Architecture
 
-Application version: **0.11.0** · The French text prevails (`docs/fr/ARCHITECTURE.md`); this file summarises each version.
+Application version: **0.12.0** · The French text prevails (`docs/fr/ARCHITECTURE.md`); this file summarises each version.
+
+## Help per screen and local FAQ (0.12.0)
+
+One sheet per screen in the interface (`frontend/src/help/`), field explanations in `hints.ts` ("?"), blocking checks in `help.test.ts`; screenshots by `npm run help:capture` in `frontend/public/aide-captures/` (never under `public/help/`). Table `help_faq` (migration `011_faq`) with `entite_id` (empty: shared), `topic_id`, question and answer FR and NL, `source_ticket_id`, deactivation with a reason; routes `/api/faq`, `POST /api/tickets/:id/faq`, six MCP tools; permission `faq:gerer`. Refused setting naming the wrong value (`refus-reglage.js`). Post-installation checks: `recette.sh` and `backend/src/recette-api.js`.
 
 ## Tickets (0.11.0)
 

@@ -2,6 +2,37 @@
   "_description": "Notes de version pour les utilisateurs, en FR et en NL, sans terme technique (standard v3.2, sections 13.1 et 17.8 ; écart E-07). Une note par version, de la plus récente à la plus ancienne. Chaque ligne a un public : « tous », « admin » (administrateur de l'application) ou une permission du catalogue des rôles (par exemple « parametres:gerer »), lue dans l'entité active. La note de la version installée s'affiche une fois à la première connexion qui suit la mise à jour ; toutes restent relisibles dans Aide, Nouveautés.",
   "notes": [
     {
+      "version": "0.12.0",
+      "date": "2026-11-06",
+      "lignes": [
+        {
+          "public": "tous",
+          "fr": "Bouton « Aide » en haut de chaque écran : le mode d'emploi de l'écran où vous êtes, avec ses captures et ses questions fréquentes. Le « ? » à côté d'un champ explique ce qu'il faut y mettre.",
+          "nl": "Knop « Help » bovenaan elk scherm: de handleiding van het scherm waar u bent, met schermafbeeldingen en veelgestelde vragen. Het « ? » naast een veld legt uit wat u erin zet."
+        },
+        {
+          "public": "tous",
+          "fr": "Aide, Mode d'emploi : une fiche par écran, une recherche dans toute l'aide, avec ou sans accents, et l'impression du mode d'emploi complet.",
+          "nl": "Help, Handleiding: een fiche per scherm, zoeken in de hele hulp, met of zonder accenten, en het afdrukken van de volledige handleiding."
+        },
+        {
+          "public": "demandes:qualifier",
+          "fr": "Une question des agents résolue dans Tickets peut devenir une question de l'aide de votre entité : « Ajouter à la FAQ ». Vous ajoutez, corrigez ou retirez aussi ces questions dans Aide, Questions fréquentes.",
+          "nl": "Een opgeloste vraag van de medewerkers in Tickets kan een vraag van de hulp van uw entiteit worden: « Toevoegen aan de FAQ ». U voegt die vragen ook toe, verbetert of trekt ze in via Help, Veelgestelde vragen."
+        },
+        {
+          "public": "admin",
+          "fr": "Paramètres : un réglage refusé nomme la valeur fautive ; les codes de rôles des tickets s'écrivent en majuscules ou en minuscules. Journal d'audit : plus aucun code brut dans le détail.",
+          "nl": "Parameters: een geweigerde instelling noemt de foute waarde; de rolcodes van de tickets mogen in hoofd- of kleine letters. Auditlogboek: geen ruwe codes meer in het detail."
+        },
+        {
+          "public": "admin",
+          "fr": "Aide, Questions fréquentes : vous ajoutez des questions communes aux deux entités ou propres à l'entité active.",
+          "nl": "Help, Veelgestelde vragen: u voegt vragen toe die gemeenschappelijk zijn voor beide entiteiten of eigen aan de actieve entiteit."
+        }
+      ]
+    },
+    {
       "version": "0.11.0",
       "date": "2026-11-05",
       "lignes": [

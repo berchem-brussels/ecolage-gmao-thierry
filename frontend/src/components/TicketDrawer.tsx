@@ -6,6 +6,9 @@
  * - entité du ticket affichée ; après un transfert vers une file que la personne ne traite pas, le panneau se ferme
  *   avec « Ticket transféré » (le serveur ne rend plus le contenu, DV-107) ;
  * - infobulles du gabarit (hint) remplacées par une ligne d'aide sous le motif, en attendant l'aide par écran (E-39) ;
+ *   0.12.0 : « ? » à côté du message et de la case de la note interne (hints.ts) ;
+ * - 0.12.0 (section 13.5) : une question métier résolue ou close devient une entrée de la FAQ de son entité
+ *   (« Ajouter à la FAQ », personne qui traite le ticket) ; ensuite, un lien mène à l'entrée dans le centre d'aide.
  * - contexte technique montré en mode Complet seulement (standard, section 12.5 : codes techniques).
  */
 import { useCallback, useEffect, useState } from 'react';
@@ -15,24 +18,29 @@ import { useAuth } from '../contexts/AuthContext';
 import { useI18n } from '../contexts/I18nContext';
 import { depuisBase } from '../pages/JournalPage';
 import { texteObligatoire } from '../validation';
+import FaqModal from '../help/FaqModal';
+import { Link } from 'react-router-dom';
 
 export interface TicketMessage { id: number; kind: 'message' | 'event'; body: string; is_internal: number; created_at: string; author_name: string | null }
 export interface Ticket {
   id: number; reference: string; type: string; title: string; description: string | null; expected: string | null; actual: string | null;
   queue: 'business' | 'it'; priority: string; status: string; screen: string | null; context: Record<string, unknown> | null; entite_id: number | null;
   has_screenshot: boolean; messages: TicketMessage[]; can_handle: boolean; can_reopen: boolean; requester_id: number; resolution: string | null; created_at: string;
+  /** 0.12.0 : entrée de la FAQ née du ticket, et droit d'en créer une. */
+  faq_id?: number | null; can_faq?: boolean;
 }
 type Action = { to: string; reason: boolean; label: string; danger?: boolean };
 const OPEN = ['new', 'in_progress', 'waiting_requester'];
 export const dateTicket = (d: string) => depuisBase(d).format('DD/MM/YYYY HH:mm');
 
 export default function TicketDrawer({ id, onClose, onChanged, userId }: { id: number | null; onClose: () => void; onChanged: () => void; userId: number }) {
-  const { t } = useI18n();
+  const { t, hint } = useI18n();
   const { user } = useAuth();
   const screens = Grid.useBreakpoint();
   const [ticket, setTicket] = useState<Ticket | null>(null);
   const [pending, setPending] = useState<Action | null>(null);
   const [reason, setReason] = useState('');
+  const [faqOpen, setFaqOpen] = useState(false);
   const [form] = Form.useForm();
   const fail = (e: unknown) => message.error(e instanceof ApiError ? e.message : t('common.error'));
   const complet = user?.ui_mode === 'complet';
@@ -85,11 +93,14 @@ export default function TicketDrawer({ id, onClose, onChanged, userId }: { id: n
       </Descriptions>
       {ticket.has_screenshot && <Typography.Paragraph><a href={`/api/tickets/${ticket.id}/screenshot`} target="_blank" rel="noreferrer">{t('tickets.screenshot.view')}</a></Typography.Paragraph>}
       {complet && ticket.context && <Collapse size="small" style={{ marginBottom: 12 }} items={[{ key: 'c', label: t('tickets.context'), children: <pre style={{ whiteSpace: 'pre-wrap', fontSize: 12 }}>{JSON.stringify(ticket.context, null, 2)}</pre> }]} />}
-      {actions.length > 0 && (
+      {(actions.length > 0 || ticket.can_faq) && (
         <Space wrap style={{ marginBottom: 16 }}>
           {actions.map((a) => <Button key={a.to} danger={a.danger} onClick={() => (a.reason ? setPending(a) : run(a))}>{t(a.label)}</Button>)}
+          {ticket.can_faq && <Button onClick={() => setFaqOpen(true)}>{t('faq.depuis_ticket')}</Button>}
         </Space>
       )}
+      {ticket.faq_id && <Typography.Paragraph><Link to="/help?onglet=faq" onClick={onClose}>{t('faq.voir')}</Link></Typography.Paragraph>}
+      <FaqModal open={faqOpen} ticket={ticket} onClose={() => setFaqOpen(false)} onSaved={() => { load(); onChanged(); }} />
       <List size="small" dataSource={ticket.messages} renderItem={(m) => (
         <List.Item style={m.is_internal ? { background: 'var(--app-bg-muted)' } : undefined}>
           <List.Item.Meta
@@ -99,8 +110,8 @@ export default function TicketDrawer({ id, onClose, onChanged, userId }: { id: n
       )} />
       {open && (
         <Form form={form} layout="vertical" onFinish={post} style={{ marginTop: 12 }}>
-          <Form.Item name="body" label={t('tickets.message')} rules={[texteObligatoire(t), { max: 8000 }]}><Input.TextArea rows={3} maxLength={8000} /></Form.Item>
-          {ticket.can_handle && <Form.Item name="is_internal" valuePropName="checked"><Checkbox>{t('tickets.internal')}</Checkbox></Form.Item>}
+          <Form.Item name="body" label={t('tickets.message')} tooltip={hint('tickets.message')} rules={[texteObligatoire(t), { max: 8000 }]}><Input.TextArea rows={3} maxLength={8000} /></Form.Item>
+          {ticket.can_handle && <Form.Item name="is_internal" valuePropName="checked" tooltip={hint('tickets.internal')} label={t('tickets.internal.label')}><Checkbox>{t('tickets.internal')}</Checkbox></Form.Item>}
           <Button type="primary" htmlType="submit">{t('tickets.post')}</Button>
         </Form>
       )}

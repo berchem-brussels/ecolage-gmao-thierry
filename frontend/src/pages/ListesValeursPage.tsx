@@ -19,7 +19,7 @@ const LISTES = ['type_lieu'];
 interface FormValues { libelle_fr: string; libelle_nl: string; ordre?: number; code?: string }
 
 export default function ListesValeursPage() {
-  const { t, tField } = useI18n();
+  const { t, tField, hint } = useI18n();
   const { user } = useAuth();
   const simple = user?.ui_mode !== 'complet';
   const [liste, setListe] = useState(LISTES[0]);
@@ -63,9 +63,9 @@ export default function ListesValeursPage() {
   const statusTag = (v: Valeur) => (v.is_active ? <Tag color="green">{t('common.active')}</Tag> : <Tag>{t('common.inactive')}</Tag>);
   const labels = (
     <>
-      <Form.Item name="libelle_fr" label={t('listes.field.libelle_fr')} rules={[texteObligatoire(t), { max: 200 }]}><Input lang="fr" /></Form.Item>
-      <Form.Item name="libelle_nl" label={t('listes.field.libelle_nl')} rules={[texteObligatoire(t), { max: 200 }]}><Input lang="nl" /></Form.Item>
-      <Form.Item name="ordre" label={t('listes.field.ordre')} extra={t('listes.field.ordre.help')}><InputNumber min={0} max={100000} step={10} /></Form.Item>
+      <Form.Item name="libelle_fr" label={t('listes.field.libelle_fr')} tooltip={hint('listes.libelle')} rules={[texteObligatoire(t), { max: 200 }]}><Input lang="fr" /></Form.Item>
+      <Form.Item name="libelle_nl" label={t('listes.field.libelle_nl')} tooltip={hint('listes.libelle')} rules={[texteObligatoire(t), { max: 200 }]}><Input lang="nl" /></Form.Item>
+      <Form.Item name="ordre" label={t('listes.field.ordre')} tooltip={hint('ref.ordre')} extra={t('listes.field.ordre.help')}><InputNumber min={0} max={100000} step={10} /></Form.Item>
     </>
   );
 
@@ -101,7 +101,7 @@ export default function ListesValeursPage() {
         <Form form={createForm} layout="vertical" onFinish={create} preserve={false}>
           {labels}
           {!simple && (
-            <Form.Item name="code" label={t('listes.field.code')} extra={t('listes.field.code.help')} rules={[{ pattern: /^[a-z][a-z0-9_]{1,39}$/, message: t('listes.field.code.help') }]}>
+            <Form.Item name="code" label={t('listes.field.code')} tooltip={hint('listes.code')} extra={t('listes.field.code.help')} rules={[{ pattern: /^[a-z][a-z0-9_]{1,39}$/, message: t('listes.field.code.help') }]}>
               <Input maxLength={40} autoComplete="off" />
             </Form.Item>
           )}

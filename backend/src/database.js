@@ -569,6 +569,30 @@ const MIGRATIONS = [
     CREATE INDEX idx_ticket_messages_ticket ON ticket_messages(ticket_id);
     CREATE INDEX idx_ticket_messages_author ON ticket_messages(author_id)
   `],
+  // 0.12.0 (standard, section 13.1) : FAQ locale, table help_faq du gabarit 1.3.0 plus entite_id (null : entrée commune
+  // aux entités, écrite par l'administrateur ; sinon entrée d'une entité, écrite par son service technique), le ticket
+  // d'origine quand une question métier résolue devient une entrée (section 13.5), et le motif de désactivation (CYC-05).
+  ['011_faq', `
+    CREATE TABLE help_faq (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      entite_id INTEGER REFERENCES entites(id) ON DELETE RESTRICT,
+      topic_id TEXT,
+      question_fr TEXT NOT NULL CHECK (length(question_fr) BETWEEN 1 AND 300),
+      question_nl TEXT NOT NULL CHECK (length(question_nl) BETWEEN 1 AND 300),
+      answer_fr TEXT NOT NULL CHECK (length(answer_fr) BETWEEN 1 AND 4000),
+      answer_nl TEXT NOT NULL CHECK (length(answer_nl) BETWEEN 1 AND 4000),
+      source_ticket_id INTEGER REFERENCES tickets(id) ON DELETE RESTRICT,
+      is_active INTEGER NOT NULL DEFAULT 1,
+      motif_desactivation TEXT,
+      created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+      updated_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+    CREATE INDEX idx_help_faq_entite ON help_faq(entite_id);
+    CREATE INDEX idx_help_faq_topic ON help_faq(topic_id);
+    CREATE UNIQUE INDEX idx_help_faq_ticket ON help_faq(source_ticket_id) WHERE source_ticket_id IS NOT NULL
+  `],
 ];
 
 function migrate() {

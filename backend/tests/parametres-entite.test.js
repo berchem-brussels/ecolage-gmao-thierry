@@ -114,3 +114,25 @@ test('paramètres de l’entité par MCP : mêmes droits, retour au défaut en d
   assert.equal((await tool(resp, 'confirm_reset_parametre_entite', { confirmation_token: p.data.confirmation_token })).data.est_defaut, true);
   assert.equal(getDb().prepare("SELECT channel FROM audit_log WHERE action = 'parametre_entite.reset' ORDER BY id DESC").get().channel, 'mcp');
 });
+
+// 0.12.0, R2 (DV-109) : le refus nomme le réglage et la valeur fautive, dans la langue de la personne ; code et détail inchangés.
+test('refus d’un réglage de l’entité : réglage et valeur nommés, en FR et en NL (R2)', async () => {
+  const r = await resp.put('/api/parametres-entite/demandes.delai_reouverture_jours', { valeur: 'sept' });
+  assert.equal(r.status, 400);
+  assert.equal(r.body.code, 'VALIDATION');
+  assert.match(r.body.message, /^Valeur refusée pour « .+ » : « sept » n'est pas un nombre entier\.$/);
+  assert.doesNotMatch(r.body.message, /Données invalides/);
+  assert.deepEqual(r.body.details, ["valeur: « sept » n'est pas un nombre entier"]);
+  const tel = await resp.put('/api/parametres-entite/contact.telephone', { valeur: 'appeler Jean' });
+  assert.match(tel.body.message, /« appeler Jean » n'est pas un numéro de téléphone/);
+  const db = getDb();
+  const id = db.prepare("SELECT id FROM users WHERE email = 'pe.resp@exemple.test'").get().id;
+  db.prepare("UPDATE users SET preferred_lang = 'nl' WHERE id = ?").run(id);
+  try {
+    const nl = await resp.put('/api/parametres-entite/demandes.delai_reouverture_jours', { valeur: '91' });
+    assert.match(nl.body.message, /^Waarde geweigerd voor ".+": 91 buiten de grenzen: tussen \d+ en 90\.$/);
+    const mcp = await tool(resp, 'update_parametre_entite', { cle: 'demandes.delai_reouverture_jours', valeur: 'sept' });
+    assert.equal(mcp.code, 'VALIDATION');
+    assert.match(mcp.message, /"sept" is geen geheel getal/);
+  } finally { db.prepare("UPDATE users SET preferred_lang = 'fr' WHERE id = ?").run(id); }
+});

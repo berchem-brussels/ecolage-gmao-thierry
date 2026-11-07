@@ -2,6 +2,10 @@
 
 The French text (`docs/fr/SECURITE.md`) prevails and holds the full grid per version.
 
+## 0.12.0 (06/11/2026)
+
+Help per screen and local FAQ (standard, section 13.1), migration `011_faq`. Tested: an entity entry is read only in that entity and managed by its technical department or the administrator (API and MCP, other entity 403); a shared entry by the administrator only; a question is turned into an entry only by the handler, only when resolved or closed, once; withdrawal with a reason, nothing deleted, audit log with the entity; refused setting naming the setting and value; no raw code left in the audit log; counters only for queue handlers. Each protection removed alone: at least one failure. No new production dependency (`@playwright/test` for development only).
+
 ## 0.11.0 (05/11/2026)
 
 Tickets (standard, section 13.5), template 1.3.0 modules taken over and adapted to roles per entity. Tested: a business question is read and handled only by the technical department of the ticket's entity and by its requester (API and MCP, other entity 403); internal note hidden from the requester; assignment only to a handler of the queue in that entity; transitions and mandatory reasons; screenshot checked on its first bytes and stripped of metadata, never served without a session; ticket parameters never served without a session. Microsoft sign-in: secret identifier refused (`SECRET_IS_ID`), only the `AADSTS` error code kept in the log. No new dependency; migration `010_tickets`, rollback to 0.10.0 tested. `npm audit --omit=dev`: server 0, interface 3 moderate (E-09). Nineteen proofs of failure in the French text.

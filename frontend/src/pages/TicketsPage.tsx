@@ -34,17 +34,20 @@ export default function TicketsPage() {
   const [openOnly, setOpenOnly] = useState(true);
   const current = params.get('id') ? Number(params.get('id')) : null;
   const entiteActive = user?.entite_active_id;
+  const traite = (user?.files_tickets?.length ?? 0) > 0;
   const codeEntite = (id: number | null) => (user?.entites || []).find((e) => e.id === id)?.code || '';
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
       setRows((await api.page<Ligne>(`/tickets${qs({ q: q || undefined, type: type || undefined, open_only: openOnly ? 'true' : undefined, limit: 200 })}`)).data);
-      try { setStats(await api.get<Stats>('/tickets/stats')); } catch { setStats(null); }
+      // R6 (0.12.0) : compteurs demandés seulement à qui traite une file ; un agent n'essuie plus de refus, que le
+      // bouton « Signaler » joignait ensuite comme « dernière erreur » à ses tickets.
+      if (traite) { try { setStats(await api.get<Stats>('/tickets/stats')); } catch { setStats(null); } } else setStats(null);
     } catch (e) { message.error(e instanceof ApiError ? e.message : t('common.error')); } finally { setLoading(false); }
   // entiteActive : la file métier suit l'entité active (DV-107).
   // eslint-disable-next-line
-  }, [q, type, openOnly, t, entiteActive]);
+  }, [q, type, openOnly, t, entiteActive, traite]);
   useEffect(() => { load(); }, [load]);
 
   const openTicket = (id: number | null) => { const p = new URLSearchParams(params); if (id) p.set('id', String(id)); else p.delete('id'); setParams(p); };

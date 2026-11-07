@@ -23,6 +23,8 @@ const motif = T.reqStr(500);
 const NATURES = ['site', 'batiment', 'niveau', 'local'];
 const STATUTS = ['en_service', 'hors_service', 'cede'];
 const valeurCode = { type: 'string', pattern: '^[a-z][a-z0-9_]{1,39}$' };
+const faqTopic = { type: ['string', 'null'], pattern: '^[a-z][a-z0-9_.-]{0,59}$' };
+const faqFields = { topic_id: faqTopic, question_fr: T.reqStr(300), question_nl: T.reqStr(300), answer_fr: T.reqStr(4000), answer_nl: T.reqStr(4000) };
 const lieuFields = {
   code: { type: 'string', pattern: '^[A-Za-z0-9][A-Za-z0-9._+-]{0,29}$' },
   nom_fr: T.reqStr(200), nom_nl: T.reqStr(200),
@@ -289,4 +291,12 @@ module.exports = {
   }),
   ticketStatus: obj({ to: T.en('in_progress', 'waiting_requester', 'resolved', 'rejected', 'cancelled', 'closed', 'reopen'), reason: T.str(4000) }, ['to']),
   ticketMessage: obj({ body: T.reqStr(8000), is_internal: { type: 'boolean' } }, ['body']),
+
+  // FAQ locale (standard, section 13.1 ; 0.12.0) : schémas du gabarit 1.3.0, plus la portée, la recherche, la
+  // désactivation avec motif et la transformation d'une question métier (E-44). topic_id : fiche d'aide d'un écran.
+  faqList: listQuery({ topic_id: faqTopic, inclure_inactives: { ...flag, default: 0 } }),
+  faqCreate: obj({ portee: T.en('commune', 'entite'), ...faqFields }, ['question_fr', 'question_nl', 'answer_fr', 'answer_nl']),
+  faqUpdate: obj({ ...faqFields, is_active: { type: 'integer', enum: [1] } }),
+  faqDeactivate: obj({ motif }, ['motif']),
+  faqFromTicket: obj({ ...faqFields }, ['question_fr', 'question_nl', 'answer_fr', 'answer_nl']),
 };

@@ -36,7 +36,7 @@ interface FormValues {
 }
 
 export default function PatrimoinePage() {
-  const { t, tField } = useI18n();
+  const { t, tField, hint } = useI18n();
   const { user, roles } = useAuth();
   const catalogue = useRoles();
   const canEdit = hasPermission(catalogue, roles, 'lieux:gerer');
@@ -179,20 +179,20 @@ export default function PatrimoinePage() {
   const fields = (nature: Nature, keepType?: number | null, editMode = false, self?: Lieu) => {
     const secondary = (
       <>
-        <Form.Item name="statut" label={t('lieux.field.statut')}>
+        <Form.Item name="statut" label={t('lieux.field.statut')} tooltip={hint('lieux.statut')}>
           <Radio.Group optionType="button" options={STATUTS.map((s) => ({ value: s, label: t(`lieux.statut.${s}`) }))} />
         </Form.Item>
         {nature !== 'site' && nature !== 'batiment' ? null : (
           <>
-            <Form.Item name="code_postal" label={t('lieux.field.code_postal')} rules={[{ max: 10 }]}><Input autoComplete="off" /></Form.Item>
-            <Form.Item name="commune" label={t('lieux.field.commune')} rules={[{ max: 100 }]}><Input autoComplete="off" /></Form.Item>
+            <Form.Item name="code_postal" label={t('lieux.field.code_postal')} tooltip={hint('lieux.code_postal')} rules={[{ max: 10 }]}><Input autoComplete="off" /></Form.Item>
+            <Form.Item name="commune" label={t('lieux.field.commune')} tooltip={hint('lieux.commune')} rules={[{ max: 100 }]}><Input autoComplete="off" /></Form.Item>
           </>
         )}
-        <Form.Item name="surface_m2" label={t('lieux.field.surface')}>
+        <Form.Item name="surface_m2" label={t('lieux.field.surface')} tooltip={hint('lieux.surface')}>
           <InputNumber min={0} max={1000000} step={0.5} style={{ width: 180 }} addonAfter="m²" />
         </Form.Item>
         {editMode && self && PARENTS[nature].length > 0 && (
-          <Form.Item name="parent_id" label={t('lieux.field.parent')} extra={t('lieux.field.parent.help')}>
+          <Form.Item name="parent_id" label={t('lieux.field.parent')} tooltip={hint('lieux.parent')} extra={t('lieux.field.parent.help')}>
             <Select showSearch optionFilterProp="label"
               options={all.filter((p) => p.is_active && PARENTS[nature].includes(p.nature) && p.id !== self.id)
                 .map((p) => ({ value: p.id, label: `${p.code} · ${tField(p as unknown as Record<string, unknown>, 'nom')}` }))} />
@@ -202,17 +202,17 @@ export default function PatrimoinePage() {
     );
     return (
       <>
-        <Form.Item name="code" label={t('lieux.field.code')} extra={t('lieux.field.code.help')}
+        <Form.Item name="code" label={t('lieux.field.code')} tooltip={hint('lieux.code')} extra={t('lieux.field.code.help')}
           rules={[texteObligatoire(t), { pattern: /^[A-Za-z0-9][A-Za-z0-9._+-]{0,29}$/, message: t('lieux.field.code.help') }]}>
           <Input maxLength={30} autoComplete="off" />
         </Form.Item>
-        <Form.Item name="nom_fr" label={t('lieux.field.nom_fr')} rules={[texteObligatoire(t), { max: 200 }]}><Input lang="fr" /></Form.Item>
-        <Form.Item name="nom_nl" label={t('lieux.field.nom_nl')} rules={[texteObligatoire(t), { max: 200 }]}><Input lang="nl" /></Form.Item>
-        <Form.Item name="type_id" label={t('lieux.field.type')} rules={nature === 'local' ? [obligatoire(t)] : []}>
+        <Form.Item name="nom_fr" label={t('lieux.field.nom_fr')} tooltip={hint('lieux.nom')} rules={[texteObligatoire(t), { max: 200 }]}><Input lang="fr" /></Form.Item>
+        <Form.Item name="nom_nl" label={t('lieux.field.nom_nl')} tooltip={hint('lieux.nom')} rules={[texteObligatoire(t), { max: 200 }]}><Input lang="nl" /></Form.Item>
+        <Form.Item name="type_id" label={t('lieux.field.type')} tooltip={hint('lieux.type')} rules={nature === 'local' ? [obligatoire(t)] : []}>
           <Select showSearch allowClear={nature !== 'local'} optionFilterProp="label" options={typeOptions(keepType)} />
         </Form.Item>
         {(nature === 'site' || nature === 'batiment') && (
-          <Form.Item name="adresse" label={t('lieux.field.adresse')} extra={nature === 'batiment' && !editMode ? t('lieux.field.adresse.help') : undefined} rules={[{ max: 200 }]}>
+          <Form.Item name="adresse" label={t('lieux.field.adresse')} tooltip={hint('lieux.adresse')} extra={nature === 'batiment' && !editMode ? t('lieux.field.adresse.help') : undefined} rules={[{ max: 200 }]}>
             <Input autoComplete="off" />
           </Form.Item>
         )}

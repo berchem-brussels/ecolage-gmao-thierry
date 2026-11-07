@@ -28,7 +28,7 @@ const enDataUrl = (blob: Blob) => new Promise<string>((resolve, reject) => {
 });
 
 export default function ReportTicketModal({ open, onClose, onCreated, screenName }: { open: boolean; onClose: () => void; onCreated?: () => void; screenName?: string }) {
-  const { t, lang } = useI18n();
+  const { t, lang, hint } = useI18n();
   const { settings } = useSettings();
   const location = useLocation();
   const [form] = Form.useForm();
@@ -69,24 +69,24 @@ export default function ReportTicketModal({ open, onClose, onCreated, screenName
       okButtonProps={{ loading: sending }} destroyOnClose>
       <Typography.Paragraph type="secondary">{t('tickets.screen_joined')} <strong>{ecran}</strong></Typography.Paragraph>
       <Form form={form} layout="vertical" onFinish={submit} initialValues={{ type: 'question', impact: 'person', urgency: 'annoying' }}>
-        <Form.Item name="type" label={t('tickets.field.type')} extra={t(type === 'question' ? 'tickets.who.business' : 'tickets.who.it')}>
+        <Form.Item name="type" label={t('tickets.field.type')} tooltip={hint('tickets.type')} extra={t(type === 'question' ? 'tickets.who.business' : 'tickets.who.it')}>
           <Radio.Group optionType="button" aria-label={t('tickets.field.type')} options={(['incident', 'bug', 'question', 'wish'] as const).map((x) => ({ value: x, label: t(`tickets.type.${x}`) }))} />
         </Form.Item>
-        <Form.Item name="title" label={t('tickets.field.title')} rules={[texteObligatoire(t), { max: 200 }]}><Input maxLength={200} /></Form.Item>
-        <Form.Item name="description" label={t('tickets.field.description')}><Input.TextArea rows={3} maxLength={8000} /></Form.Item>
+        <Form.Item name="title" label={t('tickets.field.title')} tooltip={hint('tickets.title')} rules={[texteObligatoire(t), { max: 200 }]}><Input maxLength={200} /></Form.Item>
+        <Form.Item name="description" label={t('tickets.field.description')} tooltip={hint('tickets.description')}><Input.TextArea rows={3} maxLength={8000} /></Form.Item>
         {(type === 'incident' || type === 'bug') && (
           <>
-            <Form.Item name="expected" label={t('tickets.field.expected')}><Input.TextArea rows={2} maxLength={4000} /></Form.Item>
-            <Form.Item name="actual" label={t('tickets.field.actual')}><Input.TextArea rows={2} maxLength={4000} /></Form.Item>
+            <Form.Item name="expected" label={t('tickets.field.expected')} tooltip={hint('tickets.expected')}><Input.TextArea rows={2} maxLength={4000} /></Form.Item>
+            <Form.Item name="actual" label={t('tickets.field.actual')} tooltip={hint('tickets.actual')}><Input.TextArea rows={2} maxLength={4000} /></Form.Item>
           </>
         )}
-        <Form.Item name="impact" label={t('tickets.field.impact')}>
+        <Form.Item name="impact" label={t('tickets.field.impact')} tooltip={hint('tickets.impact')}>
           <Radio.Group optionType="button" aria-label={t('tickets.field.impact')} options={(['person', 'service', 'organisation'] as const).map((x) => ({ value: x, label: t(`tickets.impact.${x}`) }))} />
         </Form.Item>
-        <Form.Item name="urgency" label={t('tickets.field.urgency')}>
+        <Form.Item name="urgency" label={t('tickets.field.urgency')} tooltip={hint('tickets.urgency')}>
           <Radio.Group optionType="button" aria-label={t('tickets.field.urgency')} options={(['blocking', 'annoying', 'comfort'] as const).map((x) => ({ value: x, label: t(`tickets.urgency.${x}`) }))} />
         </Form.Item>
-        <Form.Item label={t('tickets.field.screenshot')} extra={t('tickets.screenshot.help')}>
+        <Form.Item label={t('tickets.field.screenshot')} tooltip={hint('tickets.screenshot')} extra={t('tickets.screenshot.help')}>
           <input type="file" accept="image/png,image/jpeg" aria-label={t('tickets.field.screenshot')} onChange={(e) => pick(e.target.files?.[0])} />
           {shot && <img src={shot} alt={t('tickets.field.screenshot')} style={{ display: 'block', maxWidth: '100%', maxHeight: 160, marginTop: 8, border: '1px solid var(--app-border)' }} />}
           {shotError && <Alert type="error" showIcon message={t('tickets.screenshot.too_big')} style={{ marginTop: 8 }} />}

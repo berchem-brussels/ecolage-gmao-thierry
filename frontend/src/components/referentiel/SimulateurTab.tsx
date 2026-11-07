@@ -31,7 +31,7 @@ function Echeance({ quand, delai }: { quand: string; delai: string }) {
 }
 
 export default function SimulateurTab({ priorites, categories }: { priorites: PrioriteFiche[]; categories: Categorie[] }) {
-  const { t, tField, lang } = useI18n();
+  const { t, tField, lang, hint } = useI18n();
   const [form] = Form.useForm<FormValues>();
   const mode = Form.useWatch('mode', form);
   const [res, setRes] = useState<Echeance | null>(null);
@@ -56,20 +56,20 @@ export default function SimulateurTab({ priorites, categories }: { priorites: Pr
       <Card size="small" title={t('ref.sim.question')}>
         <Typography.Paragraph type="secondary" style={{ fontSize: 12 }}>{t('ref.sim.intro')}</Typography.Paragraph>
         <Form form={form} layout="vertical" onFinish={calculer} initialValues={{ mode: 'priorite', priorite: 'P3', recu: dayjs().second(0) }}>
-          <Form.Item name="mode" label={t('ref.sim.selon')}>
+          <Form.Item name="mode" label={t('ref.sim.selon')} tooltip={hint('ref.sim.mode')}>
             <Radio.Group optionType="button" aria-label={t('ref.sim.selon')}
               options={[{ value: 'priorite', label: t('ref.cat.priorite') }, { value: 'categorie', label: t('ref.sim.categorie') }]} />
           </Form.Item>
           {mode === 'categorie' ? (
-            <Form.Item name="categorie_id" label={t('ref.sim.categorie')} rules={[obligatoire(t)]}>
+            <Form.Item name="categorie_id" label={t('ref.sim.categorie')} tooltip={hint('ref.sim.categorie')} rules={[obligatoire(t)]}>
               <Select showSearch optionFilterProp="label" options={options} aria-label={t('ref.sim.categorie')} />
             </Form.Item>
           ) : (
-            <Form.Item name="priorite" label={t('ref.cat.priorite')}>
+            <Form.Item name="priorite" label={t('ref.cat.priorite')} tooltip={hint('ref.sim.priorite')}>
               <Radio.Group optionType="button" aria-label={t('ref.cat.priorite')} options={PRIORITES.map((p) => ({ value: p, label: p }))} />
             </Form.Item>
           )}
-          <Form.Item name="recu" label={t('ref.sim.recu')} rules={[obligatoire(t)]}>
+          <Form.Item name="recu" label={t('ref.sim.recu')} tooltip={hint('ref.sim.recu')} rules={[obligatoire(t)]}>
             <DatePicker showTime={{ format: 'HH:mm', minuteStep: 5 }} format="DD/MM/YYYY HH:mm" allowClear={false} aria-label={t('ref.sim.recu')} />
           </Form.Item>
           <Button type="primary" htmlType="submit">{t('ref.sim.calculer')}</Button>
