@@ -1,6 +1,6 @@
 # Serveur MCP
 
-Version de l'application : **0.12.0** · Mis à jour le 06/11/2026 · Le français fait foi.
+Version de l'application : **0.13.0** · Mis à jour le 08/11/2026 · Le français fait foi.
 
 ## Accès
 
@@ -19,6 +19,10 @@ Version de l'application : **0.12.0** · Mis à jour le 06/11/2026 · Le frança
 - Depuis la 0.4.1, les fiches de catégorie, de priorité, de jour de l'horaire et de jour non ouvré portent `trace` (`etat`, `le`, `par`) : qui les a modifiées en dernier et quand, ou « livrée ». Le nom n'est rendu qu'aux personnes de l'entité. Aucun outil nouveau.
 - Depuis la 0.5.0, le serveur retire les espaces de début et de fin de tout texte reçu, par le MCP comme par l'API, sauf les mots de passe ; un champ obligatoire fait seulement d'espaces est refusé (`VALIDATION`), avant tout jeton de confirmation.
 - Les instructions envoyées au client demandent de commencer par `get_profile` : les données métier sont celles de l'entité active ; `select_entite` la change. Elles disent aussi que le MCP ne transporte aucun fichier, et qu'une demande se dépose par `create_demande`, le lieu proposé d'office étant `lieu_propose` dans `get_profile`, et les derniers lieux de ses demandes `lieux_recents` (0.7.5). Depuis la 0.8.0, elles disent que les pièces du brouillon partent avec la demande suivante, même déposée par `create_demande`, et qu'il faut le dire à la personne.
+
+## 0.13.0
+
+Aucun outil nouveau. `list_lieux` reçoit `has_photo` : 0 pour les lieux sans photo, 1 pour ceux qui en ont (entité active seulement), pour dresser la liste des lieux à photographier. `get_demande` rend, au seul service technique (`demandes:entite`), `photo_lieu` : lieu dont la photo montre l'endroit (`lieu_id`, `nature`, `code`, `nom_fr`, `nom_nl`, `photo_at`), `du_lieu` à 1 si c'est le lieu de la demande, 0 si c'est le plus proche lieu au-dessus ; `null` si aucun lieu du chemin n'a de photo ; absent pour le demandeur. Le fichier se lit hors MCP (`GET /api/lieux/:id/photo`, E-17). Journal d'audit (`list_audit`, `get_audit`) : `noms.cle` nomme un réglage par son libellé FR et NL, `noms["apres.type_id"]` le type d'un lieu ; un changement d'état d'un ticket note `motif_donne` (0 ou 1) au lieu du texte du motif.
 
 ## 0.12.0
 

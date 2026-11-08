@@ -7,9 +7,14 @@
  * Noms (0.7.4, DV-50) : chaque ligne rend aussi « noms », le code et le nom actuels des lieux et des catégories que le
  * détail désigne par leur identifiant, trouvés à la lecture ; le journal lui-même ne change pas. Un identifiant qui ne
  * correspond plus à aucune fiche est rendu avec introuvable: 1. Le bénéficiaire d'une demande reste un identifiant.
+ * 0.13.0 (point 2 ; D3 du contrôle DV-113) : le type d'un lieu modifié est nommé comme valeur de liste ; la clé d'un
+ * réglage (« app.organisation_fr », « urgence.telephone ») est nommée par son libellé FR et NL du catalogue de
+ * l'instance ou de l'entité, sans requête ; une clé sortie du catalogue est rendue avec introuvable: 1.
  */
 const { getDb } = require('../database');
 const { AppError } = require('../envelope');
+const { PARAMETRES: REGLAGES_INSTANCE } = require('./parametres');
+const { PARAMETRES: REGLAGES_ENTITE } = require('./parametres-entite');
 
 const COLUMNS = `a.id, a.created_at, a.action, a.entity_type, a.entity_id, a.channel, a.details_json, a.entite_id,
   a.user_id, u.email AS user_email, u.first_name AS user_first_name, u.last_name AS user_last_name, e.code AS entite_code`;
@@ -44,13 +49,32 @@ const REFERENCES = [
   { chemin: 'apres.lieu_id', type: 'lieu', action: 'demande.qualifier' },
   { chemin: 'avant.categorie_id', type: 'categorie', action: 'demande.qualifier' },
   { chemin: 'apres.categorie_id', type: 'categorie', action: 'demande.qualifier' },
+  // 0.13.0 : type d'un lieu modifié (valeur de la liste « type_lieu »).
+  { chemin: 'avant.type_id', type: 'valeur', entity: 'lieu' },
+  { chemin: 'apres.type_id', type: 'valeur', entity: 'lieu' },
 ];
 const NOMS = {
   lieu: `SELECT l.id, l.code, l.nom_fr, l.nom_nl, e.code AS entite_code FROM lieux l LEFT JOIN entites e ON e.id = l.entite_id
     WHERE l.id IN (SELECT value FROM json_each(?))`,
   categorie: `SELECT c.id, c.code, c.libelle_fr AS nom_fr, c.libelle_nl AS nom_nl, e.code AS entite_code FROM categories c
     LEFT JOIN entites e ON e.id = c.entite_id WHERE c.id IN (SELECT value FROM json_each(?))`,
+  valeur: `SELECT v.id, v.code, v.libelle_fr AS nom_fr, v.libelle_nl AS nom_nl, e.code AS entite_code FROM listes_valeurs v
+    LEFT JOIN entites e ON e.id = v.entite_id WHERE v.id IN (SELECT value FROM json_each(?))`,
 };
+
+/** Catalogue des réglages qui nomme la clé « cle » d'une ligne (0.13.0, D3), ou null. */
+function catalogueReglages(ligne) {
+  if (/^parametre\./.test(ligne.action) || (ligne.action === 'systeme.espaces' && ligne.entity_type === 'app_settings')) return REGLAGES_INSTANCE;
+  if (/^parametre_entite\./.test(ligne.action)) return REGLAGES_ENTITE;
+  return null;
+}
+function nomReglage(ligne) {
+  const cle = ligne.details && ligne.details.cle;
+  const cat = typeof cle === 'string' ? catalogueReglages(ligne) : null;
+  if (!cat) return null;
+  const p = cat.find((x) => x.cle === cle);
+  return p ? { type: 'reglage', code: cle, nom_fr: p.libelle_fr, nom_nl: p.libelle_nl } : { type: 'reglage', code: cle, introuvable: 1 };
+}
 
 const lire = (details, chemin) => chemin.split('.').reduce((o, k) => (o && typeof o === 'object' ? o[k] : undefined), details);
 
@@ -77,6 +101,8 @@ function avecNoms(lignes) {
       const x = trouves[r.type].get(r.id);
       noms[r.chemin] = x ? { type: r.type, ...x } : { type: r.type, id: r.id, introuvable: 1 };
     }
+    const reglage = nomReglage(l);
+    if (reglage) noms.cle = reglage;
     return { ...l, noms };
   });
 }

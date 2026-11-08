@@ -9,6 +9,7 @@
  */
 import { useEffect, useMemo, useState } from 'react';
 import { Alert, Button, DatePicker, Form, Input, InputNumber, Radio, Space, Switch, TreeSelect, Typography, message } from 'antd';
+import PhotoLieu from './PhotoLieu';
 import dayjs, { type Dayjs } from 'dayjs';
 import api, { ApiError } from '../../api';
 import { useI18n } from '../../contexts/I18nContext';
@@ -89,6 +90,8 @@ export default function QualificationForm({ d, onDone, onCancel }: { d: Demande;
         date_convenue: d.date_convenue ? dayjs(d.date_convenue) : null,
       }}>
       <Typography.Paragraph type="secondary">{t('qualif.intro')}</Typography.Paragraph>
+      {/* 0.13.0 (DV-101) : la photo de l'endroit aide à confirmer le lieu et à rédiger les consignes. */}
+      {d.photo_lieu && <div style={{ marginBottom: 16 }}><PhotoLieu photo={d.photo_lieu} /></div>}
       <Form.Item label={t('qualif.categorie')} required>
         <TreeSelect<number> aria-label={t('qualif.categorie')} showSearch treeNodeFilterProp="title" treeDefaultExpandAll={false}
           value={categorieId} onChange={choisirCategorie} treeData={arbreSelect} loading={arbre === null} style={{ width: '100%' }}

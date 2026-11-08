@@ -2,6 +2,32 @@
   "_description": "Notes de version pour les utilisateurs, en FR et en NL, sans terme technique (standard v3.2, sections 13.1 et 17.8 ; écart E-07). Une note par version, de la plus récente à la plus ancienne. Chaque ligne a un public : « tous », « admin » (administrateur de l'application) ou une permission du catalogue des rôles (par exemple « parametres:gerer »), lue dans l'entité active. La note de la version installée s'affiche une fois à la première connexion qui suit la mise à jour ; toutes restent relisibles dans Aide, Nouveautés.",
   "notes": [
     {
+      "version": "0.13.0",
+      "date": "2026-11-08",
+      "lignes": [
+        {
+          "public": "tous",
+          "fr": "Sur téléphone, l'en-tête tient sur les plus petits écrans, iPhone comme Android : la langue se change maintenant dans votre menu, sous vos initiales en haut à droite.",
+          "nl": "Op een telefoon past de koptekst op de kleinste schermen, iPhone zoals Android: de taal wijzigt u nu in uw menu, onder uw initialen rechtsboven."
+        },
+        {
+          "public": "tous",
+          "fr": "Aide : un lien « Voir aussi » ouvre la bonne fiche, l'impression du mode d'emploi est plus rapide, et l'onglet Questions fréquentes montre aussi les questions propres à un écran.",
+          "nl": "Help: een link « Zie ook » opent de juiste fiche, het afdrukken van de handleiding gaat sneller, en het tabblad Veelgestelde vragen toont ook de vragen eigen aan een scherm."
+        },
+        {
+          "public": "demandes:qualifier",
+          "fr": "Fiche d'une demande et qualification : la photo de l'endroit (celle du local, sinon celle du bâtiment ou du site) pour reconnaître le lieu. Patrimoine : la case « Sans photo » montre les lieux qu'il reste à photographier.",
+          "nl": "Fiche van een aanvraag en kwalificatie: de foto van de plek (die van het lokaal, anders die van het gebouw of de site) om de plaats te herkennen. Patrimonium: het vakje « Zonder foto » toont de plaatsen die nog gefotografeerd moeten worden."
+        },
+        {
+          "public": "admin",
+          "fr": "Journal d'audit : chaque champ et chaque réglage s'affichent par leur nom. Le motif tapé à la clôture d'un ticket n'y est plus recopié ; il reste lisible dans le ticket.",
+          "nl": "Auditlogboek: elk veld en elke instelling verschijnen met hun naam. De reden die bij het afsluiten van een ticket getypt wordt, wordt er niet meer overgenomen; ze blijft leesbaar in het ticket."
+        }
+      ]
+    },
+    {
       "version": "0.12.0",
       "date": "2026-11-06",
       "lignes": [

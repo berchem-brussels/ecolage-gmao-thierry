@@ -113,7 +113,8 @@ module.exports = {
   valeurDeactivate: obj({ motif }, ['motif']),
 
   // Référentiel des lieux (REF-01, REF-02). La nature ne change pas après la création.
-  lieuList: listQuery({ nature: T.en(...NATURES), parent_id: T.int(1), type_id: T.int(1), statut: T.en(...STATUTS), is_active: flag }),
+  // 0.13.0 (étape 8 ter) : has_photo filtre les lieux avec (1) ou sans (0) photo.
+  lieuList: listQuery({ nature: T.en(...NATURES), parent_id: T.int(1), type_id: T.int(1), statut: T.en(...STATUTS), is_active: flag, has_photo: flag }),
   lieuArbre: obj({ inclure_inactifs: { ...flag, default: 0 } }),
   lieuCreate: obj({
     nature: T.en(...NATURES), parent_id: T.int(1), ...lieuFields,

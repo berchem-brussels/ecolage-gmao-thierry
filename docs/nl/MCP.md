@@ -1,6 +1,6 @@
 # MCP-server
 
-Versie van de toepassing: **0.12.0** · Bijgewerkt op 06/11/2026 · De Franse tekst is rechtsgeldig (`docs/fr/MCP.md`).
+Versie van de toepassing: **0.13.0** · Bijgewerkt op 08/11/2026 · De Franse tekst is rechtsgeldig (`docs/fr/MCP.md`).
 
 ## Toegang en regels
 
@@ -9,6 +9,10 @@ Versie van de toepassing: **0.12.0** · Bijgewerkt op 06/11/2026 · De Franse te
 - Authenticatie: de sessie, of het sessietoken in `Authorization: Bearer`. OAuth 2.1 met PKCE komt in stap 44 (afwijking E-10).
 - Limiet: 60 oproepen per minuut en per persoon.
 - Elke tool roept dezelfde dienstfunctie op als de REST-route, met de identiteit en de rechten van de persoon, in haar actieve entiteit. Een deactivering, intrekking of wissing gebeurt in twee oproepen (`prepare_*`, dan `confirm_*`). Geen tool voor vrije SQL.
+
+## 0.13.0
+
+Geen nieuw hulpmiddel. `list_lieux` krijgt `has_photo` (0: plaatsen zonder foto, 1: met foto, enkel de actieve entiteit). `get_demande` geeft enkel aan de technische dienst `photo_lieu`: de plaats waarvan de foto de plek toont (de plaats van de aanvraag, `du_lieu` 1, of de dichtstbijzijnde plaats erboven, `du_lieu` 0), `null` als geen plaats van het pad een foto heeft. Auditlogboek: `noms.cle` noemt een instelling; een statuswijziging van een ticket noteert `motif_donne` (0 of 1) in plaats van de tekst van de reden.
 
 ## 0.12.0
 

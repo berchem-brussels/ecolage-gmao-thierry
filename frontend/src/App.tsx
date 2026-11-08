@@ -14,7 +14,7 @@ import 'dayjs/locale/nl';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { I18nProvider, useI18n } from './contexts/I18nContext';
 import { SettingsProvider, type InstanceSettings } from './contexts/SettingsContext';
-import { ROUGE_ERREUR, TEXTE_BOUTON_DANGER } from './couleurs';
+import { ROUGE_ERREUR, TEXTE_BOUTON_DANGER, TEXTE_DISCRET } from './couleurs';
 import AppLayout from './components/AppLayout';
 import LoginPage from './pages/LoginPage';
 import { safeNext } from './connexion';
@@ -54,15 +54,17 @@ export function buildTheme(s: InstanceSettings, dark: boolean) {
       algorithm: antTheme.darkAlgorithm,
       // Rouge d'erreur lisible sur fond sombre (E-26, 0.7.0) ; texte foncé sur les boutons de danger pleins.
       token: { ...base.token, colorLink: s.theme.primary_text_dark, colorBgLayout: '#141414', colorBgContainer: '#1f1f1f',
-        colorError: ROUGE_ERREUR.sombre, colorErrorText: ROUGE_ERREUR.sombre },
+        colorError: ROUGE_ERREUR.sombre, colorErrorText: ROUGE_ERREUR.sombre, colorTextDescription: TEXTE_DISCRET.sombre },
       components: { ...base.components, Button: { dangerColor: TEXTE_BOUTON_DANGER.sombre }, Table: { headerBg: '#262626', rowHoverBg: 'rgba(95,184,173,0.12)' }, Tree: { nodeSelectedBg: s.theme.selection_dark }, Tabs: { itemSelectedColor: s.theme.primary_text_dark, inkBarColor: s.theme.primary_text_dark } },
     };
   }
   return {
     // Liens à la couleur principale : le bleu par défaut d'Ant Design (#1677ff) n'atteint pas 4,5:1 sur fond blanc.
     // Rouge d'erreur à 4,5:1 au moins sur les fonds clairs (E-26, 0.7.0) : le rouge par défaut d'Ant Design n'atteint que 3,3:1.
+    // Texte discret (Typography « secondary », « (valeur par défaut) ») à 4,5:1 au moins (0.13.0, D10) : le gris d'Ant Design
+    // (45 % de noir) n'atteint que 3,4:1.
     token: { ...base.token, colorLink: s.theme.primary, colorText: '#444', colorTextSecondary: '#666', colorBgLayout: '#f6f6f6', colorBgContainer: '#ffffff',
-      colorError: ROUGE_ERREUR.clair, colorErrorText: ROUGE_ERREUR.clair },
+      colorError: ROUGE_ERREUR.clair, colorErrorText: ROUGE_ERREUR.clair, colorTextDescription: TEXTE_DISCRET.clair },
     components: { ...base.components, Button: { dangerColor: TEXTE_BOUTON_DANGER.clair }, Table: { headerBg: '#f6f6f6', rowHoverBg: 'rgba(173,212,204,0.25)' }, Tree: { nodeSelectedBg: s.theme.selection } },
   };
 }

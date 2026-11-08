@@ -270,3 +270,16 @@ test('R6 : le profil dit quelles files la personne traite ; un agent sans file n
   assert.deepEqual((await admin.get('/api/auth/me')).body.data.files_tickets, ['it']);
   assert.equal((await a1.get('/api/tickets/stats')).status, 403, 'le refus du serveur reste en place');
 });
+
+// 0.13.0 (D8, décidé le 08/11/2026) : le motif tapé reste dans le ticket, le journal note seulement qu'il a été donné.
+test('motif d’un changement d’état : dans le fil du ticket, jamais en clair au journal', async () => {
+  const { getDb } = require('../src/database');
+  const id = (await a1.post('/api/tickets', { type: 'incident', title: 'Motif hors journal' })).body.data.id;
+  const texte = 'Réponse donnée à Madame Exemple';
+  assert.equal((await admin.post(`/api/tickets/${id}/status`, { to: 'resolved', reason: texte })).body.data.status, 'resolved');
+  const lignes = getDb().prepare("SELECT action, details_json FROM audit_log WHERE entity_type = 'ticket' AND entity_id = ?").all(id);
+  assert.ok(lignes.every((l) => !(l.details_json || '').includes('Madame')), JSON.stringify(lignes));
+  const resolu = lignes.find((l) => l.action === 'ticket.resolved');
+  assert.deepEqual(JSON.parse(resolu.details_json), { motif_donne: 1 });
+  assert.ok((await admin.get(`/api/tickets/${id}`)).body.data.messages.some((m) => m.body === texte), 'motif lisible dans le ticket');
+});

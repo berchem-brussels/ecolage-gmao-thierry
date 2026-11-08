@@ -43,7 +43,8 @@ export default function TopicView({ topic, localFaq = [], expanded = false, faqA
     return r ? (lang === 'nl' ? r.label_nl : r.label_fr) : code;
   };
   // Une capture absente (pas encore produite) ne laisse pas d'image cassée.
-  const img = (id: string, alt: string) => <img key={id} src={shotSrc(lang, id)} alt={alt} className="help-shot" loading="lazy" onError={(ev) => { (ev.target as HTMLImageElement).style.display = 'none'; }} />;
+  // 0.13.0 (M1) : fiche dépliée pour l'impression, captures chargées tout de suite ; à l'écran, au fil du défilement.
+  const img = (id: string, alt: string) => <img key={id} src={shotSrc(lang, id)} alt={alt} className="help-shot" loading={expanded ? 'eager' : 'lazy'} onError={(ev) => { (ev.target as HTMLImageElement).style.display = 'none'; }} />;
   const procItems = topic.procedures.filter((p) => voit(p.acces)).map((p, i) => ({
     key: String(i),
     label: tx(p.title),

@@ -21,7 +21,7 @@ import { texteObligatoire } from '../validation';
 import FaqModal from '../help/FaqModal';
 import { Link } from 'react-router-dom';
 
-export interface TicketMessage { id: number; kind: 'message' | 'event'; body: string; is_internal: number; created_at: string; author_name: string | null }
+export interface TicketMessage { id: number; kind: 'message' | 'event'; body: string; is_internal: number; created_at: string; author_name: string | null; author_id?: number | null }
 export interface Ticket {
   id: number; reference: string; type: string; title: string; description: string | null; expected: string | null; actual: string | null;
   queue: 'business' | 'it'; priority: string; status: string; screen: string | null; context: Record<string, unknown> | null; entite_id: number | null;

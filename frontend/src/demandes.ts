@@ -35,6 +35,8 @@ export interface Demande {
   beneficiaire_id?: number | null; beneficiaire_prenom?: string | null; beneficiaire_nom?: string | null; beneficiaire_texte?: string | null;
   date_souhaitee?: string | null; creneau?: string | null; pour_moi?: 0 | 1;
   lieu_id: number; lieu_code: string; lieu_nom_fr: string; lieu_nom_nl: string; lieu_nature: string; lieu_chemin: Etape[];
+  /** 0.13.0 : photo de l'endroit, pour le service technique (absente pour le demandeur). */
+  photo_lieu?: PhotoLieu | null;
   categorie_id: number; categorie_code: string; categorie_libelle_fr: string; categorie_libelle_nl: string; categorie_icone: string;
   domaine_libelle_fr: string | null; domaine_libelle_nl: string | null;
   /** Nuls pour une personne qui suit la demande d'un autre (« Moi aussi », 0.7.0) : le nom du demandeur ne lui est pas rendu. */
@@ -144,6 +146,9 @@ export function taille(octets: number, lang: 'fr' | 'nl'): string {
 export interface ReponseDemande { question_id: number; question_fr: string; question_nl: string; valeur: string; reponse_fr: string; reponse_nl: string }
 
 /** Demande ouverte du même bâtiment, vue avant l'envoi (DEM-04, 0.7.0) : sans le nom du demandeur. */
+/** Photo de l'endroit (0.13.0, DV-101) : du lieu choisi (du_lieu = 1) ou du plus proche lieu au-dessus ; service technique seulement. */
+export interface PhotoLieu { lieu_id: number; nature: string; code: string; nom_fr: string; nom_nl: string; photo_at: string | null; du_lieu: 0 | 1 }
+
 export interface DemandeVoisine {
   id: number; numero: string; etat: Etat; danger: 0 | 1; created_at: string;
   lieu_id: number; lieu_code: string; lieu_nom_fr: string; lieu_nom_nl: string;

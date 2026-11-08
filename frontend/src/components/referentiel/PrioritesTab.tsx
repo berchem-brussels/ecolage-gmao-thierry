@@ -16,9 +16,10 @@ interface FormValues {
   prise_en_charge: number; fin?: number | null; convenue: boolean;
 }
 
-/** Texte d'un délai : « 4 heures calendaires », « date convenue ». */
+/** Texte d'un délai : « 1 heure calendaire », « 4 heures calendaires », « date convenue » (singulier : 0.13.0, D5). */
 export function texteDelai(t: (k: string) => string, n: number | null, unite: Unite) {
-  return n === null ? t('ref.prio.convenue') : `${n} ${t(`ref.unite.${unite}`)}`;
+  if (n === null) return t('ref.prio.convenue');
+  return `${n} ${t(n === 1 ? `ref.unite.${unite}.un` : `ref.unite.${unite}`)}`;
 }
 
 function CartePriorite({ p, onSaved }: { p: PrioriteFiche; onSaved: (p: PrioriteFiche) => void }) {

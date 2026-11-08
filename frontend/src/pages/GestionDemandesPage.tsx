@@ -234,7 +234,7 @@ export default function GestionDemandesPage() {
           <Collapse ghost size="small" items={[{ key: 'filtres', label: `${t('gest.filtres')}${nbFiltres ? ` (${nbFiltres})` : ''}${vue ? ` · ${vue.nom}` : ''}`, children: filtres }]} />
         ) : filtres}
       </Card>
-      <Typography.Paragraph type="secondary" aria-live="polite" style={{ marginBottom: 8 }}>{t('gest.total').replace('{n}', String(total))}</Typography.Paragraph>
+      <Typography.Paragraph type="secondary" aria-live="polite" style={{ marginBottom: 8 }}>{t(total === 1 ? 'gest.total.un' : 'gest.total').replace('{n}', String(total))}</Typography.Paragraph>
 
       {mobile ? (
         <List<Demande> loading={loading} dataSource={rows} locale={{ emptyText: t('gest.vide') }}

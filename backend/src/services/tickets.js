@@ -247,7 +247,9 @@ function changeStatus(user, id, { to, reason }, channel = 'api') {
     event(id, user.id, `status:${to}`);
     if (reason) db.prepare("INSERT INTO ticket_messages (ticket_id, author_id, kind, body, is_internal) VALUES (?, ?, 'message', ?, 0)").run(id, user.id, reason);
   })();
-  logAudit(user.id, `ticket.${to}`, 'ticket', id, { reason }, channel, t.entite_id);
+  // 0.13.0 (D8, décidé par Thierry le 08/11/2026) : le motif tapé reste dans le fil du ticket ; le journal, gardé
+  // longtemps, note seulement qu'il a été donné (écart au gabarit, E-46).
+  logAudit(user.id, `ticket.${to}`, 'ticket', id, rule.reason ? { motif_donne: reason ? 1 : 0 } : null, channel, t.entite_id);
   return get(user, id);
 }
 

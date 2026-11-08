@@ -1,5 +1,5 @@
 #!/bin/bash
-# Contrôles automatiques après installation (0.12.0, DV-110), à lancer dans la session SSH du NAS, dans le dossier
+# Contrôles automatiques après installation (0.12.0, DV-110 ; 0.13.0 : aucune migration nouvelle, dernière 011_faq), à lancer dans la session SSH du NAS, dans le dossier
 # de l'application :   sudo bash recette.sh            (compte de démonstration multi-entites@demo.invalid)
 #                      sudo bash recette.sh <adresse>  (un autre compte de démonstration qui a un rôle dans deux entités)
 # Le mot de passe de démonstration est demandé et tapé sans affichage ; il n'est ni affiché, ni écrit, ni gardé.

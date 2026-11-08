@@ -1,5 +1,5 @@
 /**
- * Contrôles automatiques après installation, partie « serveur » (0.12.0, DV-110), lancés par recette.sh dans le
+ * Contrôles automatiques après installation, partie « serveur » (0.12.0, DV-110 ; 0.13.0 : aucune migration nouvelle, la dernière reste 011_faq), lancés par recette.sh dans le
  * conteneur de l'API : `docker exec -i <app>-api node src/recette-api.js <version> <adresse>`.
  *
  * Lecture seule pour les données métier : rien n'est créé, modifié ni supprimé. Seules la connexion du compte de

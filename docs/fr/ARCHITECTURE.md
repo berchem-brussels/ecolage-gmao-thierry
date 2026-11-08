@@ -1,6 +1,6 @@
 # Architecture
 
-Version 0.12.0 · Le français fait foi.
+Version 0.13.0 · Le français fait foi.
 
 ## Services
 
@@ -308,3 +308,10 @@ Repris du gabarit 1.3.0 (`services/tickets.js`, `routes/tickets.js`, schémas, n
 - Table `help_faq` (migration `011_faq`) : `entite_id` (nul : entrée commune), `topic_id` (fiche d'un écran), question et réponse FR et NL, `source_ticket_id` (une entrée au plus par ticket), `is_active` et `motif_desactivation`. Service `services/faq.js`, routes `/api/faq`, `POST /api/tickets/:id/faq`, six outils MCP. Permission `faq:gerer` (gestionnaire, responsable).
 - Refus d'un réglage nommé (`services/refus-reglage.js`) : `AppError` porte un texte FR et NL propre au refus, rendu à la place du message général du code par l'API et le MCP (`messageOf`).
 - Contrôles après installation : `recette.sh` (racine) et `backend/src/recette-api.js` (dans le conteneur de l'API, lecture seule).
+
+## Photo de l'endroit, filtre « Sans photo », téléphones (0.13.0)
+
+- `photo_lieu` de `GET /api/demandes/:id` (`photoDuLieu` de `services/demandes.js`), au seul service technique : photo du lieu de la demande, sinon du plus proche lieu au-dessus dans le chemin (`du_lieu`), lieux lus en une requête par `json_each(?)` ; composant `components/demandes/PhotoLieu.tsx` (fiche du service et qualification) ; fichier lu par `GET /api/lieux/:id/photo?v=<photo_at>`.
+- `has_photo` (0 ou 1) de `GET /api/lieux` et de `list_lieux` ; case « Sans photo (n) » de `PatrimoinePage.tsx`, calculée sur l'arbre déjà chargé, filtre `?photo=sans` gardé dans l'adresse.
+- Journal d'audit : `noms.cle` (réglage de l'instance ou de l'entité, nommé par le catalogue, sans requête) et type d'un lieu (`listes_valeurs`) dans `services/journal.js` ; `CODES_FAMILLE`, `CHAMPS_FAMILLE`, rôles par le catalogue et titre de fiche pour `topic_id` dans `JournalPage.tsx` ; `motif_donne` à la place du motif d'un ticket (E-46).
+- En-tête des téléphones (`AppLayout.tsx`, sous 768 px) : la langue passe dans le menu de la personne ; contrôle `npm run mobile:check` (`frontend/mobile-check/verifier-mobile.mjs`, Playwright, développement seulement).

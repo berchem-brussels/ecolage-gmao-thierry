@@ -49,7 +49,7 @@ export default function PiecesDemande({ pieces, plafonds, onChange }: Props) {
     let courantes = pieces;
     const refus: string[] = [];
     const place = plafonds.nombre - courantes.length;
-    if (fichiers.length > place) refus.push(t('demande.pieces.trop').replace('{n}', String(fichiers.length - place)));
+    if (fichiers.length > place) refus.push(t(fichiers.length - place === 1 ? 'demande.pieces.trop.un' : 'demande.pieces.trop').replace('{n}', String(fichiers.length - place)));
     for (const f of fichiers.slice(0, Math.max(0, place))) {
       setEnvoi(f.name);
       try {

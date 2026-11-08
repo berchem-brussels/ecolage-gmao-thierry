@@ -1,6 +1,6 @@
 {
   "name": "gmao-frontend",
-  "version": "0.12.0",
+  "version": "0.13.0",
   "private": true,
   "license": "EUPL-1.2",
   "type": "module",
@@ -10,7 +10,8 @@
     "test": "vitest run",
     "a11y": "eslint -c .eslintrc.a11y.json --no-eslintrc --ext .tsx src",
     "help:capture": "playwright test -c help-capture/playwright.help.config.ts",
-    "help:check": "HELP_STRICT=1 vitest run src/test/help.test.ts"
+    "help:check": "HELP_STRICT=1 vitest run src/test/help.test.ts",
+    "mobile:check": "node mobile-check/verifier-mobile.mjs"
   },
   "dependencies": {
     "@ant-design/icons": "^5.5.0",

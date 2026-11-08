@@ -7,6 +7,8 @@
  * libellé dans le menu ; sur téléphone, l'icône seule avec son nom accessible.
  * Bouton « Aide » à côté (standard, section 13.1 ; 0.12.0, DV-100) : la fiche d'aide de l'écran ; « Signaler » nomme
  * l'écran par le titre de sa fiche quand elle existe (section 13.5).
+ * Téléphone (moins de 768 px ; 0.13.0, défaut D1 du contrôle DV-113) : l'en-tête tient dans 320 px, en FR comme en NL.
+ * Le niveau de détail, le thème et la langue passent dans le menu de la personne ; marges et écarts resserrés.
  */
 import { useState } from 'react';
 import { Avatar, Button, Drawer, Dropdown, Grid, Layout, Menu, Segmented, Select, Tag, Tooltip, message } from 'antd';
@@ -14,7 +16,7 @@ import type { MenuProps } from 'antd';
 import {
   HomeOutlined, ApartmentOutlined, TeamOutlined, QuestionCircleOutlined, EyeOutlined, MenuFoldOutlined, MenuUnfoldOutlined,
   LogoutOutlined, LockOutlined, SunOutlined, MoonOutlined, ControlOutlined, BankOutlined, UnorderedListOutlined, SettingOutlined, AuditOutlined, FieldTimeOutlined,
-  PlusOutlined, ProfileOutlined, InboxOutlined, EnvironmentOutlined, AlertOutlined, FlagOutlined,
+  PlusOutlined, ProfileOutlined, InboxOutlined, EnvironmentOutlined, AlertOutlined, FlagOutlined, GlobalOutlined,
 } from '@ant-design/icons';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -116,7 +118,7 @@ export default function AppLayout() {
           style={{ background: 'transparent', border: 'none', marginTop: 8 }} inlineCollapsed={collapsed && !isMobile} />
       </nav>
       {!(collapsed && !isMobile) && (
-        <div style={{ padding: '8px 0 12px', textAlign: 'center', fontSize: 10, color: 'rgba(255,255,255,0.45)', letterSpacing: 1 }}>
+        <div style={{ padding: '8px 0 12px', textAlign: 'center', fontSize: 11, color: 'rgba(255,255,255,0.8)', letterSpacing: 1 }}>
           v{settings.version}
         </div>
       )}
@@ -128,6 +130,8 @@ export default function AppLayout() {
       // Sur téléphone, la bascule Simple ou Complet passe dans ce menu : elle reste accessible (standard section 12.5).
       ...(isMobile ? [{ key: 'mode', icon: <ControlOutlined />, label: `${t('layout.mode')} : ${user?.ui_mode === 'complet' ? t('layout.mode.simple') : t('layout.mode.complet')}` }] : []),
       ...(isMobile ? [{ key: 'theme', icon: dark ? <SunOutlined /> : <MoonOutlined />, label: dark ? t('layout.theme.light') : t('layout.theme.dark') }] : []),
+      // 0.13.0 (D1) : la langue aussi, sous le nom de l'autre langue écrit dans cette langue, pour qui ne lit pas l'écran.
+      ...(isMobile ? [{ key: 'lang', icon: <GlobalOutlined />, label: <span lang={lang === 'fr' ? 'nl' : 'fr'}>{lang === 'fr' ? 'Nederlands' : 'Français'}</span> }] : []),
       ...(entite ? [{ key: 'lieu', icon: <EnvironmentOutlined />, label: t('profil.lieu.title') }] : []),
       { key: 'password', icon: <LockOutlined />, label: t('layout.password') },
       { key: 'logout', icon: <LogoutOutlined />, label: t('layout.logout') },
@@ -135,6 +139,7 @@ export default function AppLayout() {
     onClick: ({ key }) => {
       if (key === 'mode') savePreferences({ ui_mode: user?.ui_mode === 'complet' ? 'simple' : 'complet' });
       else if (key === 'theme') savePreferences({ theme: dark ? 'clair' : 'sombre' });
+      else if (key === 'lang') changeLang(lang === 'fr' ? 'nl' : 'fr');
       else if (key === 'lieu') setLieuOpen(true);
       else if (key === 'password') setPwdOpen(true);
       else logout();
@@ -162,11 +167,11 @@ export default function AppLayout() {
         </Drawer>
       )}
       <Layout style={{ marginLeft: isMobile ? 0 : width, transition: 'margin-left 0.2s' }}>
-        <Header style={{ padding: '0 16px', background: 'var(--app-bg-container)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid var(--app-border)', position: 'sticky', top: 0, zIndex: 9, boxShadow: '0 1px 4px rgba(0,0,0,0.04)', height: 56 }}>
+        <Header style={{ padding: isMobile ? '0 8px' : '0 16px', gap: 4, background: 'var(--app-bg-container)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid var(--app-border)', position: 'sticky', top: 0, zIndex: 9, boxShadow: '0 1px 4px rgba(0,0,0,0.04)', height: 56 }}>
           <Button type="text" aria-label={t('layout.menu')}
             icon={isMobile || collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
             onClick={() => (isMobile ? setDrawerOpen(true) : setCollapsed(!collapsed))} />
-          <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? 6 : 12, minWidth: 0 }}>
+          <div className="entete-actions" style={{ display: 'flex', alignItems: 'center', gap: isMobile ? 4 : 12, minWidth: 0 }}>
             {/* Bouton « Nouvelle demande » sur chaque écran (DEM-01) ; sur téléphone, l'icône seule avec son nom accessible. */}
             {entite && location.pathname !== '/demandes/nouvelle' && (
               <Button type="primary" size={isMobile ? 'middle' : 'small'} icon={<PlusOutlined />} onClick={() => navigate('/demandes/nouvelle')}
@@ -183,8 +188,9 @@ export default function AppLayout() {
             {!isMobile && <Segmented size="small" aria-label={t('layout.mode')} value={user?.ui_mode || 'simple'}
               onChange={(v) => savePreferences({ ui_mode: v as 'simple' | 'complet' })}
               options={[{ label: t('layout.mode.simple'), value: 'simple' }, { label: t('layout.mode.complet'), value: 'complet' }]} />}
-            <Select size="small" aria-label={t('layout.lang')} value={lang} onChange={changeLang} style={{ width: 64 }}
-              options={[{ value: 'fr', label: 'FR' }, { value: 'nl', label: 'NL' }]} />
+            {/* 0.13.0 (D1) : sur téléphone, la langue passe dans le menu de la personne ; l'en-tête dépassait 320 et 360 px. */}
+            {!isMobile && <Select size="small" aria-label={t('layout.lang')} value={lang} onChange={changeLang} style={{ width: 64 }}
+              options={[{ value: 'fr', label: 'FR' }, { value: 'nl', label: 'NL' }]} />}
             {/* 0.12.0 : avec le bouton « Aide », l'en-tête dépassait 360 px ; sur téléphone, le thème passe dans le menu de la personne. */}
             {!isMobile && (
               <Tooltip title={dark ? t('layout.theme.light') : t('layout.theme.dark')}>
@@ -193,7 +199,7 @@ export default function AppLayout() {
               </Tooltip>
             )}
             <Dropdown menu={userMenu} trigger={['click']}>
-              <Button type="text" style={{ display: 'flex', alignItems: 'center', gap: 6, height: 44 }}>
+              <Button type="text" aria-label={t('layout.compte')} style={{ display: 'flex', alignItems: 'center', gap: 6, height: 44, paddingInline: isMobile ? 4 : undefined }}>
                 <Avatar size={30} style={{ background: 'var(--app-primary)', flexShrink: 0 }}>{user?.first_name?.[0]}{user?.last_name?.[0]}</Avatar>
                 {screens.lg && <span style={{ fontSize: 12, fontWeight: 500, whiteSpace: 'nowrap' }}>{user?.first_name} {user?.last_name}</span>}
               </Button>

@@ -2,6 +2,10 @@
 
 De Franse tekst (`docs/fr/SECURITE.md`) is rechtsgeldig en bevat het volledige rooster per versie.
 
+## 0.13.0 (08/11/2026)
+
+Foto van de plek op de fiche van een aanvraag, enkel voor de technische dienst (`photo_lieu`), filter « Zonder foto » in Patrimonium (`has_photo`), correcties D1 tot D10 en M1 tot M5. Getest: de foto en de aanvraag van de andere entiteit 403; nooit aan de aanvrager; `has_photo` enkel 0 of 1 en enkel de actieve entiteit; de reden van een ticketstatus niet meer in het auditlogboek (`motif_donne`); geen rauwe code meer in het logboek; kop tot 320 px. Elke correctie apart verwijderd: minstens één fout. Geen migratie, geen nieuwe afhankelijkheid.
+
 ## 0.12.0 (06/11/2026)
 
 Hulp per scherm en lokale FAQ (standaard, sectie 13.1), migratie `011_faq`. Getest: een item van een entiteit wordt alleen gelezen in die entiteit en beheerd door haar technische dienst of de beheerder (API en MCP, andere entiteit 403); een gemeenschappelijk item alleen door de beheerder; een vraag wordt alleen door de behandelaar en alleen opgelost of afgesloten omgezet, één keer; intrekken met reden, niets verwijderd, logboek met de entiteit; geweigerde instelling met naam en waarde; geen rauwe code meer in het logboek; tellers alleen voor wie een wachtrij behandelt. Elke bescherming apart verwijderd: minstens één fout. Geen nieuwe productie-afhankelijkheid (`@playwright/test` enkel voor ontwikkeling).

@@ -1,7 +1,8 @@
 /**
  * Saisie d'une question de la FAQ locale (0.12.0, standard section 13.1) : ajout, modification, ou transformation d'une
  * question métier résolue (section 13.5, ticket fourni : la question et la réponse sont préremplies en français à partir
- * du titre et de la résolution, à réécrire sans donnée personnelle et à traduire). La portée (commune ou entité active)
+ * du titre et de la dernière réponse du service (0.13.0, M2 ; à défaut, du motif de la résolution), à réécrire sans
+ * donnée personnelle et à traduire). La portée (commune ou entité active)
  * n'est proposée qu'à l'administrateur ; le service technique écrit toujours pour son entité active.
  */
 import { useEffect, useState } from 'react';
@@ -22,9 +23,22 @@ interface Props {
   /** Question à modifier. */
   faq?: LocalFaq | null;
   /** Ticket à transformer : POST /tickets/:id/faq. */
-  ticket?: { id: number; reference: string; title: string; resolution?: string | null } | null;
+  ticket?: { id: number; reference: string; title: string; resolution?: string | null; requester_id?: number;
+    messages?: { kind: string; body: string; is_internal: number; author_id?: number | null }[] } | null;
   /** Écran proposé pour un ajout. */
   topicId?: string | null;
+}
+
+/**
+ * Réponse du service à préremplir (0.13.0, M2 de la recette de la 0.12.0) : le dernier message public écrit par qui
+ * traite le ticket (pas par le demandeur), sans le motif de la résolution (« Réponse donnée »), qui est aussi recopié
+ * dans le fil ; à défaut, ce motif ; sinon rien. Avant, la réponse était toujours le motif de la clôture.
+ */
+export function reponseDuService(ticket: NonNullable<Props['ticket']>): string {
+  const motif = (ticket.resolution || '').trim();
+  const reponses = (ticket.messages || []).filter((m) => m.kind === 'message' && !m.is_internal && m.author_id !== ticket.requester_id
+    && m.body.trim() && m.body.trim() !== motif);
+  return reponses.length ? reponses[reponses.length - 1].body : motif;
 }
 
 export default function FaqModal({ open, onClose, onSaved, faq, ticket, topicId }: Props) {
@@ -37,7 +51,7 @@ export default function FaqModal({ open, onClose, onSaved, faq, ticket, topicId 
     if (!open) return;
     form.resetFields();
     if (faq) form.setFieldsValue({ topic_id: faq.topic_id, question_fr: faq.question_fr, question_nl: faq.question_nl, answer_fr: faq.answer_fr, answer_nl: faq.answer_nl });
-    else if (ticket) form.setFieldsValue({ question_fr: ticket.title, answer_fr: ticket.resolution || '' });
+    else if (ticket) form.setFieldsValue({ question_fr: ticket.title, answer_fr: reponseDuService(ticket) });
     else form.setFieldsValue({ portee: isAdmin ? 'commune' : 'entite', topic_id: topicId || null });
   }, [open, faq, ticket, topicId, isAdmin, form]);
 
