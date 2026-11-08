@@ -1,6 +1,6 @@
 # Service technique : tableau de bord, liste et qualification des demandes
 
-Version 0.9.1 · Fiche fonctionnelle (modèle du standard, section 17.8).
+Version 0.13.0 · Fiche fonctionnelle (modèle du standard, section 17.8).
 
 ## Objet
 
@@ -40,12 +40,12 @@ Donner au gestionnaire technique et au responsable du service technique de chaqu
 | --- | --- | --- | --- |
 | Accueil (service technique) | Tableau de bord, quatre compteurs | Un clic ouvre la liste filtrée | |
 | Demandes de l'entité | Tableau de bord ; filtres et vues (repliés sur téléphone) ; colonnes numéro, priorité, état, échéance, quoi, où, demandeur, date de dépôt | Filtrer, trier, enregistrer, remplacer ou supprimer une vue, ouvrir une fiche | « Aucune demande pour ces filtres. » |
-| Fiche d'une demande (service) | État du service, priorité et motif, échéances, description, pièces jointes, demandeur, durée estimée, consignes, qualifiée le … par … | « Qualifier » ou « Modifier la qualification » | |
-| Qualifier la demande | Catégorie, priorité en boutons avec la proposition, motif, lieu, durée, date convenue, consignes, photos visibles | « Qualifier » ou « Enregistrer », « Annuler » | « Vous changez la priorité proposée : indiquez le motif. », « Demande qualifiée » |
+| Fiche d'une demande (service) | État du service, priorité et motif, échéances, lieu et, sous lui, la photo de l'endroit (0.13.0 : celle du lieu ; à défaut, celle du plus proche lieu au-dessus, dite comme telle ; agrandie au toucher), description, pièces jointes, demandeur, durée estimée, consignes, qualifiée le … par … | « Qualifier » ou « Modifier la qualification » | |
+| Qualifier la demande | Photo de l'endroit en tête (0.13.0), catégorie, priorité en boutons avec la proposition, motif, lieu, durée, date convenue, consignes, photos visibles | « Qualifier » ou « Enregistrer », « Annuler » | « Vous changez la priorité proposée : indiquez le motif. », « Demande qualifiée » |
 
 ## Données personnelles
 
-Aucune donnée personnelle nouvelle sur le demandeur. La qualification ajoute le nom de la personne qui qualifie (lu par le service technique), les consignes à l'ouvrier et le motif d'un changement de priorité (consigne : décrire le travail, pas les personnes). Les vues enregistrées ne contiennent que des filtres. Rien n'est envoyé hors de l'application.
+Aucune donnée personnelle nouvelle sur le demandeur. La qualification ajoute le nom de la personne qui qualifie (lu par le service technique), les consignes à l'ouvrier et le motif d'un changement de priorité (consigne : décrire le travail, pas les personnes). Les vues enregistrées ne contiennent que des filtres. La photo de l'endroit (0.13.0) est une photo de lieu déjà en base, sans personne (DV-12), montrée au seul service technique. Rien n'est envoyé hors de l'application.
 
 ## Ce qui vient ensuite
 

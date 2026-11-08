@@ -1,6 +1,6 @@
 # Architectuur
 
-Versie van de toepassing: **0.12.0** · De Franse tekst is rechtsgeldig (`docs/fr/ARCHITECTURE.md`); dit bestand vat elke versie samen.
+Versie van de toepassing: **0.13.0** · De Franse tekst is rechtsgeldig (`docs/fr/ARCHITECTURE.md`); dit bestand vat elke versie samen.
 
 ## Hulp per scherm en lokale FAQ (0.12.0)
 
@@ -37,3 +37,7 @@ Migratie `006_demandes_formulaire`: tabellen `demande_suiveurs` (« Ik ook », o
 ## Interventieaanvragen (0.5.0)
 
 Migratie `005_demandes`: tabellen `sequences` (tellers per entiteit, type en jaar; jaar 0 voor de doorlopende teller) en `demandes` (uniek nummer `AC-DI-2026-00001`, plaats, categorie, beschrijving van 10 tot 5 000 tekens, status `a_qualifier` bij aanmaak, voorgestelde prioriteit, kanaal, aanvrager), kolom `users.lieu_habituel_id`; een JavaScript-stap (`src/nettoyage-espaces.js`) verwijdert overtollige spaties uit reeds opgeslagen teksten en noteert elke verbeterde fiche in het auditlogboek. `nettoyer()` van `src/validation.js` verwijdert spaties vooraan en achteraan in elke ontvangen tekst (routes en MCP), behalve wachtwoorden. Nummering in `services/numerotation.js`, toegekend in de registratietransactie. Routes `GET`, `POST /api/demandes`, `GET /api/demandes/:id`, `PUT /api/auth/lieu-habituel`; rechten `demandes:creer` (alle entiteitsrollen) en `demandes:entite` (beheerder, verantwoordelijke). Zoeken naar een plaats zonder accenten, ook via de namen van de bovenliggende plaatsen; elke rij geeft haar pad.
+
+## Foto van de plek, filter « Zonder foto », telefoons (0.13.0)
+
+`photo_lieu` van `GET /api/demandes/:id` enkel voor de technische dienst (de plaats van de aanvraag, of de dichtstbijzijnde plaats erboven met een foto), `PhotoLieu.tsx`; filter `has_photo` van `GET /api/lieux` en `list_lieux`, vakje « Zonder foto (n) » in Patrimonium (`?photo=sans`); het auditlogboek noemt instellingen en soorten plaatsen bij het lezen; reden van een ticket niet meer in het logboek (`motif_donne`, E-46); kop op telefoon: taal in het menu van de persoon onder 768 px, gecontroleerd door `npm run mobile:check`.

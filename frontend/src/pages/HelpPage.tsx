@@ -87,8 +87,10 @@ export default function HelpPage() {
   // FAQ locale : communes et de l'entité active ; avec les questions retirées pour qui les gère, s'il le demande.
   const [retirees, setRetirees] = useState(false);
   const [faq, setFaq] = useState<LocalFaq[]>([]);
+  const [faqRecue, setFaqRecue] = useState(false);
   const loadFaq = useCallback(() => {
-    api.page<LocalFaq>(`/faq${qs({ limit: 200, inclure_inactives: retirees ? 1 : undefined })}`).then((r) => setFaq(Array.isArray(r.data) ? r.data : [])).catch(() => setFaq([]));
+    api.page<LocalFaq>(`/faq${qs({ limit: 200, inclure_inactives: retirees ? 1 : undefined })}`).then((r) => setFaq(Array.isArray(r.data) ? r.data : [])).catch(() => setFaq([]))
+      .finally(() => setFaqRecue(true));
   }, [retirees, user?.entite_active_id]);
   useEffect(() => { loadFaq(); }, [loadFaq]);
   const [edition, setEdition] = useState<{ faq?: LocalFaq | null; topicId?: string | null } | null>(null);
@@ -100,7 +102,7 @@ export default function HelpPage() {
   const actions = (f: LocalFaq) => (printMode || !f.can_manage ? null : (
     <Space wrap size={4}>
       <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-        {f.entite_code ? `${t('faq.portee.entite')} ${f.entite_code}` : t('faq.portee.commune')}
+        {f.entite_code ? t('faq.portee.entite.code').replace('{code}', f.entite_code) : t('faq.portee.commune.liste')}
         {f.source_ticket_reference ? ` · ${f.source_ticket_reference}` : ''}
         {!f.is_active && f.motif_desactivation ? ` · ${t('faq.motif')} : ${f.motif_desactivation}` : ''}
       </Typography.Text>
@@ -113,12 +115,26 @@ export default function HelpPage() {
     </Space>
   ));
 
+  // 0.13.0 (M1 de la recette de la 0.12.0) : l'impression partait 800 ms après l'ouverture, quand 3 captures sur 18
+  // étaient chargées (chargement différé) ; l'aperçu de Chrome devait alors les charger et se recalculer, d'où sa
+  // lenteur. Captures chargées d'emblée, notes de version et FAQ reçues, puis impression ; au plus 8 secondes d'attente.
   useEffect(() => {
     if (!printMode) return undefined;
-    const id = window.setTimeout(() => window.print(), 800);
-    return () => window.clearTimeout(id);
-  }, [printMode]);
-  // Fiche demandée par l'adresse : on la fait défiler à l'écran une fois affichée.
+    let fini = false;
+    const debut = Date.now();
+    const pret = () => notes !== null && faqRecue
+      && [...document.querySelectorAll<HTMLImageElement>('.help-print img')].every((i) => i.complete);
+    const id = window.setInterval(() => {
+      if (fini || (!pret() && Date.now() - debut < 8000)) return;
+      fini = true;
+      window.clearInterval(id);
+      window.print();
+    }, 150);
+    return () => { fini = true; window.clearInterval(id); };
+  }, [printMode, notes, faqRecue]);
+  // Fiche demandée par l'adresse : on la fait défiler à l'écran une fois affichée. 0.13.0 (D4) : un lien « Voir aussi »
+  // change ?fiche= sans recharger l'écran ; la clé du Collapse suit la fiche, qui s'ouvre (defaultActiveKey ne valait
+  // qu'au premier affichage, la fiche d'avant restait ouverte).
   useEffect(() => {
     if (!fiche) return;
     const id = window.setTimeout(() => document.getElementById(`help-${fiche}`)?.scrollIntoView?.({ block: 'start' }), 200);
@@ -151,7 +167,10 @@ export default function HelpPage() {
   const faqCode = FAQ.filter((f) => on(f.module) && (!f.admin || isAdmin) && (!f.permission || can(f.permission)) && (!f.traitant || !!user?.files_tickets?.length))
     .map(({ n }) => ({ key: `q${n}`, label: t(`help.faq.q${n}`), texte: t(`help.faq.a${n}`) }))
     .filter((f) => !q || sansAccents(`${f.label} ${f.texte}`).includes(q));
-  const generales = faq.filter((f) => !f.topic_id && (!q || texteLocal(f).includes(q)));
+  // 0.13.0 (M3 de la recette de la 0.12.0) : l'onglet Questions fréquentes montre aussi les questions rattachées à un
+  // écran que la personne voit, avec le nom de l'écran ; à l'impression, elles restent dans la fiche de leur écran.
+  const ficheDe = (id: string | null) => (id ? fiches.find((tp) => tp.id === id) : undefined);
+  const generales = faq.filter((f) => (!f.topic_id || (!printMode && !!ficheDe(f.topic_id))) && (!q || texteLocal(f).includes(q)));
 
   const guide = (
     <>
@@ -165,7 +184,7 @@ export default function HelpPage() {
               <Typography.Title level={2} style={{ fontSize: 16, marginTop: 8 }}>{t(`help.groupe.${g}`)}</Typography.Title>
               {printMode
                 ? liste.map((tp) => <Card key={tp.id} style={{ marginBottom: 16, breakInside: 'avoid' }}><TopicView topic={tp} expanded localFaq={localDe(tp.id)} /></Card>)
-                : <Collapse key={q ? `q-${q}` : 'tout'} style={{ marginBottom: 16 }} defaultActiveKey={fiche ? [fiche] : q ? liste.map((tp) => tp.id) : []}
+                : <Collapse key={q ? `q-${q}` : `tout-${fiche || ''}`} style={{ marginBottom: 16 }} defaultActiveKey={fiche ? [fiche] : q ? liste.map((tp) => tp.id) : []}
                     items={liste.map((tp) => ({ key: tp.id, label: t(tp.titleKey), children: <TopicView topic={tp} localFaq={localDe(tp.id)} faqActions={actions} /> }))} />}
             </section>
           );
@@ -193,7 +212,9 @@ export default function HelpPage() {
         <Collapse defaultActiveKey={printMode ? [...generales.map((f) => `l${f.id}`), ...faqCode.map((f) => f.key)] : []} items={[
           ...generales.map((f) => ({
             key: `l${f.id}`,
-            label: <span>{lang === 'nl' ? f.question_nl : f.question_fr}{!f.is_active && <Tag style={{ marginInlineStart: 8 }}>{t('faq.retiree')}</Tag>}</span>,
+            label: <span>{lang === 'nl' ? f.question_nl : f.question_fr}
+              {f.topic_id && ficheDe(f.topic_id) && <Tag style={{ marginInlineStart: 8 }}>{t('faq.ecran').replace('{ecran}', t(ficheDe(f.topic_id)!.titleKey))}</Tag>}
+              {!f.is_active && <Tag style={{ marginInlineStart: 8 }}>{t('faq.retiree')}</Tag>}</span>,
             children: <Space direction="vertical" style={{ width: '100%' }}><span style={{ whiteSpace: 'pre-wrap' }}>{lang === 'nl' ? f.answer_nl : f.answer_fr}</span>{actions(f)}</Space>,
           })),
           ...faqCode.map((f) => ({ key: f.key, label: f.label, children: <Typography.Paragraph>{f.texte}</Typography.Paragraph> })),

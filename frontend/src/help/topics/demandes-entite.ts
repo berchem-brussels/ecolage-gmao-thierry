@@ -30,7 +30,7 @@ const topic: HelpTopic = {
       when: { fr: 'Pour chaque demande « À qualifier ».', nl: 'Voor elke aanvraag « Te kwalificeren ».' },
       steps: [
         { fr: 'Ouvrez la fiche et cliquez sur {{qualif.envoyer}}.', nl: 'Open de fiche en klik op {{qualif.envoyer}}.' },
-        { fr: 'Vérifiez la catégorie et le lieu ; corrigez-les si le demandeur s’est trompé.', nl: 'Controleer de categorie en de plaats; verbeter ze als de aanvrager zich vergiste.' },
+        { fr: 'Vérifiez la catégorie et le lieu, avec la photo de l’endroit en tête du formulaire ; corrigez-les si le demandeur s’est trompé.', nl: 'Controleer de categorie en de plaats, met de foto van de plek bovenaan het formulier; verbeter ze als de aanvrager zich vergiste.' },
         { fr: 'Confirmez la priorité proposée, ou changez-la et écrivez {{qualif.motif}}.', nl: 'Bevestig de voorgestelde prioriteit, of wijzig ze en vul {{qualif.motif}} in.' },
         { fr: 'Estimez la durée et écrivez {{qualif.consignes}}, puis cliquez sur {{qualif.enregistrer}}.', nl: 'Schat de duur en vul {{qualif.consignes}} in, en klik daarna op {{qualif.enregistrer}}.' },
       ],
@@ -41,6 +41,8 @@ const topic: HelpTopic = {
   ],
   faq: [
     { q: { fr: 'Pourquoi le délai a-t-il changé après la qualification ?', nl: 'Waarom veranderde de termijn na de kwalificatie?' }, a: { fr: 'Le délai suit la priorité : une priorité changée recalcule les échéances, toujours comptées depuis la réception de la demande.', nl: 'De termijn volgt de prioriteit: een gewijzigde prioriteit herberekent de vervaldagen, altijd geteld vanaf de ontvangst van de aanvraag.' } },
+    // 0.13.0 (étape 8 ter, DV-101) : photo de l'endroit.
+    { q: { fr: 'D’où vient la photo de l’endroit sur la fiche ?', nl: 'Waar komt de foto van de plek op de fiche vandaan?' }, a: { fr: 'C’est la photo du lieu de la demande, prise dans Patrimoine ; si le local n’en a pas, celle de son bâtiment ou de son site, et la légende le dit. Un toucher l’agrandit. Le demandeur ne la voit pas sur sa demande. Pour compléter les photos : Patrimoine, case {{lieux.sans_photo.tag}}.', nl: 'Het is de foto van de plaats van de aanvraag, uit Patrimonium; heeft het lokaal er geen, dan die van zijn gebouw of site, en het onderschrift zegt het. Een tik vergroot ze. De aanvrager ziet ze niet bij zijn aanvraag. Om de foto’s aan te vullen: Patrimonium, vakje {{lieux.sans_photo.tag}}.' } },
     { q: { fr: 'Je ne vois pas les demandes du CPAS.', nl: 'Ik zie de aanvragen van het OCMW niet.' }, a: { fr: 'La liste suit l’entité active ; si vous avez un rôle dans l’autre entité, changez d’entité dans l’en-tête.', nl: 'De lijst volgt de actieve entiteit; als u een rol hebt in de andere entiteit, wissel van entiteit in de kop.' } },
   ],
   seeAlso: ['referentiel', 'patrimoine'],

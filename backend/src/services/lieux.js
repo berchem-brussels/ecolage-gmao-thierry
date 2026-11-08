@@ -121,7 +121,7 @@ function trouver(index, rows, q) {
   return notes.map((x) => x.r);
 }
 
-function list(user, { limit = 50, offset = 0, q, nature, parent_id, type_id, statut, is_active } = {}) {
+function list(user, { limit = 50, offset = 0, q, nature, parent_id, type_id, statut, is_active, has_photo } = {}) {
   const entiteId = entiteActive(user);
   const where = ['l.entite_id = ?'];
   const params = [entiteId];
@@ -130,6 +130,8 @@ function list(user, { limit = 50, offset = 0, q, nature, parent_id, type_id, sta
   if (type_id) { where.push('l.type_id = ?'); params.push(type_id); }
   if (statut) { where.push('l.statut = ?'); params.push(statut); }
   if (is_active !== undefined) { where.push('l.is_active = ?'); params.push(is_active); }
+  // 0.13.0 : lieux sans photo (0) ou avec photo (1), pour compléter les photos du patrimoine.
+  if (has_photo !== undefined) where.push(Number(has_photo) ? 'l.photo_fichier IS NOT NULL' : 'l.photo_fichier IS NULL');
   const clause = `WHERE ${where.join(' AND ')}`;
   const db = getDb();
   const index = indexEntite(entiteId);

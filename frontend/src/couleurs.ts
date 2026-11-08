@@ -11,6 +11,8 @@
  */
 export const ROUGE_ERREUR = { clair: '#cf1322', sombre: '#ff8a8a' };
 export const TEXTE_BOUTON_DANGER = { clair: '#ffffff', sombre: '#141414' };
+/** Texte discret (0.13.0, D10 du contrôle DV-113) : 4,5:1 au moins sur tous les fonds, en clair et en sombre. */
+export const TEXTE_DISCRET = { clair: '#666666', sombre: '#a6a6a6' };
 
 /** Fonds sur lesquels un message d'erreur peut paraître, par thème. */
 export const FONDS = { clair: ['#ffffff', '#f6f6f6', '#f0f0f0'], sombre: ['#1f1f1f', '#141414', '#262626'] };

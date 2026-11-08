@@ -1,6 +1,6 @@
 # Architecture
 
-Application version: **0.12.0** · The French text prevails (`docs/fr/ARCHITECTURE.md`); this file summarises each version.
+Application version: **0.13.0** · The French text prevails (`docs/fr/ARCHITECTURE.md`); this file summarises each version.
 
 ## Help per screen and local FAQ (0.12.0)
 
@@ -37,3 +37,7 @@ Migration `006_demandes_formulaire`: tables `demande_suiveurs` (« Me too », re
 ## Work requests (0.5.0)
 
 Migration `005_demandes`: tables `sequences` (counters per entity, type and year; year 0 for the continuous counter) and `demandes` (unique number `AC-DI-2026-00001`, place, category, description of 10 to 5,000 characters, status `a_qualifier` on creation, proposed priority, channel, requester), column `users.lieu_habituel_id`; a JavaScript step (`src/nettoyage-espaces.js`) removes extra spaces from stored texts and logs each corrected record. `nettoyer()` in `src/validation.js` trims every received string (routes and MCP), except passwords. Numbering in `services/numerotation.js`, assigned inside the saving transaction. Routes `GET`, `POST /api/demandes`, `GET /api/demandes/:id`, `PUT /api/auth/lieu-habituel`; permissions `demandes:creer` (all entity roles) and `demandes:entite` (manager, head of service). Place search ignores accents and also matches parent places' names; each row carries its path.
+
+## Photo of the spot, "Without photo" filter, phones (0.13.0)
+
+`photo_lieu` of `GET /api/demandes/:id` for the technical department only (the request's place, or the nearest place above with a photo), `PhotoLieu.tsx`; `has_photo` filter of `GET /api/lieux` and `list_lieux`, "Without photo (n)" checkbox in Assets (`?photo=sans`); audit log names settings and place types on read; ticket reasons no longer copied to the log (`motif_donne`, E-46); phone header: language in the person's menu below 768 px, checked by `npm run mobile:check`.

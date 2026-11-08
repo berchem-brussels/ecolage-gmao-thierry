@@ -1,6 +1,6 @@
 # MCP server
 
-Application version: **0.12.0** · Updated on 06/11/2026 · The French text prevails (`docs/fr/MCP.md`).
+Application version: **0.13.0** · Updated on 08/11/2026 · The French text prevails (`docs/fr/MCP.md`).
 
 ## Access and rules
 
@@ -9,6 +9,10 @@ Application version: **0.12.0** · Updated on 06/11/2026 · The French text prev
 - Authentication: the session, or the session token in `Authorization: Bearer`. OAuth 2.1 with PKCE arrives at step 44 (deviation E-10).
 - Limit: 60 calls per minute per person.
 - Each tool calls the same service function as the REST route, with the person's identity and rights, in their active entity. A deactivation, withdrawal or erasure takes two calls (`prepare_*`, then `confirm_*`). No free SQL tool.
+
+## 0.13.0
+
+No new tool. `list_lieux` takes `has_photo` (0: places without a photo, 1: with one, active entity only). `get_demande` returns `photo_lieu` to the technical service only: the place whose photo shows the spot (the request's place, `du_lieu` 1, or the nearest place above it, `du_lieu` 0), `null` when no place in the path has a photo. Audit log: `noms.cle` names a setting; a ticket status change records `motif_donne` (0 or 1) instead of the reason text.
 
 ## 0.12.0
 

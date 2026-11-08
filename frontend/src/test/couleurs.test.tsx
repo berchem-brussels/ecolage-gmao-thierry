@@ -60,3 +60,15 @@ describe('rouge des erreurs (E-26)', () => {
     for (const f of fichiers(src)) expect(readFileSync(f, 'utf8'), f).not.toMatch(/#ff4d4f/i);
   });
 });
+
+describe('texte discret (0.13.0, D10 du contrôle DV-113)', () => {
+  for (const [mode, sombre] of [['clair', false], ['sombre', true]] as const) {
+    it(`${mode} : « (valeur par défaut) » et tout texte secondaire à 4,5:1 au moins, rendus dans la couleur du thème`, () => {
+      const th = buildTheme(FALLBACK_SETTINGS, sombre);
+      const jetons = theme.getDesignToken(th as Parameters<typeof theme.getDesignToken>[0]) as unknown as Record<string, string>;
+      for (const fond of FONDS[mode]) expect(contraste(jetons.colorTextDescription, fond), `${jetons.colorTextDescription} sur ${fond}`).toBeGreaterThanOrEqual(4.5);
+      render(<ConfigProvider theme={th}><Typography.Text type="secondary" className="reglage-defaut">(valeur par défaut)</Typography.Text></ConfigProvider>);
+      expect(getComputedStyle(screen.getByText('(valeur par défaut)')).color).toBe(rgb(jetons.colorTextDescription));
+    });
+  }
+});

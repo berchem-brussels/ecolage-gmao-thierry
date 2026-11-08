@@ -2,6 +2,10 @@
 
 The French text (`docs/fr/SECURITE.md`) prevails and holds the full grid per version.
 
+## 0.13.0 (08/11/2026)
+
+Photo of the spot on a request record, for the technical department only (`photo_lieu`), "Without photo" filter in Assets (`has_photo`), fixes D1 to D10 and M1 to M5. Tested: the other entity gets 403 on the request and on the photo; never shown to the requester; `has_photo` only 0 or 1 and only in the active entity; a ticket status reason no longer copied to the audit log (`motif_donne`); no raw code left in the log; header fits 320 px. Each fix removed in turn: at least one failure. No migration, no new dependency.
+
 ## 0.12.0 (06/11/2026)
 
 Help per screen and local FAQ (standard, section 13.1), migration `011_faq`. Tested: an entity entry is read only in that entity and managed by its technical department or the administrator (API and MCP, other entity 403); a shared entry by the administrator only; a question is turned into an entry only by the handler, only when resolved or closed, once; withdrawal with a reason, nothing deleted, audit log with the entity; refused setting naming the setting and value; no raw code left in the audit log; counters only for queue handlers. Each protection removed alone: at least one failure. No new production dependency (`@playwright/test` for development only).

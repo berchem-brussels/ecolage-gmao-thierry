@@ -1,4 +1,4 @@
-/** Fiche d'aide « Patrimoine » : sites, bâtiments, niveaux, locaux et photos (REF-01 à 08 ; 0.12.0). */
+/** Fiche d'aide « Patrimoine » : sites, bâtiments, niveaux, locaux et photos (REF-01 à 08 ; 0.12.0 ; filtre « Sans photo », 0.13.0). */
 import type { HelpTopic } from '../types';
 
 const topic: HelpTopic = {
@@ -41,6 +41,16 @@ const topic: HelpTopic = {
         { fr: 'Prenez la photo au téléphone ou choisissez un fichier ; ni personne ni plaque lisible.', nl: 'Neem de foto met de telefoon of kies een bestand; geen personen, geen leesbare nummerplaat.' },
       ],
       result: { fr: 'La photo est réduite et débarrassée de ses informations cachées (lieu GPS, appareil) avant l’envoi ; elle remplace la précédente.', nl: 'De foto wordt verkleind en ontdaan van haar verborgen informatie (gps-locatie, toestel) voor het verzenden; ze vervangt de vorige.' },
+    },
+    {
+      // 0.13.0 (étape 8 ter, DV-101) : retrouver les lieux à photographier.
+      title: { fr: 'Retrouver les lieux sans photo', nl: 'De plaatsen zonder foto terugvinden' },
+      when: { fr: 'Pour savoir quels lieux il reste à photographier, par exemple avant une tournée.', nl: 'Om te weten welke plaatsen nog gefotografeerd moeten worden, bijvoorbeeld voor een ronde.' },
+      steps: [
+        { fr: 'Cochez {{lieux.sans_photo.tag}} au-dessus de l’arbre : le nombre entre parenthèses compte les lieux actifs sans photo.', nl: 'Vink {{lieux.sans_photo.tag}} aan boven de boom: het getal tussen haakjes telt de actieve plaatsen zonder foto.' },
+        { fr: 'L’arbre ne garde que ces lieux, marqués {{lieux.sans_photo.tag}}, avec leurs parents pour vous y retrouver ; ouvrez un lieu pour ajouter sa photo.', nl: 'De boom houdt enkel die plaatsen over, gemarkeerd {{lieux.sans_photo.tag}}, met hun bovenliggende plaatsen om u te oriënteren; open een plaats om haar foto toe te voegen.' },
+      ],
+      result: { fr: 'Le filtre reste dans l’adresse de la page : vous pouvez l’envoyer à un collègue. Décochez la case pour revoir tout l’arbre.', nl: 'De filter blijft in het adres van de pagina: u kunt het naar een collega sturen. Vink het vakje uit om de hele boom terug te zien.' },
     },
   ],
   faq: [],

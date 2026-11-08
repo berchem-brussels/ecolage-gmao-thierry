@@ -1,6 +1,6 @@
 # Aide par écran et FAQ locale
 
-Version 0.12.0 · Fiche fonctionnelle (modèle du standard, section 17.8).
+Version 0.13.0 · Fiche fonctionnelle (modèle du standard, section 17.8).
 
 ## Objectif
 
@@ -15,9 +15,9 @@ Que tout agent trouve seul comment faire, sans formation (standard, section 13.1
 ## Parcours
 
 1. Sur un écran, « Aide » ouvre la fiche de l'écran dans un panneau : à quoi sert l'écran, ses zones repérées sur une capture, les procédures pas à pas (résultat attendu, que faire si ça ne marche pas), les questions fréquentes de cet écran ; « Mode d'emploi complet » mène au centre d'aide.
-2. Aide, « Mode d'emploi et FAQ » : les fiches rangées comme le menu (Demander et suivre, Service technique, Administration, Aide), seulement celles des écrans que la personne peut ouvrir ; recherche dans les fiches et les questions, avec ou sans accents ; « Imprimer le mode d'emploi » ouvre une page tout dépliée et lance l'impression.
+2. Aide, « Mode d'emploi et FAQ » : les fiches rangées comme le menu (Demander et suivre, Service technique, Administration, Aide), seulement celles des écrans que la personne peut ouvrir ; recherche dans les fiches et les questions, avec ou sans accents ; « Imprimer le mode d'emploi » ouvre une page tout dépliée et lance l'impression quand les captures, la FAQ et les notes sont chargées (0.13.0). L'onglet Questions fréquentes montre aussi les questions rattachées à un écran, avec le nom de l'écran (0.13.0) ; un lien « Voir aussi » ouvre la fiche liée.
 3. À côté de chaque champ, « ? » explique ce qu'il faut y mettre et d'où vient la valeur.
-4. Dans un ticket « Question métier » résolu, « Ajouter à la FAQ » préremplit la question et la réponse ; on les réécrit sans donnée personnelle, en FR et en NL, et on choisit l'écran.
+4. Dans un ticket « Question métier » résolu, « Ajouter à la FAQ » préremplit la question et la dernière réponse du service (à défaut, le motif de la résolution, 0.13.0) ; on les réécrit sans donnée personnelle, en FR et en NL, et on choisit l'écran.
 
 ## Règles
 

@@ -5,7 +5,7 @@
  */
 import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { cleanup as cleanupAll, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import axe from 'axe-core';
 import { I18nProvider } from '../contexts/I18nContext';
@@ -150,7 +150,8 @@ vi.mock('../photo', () => ({
 
 import HomePage from '../pages/HomePage';
 import NouvelleDemandePage from '../pages/NouvelleDemandePage';
-import DemandesPage from '../pages/DemandesPage';
+import DemandesPage, { FicheDemande } from '../pages/DemandesPage';
+import QualificationForm from '../components/demandes/QualificationForm';
 
 const MesDemandes = () => <DemandesPage perimetre="miennes" />;
 const DemandesEntite = () => <DemandesPage perimetre="entite" />;
@@ -834,7 +835,7 @@ describe('pièces jointes du formulaire (0.8.0, DEM-09, DEM-16)', () => {
     deposer(new File(['x'], 'e.jpg', { type: 'image/jpeg' }), new File(['x'], 'f.jpg', { type: 'image/jpeg' }));
     await waitFor(() => expect(screen.getByText('5 sur 5')).toBeInTheDocument());
     expect(uploads).toHaveLength(1);
-    expect(screen.getByRole('alert')).toHaveTextContent('Nombre maximal atteint : 1 fichier(s) non ajouté(s).');
+    expect(screen.getByRole('alert')).toHaveTextContent('Nombre maximal atteint : 1 fichier non ajouté.');
     expect(screen.getByRole('button', { name: /Ajouter une photo ou un document$/ })).toBeDisabled();
     expect(screen.getByText(/Maximum atteint : retirez une pièce/)).toBeInTheDocument();
   });
@@ -1077,5 +1078,41 @@ describe('service technique (0.9.0, GES-01, GES-02, GES-04, PRI-01, PRI-03)', ()
     expect(within(fiche).queryByText('Échéances')).toBeNull();
     expect(within(fiche).queryByText(/Consignes/)).toBeNull();
     expect(screen.queryByRole('button', { name: 'Qualifier' })).toBeNull();
+  });
+});
+
+describe('photo de l’endroit sur la fiche d’une demande (0.13.0, point 5, DV-101)', () => {
+  const photoBat = { lieu_id: 2, nature: 'batiment', code: 'MC-A', nom_fr: 'Aile A', nom_nl: 'Vleugel A', photo_at: '2026-11-08 07:00:00', du_lieu: 0 as const };
+  const photoLocal = { lieu_id: 3, nature: 'local', code: 'MC-A-12', nom_fr: 'Bureau 12', nom_nl: 'Kantoor 12', photo_at: '2026-11-08 08:00:00', du_lieu: 1 as const };
+  const Fiche = ({ d, service }: { d: Record<string, unknown>; service: boolean }) => <FicheDemande d={d as never} avecDemandeur={service} service={service} />;
+  const rendre = (d: Record<string, unknown>, service: boolean, lang: 'fr' | 'nl' = 'fr') => render(wrap(() => <Fiche d={d} service={service} />, lang));
+
+  it('service technique : photo du bâtiment quand le local n’en a pas, dite comme telle, avec l’adresse qui évite le cache (FR et NL)', async () => {
+    const { container } = rendre(demande(2, 'AA-DI-2026-00002', 'a_qualifier', { photo_lieu: photoBat }), true);
+    expect(screen.getByText("Photo de l'endroit")).toBeInTheDocument();
+    const img = screen.getByAltText('Photo du lieu MC-A — Aile A');
+    expect(img.getAttribute('src')).toBe('/api/lieux/2/photo?v=2026-11-08%2007%3A00%3A00');
+    expect(screen.getByText("Le lieu n'a pas de photo : photo du bâtiment MC-A — Aile A.")).toBeInTheDocument();
+    await audit(container);
+    cleanupAll();
+    rendre(demande(2, 'AA-DI-2026-00002', 'a_qualifier', { photo_lieu: photoBat }), true, 'nl');
+    expect(screen.getByText('De plaats heeft geen foto: foto van gebouw MC-A — Vleugel A.')).toBeInTheDocument();
+  });
+
+  it('service technique : photo du lieu lui-même ; rien sans photo ; rien pour le demandeur même si le champ arrivait', () => {
+    rendre(demande(2, 'AA-DI-2026-00002', 'a_qualifier', { photo_lieu: photoLocal }), true);
+    expect(screen.getByText('Photo du lieu de la demande.')).toBeInTheDocument();
+    cleanupAll();
+    rendre(demande(2, 'AA-DI-2026-00002', 'a_qualifier', { photo_lieu: null }), true);
+    expect(screen.queryByText("Photo de l'endroit")).toBeNull();
+    cleanupAll();
+    rendre(demande(2, 'AA-DI-2026-00002', 'a_qualifier', { photo_lieu: photoLocal }), false);
+    expect(screen.queryByText("Photo de l'endroit")).toBeNull();
+    expect(screen.queryByRole('img', { name: /Photo du lieu/ })).toBeNull();
+  });
+
+  it('qualification : la photo de l’endroit en tête du formulaire', () => {
+    render(wrap(() => <QualificationForm d={demande(2, 'AA-DI-2026-00002', 'a_qualifier', { photo_lieu: photoLocal }) as never} onCancel={() => {}} onDone={() => {}} />, 'fr'));
+    expect(screen.getByAltText('Photo du lieu MC-A-12 — Bureau 12')).toBeInTheDocument();
   });
 });

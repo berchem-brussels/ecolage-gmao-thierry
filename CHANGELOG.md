@@ -1,6 +1,20 @@
 # Journal des versions
 
-Version de l'application : **0.12.0** · Mis à jour le 06/11/2026
+Version de l'application : **0.13.0** · Mis à jour le 08/11/2026
+
+## 0.13.0 (08/11/2026)
+
+Étape 8 ter (DV-101) : photo de l'endroit sur la fiche d'une demande et filtre « Sans photo » dans Patrimoine ; défauts D1 à D10 du contrôle complet de la 0.12.0 (DV-113, DV-114) et remarques M1 à M5 de sa recette (DV-112). Aucune migration, aucune dépendance nouvelle.
+
+- Téléphones (D1) : sous 768 px, la langue passe dans le menu de la personne (« Nederlands » ou « Français », attribut `lang`), comme le niveau de détail et le thème ; marges de l'en-tête resserrées ; l'en-tête tient dans 320, 360, 375, 390 et 412 px, en FR et en NL (il dépassait de 68 px à 320 px et de 28 à 30 px à 360 px). Contrôle `npm run mobile:check` (`frontend/mobile-check/verifier-mobile.mjs`) : chaque écran du menu en FR et en NL à quatre largeurs (iPhone SE, Android 360 px, iPhone 13, Pixel 7) ; débordement, texte hors de l'écran, champ sous 16 px, erreurs de la console et appels refusés.
+- Aide : un lien « Voir aussi » ouvre la fiche liée (D4, clé du `Collapse` liée à `?fiche=`) ; impression du mode d'emploi lancée quand les captures (chargées d'emblée à l'impression), la FAQ et les notes sont prêtes, huit secondes au plus (M1 : l'impression partait avec 3 captures sur 18) ; « Ajouter à la FAQ » préremplit la dernière réponse publique du service, sans le motif de résolution (M2) ; l'onglet Questions fréquentes montre aussi les questions rattachées à un écran, avec « Écran : … » (M3) ; « Entité AC seulement », « Commune aux deux entités », « Cette entité (AC) » (M4).
+- Journal d'audit sans code brut (D2, D3, D9, M5) : libellés FR et NL de tout champ que le serveur peut écrire (test d'inventaire), codes traduits par famille d'actions (nature et statut d'un lieu, niveau et pictogramme d'une catégorie, unité et couleur d'une priorité, jour de l'horaire, type d'un fichier, langue, thème, liste, module), rôles par leur libellé, écran d'une question de la FAQ par le titre de sa fiche, dates au format de la langue (« 8 mai »), colonne Objet traduite en mode Complet ; le serveur nomme un réglage (`noms.cle`, catalogues de l'instance et de l'entité) et le type d'un lieu à la lecture.
+- Tickets (D8, décision de Thierry du 08/11/2026) : un changement d'état note `motif_donne` (0 ou 1) au journal au lieu du texte du motif, qui reste dans le fil du ticket (écart au gabarit E-46).
+- Textes et accessibilité : délais au singulier (« 1 heure calendaire », « 1 jour ouvrable », « 1 demande », « 1 fichier non ajouté », D5) ; explication du téléphone d'urgence à jour (D6) ; motif du retrait d'un rôle demandé sous le champ, avec le focus (D7) ; texte discret (`colorTextDescription`) à 4,5:1 au moins en clair (#666666) et en sombre (#a6a6a6), numéro de version du menu plus lisible (D10).
+- Photo de l'endroit (DV-101) : `photo_lieu` de `GET /api/demandes/:id` et de `get_demande`, au seul service technique (photo du lieu, sinon du plus proche lieu au-dessus, `du_lieu`) ; `PhotoLieu.tsx` sous « Où ? » de la fiche du service et en tête de la qualification, agrandie au toucher.
+- Filtre « Sans photo (n) » dans Patrimoine (`?photo=sans`) ; `has_photo` (0 ou 1) de `GET /api/lieux` et de `list_lieux`.
+- Aide : fiches Accueil (langue sur téléphone), Demandes de l'entité (photo de l'endroit), Patrimoine (lieux sans photo) ; capture de Patrimoine refaite (FR et NL) ; note de version (deux lignes pour tous, une pour le service technique, une pour l'administrateur).
+- Tests : serveur 437 (427 en 0.12.0 ; `photo-lieu-demande.test.js` : 5), interface 238 (217) et un contrôle des captures ; preuves d'échec dans `docs/fr/SECURITE.md`.
 
 ## 0.12.0 (06/11/2026)
 

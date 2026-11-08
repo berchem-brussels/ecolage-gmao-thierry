@@ -3,6 +3,8 @@
  * fiche du lieu à droite (en dessous sur téléphone). Le lieu choisi est dans l'adresse (?lieu=12), partageable.
  * Lecture pour tout rôle de l'entité ; création, modification, photo et désactivation pour les rôles qui portent
  * « lieux:gerer ». En mode Simple, la désactivation et le déplacement sont repliés (standard v3.2, section 12.5).
+ * 0.13.0 (étape 8 ter, DV-101) : case « Sans photo (n) » : l'arbre ne montre que les lieux actifs sans photo (avec leurs
+ * parents pour s'y retrouver), marqués « Sans photo » ; filtre gardé dans l'adresse (?photo=sans), avec le lieu choisi.
  */
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
@@ -43,6 +45,8 @@ export default function PatrimoinePage() {
   const simple = user?.ui_mode !== 'complet';
   const [params, setParams] = useSearchParams();
   const selectedId = Number(params.get('lieu')) || null;
+  // 0.13.0 (étape 8 ter, DV-101) : filtre « Sans photo », gardé dans l'adresse de la page (standard section 12.9).
+  const sansPhoto = params.get('photo') === 'sans';
 
   const [racines, setRacines] = useState<Lieu[]>([]);
   const [types, setTypes] = useState<Valeur[]>([]);
@@ -78,7 +82,14 @@ export default function PatrimoinePage() {
     setExpanded([...keys]);
   }, [racines]); // dépend volontairement du seul arbre chargé
 
-  const select = (id: number | null) => { setParams(id ? { lieu: String(id) } : {}); setMotif(''); };
+  const setParam = (cle: string, valeur: string | null) => {
+    const next = new URLSearchParams(params);
+    if (valeur) next.set(cle, valeur); else next.delete(cle);
+    setParams(next);
+  };
+  const select = (id: number | null) => { setParam('lieu', id ? String(id) : null); setMotif(''); };
+  // Lieux actifs sans photo de l'entité active : leur nombre s'affiche sur le filtre.
+  const nbSansPhoto = useMemo(() => all.filter((l) => l.is_active && !l.has_photo).length, [all]);
   const natureLabel = (n: Nature) => t(`lieux.nature.${n}`);
   const statutTag = (l: Lieu) => (l.statut === 'en_service' ? null : <Tag color={l.statut === 'cede' ? 'default' : 'orange'}>{t(`lieux.statut.${l.statut}`)}</Tag>);
   const activeTypes = types.filter((v) => v.is_active);
@@ -89,7 +100,8 @@ export default function PatrimoinePage() {
   /* ---------- Arbre ---------- */
   const treeData = useMemo(() => {
     const q = normalize(search.trim());
-    const match = (l: Lieu) => !q || [l.code, l.nom_fr, l.nom_nl, l.adresse || ''].some((s) => normalize(s).includes(q));
+    const match = (l: Lieu) => (!q || [l.code, l.nom_fr, l.nom_nl, l.adresse || ''].some((s) => normalize(s).includes(q)))
+      && (!sansPhoto || (!l.has_photo && !!l.is_active));
     const build = (nodes: Lieu[]): DataNode[] => nodes.flatMap((l) => {
       const kids = build(l.enfants || []);
       if (!match(l) && !kids.length) return [];
@@ -100,14 +112,15 @@ export default function PatrimoinePage() {
           <span style={{ opacity: l.is_active ? 1 : 0.55 }}>
             <span style={{ fontWeight: 500 }}>{l.code}</span> · {tField(l as unknown as Record<string, unknown>, 'nom')}
             {' '}{statutTag(l)}{!l.is_active && <Tag>{t('common.inactive')}</Tag>}
+            {sansPhoto && !l.has_photo && l.is_active ? <Tag icon={<CameraOutlined />} style={{ marginInlineStart: 4 }}>{t('lieux.sans_photo.tag')}</Tag> : null}
           </span>
         ),
         children: kids,
       }];
     });
     return build(racines);
-  }, [racines, search, t, tField]);
-  const treeExpanded = search.trim() ? all.map((l) => l.id) : expanded;
+  }, [racines, search, sansPhoto, t, tField]);
+  const treeExpanded = search.trim() || sansPhoto ? all.map((l) => l.id) : expanded;
 
   /* ---------- Création ---------- */
   const openCreate = (nature: Nature, parent: Lieu | null) => setCreating({ nature, parent });
@@ -312,6 +325,9 @@ export default function PatrimoinePage() {
           <Card title={t('lieux.tree')}>
             <Input.Search allowClear aria-label={t('lieux.search')} placeholder={t('lieux.search')} value={search}
               onChange={(e) => setSearch(e.target.value)} style={{ marginBottom: 8 }} />
+            <Checkbox checked={sansPhoto} onChange={(e) => setParam('photo', e.target.checked ? 'sans' : null)} style={{ marginBottom: 8, marginInlineEnd: 16 }}>
+              {t('lieux.sans_photo').replace('{n}', String(nbSansPhoto))}
+            </Checkbox>
             {!simple && (
               <Checkbox checked={inactifs} onChange={(e) => setInactifs(e.target.checked)} style={{ marginBottom: 8 }}>{t('lieux.show_inactive')}</Checkbox>
             )}
@@ -320,7 +336,7 @@ export default function PatrimoinePage() {
                 <Tree showIcon blockNode treeData={treeData} expandedKeys={treeExpanded} onExpand={(k) => setExpanded(k)}
                   selectedKeys={selectedId ? [selectedId] : []} onSelect={(k) => select(k.length ? Number(k[0]) : null)} />
               ) : (
-                <Empty description={search ? t('lieux.search.none') : t('lieux.empty')} />
+                <Empty description={sansPhoto && !search ? t('lieux.sans_photo.aucun') : search ? t('lieux.search.none') : t('lieux.empty')} />
               )}
             </Spin>
           </Card>

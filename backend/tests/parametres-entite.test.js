@@ -136,3 +136,20 @@ test('refus d’un réglage de l’entité : réglage et valeur nommés, en FR e
     assert.match(mcp.message, /"sept" is geen geheel getal/);
   } finally { db.prepare("UPDATE users SET preferred_lang = 'fr' WHERE id = ?").run(id); }
 });
+
+// 0.13.0 (D6 du contrôle DV-113) : aucune explication de réglage n'annonce au futur une étape déjà livrée (1 à 8).
+test('explications des réglages : plus d’annonce d’une étape déjà livrée', () => {
+  const fs = require('node:fs');
+  const path = require('node:path');
+  for (const f of ['parametres-entite.json', 'parametres-instance.json']) {
+    const cat = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'config', f), 'utf8'));
+    for (const p of cat.parametres) {
+      for (const d of [p.description_fr, p.description_nl]) {
+        assert.doesNotMatch(d || '', /\((étape|stap) [1-8]\)/, `${f} ${p.cle}`);
+      }
+    }
+  }
+  const u = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'config', 'parametres-entite.json'), 'utf8')).parametres.find((p) => p.cle === 'urgence.telephone');
+  assert.match(u.description_fr, /coche « Danger pour les personnes ou les biens »/);
+  assert.match(u.description_nl, /Gevaar voor personen of goederen/);
+});

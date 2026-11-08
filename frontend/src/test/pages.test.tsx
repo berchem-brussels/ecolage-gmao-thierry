@@ -12,6 +12,7 @@ import { resolve } from 'node:path';
 import { I18nProvider } from '../contexts/I18nContext';
 import { SettingsProvider, FALLBACK_SETTINGS } from '../contexts/SettingsContext';
 import { ApiError } from '../api';
+import { translations } from '../i18n';
 
 const entites = [
   { id: 1, code: 'AA', nom_fr: 'Administration fictive', nom_nl: 'Fictief bestuur', is_active: 1, motif_desactivation: null, created_at: '2026-10-15 10:00:00', updated_at: '2026-10-15 10:00:00' },
@@ -360,7 +361,7 @@ describe('écrans', () => {
     expect(await screen.findByDisplayValue('Veiligheid')).toBeInTheDocument();
     expect(screen.getAllByRole('radio', { name: 'kalenderuren' })[0]).toBeChecked();
     expect(screen.getAllByRole('checkbox', { name: 'Afgesproken datum' })[3]).toBeChecked();
-    expect(screen.getByText(/Geleverde waarden : Tenlasteneming 1 kalenderuren · Einde van de werken 4 kalenderuren/)).toBeInTheDocument();
+    expect(screen.getByText(/Geleverde waarden : Tenlasteneming 1 kalenderuur · Einde van de werken 4 kalenderuren/)).toBeInTheDocument();
     const r = await axe.run(container, { rules: { 'color-contrast': { enabled: false }, region: { enabled: false } } });
     expect(r.violations.map((v) => `${v.id}: ${v.nodes.length} ${v.nodes.map((n) => n.html.slice(0, 200)).join(' | ')}`)).toEqual([]);
   }, 30000);
@@ -1104,6 +1105,9 @@ describe('aide par écran (0.12.0, standard 13.1, DV-100)', () => {
 
   it('impression : tout déplié, sans onglets ni recherche, impression lancée', async () => {
     const imprimer = vi.spyOn(window, 'print').mockImplementation(() => {});
+    // 0.13.0 (M1) : l'impression attend les captures ; jsdom ne les charge pas, elles sont dites chargées.
+    const complete = Object.getOwnPropertyDescriptor(HTMLImageElement.prototype, 'complete');
+    Object.defineProperty(HTMLImageElement.prototype, 'complete', { configurable: true, get: () => true });
     try {
       render(wrap(HelpPage, 'fr', FALLBACK_SETTINGS, ['/help?print=1']));
       expect(await screen.findByText('Signaler un problème depuis un écran')).toBeInTheDocument();
@@ -1112,7 +1116,10 @@ describe('aide par écran (0.12.0, standard 13.1, DV-100)', () => {
       expect(screen.getByText(/Mode d'emploi imprimé le/)).toBeInTheDocument();
       expect(screen.getAllByText('Ouvrez le ticket et cliquez sur', { exact: false }).length).toBeGreaterThan(0);
       await waitFor(() => expect(imprimer).toHaveBeenCalled(), { timeout: 2000 });
-    } finally { imprimer.mockRestore(); }
+    } finally {
+      imprimer.mockRestore();
+      if (complete) Object.defineProperty(HTMLImageElement.prototype, 'complete', complete);
+    }
   });
 
   it('question métier résolue : « Ajouter à la FAQ » préremplit la question et l’envoie au ticket', async () => {
@@ -1206,5 +1213,265 @@ describe('fiches du service technique et de l’administration (0.12.0, point 4)
     fireEvent.click(await screen.findByRole('button', { name: /Créer/ }));
     const d = await screen.findByRole('dialog');
     expect(d.querySelectorAll('.ant-form-item-tooltip').length).toBe(3);
+  });
+});
+
+describe('téléphones et lien « Voir aussi » (0.13.0, point 1 ; défauts D1 et D4 du contrôle DV-113)', () => {
+  it('D1 : sur téléphone, la langue quitte l’en-tête et passe dans le menu de la personne, sous le nom de l’autre langue', async () => {
+    // Le simulacre de matchMedia ne répond à aucune requête : Ant Design voit un écran de moins de 576 px (téléphone).
+    savePreferences.mockClear();
+    render(wrap(AppLayout, 'fr'));
+    const entete = await screen.findByRole('banner');
+    expect(within(entete).queryByRole('combobox', { name: 'Langue' })).toBeNull();
+    fireEvent.click(within(entete).getByRole('button', { name: /Mon compte/ }));
+    const choix = await screen.findByText('Nederlands');
+    expect(choix.closest('[lang]')?.getAttribute('lang')).toBe('nl');
+    fireEvent.click(choix);
+    await waitFor(() => expect(savePreferences).toHaveBeenCalledWith({ preferred_lang: 'nl' }));
+    expect(await within(entete).findByRole('button', { name: /Mijn account/ })).toBeInTheDocument();
+  });
+
+  it('D1 : sur grand écran, le sélecteur de langue reste dans l’en-tête et le menu de la personne ne le répète pas', async () => {
+    const avant = window.matchMedia;
+    window.matchMedia = ((query: string) => ({ ...avant(query), matches: true })) as typeof window.matchMedia;
+    try {
+      render(wrap(AppLayout, 'nl'));
+      const entete = await screen.findByRole('banner');
+      expect(within(entete).getByRole('combobox', { name: 'Taal' })).toBeInTheDocument();
+      fireEvent.click(within(entete).getByRole('button', { name: /Mijn account/ }));
+      await screen.findByText('Mijn wachtwoord wijzigen');
+      expect(screen.queryByText('Français')).toBeNull();
+    } finally { window.matchMedia = avant; }
+  });
+
+  it('D4 : dans le mode d’emploi, un lien « Voir aussi » ouvre la fiche liée et referme la précédente', async () => {
+    const { container } = render(wrap(HelpPage, 'fr', FALLBACK_SETTINGS, ['/help?fiche=journal']));
+    const ouverte = () => [...container.querySelectorAll('.ant-collapse-item-active > .ant-collapse-header')].map((e) => e.textContent);
+    await waitFor(() => expect(ouverte()).toEqual(["Journal d'audit"]));
+    const lien = [...container.querySelectorAll('.ant-collapse-item-active a[href="/help?fiche=parametres"]')][0] as HTMLElement;
+    expect(lien).toBeTruthy();
+    fireEvent.click(lien);
+    await waitFor(() => expect(ouverte()).toEqual(['Paramètres']));
+  });
+});
+
+describe('journal d’audit sans code brut (0.13.0, point 2 ; défauts D2, D3, D9, M5 et D8 du contrôle DV-113)', () => {
+  // Champs que le serveur peut écrire au journal : colonnes modifiables des tables suivies par changements() (audit.js)
+  // et clés écrites en clair par logAudit() dans les services. Un champ nouveau sans libellé fait échouer ce test.
+  const CHAMPS_ECRITS: Record<string, string> = {
+    jours_non_ouvres: 'nature mois_jour date_debut date_fin libelle_fr libelle_nl is_active motif_desactivation',
+    categories: 'parent_id code libelle_fr libelle_nl icone priorite_defaut validation delai_fin_jours ordre is_active motif_desactivation',
+    entites: 'code nom_fr nom_nl is_active motif_desactivation',
+    help_faq: 'topic_id question_fr question_nl answer_fr answer_nl is_active motif_desactivation',
+    lieux: 'parent_id nature code nom_fr nom_nl type_id adresse code_postal commune surface_m2 statut is_active motif_desactivation',
+    listes_valeurs: 'liste code libelle_fr libelle_nl ordre is_active motif_desactivation',
+    questions_categorie: 'categorie question_fr question_nl type reponses_json obligatoire ordre is_active motif_desactivation',
+    priorites: 'code libelle_fr libelle_nl description_fr description_nl couleur unite prise_en_charge fin',
+    horaires: 'jour debut fin',
+    users: 'email first_name last_name user_role entite_id preferred_lang ui_mode theme must_change_password is_active lieu_habituel_id is_admin_local',
+    nettoyage: 'valeur value cle',
+    services: 'email role entite_id user_id from to motif module type priority fields internal motif_donne liste code version nom filtres niveau obligatoire octets largeur hauteur demande_id numero brouillon comptes lieux entite langue modules remarque microsoft_code method avant apres ticket reason danger beneficiaire_id beneficiaire_texte date_souhaitee reponses pieces premiere priorite_confirmee etat motif_priorite duree_estimee_minutes consignes photos_visibles date_convenue lieu_id categorie_id',
+  };
+  it('chaque champ écrit au journal a son libellé, en FR et en NL', () => {
+    const manquants = [...new Set(Object.values(CHAMPS_ECRITS).join(' ').split(' '))]
+      .filter((k) => !translations[`audit.detail.${k}`]?.fr || !translations[`audit.detail.${k}`]?.nl);
+    expect(manquants).toEqual([]);
+  });
+
+  it('mode Complet : la colonne Objet nomme l’objet au lieu de son code', async () => {
+    const ligneObjet = { id: 201, created_at: '2026-11-08 07:10:00', action: 'parametre_entite.update', entity_type: 'parametre_entite', entity_id: null, channel: 'api', entite_id: 1, entite_code: 'AA',
+      user_id: 1, user_email: 'a@exemple.test', user_first_name: 'Ada', user_last_name: 'Admin', details: { cle: 'urgence.telephone', avant: null, apres: '02 000 00 00' } };
+    (journal as unknown as Record<string, unknown>[]).push(ligneObjet);
+    const mode = user.ui_mode;
+    user.ui_mode = 'complet';
+    // Grand écran : la colonne Objet n'existe qu'au-dessus de 768 px.
+    const avant = window.matchMedia;
+    window.matchMedia = ((query: string) => ({ ...avant(query), matches: true })) as typeof window.matchMedia;
+    try {
+      const { container } = render(wrap(JournalPage, 'fr'));
+      await waitFor(() => expect([...container.querySelectorAll('td')].map((c) => c.textContent)).toContain("Réglage de l'entité"));
+      expect([...container.querySelectorAll('td')].map((c) => c.textContent)).not.toContain('parametre_entite');
+    } finally { window.matchMedia = avant; user.ui_mode = mode; journal.splice(journal.length - 1, 1); }
+  });
+
+  for (const [lang, attendus] of [
+    ['fr', ['Libellé en français : Mobilier de bureau', 'Nom du pouvoir local en français', 'Photo JPEG', 'Mes demandes', 'Motif donné', 'Oui',
+      'Gestionnaire technique', 'Jour', 'Lundi', 'Heure de début : 07:45', 'Type de lieu : Bureau', 'Congé', '8 mai', 'Nature', 'Bâtiment', 'Pictogramme : Éclair']],
+    ['nl', ['Benaming in het Frans : Mobilier de bureau', 'Naam van het lokaal bestuur in het Frans', 'JPEG-foto', 'Mijn aanvragen', 'Reden opgegeven', 'Ja',
+      'Technisch beheerder', 'Maandag', 'Beginuur : 07:45', 'Soort plaats : Kantoor', 'Jaarlijkse verlofdag', '8 mei', 'Gebouw']],
+  ] as const) {
+    it(`détail des lignes sans clé ni code brut (${lang})`, async () => {
+      const ada = { entite_id: 1, entite_code: 'AA', user_id: 1, user_email: 'a@exemple.test', user_first_name: 'Ada', user_last_name: 'Admin', channel: 'api', entity_id: 3 };
+      const lignes = [
+        { ...ada, id: 191, created_at: '2026-11-08 07:00:00', action: 'categorie.update', entity_type: 'categorie', details: { code: 'mobilier', avant: { libelle_fr: 'Mobilier de bureau', icone: 'mobilier' }, apres: { libelle_fr: 'Mobilier', icone: 'eclair' } } },
+        { ...ada, id: 192, created_at: '2026-11-08 07:01:00', action: 'parametre.update', entity_type: 'parametre', entite_id: null, entite_code: null, details: { cle: 'app.organisation_fr', avant: 'A', apres: 'B' },
+          noms: { cle: { type: 'reglage', code: 'app.organisation_fr', nom_fr: 'Nom du pouvoir local en français', nom_nl: 'Naam van het lokaal bestuur in het Frans' } } },
+        { ...ada, id: 193, created_at: '2026-11-08 07:02:00', action: 'piece.add', entity_type: 'piece', details: { type: 'image/jpeg', octets: 1000, brouillon: 1 } },
+        { ...ada, id: 194, created_at: '2026-11-08 07:03:00', action: 'faq.create', entity_type: 'faq', details: { topic_id: 'mes-demandes', ticket: 'TCK-2026-00001' } },
+        { ...ada, id: 195, created_at: '2026-11-08 07:04:00', action: 'ticket.resolved', entity_type: 'ticket', details: { motif_donne: 1 } },
+        { ...ada, id: 196, created_at: '2026-11-08 07:05:00', action: 'role.grant', entity_type: 'user_role', details: { user_id: 4, entite_id: 1, role: 'gestionnaire' } },
+        { ...ada, id: 197, created_at: '2026-11-08 07:06:00', action: 'horaire.update', entity_type: 'horaire', details: { jour: 1, avant: { debut: '08:00', fin: '16:30' }, apres: { debut: '07:45', fin: '16:15' } } },
+        { ...ada, id: 198, created_at: '2026-11-08 07:07:00', action: 'lieu.update', entity_type: 'lieu', details: { code: 'AA-B1-L02', avant: { type_id: 2 }, apres: { type_id: 1 } },
+          noms: { 'avant.type_id': { type: 'valeur', id: 2, code: 'salle_reunion', nom_fr: 'Salle de réunion', nom_nl: 'Vergaderzaal' }, 'apres.type_id': { type: 'valeur', id: 1, code: 'bureau', nom_fr: 'Bureau', nom_nl: 'Kantoor' } } },
+        { ...ada, id: 199, created_at: '2026-11-08 07:08:00', action: 'jour_non_ouvre.create', entity_type: 'jour_non_ouvre', details: { nature: 'conge', mois_jour: '05-08', date_debut: null, date_fin: null } },
+        { ...ada, id: 200, created_at: '2026-11-08 07:09:00', action: 'lieu.create', entity_type: 'lieu', details: { code: 'AA-B9', nature: 'batiment' } },
+      ];
+      (journal as unknown as Record<string, unknown>[]).push(...lignes);
+      try {
+        const { container } = render(wrap(JournalPage, lang));
+        await screen.findAllByText(lang === 'fr' ? /Catégorie d'intervention modifiée/ : /Interventiecategorie gewijzigd/);
+        container.querySelectorAll<HTMLButtonElement>('button.ant-table-row-expand-icon').forEach((b) => fireEvent.click(b));
+        await waitFor(() => expect(container.querySelectorAll('.ant-descriptions-item-content').length).toBeGreaterThan(15));
+        const cellules = [...container.querySelectorAll('.ant-descriptions-item-label, .ant-descriptions-item-content')].map((c) => c.textContent || '');
+        const tout = cellules.join(' ¦ ');
+        for (const a of attendus) expect(tout, a).toContain(a);
+        for (const brut of ['libelle_fr', 'app.organisation_fr', 'image/jpeg', 'mes-demandes', 'motif_donne', 'type_id', 'mois_jour', '05-08', 'conge', 'batiment', 'icone', 'salle_reunion']) {
+          expect(cellules.some((c) => c.split(/[\s:·,()]+/).includes(brut)), brut).toBe(false);
+        }
+      } finally { journal.splice(journal.length - lignes.length, lignes.length); }
+    });
+  }
+});
+
+describe('textes et accessibilité (0.13.0, point 3 ; D5, D7, M4)', () => {
+  it('D5 : délai au singulier pour 1, au pluriel sinon, en FR et en NL', async () => {
+    const { texteDelai } = await import('../components/referentiel/PrioritesTab');
+    const tr = (lang: 'fr' | 'nl') => (k: string) => translations[k]?.[lang] ?? k;
+    expect(texteDelai(tr('fr'), 1, 'heures_calendaires')).toBe('1 heure calendaire');
+    expect(texteDelai(tr('fr'), 4, 'heures_calendaires')).toBe('4 heures calendaires');
+    expect(texteDelai(tr('fr'), 1, 'jours_ouvrables')).toBe('1 jour ouvrable');
+    expect(texteDelai(tr('fr'), 1, 'heures_ouvrables')).toBe('1 heure ouvrable');
+    expect(texteDelai(tr('nl'), 1, 'jours_ouvrables')).toBe('1 werkdag');
+    expect(texteDelai(tr('nl'), 2, 'jours_ouvrables')).toBe('2 werkdagen');
+    expect(texteDelai(tr('nl'), 1, 'heures_calendaires')).toBe('1 kalenderuur');
+    expect(texteDelai(tr('fr'), null, 'jours_ouvrables')).toBe(translations['ref.prio.convenue'].fr);
+    for (const k of ['gest.total', 'gest.total.un', 'demande.pieces.trop', 'demande.pieces.trop.un']) {
+      expect(`${translations[k].fr} ${translations[k].nl}`, k).not.toMatch(/\((s|en)\)|\//);
+    }
+  });
+
+  it('D7 : retrait d’un rôle sans motif : message sous le champ, focus sur le champ, rien d’envoyé', async () => {
+    const appels = () => (fetch as unknown as { mock: { calls: [string, RequestInit?][] } }).mock.calls;
+    render(wrap(UsersPage, 'fr'));
+    await screen.findByText('Microsoft');
+    fireEvent.click(screen.getAllByRole('button', { name: 'Rôles' })[0]);
+    const tiroir = await screen.findByRole('dialog');
+    const cases = within(tiroir).getAllByRole('checkbox', { name: 'Responsable du service technique' });
+    const cochee = cases.find((c) => (c as HTMLInputElement).checked) as HTMLElement;
+    fireEvent.click(cochee);
+    const avant = appels().length;
+    fireEvent.click(within(tiroir).getByRole('button', { name: 'Enregistrer' }));
+    const champ = await within(tiroir).findByLabelText('Motif du retrait des rôles décochés');
+    const erreur = await within(tiroir).findByText('Un motif est demandé pour retirer un rôle');
+    expect(erreur.closest('[role="alert"]')).toBeTruthy();
+    expect(champ).toHaveAttribute('aria-invalid', 'true');
+    expect(champ.getAttribute('aria-describedby')).toBe(erreur.closest('[id]')?.id);
+    expect(document.activeElement).toBe(champ);
+    expect(appels().slice(avant).some(([, o]) => o?.method && o.method !== 'GET')).toBe(false);
+    fireEvent.change(champ, { target: { value: 'Fin du remplacement' } });
+    expect(within(tiroir).queryByText('Un motif est demandé pour retirer un rôle')).toBeNull();
+  });
+
+  it('M4 : une question de la FAQ propre à une entité dit « Entité AA seulement », plus « L’entité AA »', async () => {
+    (faqLocale as unknown as Record<string, unknown>[]).push({ id: 9, entite_id: 1, entite_code: 'AA', topic_id: null, question_fr: 'Où garer le vélo ?', question_nl: 'Waar de fiets stallen?', answer_fr: 'Au local vélo.', answer_nl: 'In het fietslokaal.', is_active: 1, motif_desactivation: null, can_manage: true, source_ticket_reference: null });
+    try {
+      render(wrap(HelpPage, 'fr', FALLBACK_SETTINGS, ['/help?onglet=faq']));
+      fireEvent.click(await screen.findByText('Où garer le vélo ?'));
+      expect(await screen.findByText(/Entité AA seulement/)).toBeInTheDocument();
+      expect(screen.queryByText(/L'entité AA/)).toBeNull();
+      fireEvent.click(screen.getByText('Qui contacter le week-end ?'));
+      expect(await screen.findByText(/Commune aux deux entités/)).toBeInTheDocument();
+    } finally { faqLocale.splice(faqLocale.findIndex((f) => f.id === 9), 1); }
+  });
+});
+
+describe('aide et FAQ (0.13.0, point 4 ; M1, M2, M3 de la recette de la 0.12.0)', () => {
+  it('M1 : impression : captures chargées d’emblée, impression lancée une seule fois, une fois la FAQ et les notes reçues', async () => {
+    const impression = vi.spyOn(window, 'print').mockImplementation(() => {});
+    // jsdom ne charge pas les images : elles sont dites chargées, comme dans le navigateur une fois reçues.
+    const complete = Object.getOwnPropertyDescriptor(HTMLImageElement.prototype, 'complete');
+    Object.defineProperty(HTMLImageElement.prototype, 'complete', { configurable: true, get: () => true });
+    try {
+      const { container } = render(wrap(HelpPage, 'fr', FALLBACK_SETTINGS, ['/help?print=1']));
+      await waitFor(() => expect(impression).toHaveBeenCalledTimes(1), { timeout: 5000 });
+      const images = [...container.querySelectorAll('img.help-shot')];
+      expect(images.length).toBeGreaterThan(0);
+      expect(images.every((i) => i.getAttribute('loading') === 'eager')).toBe(true);
+      const appels = (fetch as unknown as { mock: { calls: [string][] } }).mock.calls.map((c) => c[0]);
+      expect(appels.some((u) => u.startsWith('/api/faq'))).toBe(true);
+      expect(appels.some((u) => u.startsWith('/api/notes-version'))).toBe(true);
+      await new Promise((r) => setTimeout(r, 400));
+      expect(impression).toHaveBeenCalledTimes(1);
+    } finally {
+      impression.mockRestore();
+      if (complete) Object.defineProperty(HTMLImageElement.prototype, 'complete', complete);
+    }
+  }, 15000);
+
+  it('M1 : à l’écran, les captures restent chargées au fil du défilement', async () => {
+    const { container } = render(wrap(HelpPage, 'fr', FALLBACK_SETTINGS, ['/help?fiche=journal']));
+    await waitFor(() => expect(container.querySelectorAll('img.help-shot').length).toBeGreaterThan(0));
+    expect([...container.querySelectorAll('img.help-shot')].every((i) => i.getAttribute('loading') === 'lazy')).toBe(true);
+  });
+
+  it('M2 : « Ajouter à la FAQ » préremplit la dernière réponse du service, pas le motif de la clôture', async () => {
+    const { reponseDuService } = await import('../help/FaqModal');
+    const base = { id: 7, reference: 'TCK-2026-00007', title: 'Comment changer la catégorie ?', resolution: 'Réponse donnée', requester_id: 5 };
+    const m = (body: string, author_id: number, is_internal = 0, kind = 'message') => ({ kind, body, is_internal, author_id });
+    expect(reponseDuService({ ...base, messages: [m('Je ne trouve pas le menu', 5), m('Ouvrez la fiche, puis Catégorie.', 1), m('Note pour l’équipe', 1, 1), m('Réponse donnée', 1), m('resolved', 1, 0, 'event')] }))
+      .toBe('Ouvrez la fiche, puis Catégorie.');
+    expect(reponseDuService({ ...base, messages: [m('Je ne trouve pas le menu', 5), m('Réponse donnée', 1)] })).toBe('Réponse donnée');
+    expect(reponseDuService({ ...base, resolution: null, messages: [] })).toBe('');
+    ticketDetail = { ...ticketBase, status: 'resolved', resolution: 'Réponse donnée', can_faq: true, requester_id: 5,
+      messages: [{ id: 2, kind: 'message', body: 'Menu Catégorie, puis Enregistrer.', is_internal: 0, created_at: '2026-11-05 11:00:00', author_name: 'Service', author_id: 1 },
+        { id: 3, kind: 'message', body: 'Réponse donnée', is_internal: 0, created_at: '2026-11-05 11:05:00', author_name: 'Service', author_id: 1 }] };
+    try {
+      render(wrap(TicketsPage, 'fr', FALLBACK_SETTINGS, ['/tickets?id=7']));
+      fireEvent.click(await screen.findByRole('button', { name: 'Ajouter à la FAQ' }));
+      await screen.findByText(/La question deviendra une entrée de la FAQ de AA/);
+      expect(within(dernierDialogue()).getByLabelText('Réponse en français')).toHaveValue('Menu Catégorie, puis Enregistrer.');
+    } finally { ticketDetail = { ...ticketBase }; }
+  });
+
+  it('M3 : l’onglet Questions fréquentes montre aussi une question rattachée à un écran, avec le nom de l’écran (FR et NL)', async () => {
+    render(wrap(HelpPage, 'fr', FALLBACK_SETTINGS, ['/help?onglet=faq']));
+    expect(await screen.findByText('Où voir la réponse à ma question ?')).toBeInTheDocument();
+    expect(screen.getByText('Écran : Tickets')).toBeInTheDocument();
+    cleanupAll();
+    render(wrap(HelpPage, 'nl', FALLBACK_SETTINGS, ['/help?onglet=faq']));
+    expect(await screen.findByText('Scherm: Tickets')).toBeInTheDocument();
+  });
+});
+
+describe('Patrimoine : filtre « Sans photo » (0.13.0, point 6, DV-101)', () => {
+  const Ici = () => { const l = useLocation(); return <p data-testid="adresse">{l.search}</p>; };
+  const rendre = (lang: 'fr' | 'nl', entree: string) => render(
+    <SettingsProvider value={{ settings: FALLBACK_SETTINGS, reload: async () => {} }}>
+      <I18nProvider defaultLang={lang}><MemoryRouter initialEntries={[entree]}><PatrimoinePage /><Ici /></MemoryRouter></I18nProvider>
+    </SettingsProvider>);
+
+  it('filtre dans l’adresse : seuls les lieux actifs sans photo, avec leur nombre et leur marque ; le lieu choisi garde le filtre', async () => {
+    const { container } = rendre('fr', '/patrimoine?photo=sans');
+    const filtre = await screen.findByRole('checkbox', { name: 'Sans photo (3)' });
+    expect(filtre).toBeChecked();
+    await screen.findByText('AA-B1');
+    expect(screen.queryByText('AA-B1-L02')).toBeNull();
+    expect(screen.getAllByText('Sans photo')).toHaveLength(3);
+    fireEvent.click(screen.getByText('AA-B1'));
+    await waitFor(() => expect(screen.getByTestId('adresse').textContent).toContain('lieu=2'));
+    expect(screen.getByTestId('adresse').textContent).toContain('photo=sans');
+    fireEvent.click(filtre);
+    await waitFor(() => expect(screen.queryAllByText('Sans photo')).toHaveLength(0));
+    expect(screen.getByRole('checkbox', { name: 'Sans photo (3)' })).not.toBeChecked();
+    expect(screen.getByTestId('adresse').textContent).not.toContain('photo=');
+    expect(screen.getByTestId('adresse').textContent).toContain('lieu=2');
+    const r = await axe.run(container, { rules: { 'color-contrast': { enabled: false }, region: { enabled: false } } });
+    expect(r.violations.map((v) => v.id)).toEqual([]);
+  });
+
+  it('en néerlandais', async () => {
+    rendre('nl', '/patrimoine?photo=sans');
+    expect(await screen.findByRole('checkbox', { name: 'Zonder foto (3)' })).toBeChecked();
+    expect((await screen.findAllByText('Zonder foto')).length).toBe(3);
   });
 });

@@ -1,8 +1,24 @@
 # Manifeste
 
-Version de l'application : **0.12.0** · Mis à jour le 06/11/2026
+Version de l'application : **0.13.0** · Mis à jour le 08/11/2026
 
 Fichiers changés, dépendances et suites par version. Les décomptes sont recopiés de la sortie des commandes.
+
+## 0.13.0 (08/11/2026)
+
+Fichiers comparés à l'archive 0.12.0 par `diff -rq` (hors `node_modules` et `dist`). Pour le contrôle du `git status` (`GITHUB.md`, section 5) : aucune ligne `D` attendue ; quatre lignes `A` (`NOTES_LIVRAISON_v0.13.0.md`, `backend/tests/photo-lieu-demande.test.js`, `frontend/src/components/demandes/PhotoLieu.tsx`, `frontend/mobile-check/verifier-mobile.mjs`), les autres `M`.
+
+- Nouveaux : `NOTES_LIVRAISON_v0.13.0.md` ; serveur `tests/photo-lieu-demande.test.js` (photo de l'endroit, filtre `has_photo`, cloison, MCP) ; interface `src/components/demandes/PhotoLieu.tsx`, `mobile-check/verifier-mobile.mjs` (contrôle des téléphones, script `mobile:check`).
+- Modifiés, serveur : `config/notes-version.json` (note 0.13.0), `config/parametres-entite.json` (explication du téléphone d'urgence, D6) ; `src/schemas.js` (`has_photo`), `src/mcp.js` (description de `list_lieux`), `src/recette-api.js` (commentaire), `src/services/demandes.js` (`photo_lieu`), `src/services/journal.js` (`noms.cle`, type de lieu), `src/services/lieux.js` (`has_photo`), `src/services/tickets.js` (`motif_donne`, E-46) ; `package.json` et `package-lock.json` (0.13.0, script de test) ; tests `journal-noms`, `notes-version`, `parametres-entite`, `tickets`.
+- Modifiés, interface : `src/App.tsx` et `src/couleurs.ts` (texte discret, D10), `src/components/AppLayout.tsx` (en-tête des téléphones, D1), `ErreurObligatoire.tsx` (texte propre), `TicketDrawer.tsx` (`author_id`), `demandes/PiecesDemande.tsx` (singulier), `demandes/QualificationForm.tsx` (photo), `referentiel/PrioritesTab.tsx` (singulier), `src/demandes.ts` (`PhotoLieu`), `src/help/FaqModal.tsx` (M2), `src/help/TopicView.tsx` (M1), fiches `accueil`, `demandes-entite`, `patrimoine`, `src/i18n.ts`, pages `DemandesPage`, `GestionDemandesPage`, `HelpPage` (D4, M1, M3, M4), `JournalPage` (D2, D3, D9, M5), `PatrimoinePage` (« Sans photo »), `UsersPage` (D7) ; captures `aide-captures/fr` et `nl/patrimoine-overview.jpg` ; `package.json` et `package-lock.json` (0.13.0, script `mobile:check`) ; tests `couleurs`, `demandes`, `pages`.
+- Modifiés, documentation et racine : `README.md`, `README.nl.md`, `README.en.md` ; `recette.sh` (commentaire) ; `docs/fr`, `docs/nl`, `docs/en` (`ARCHITECTURE.md`, `EXPLOITATION.md`, `MCP.md`, `SECURITE.md`), `docs/fr/APRES-DEPLOIEMENT.md` ; `docs/fonctionnel/aide.md`, `patrimoine.md`, `service-technique.md` ; fichiers de suivi (`ETAT.md`, `CHANGELOG.md`, `ECARTS-CDC.md`, `MANIFESTE.md`).
+- Inchangés : les deux Dockerfile, `nginx.conf`, `docker-entrypoint.sh`, `docker-compose.yml`, `.env.example`, `backup.sh`, `verifier-ports.sh`, `ci.yml`, `.gitignore`. La construction n'a pas besoin de `--no-cache`.
+- Retirés : aucun fichier.
+- Dépendances : aucune nouvelle ; `mobile:check` utilise `@playwright/test` déjà présent en développement (E-37). Aucun `npm audit fix`.
+- Contrôle DV-09 de la séance, avant toute modification : archive 0.12.0 conforme à `ETAT.md` (7 238 851 octets, 511 entrées, SHA-256 `3413c4c9…ef1ced0`) ; serveur 427/427 ; audit du serveur 0 ; interface 217 (+1 ignoré) sur trois lancements ; `help:check` 10/10 ; construction et accessibilité 0 erreur.
+- Suites de la 0.13.0 : serveur 437/437 ; interface 238 (+1 ignoré) sur trois lancements ; `help:check` 10/10 ; construction et accessibilité 0 erreur ; `npm audit --omit=dev` serveur 0, interface 3 modérées (E-09) ; `mobile:check` : 23 écrans, 4 largeurs, FR et NL, aucun défaut.
+- Navigateur réel : Chromium du bac à sable, serveur réel sur une base jetable de démonstration ; en-tête aux cinq largeurs, fiche avec la photo de l'endroit et son aperçu au toucher (iPhone SE FR, Android 360 px NL), impression avec 18 captures sur 18, capture de Patrimoine refaite par `npm run help:capture` (`HELP_ONLY=patrimoine-overview`).
+- Images Docker : non reconstruites dans le bac à sable.
 
 ## 0.12.0 (06/11/2026)
 

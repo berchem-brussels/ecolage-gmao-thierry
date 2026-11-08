@@ -2,6 +2,47 @@
 
 Le français fait foi. Grille de la section 10.2 du standard, rejouée à chaque version. « Non joué » veut dire que le contrôle n'a pas tourné.
 
+## 0.13.0 (08/11/2026)
+
+Étape 8 ter (DV-101) : photo de l'endroit sur la fiche d'une demande pour le service technique, filtre « Sans photo » dans Patrimoine ; défauts D1 à D10 du contrôle complet DV-113 et remarques M1 à M5 de la recette de la 0.12.0. Environnement : bac à sable de Claude, Node 22.23.4. Aucune migration, aucune dépendance nouvelle.
+
+| Famille | Contrôle | Résultat |
+| --- | --- | --- |
+| Autorisation (IDOR) | `photo_lieu` rendu au seul service technique (`demandes:entite`), jamais au demandeur ni à qui suit la demande ; le fichier se lit par `GET /api/lieux/:id/photo` avec les droits et la cloison des lieux : service de l'autre entité 403 sur la demande et sur la photo ; même réponse par l'API et par le MCP | Conforme (`photo-lieu-demande.test.js`) |
+| Autorisation | Filtre `has_photo` de `list_lieux` limité à l'entité active, par l'API et par le MCP | Conforme (`photo-lieu-demande.test.js`) |
+| Validation | `has_photo` : 0 ou 1 seulement (`ajv`), 400 sinon | Conforme (`photo-lieu-demande.test.js`) |
+| Injections | Lieux du chemin passés par `json_each(?)` (le contrôle statique a refusé une première écriture `IN (?, ?…)` construite par interpolation) | Conforme (`securite.test.js`) |
+| Données (RGPD) | Le motif tapé au changement d'état d'un ticket n'est plus recopié au journal d'audit, gardé longtemps : `motif_donne` (0 ou 1) ; le texte reste dans le fil du ticket (D8, décision de Thierry du 08/11/2026, écart au gabarit E-46) ; lignes anciennes inchangées (journal jamais réécrit) | Conforme (`tickets.test.js`) |
+| Données | Détail du journal sans clé ni code brut : tout champ écrit par le serveur a son libellé FR et NL (test d'inventaire), réglages et types de lieux nommés à la lecture, rien de nouveau enregistré | Conforme (`journal-noms.test.js`, `pages.test.tsx`) |
+| Interface | En-tête tenu dans 320, 360, 375, 390 et 412 px, FR et NL ; aucun champ sous 16 px ; contraste du texte discret à 4,5:1 au moins en clair et en sombre (D10) | Conforme (`pages.test.tsx`, `couleurs.test.tsx`, `npm run mobile:check` : 23 écrans, 4 largeurs, FR et NL, aucun défaut) |
+| Secrets commités | Mot de passe de `mobile:check` par l'environnement, jamais dans un fichier ; aucune valeur de NIXUS ni photo réelle dans l'archive (capture de Patrimoine refaite sur une base de démonstration, lieu sans photo à l'écran) | Conforme |
+| Infrastructure | Dockerfile, compose, `nginx.conf`, `backup.sh`, `.env`, `ci.yml` inchangés | Conforme |
+| Dépendances | `npm audit --omit=dev` serveur | 0 vulnérabilité |
+| Dépendances | `npm audit --omit=dev` interface | 3 modérées (E-09), inchangées |
+| LLM et MCP | `get_demande` et `list_lieux` enrichis sous les droits de la personne ; parité route et outil | Conforme (`photo-lieu-demande.test.js`, `mcp.test.js`) |
+| Migration | Aucune ; base 0.13.0 identique à une base 0.12.0 : retour arrière sans effet sur les données | Conforme |
+
+Les trois contrôles qui ne restent jamais « non joués » (secrets commités, contrôle d'accès côté serveur, IDOR) ont été joués.
+
+### Preuve d'échec des nouveaux tests (0.13.0)
+
+Chaque correction retirée (fichier remis dans son état de la 0.12.0), les tests nouveaux échouent ; avec le code de la 0.13.0, tout réussit.
+
+| Correction retirée | Tests en échec |
+| --- | --- |
+| `AppLayout.tsx` (langue dans le menu de la personne, D1) | 2 (`pages.test.tsx`) ; `mobile:check` sur l'interface 0.12.0 : en-tête trop large de 68 px à 320 px |
+| `HelpPage.tsx` (clé du Collapse, D4) | 1 |
+| `JournalPage.tsx` (libellés, codes par famille, objet) | 3 |
+| `services/journal.js` (`noms.cle`, type de lieu) | 2 (`journal-noms.test.js`) |
+| `services/tickets.js` (`motif_donne`, D8) | 1 (`tickets.test.js`) |
+| `PrioritesTab.tsx`, `UsersPage.tsx`, `HelpPage.tsx`, `i18n.ts` (D5, D7, M4) | 3 |
+| `App.tsx`, `couleurs.ts` (texte discret, D10) | 2 (`couleurs.test.tsx`) |
+| `HelpPage.tsx`, `TopicView.tsx`, `FaqModal.tsx` (M1, M2, M3) | 3 |
+| `services/demandes.js` (`photo_lieu`) | 3 sur 4 (`photo-lieu-demande.test.js`) |
+| `schemas.js`, `services/lieux.js` (`has_photo`) | 1 |
+
+Code de la 0.13.0 : tout réussi (serveur 436/436, interface 238 et un test des captures joué par `npm run help:check`).
+
 ## 0.12.0 (06/11/2026)
 
 Aide par écran et FAQ locale (standard, section 13.1 ; DV-100), modules du gabarit 1.3.0 repris et adaptés aux entités (E-44, E-45) ; remarques R1 à R6 de la recette de la 0.11.0 (DV-109) ; script de contrôles après installation (DV-110). Environnement : bac à sable de Claude, Node 22.23.4 ; parcours `ci.yml` rejoué sous Node 20.20.2. Migration `011_faq`. Dépendance nouvelle de développement seulement : `@playwright/test` ^1.56.1 (E-37), absente des images.

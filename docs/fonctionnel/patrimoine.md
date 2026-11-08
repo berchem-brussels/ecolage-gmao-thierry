@@ -1,6 +1,6 @@
 # Patrimoine : sites, bâtiments, niveaux, locaux et types de lieux
 
-Version 0.2.0 · Fiche fonctionnelle (modèle du standard, section 17.8).
+Version 0.13.0 · Fiche fonctionnelle (modèle du standard, section 17.8).
 
 ## Objet
 
@@ -34,9 +34,12 @@ Décrire le patrimoine de chaque entité en arbre, pour que chaque demande, rés
 | Écran | Contenu | Actions |
 | --- | --- | --- |
 | Patrimoine (menu Principal) | À gauche l'arbre de l'entité active avec une recherche par code, nom ou adresse ; à droite la fiche du lieu : chemin, nature, type, statut, adresse, surface, nombre de lieux contenus, photo. Le lieu choisi est dans l'adresse de la page (`/patrimoine?lieu=12`). Sur téléphone, la fiche passe sous l'arbre | Créer un site ; dans la fiche, « Ajouter un bâtiment », « Ajouter un niveau », « Ajouter un local » ou « Ajouter un lieu extérieur » selon le lieu ; « Modifier » ; « Ajouter une photo », « Changer la photo », « Supprimer la photo » |
+| Patrimoine, case « Sans photo (n) » (0.13.0) | Le nombre de lieux actifs sans photo de l'entité active ; cochée, l'arbre ne garde que ces lieux, marqués « Sans photo », avec leurs parents ; filtre gardé dans l'adresse (`/patrimoine?photo=sans`), avec le lieu choisi | Cocher, décocher, ouvrir un lieu pour ajouter sa photo |
 | Patrimoine, mode Complet | En plus : case « Afficher les lieux désactivés », date de modification, champ « Ranger sous » pour déplacer un lieu, désactivation avec motif, réactivation | Déplacer, désactiver, réactiver |
 | Formulaire d'un lieu | Code court (proposé à partir du code du parent), nom FR, nom NL, type, adresse pour un site ou un bâtiment ; sous « + Plus d'options » en mode Simple : statut (boutons), code postal, commune, surface | Enregistrer |
 | Listes de valeurs (menu Réglages du service, responsable) | Types de lieux : libellé dans la langue de l'écran et statut ; en mode Complet, libellés FR et NL, code technique et ordre | Créer, modifier le libellé et l'ordre, désactiver avec motif, réactiver |
+
+Tous les lieux actifs ont une photo : « Tous les lieux actifs ont une photo. »
 
 Messages d'erreur : code déjà utilisé dans l'entité ; lieu impossible à ranger à cet endroit ; parent désactivé ; lieu qui contient encore des lieux actifs ; type du local manquant ; valeur hors de la liste ou désactivée ; photo d'un autre format que JPEG ou PNG ; photo illisible ou trop grande ; photo illisible ou trop lourde à la préparation.
 

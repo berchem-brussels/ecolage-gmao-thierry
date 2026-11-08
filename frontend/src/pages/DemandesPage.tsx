@@ -16,12 +16,14 @@
  * 0.9.0 (étape 8) : « Demandes de l'entité » est la liste du service technique (GestionDemandesPage : tableau de
  * bord, filtres, tris, vues, qualification). La fiche du service montre l'état avec le libellé du service, les
  * échéances, le retard et la qualification (priorité proposée, motif, durée, consignes, qui a qualifié).
+ * 0.13.0 (étape 8 ter, DV-101) : la fiche du service montre la photo de l'endroit, sous « Où ? ».
  */
 import { useCallback, useEffect, useState } from 'react';
 import { Alert, Button, Card, Descriptions, Drawer, Grid, Input, List, Segmented, Space, Table, Tag, Typography, message } from 'antd';
 import { useSearchParams } from 'react-router-dom';
 import api, { ApiError, qs } from '../api';
 import VignettesPieces from '../components/demandes/VignettesPieces';
+import PhotoLieu from '../components/demandes/PhotoLieu';
 import { useI18n } from '../contexts/I18nContext';
 import { useAuth } from '../contexts/AuthContext';
 import { Icone } from '../referentiel';
@@ -88,6 +90,7 @@ export function FicheDemande({ d, avecDemandeur, service = false, onChange }: { 
       {d.danger === 1 && <Descriptions.Item label={t('demande.champ.danger')}><Typography.Text type="danger" strong>{t('demande.danger.oui')}</Typography.Text></Descriptions.Item>}
       <Descriptions.Item label={t('demande.champ.quoi')}>{dom ? `${dom} › ${cat}` : cat}</Descriptions.Item>
       <Descriptions.Item label={t('demande.champ.ou')}>{cheminTexte(d.lieu_chemin, lang)}</Descriptions.Item>
+      {service && d.photo_lieu && <Descriptions.Item label={t('demande.photo_lieu')}><PhotoLieu photo={d.photo_lieu} /></Descriptions.Item>}
       {(d.reponses || []).length > 0 && (
         <Descriptions.Item label={t('demande.champ.reponses')}>
           <Space direction="vertical" size={2}>

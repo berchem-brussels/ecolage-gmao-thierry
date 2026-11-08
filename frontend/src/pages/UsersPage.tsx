@@ -3,9 +3,10 @@
  * Création sur le modèle Microsoft 365 avec l'entité de rattachement, où le rôle de demandeur est donné d'office.
  * Les rôles se cochent entité par entité ; un rôle décoché se retire avec un motif. Remplacé à terme par l'application Droits.
  */
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, Button, Card, Checkbox, Drawer, Form, Grid, Input, Modal, Popconfirm, Radio, Space, Table, Tag, Typography, message } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
+import type { TextAreaRef } from 'antd/es/input/TextArea';
 import api, { ApiError, qs } from '../api';
 import { useAuth } from '../contexts/AuthContext';
 import { useI18n } from '../contexts/I18nContext';
@@ -37,6 +38,9 @@ export default function UsersPage() {
   const [rolesOf, setRolesOf] = useState<U | null>(null);
   const [selection, setSelection] = useState<Record<number, string[]>>({});
   const [motif, setMotif] = useState('');
+  // 0.13.0 (D7 du contrôle DV-113) : un retrait sans motif le dit sous le champ, plus dans un bandeau qui disparaît.
+  const [motifManquant, setMotifManquant] = useState(false);
+  const motifRef = useRef<TextAreaRef>(null);
   const [saving, setSaving] = useState(false);
   const [q, setQ] = useState('');
   const [instanceRole, setInstanceRole] = useState<U['user_role']>('agent');
@@ -81,6 +85,7 @@ export default function UsersPage() {
     setInstanceRole(u.user_role);
     setSecours(!!u.is_admin_local);
     setMotif('');
+    setMotifManquant(false);
     setRolesOf(u);
   };
 
@@ -95,7 +100,7 @@ export default function UsersPage() {
 
   const saveRoles = async () => {
     if (!rolesOf) return;
-    if (removed.length && !motif.trim()) { message.warning(t('users.roles.motif.required')); return; }
+    if (removed.length && !motif.trim()) { setMotifManquant(true); motifRef.current?.focus(); return; }
     setSaving(true);
     try {
       const fiche: { user_role?: U['user_role']; is_admin_local?: number } = {};
@@ -219,9 +224,11 @@ export default function UsersPage() {
             ))}
             {removed.length > 0 && (
               <div>
-                <Input.TextArea rows={2} aria-label={t('users.roles.motif')} placeholder={t('users.roles.motif')} value={motif} onChange={(ev) => setMotif(ev.target.value)}
-                  aria-invalid={seulementEspaces(motif) || undefined} aria-describedby={seulementEspaces(motif) ? 'motif-roles-erreur' : undefined} />
-                {seulementEspaces(motif) && <ErreurObligatoire id="motif-roles-erreur" />}
+                <Input.TextArea ref={motifRef} rows={2} aria-label={t('users.roles.motif')} placeholder={t('users.roles.motif')} value={motif}
+                  onChange={(ev) => { setMotif(ev.target.value); if (ev.target.value.trim()) setMotifManquant(false); }}
+                  status={motifManquant || seulementEspaces(motif) ? 'error' : undefined}
+                  aria-invalid={motifManquant || seulementEspaces(motif) || undefined} aria-describedby={motifManquant || seulementEspaces(motif) ? 'motif-roles-erreur' : undefined} />
+                {(motifManquant || seulementEspaces(motif)) && <ErreurObligatoire id="motif-roles-erreur" texte={motifManquant ? t('users.roles.motif.required') : undefined} />}
               </div>
             )}
           </Space>

@@ -101,6 +101,27 @@ function chemin(lieuId, cache = new Map()) {
 }
 
 /**
+ * Photo qui montre l'endroit d'une demande (0.13.0, étape 8 ter, DV-101) : celle du lieu choisi ; à défaut, celle du
+ * plus proche lieu au-dessus de lui (niveau, bâtiment, site). Rendue au seul service technique, avec de quoi dire d'où
+ * elle vient ; null si aucun lieu du chemin n'a de photo. Le fichier se lit par GET /api/lieux/:id/photo, avec les
+ * droits et la cloison des lieux ; photo_at sert à ne pas garder en cache une photo remplacée.
+ */
+function photoDuLieu(cheminLieu) {
+  const ids = cheminLieu.map((l) => l.id);
+  if (!ids.length) return null;
+  const avecPhoto = new Map(getDb().prepare(`SELECT id, photo_at FROM lieux WHERE photo_fichier IS NOT NULL
+    AND id IN (SELECT value FROM json_each(?))`).all(JSON.stringify(ids)).map((r) => [r.id, r.photo_at]));
+  for (let i = cheminLieu.length - 1; i >= 0; i -= 1) {
+    const l = cheminLieu[i];
+    if (avecPhoto.has(l.id)) {
+      return { lieu_id: l.id, nature: l.nature, code: l.code, nom_fr: l.nom_fr, nom_nl: l.nom_nl, photo_at: avecPhoto.get(l.id),
+        du_lieu: i === cheminLieu.length - 1 ? 1 : 0 };
+    }
+  }
+  return null;
+}
+
+/**
  * Délai annoncé : échéance de fin enregistrée sur la fiche (0.9.0 ; calculée au dépôt, recalculée à la qualification),
  * avec l'unité et le délai de la priorité ; null si la priorité manque.
  */
@@ -175,7 +196,10 @@ function get(user, id) {
   const d = load(user, id);
   const f = fiche(d, undefined, user);
   f.reponses = questions.deDemande(d.id);
-  if (peut(user, 'demandes:entite')) f.suiveurs = suiveurs(d.id);
+  if (peut(user, 'demandes:entite')) {
+    f.suiveurs = suiveurs(d.id);
+    f.photo_lieu = photoDuLieu(f.lieu_chemin);
+  }
   // Pièces jointes (0.8.0) : demandeur, bénéficiaire et service technique ; null pour qui suit seulement la demande.
   const litPieces = d.demandeur_id === user.id || d.beneficiaire_id === user.id || peut(user, 'demandes:entite');
   f.pieces = litPieces ? require('./pieces').deDemande(d.id, user, d) : null;

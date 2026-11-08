@@ -46,6 +46,8 @@ const topic: HelpTopic = {
   ],
   faq: [
     { q: { fr: 'Une fenêtre « Nouveautés » s’ouvre à la connexion.', nl: 'Bij het aanmelden opent een venster « Nieuwigheden ».' }, a: { fr: 'Elle présente ce qui change pour vous dans la nouvelle version ; fermée, elle ne revient pas. Tout reste dans l’aide, onglet {{help.nouveautes}}.', nl: 'Het toont wat er voor u verandert in de nieuwe versie; eenmaal gesloten komt het niet terug. Alles blijft in de hulp, tabblad {{help.nouveautes}}.' } },
+    // 0.13.0 (D1) : sur téléphone, la langue est dans le menu de la personne.
+    { q: { fr: 'Sur téléphone, où changer la langue ?', nl: 'Waar wijzig ik de taal op een telefoon?' }, a: { fr: 'Touchez vos initiales en haut à droite : le menu propose l’autre langue, avec le niveau de détail et le thème. Sur un grand écran, la langue reste dans l’en-tête.', nl: 'Tik op uw initialen rechtsboven: het menu stelt de andere taal voor, met het detailniveau en het thema. Op een groot scherm blijft de taal in de kop.' } },
     { q: { fr: 'Comment passer en mode Complet ?', nl: 'Hoe schakel ik naar de modus Volledig?' }, a: { fr: '{{layout.mode}} en haut de l’écran : Complet montre plus de colonnes et de détails ; sur téléphone, il est dans le menu de votre nom.', nl: '{{layout.mode}} bovenaan het scherm: Volledig toont meer kolommen en details; op een telefoon staat het in het menu van uw naam.' } },
   ],
   seeAlso: ['nouvelle-demande', 'mes-demandes', 'help'],

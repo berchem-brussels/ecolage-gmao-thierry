@@ -113,3 +113,35 @@ test('MCP : get_audit et list_audit rendent les mêmes noms que l’API', async 
   const l = (await tool(admin, 'list_audit', { action: 'demande.create', limit: 200 })).data;
   assert.deepEqual(l.rows.find((y) => y.id === a.id).noms, a.noms);
 });
+
+// 0.13.0 (point 2 ; D3 du contrôle DV-113) : un réglage et un type de lieu nommés à la lecture.
+test('réglage de l’instance et de l’entité nommé par son libellé ; clé sortie du catalogue signalée', async () => {
+  assert.equal((await admin.put('/api/parametres/app.organisation_fr', { valeur: 'Commune fictive bis' })).status, 200);
+  const a = await ligne('parametre.update');
+  assert.equal(a.details.cle, 'app.organisation_fr');
+  assert.equal(a.noms.cle.type, 'reglage');
+  assert.equal(a.noms.cle.code, 'app.organisation_fr');
+  assert.match(a.noms.cle.nom_fr, /pouvoir local en français/i);
+  assert.match(a.noms.cle.nom_nl, /lokaal bestuur/i);
+  assert.equal((await resp.put('/api/parametres-entite/urgence.telephone', { valeur: '02 000 00 00' })).status, 200);
+  const b = await ligne('parametre_entite.update');
+  assert.equal(b.noms.cle.type, 'reglage');
+  assert.match(b.noms.cle.nom_fr, /urgence/i);
+  assert.ok(b.noms.cle.nom_nl);
+  getDb().prepare("INSERT INTO audit_log (user_id, action, entity_type, channel, details_json) VALUES (NULL, 'parametre.update', 'parametre', 'cli', ?)")
+    .run(JSON.stringify({ cle: 'app.ancien_reglage', avant: 'a', apres: 'b' }));
+  const c = await ligne('parametre.update');
+  assert.deepEqual(c.noms.cle, { type: 'reglage', code: 'app.ancien_reglage', introuvable: 1 });
+});
+
+test('type d’un lieu modifié nommé comme valeur de liste', async () => {
+  const types = (await gest.get('/api/listes-valeurs?liste=type_lieu&limit=200')).body.data;
+  const autre = types.find((x) => x.id !== types[0].id);
+  assert.equal((await gest.put(`/api/lieux/${L.local}`, { type_id: autre.id })).status, 200);
+  const a = await ligne('lieu.update', L.local);
+  assert.equal(a.details.apres.type_id, autre.id);
+  assert.equal(a.noms['apres.type_id'].type, 'valeur');
+  assert.equal(a.noms['apres.type_id'].code, autre.code);
+  assert.equal(a.noms['apres.type_id'].nom_nl, autre.libelle_nl);
+  assert.equal(a.noms['avant.type_id'].id, types[0].id);
+});
