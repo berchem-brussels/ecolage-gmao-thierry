@@ -4,7 +4,7 @@
  * la désactive avec un motif ou la réactive. Le code se tire du libellé et ne change plus (visible en mode Complet).
  */
 import { useCallback, useEffect, useState } from 'react';
-import { Button, Card, Descriptions, Drawer, Form, Input, InputNumber, Modal, Popconfirm, Segmented, Table, Tag, Typography, message } from 'antd';
+import { Button, Card, Descriptions, Drawer, Form, Input, InputNumber, Modal, Popconfirm, Radio, Table, Tag, Typography, message } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
 import api, { ApiError, qs } from '../api';
 import { useAuth } from '../contexts/AuthContext';
@@ -14,7 +14,8 @@ import ErreurObligatoire from '../components/ErreurObligatoire';
 import { seulementEspaces, texteObligatoire } from '../validation';
 
 /** Listes réglables dans cet écran ; leur catalogue serveur est config/listes-valeurs.json. */
-const LISTES = ['type_lieu'];
+// 0.14.0 : motifs d'attente, motifs de refus et causes de panne du cycle de vie d'une demande.
+const LISTES = ['type_lieu', 'motif_attente', 'motif_refus', 'cause_panne'];
 
 interface FormValues { libelle_fr: string; libelle_nl: string; ordre?: number; code?: string }
 
@@ -77,7 +78,9 @@ export default function ListesValeursPage() {
       </div>
       <Typography.Paragraph type="secondary">{t('listes.intro')}</Typography.Paragraph>
       {LISTES.length > 1 && (
-        <Segmented aria-label={t('listes.choose')} value={liste} onChange={(v) => setListe(String(v))} style={{ marginBottom: 16 }}
+        // Boutons qui passent à la ligne sur un téléphone (quatre listes depuis la 0.14.0 ; 320 px, FR et NL).
+        <Radio.Group aria-label={t('listes.choose')} value={liste} onChange={(e) => setListe(String(e.target.value))} optionType="button" buttonStyle="solid"
+          style={{ marginBottom: 16, display: 'flex', flexWrap: 'wrap', gap: 8 }}
           options={LISTES.map((l) => ({ value: l, label: t(`listes.liste.${l}`) }))} />
       )}
       <Card title={t(`listes.liste.${liste}`)}>

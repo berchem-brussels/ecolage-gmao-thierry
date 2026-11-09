@@ -1,7 +1,7 @@
 /**
  * Demandes d'intervention côté interface (version 0.5.0 ; cahier des charges DEM-01 à 03, SUI-01, ERG-08).
  * Types de l'API, libellé simple et couleur de chaque état tels que le demandeur les voit (cahier des charges,
- * section 8.1 ; les libellés réglables par état arrivent à l'étape 9, CYC-04). Les règles font foi côté serveur
+ * section 8.1 ; libellés réglables par entité depuis la 0.14.0, CYC-04). Les règles font foi côté serveur
  * (backend/src/services/demandes.js).
  */
 import dayjs from 'dayjs';
@@ -59,24 +59,72 @@ export interface Demande {
   prise_en_charge_le?: string | null; echeance_le?: string | null; date_convenue?: string | null;
   duree_estimee_minutes?: number | null; consignes?: string | null; photos_visibles?: 0 | 1;
   qualifiee_par?: number | null; qualifiee_par_prenom?: string | null; qualifiee_par_nom?: string | null; qualifiee_le?: string | null;
-  echeance_type?: 'prise_en_charge' | 'fin' | null; echeance_courante?: string | null; retard?: 0 | 1;
+  echeance_type?: 'prise_en_charge' | 'fin' | 'suspendu' | null; echeance_courante?: string | null; retard?: 0 | 1;
+  /**
+   * Cycle de vie (0.14.0, CYC-01, CYC-04, CLO-01) : état depuis quand, libellé de l'état réglé par l'entité ; pour le
+   * service technique, passages permis depuis l'état courant, cause de la panne et compte rendu de la clôture.
+   */
+  etat_depuis?: string | null; etat_libelle_fr?: string | null; etat_libelle_nl?: string | null;
+  transitions?: Transition[];
+  cause_id?: number | null; cause_code?: string | null; cause_libelle_fr?: string | null; cause_libelle_nl?: string | null; compte_rendu?: string | null;
+  /** 0.14.0, point 5 (SUI-05) : compléments datés ; ce que le demandeur ou le bénéficiaire peut encore faire. */
+  complements?: Complement[]; completable?: 0 | 1; annulable?: 0 | 1;
+  /** 0.14.0, point 6 (SUI-06) : avis (du plus récent au plus ancien), avis encore possible, réouverture et sa limite. */
+  avis?: Avis[]; avis_possible?: 0 | 1; reouvrable?: 0 | 1; reouvrable_jusqu_au?: string | null;
 }
 
+/** Avis du demandeur ou du bénéficiaire à la clôture (0.14.0) : note de 1 à 5. */
+export interface Avis { id: number; note: 1 | 2 | 3 | 4 | 5; commentaire: string | null; created_at: string; auteur: 'demandeur' | 'beneficiaire' }
+
+/** Complément d'une demande par son demandeur ou son bénéficiaire (0.14.0). */
+export interface Complement { id: number; texte: string; langue: 'fr' | 'nl'; created_at: string; auteur: 'demandeur' | 'beneficiaire' }
+
+/** Passage permis d'un état à l'autre (0.14.0, table du serveur) : motif exigé, commentaire, compte rendu. */
+export interface Transition {
+  vers: Etat; via: 'qualifier' | null; motif_liste: 'motif_attente' | 'motif_refus' | 'cause_panne' | null;
+  commentaire: 'interdit' | 'facultatif' | 'obligatoire'; commentaire_public: 0 | 1; compte_rendu: 0 | 1;
+}
+
+/** Étape de l'historique d'une demande (0.14.0, CYC-02) ; le demandeur ne reçoit ni nom d'agent ni canal. */
+export interface EtapeHistorique {
+  id: number; de_etat: Etat | null; vers_etat: Etat; auteur: 'demandeur' | 'service' | 'systeme';
+  auteur_prenom?: string | null; auteur_nom?: string | null; canal?: string;
+  motif_id: number | null; motif_code: string | null; motif_libelle_fr: string | null; motif_libelle_nl: string | null;
+  commentaire: string | null; commentaire_public: 0 | 1; created_at: string; etat_libelle_fr: string | null; etat_libelle_nl: string | null;
+}
+
+/**
+ * Libellé du bouton d'un passage (0.14.0) : « Reprendre » sort de l'attente, « Reprendre les travaux » revient de
+ * l'attente ou de « Travaux terminés » vers « En cours ». Rend une clé de traduction.
+ */
+export function cleAction(de: Etat, vers: Etat): string {
+  if (vers === 'en_cours' && (de === 'en_attente' || de === 'terminee')) return 'cycle.action.reprendre_travaux';
+  if (vers === 'qualifiee' && de === 'en_attente') return 'cycle.action.reprendre';
+  return `cycle.action.${vers}`;
+}
+
+/** Qualification permise (0.14.0) : fiche « Qualifiée », ou passage vers « Qualifiée » fait par la qualification. */
+export const qualifiable = (d: Demande): boolean => d.etat === 'qualifiee' || (d.transitions || []).some((x) => x.via === 'qualifier');
+
 /** Tableau de bord du service technique (0.9.0, GES-01). */
-export interface TableauBord { a_qualifier: number; en_retard: number; p1_p2: number; echeance_proche: number; limite_proche: string; jours_proches: number }
+export interface TableauBord {
+  a_qualifier: number; en_retard: number; p1_p2: number; echeance_proche: number; limite_proche: string; jours_proches: number;
+  /** 0.14.0 (GES-01, DV-119) : en attente depuis plus de N jours ouvrés (N réglé par l'entité), travaux terminés à clôturer. */
+  attente_longue: number; jours_attente: number; a_cloturer: number;
+}
 
 /** Filtres de la liste du service technique (0.9.0, GES-02) ; les mêmes clés forment une vue enregistrée. */
 export interface FiltresGestion {
   etats?: string; priorites?: string; categorie_id?: number; batiment_id?: number; echeance?: 'retard' | 'proche' | 'sans';
   canal?: string; danger?: 0 | 1; q?: string; ouvertes?: 0 | 1; tri?: 'depot' | 'numero' | 'echeance' | 'priorite'; ordre?: 'asc' | 'desc';
+  /** 0.14.0 : en attente depuis plus de N jours ouvrés. */
+  attente?: 'longue';
 }
 export interface VueDemandes { id: number; nom: string; filtres: FiltresGestion; created_at: string; updated_at: string }
 
 const NOMBRES: (keyof FiltresGestion)[] = ['categorie_id', 'batiment_id', 'danger', 'ouvertes'];
-export const CLES_FILTRES: (keyof FiltresGestion)[] = ['etats', 'priorites', 'categorie_id', 'batiment_id', 'echeance', 'canal', 'danger', 'q', 'ouvertes', 'tri', 'ordre'];
+export const CLES_FILTRES: (keyof FiltresGestion)[] = ['etats', 'priorites', 'categorie_id', 'batiment_id', 'echeance', 'attente', 'canal', 'danger', 'q', 'ouvertes', 'tri', 'ordre'];
 export const CANAUX = ['ecran', 'telephone', 'courriel', 'grc', 'mcp', 'api', 'preventif'];
-/** États où le service technique peut qualifier une demande en 0.9.0 ; les autres attendent le cycle de vie (étape 9). */
-export const QUALIFIABLES: Etat[] = ['a_qualifier', 'qualifiee'];
 
 /**
  * Filtres lus dans l'adresse de la page. Sans « ouvertes » dans l'adresse, la liste montre les demandes en cours ;
@@ -103,11 +151,15 @@ export function urlGestion(f: FiltresGestion, extra: Record<string, string> = {}
 }
 
 /** Filtres de chaque compteur du tableau de bord : un clic ouvre la liste filtrée, avec le même total. */
-export const COMPTEURS: { cle: 'a_qualifier' | 'en_retard' | 'p1_p2' | 'echeance_proche'; filtres: FiltresGestion }[] = [
-  { cle: 'a_qualifier', filtres: { etats: 'a_qualifier', tri: 'echeance', ordre: 'asc' } },
+export const COMPTEURS: { cle: 'a_qualifier' | 'en_retard' | 'p1_p2' | 'echeance_proche' | 'attente_longue' | 'a_cloturer'; filtres: FiltresGestion }[] = [
+  // 0.14.0 (point 6) : une demande rouverte revient dans la file à qualifier.
+  { cle: 'a_qualifier', filtres: { etats: 'a_qualifier,rouverte', tri: 'echeance', ordre: 'asc' } },
   { cle: 'en_retard', filtres: { echeance: 'retard', tri: 'echeance', ordre: 'asc' } },
   { cle: 'p1_p2', filtres: { priorites: 'P1,P2', ouvertes: 1, tri: 'echeance', ordre: 'asc' } },
   { cle: 'echeance_proche', filtres: { echeance: 'proche', tri: 'echeance', ordre: 'asc' } },
+  // 0.14.0 (GES-01, E-35) : mêmes totaux que les filtres attente=longue et etats=terminee.
+  { cle: 'attente_longue', filtres: { attente: 'longue', tri: 'depot', ordre: 'asc' } },
+  { cle: 'a_cloturer', filtres: { etats: 'terminee', tri: 'depot', ordre: 'asc' } },
 ];
 
 /** Instant de la base (UTC, « 2026-11-05 07:00:00 ») à l'heure du poste : « 05/11/2026 08:00 ». */

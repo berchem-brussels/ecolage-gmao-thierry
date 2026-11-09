@@ -1,6 +1,6 @@
 # Aide par écran et FAQ locale
 
-Version 0.13.0 · Fiche fonctionnelle (modèle du standard, section 17.8).
+Version 0.14.0 · Fiche fonctionnelle (modèle du standard, section 17.8).
 
 ## Objectif
 
@@ -18,6 +18,7 @@ Que tout agent trouve seul comment faire, sans formation (standard, section 13.1
 2. Aide, « Mode d'emploi et FAQ » : les fiches rangées comme le menu (Demander et suivre, Service technique, Administration, Aide), seulement celles des écrans que la personne peut ouvrir ; recherche dans les fiches et les questions, avec ou sans accents ; « Imprimer le mode d'emploi » ouvre une page tout dépliée et lance l'impression quand les captures, la FAQ et les notes sont chargées (0.13.0). L'onglet Questions fréquentes montre aussi les questions rattachées à un écran, avec le nom de l'écran (0.13.0) ; un lien « Voir aussi » ouvre la fiche liée.
 3. À côté de chaque champ, « ? » explique ce qu'il faut y mettre et d'où vient la valeur.
 4. Dans un ticket « Question métier » résolu, « Ajouter à la FAQ » préremplit la question et la dernière réponse du service (à défaut, le motif de la résolution, 0.13.0) ; on les réécrit sans donnée personnelle, en FR et en NL, et on choisit l'écran.
+5. 0.14.0 : les fiches Mes demandes (ligne du temps, compléter, annuler, avis, rouvrir), Demandes de l'entité (faire avancer une demande jusqu'à la clôture, délai suspendu), Catégories et délais (onglet États des demandes), Réglages de l'entité et Listes de valeurs sont à jour, avec leurs questions ; l'assistant répond sur ces sujets.
 
 ## Règles
 

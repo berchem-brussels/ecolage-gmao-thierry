@@ -8,9 +8,11 @@
  * 0.12.0 (DV-109) : R1, « valeur par défaut » est un état, écrit en texte discret à côté du libellé, et non une étiquette
  * qui ressemblait à un bouton ; R2, un refus du serveur s'affiche sous le réglage refusé, avec le message du serveur qui
  * nomme le réglage et la valeur fautive, au lieu de « Données invalides ».
+ * 0.14.0 (DV-119) : type codes_liste, cases à cocher des valeurs d'une liste de l'entité (motifs d'attente qui
+ * suspendent le délai) ; la valeur reste le texte des codes séparés par des virgules, comme au serveur.
  */
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Button, Card, Form, Input, InputNumber, Popconfirm, Radio, Space, Typography, message } from 'antd';
+import { Button, Card, Checkbox, Form, Input, InputNumber, Popconfirm, Radio, Space, Typography, message } from 'antd';
 import { UndoOutlined } from '@ant-design/icons';
 import api, { ApiError, qs } from '../api';
 import { useI18n } from '../contexts/I18nContext';
@@ -18,12 +20,27 @@ import { courriel, obligatoire, texteObligatoire } from '../validation';
 
 export interface Choix { valeur: string; libelle_fr: string; libelle_nl: string }
 export interface Reglage {
-  cle: string; groupe: string; type: 'texte' | 'texte_long' | 'choix' | 'telephone' | 'courriel' | 'entier'; requis?: boolean;
+  cle: string; groupe: string; type: 'texte' | 'texte_long' | 'choix' | 'telephone' | 'courriel' | 'entier' | 'codes_liste'; requis?: boolean;
+  /** Liste de valeurs de l'entité d'un réglage codes_liste (0.14.0). */
+  liste?: string | null;
   max: number | null; min?: number | null; choix?: Choix[] | null; motif?: string | null;
   /** Variables permises dans un texte long (0.7.0), par exemple « entite » pour {entite}. */
   variables?: string[] | null;
   libelle_fr: string; libelle_nl: string; description_fr: string; description_nl: string;
   valeur: string; defaut: string; est_defaut: boolean; updated_at: string | null;
+}
+
+interface ValeurListe { code: string; libelle_fr: string; libelle_nl: string; is_active: number }
+
+/** Cases à cocher d'un réglage codes_liste : la valeur du formulaire est le texte « code1,code2 ». */
+function CasesCodes({ value, onChange, options, label }: { value?: string; onChange?: (v: string) => void; options: { value: string; label: string }[]; label: string }) {
+  const coches = (value || '').split(',').filter(Boolean);
+  return (
+    <div role="group" aria-label={label}>
+      <Checkbox.Group value={coches} onChange={(v) => onChange?.((v as string[]).slice().sort().join(','))}
+        style={{ display: 'flex', flexDirection: 'column', gap: 8 }} options={options} />
+    </div>
+  );
 }
 
 interface Props {
@@ -44,6 +61,7 @@ export default function ReglagesForm({ endpoint, groupes, prefixe, onSaved, relo
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState<string | null>(null);
   const [form] = Form.useForm<Record<string, string | number>>();
+  const [listes, setListes] = useState<Record<string, ValeurListe[]>>({});
   const fail = (e: unknown) => message.error(e instanceof ApiError ? e.message : t('common.error'));
   const lbl = (o: object, f: string) => tField(o as Record<string, unknown>, f);
   const texte = (v: unknown) => (v === null || v === undefined ? '' : String(v).trim());
@@ -53,6 +71,10 @@ export default function ReglagesForm({ endpoint, groupes, prefixe, onSaved, relo
     try {
       const data = (await api.page<Reglage>(`${endpoint}${qs({ limit: 200 })}`)).data;
       setRows(data);
+      // 0.14.0 : valeurs des listes nommées par les réglages codes_liste.
+      const noms = [...new Set(data.filter((p) => p.type === 'codes_liste' && p.liste).map((p) => p.liste as string))];
+      const lues = await Promise.all(noms.map((l) => api.page<ValeurListe>(`/listes-valeurs${qs({ liste: l, limit: 200 })}`).then((r) => [l, r.data] as const).catch(() => [l, []] as const)));
+      setListes(Object.fromEntries(lues));
       form.setFieldsValue(Object.fromEntries(data.map((p) => [p.cle, p.type === 'entier' ? Number(p.valeur) : (p.valeur ?? '')])));
     } catch (e) { fail(e); } finally { setLoading(false); }
   }, [t, form, endpoint]);
@@ -85,11 +107,13 @@ export default function ReglagesForm({ endpoint, groupes, prefixe, onSaved, relo
     try { await api.del(`${endpoint}/${p.cle}`); message.success(t('parametres.reset.done')); await load(); await onSaved?.(); } catch (e) { fail(e); }
   };
 
-  const shown = (p: Reglage, v: string) => (p.type === 'choix' ? lbl(p.choix?.find((c) => c.valeur === v) || {}, 'libelle') || v : v || t('parametres.empty'));
+  const nomsCodes = (p: Reglage, v: string) => v.split(',').filter(Boolean).map((c) => lbl((listes[p.liste || ''] || []).find((x) => x.code === c) || {}, 'libelle') || c).join(', ');
+  const shown = (p: Reglage, v: string) => (p.type === 'choix' ? lbl(p.choix?.find((c) => c.valeur === v) || {}, 'libelle') || v
+    : p.type === 'codes_liste' ? nomsCodes(p, v) || t('parametres.aucun') : v || t('parametres.empty'));
 
   const rules = (p: Reglage) => {
     // Un choix a toujours une valeur, contrôlée par le serveur ; une règle « requis » poserait aria-required sur le groupe.
-    if (p.type === 'choix') return [];
+    if (p.type === 'choix' || p.type === 'codes_liste') return [];
     if (p.type === 'entier') return [obligatoire(t)];
     if (p.type === 'courriel') return [courriel(t)];
     if (p.type === 'telephone') return [{ pattern: /^\+?[0-9][0-9 ./()-]{5,29}$/, message: t('parametres.telephone.invalide') }];
@@ -108,6 +132,12 @@ export default function ReglagesForm({ endpoint, groupes, prefixe, onSaved, relo
   const control = (p: Reglage) => {
     if (p.type === 'choix') {
       return <Radio.Group optionType="button" buttonStyle="solid" options={(p.choix || []).map((c) => ({ value: c.valeur, label: lbl(c, 'libelle') }))} />;
+    }
+    if (p.type === 'codes_liste') {
+      // Valeurs actives, plus une valeur désactivée encore cochée (pour pouvoir la décocher).
+      const coches = String(form.getFieldValue(p.cle) || '').split(',');
+      const options = (listes[p.liste || ''] || []).filter((v) => v.is_active === 1 || coches.includes(v.code)).map((v) => ({ value: v.code, label: lbl(v, 'libelle') }));
+      return <CasesCodes options={options} label={lbl(p, 'libelle')} />;
     }
     if (p.type === 'entier') return <InputNumber min={p.min ?? undefined} max={p.max ?? undefined} precision={0} style={{ width: 140 }} />;
     const lang = p.cle.endsWith('_nl') ? 'nl' : p.cle.endsWith('_fr') ? 'fr' : undefined;

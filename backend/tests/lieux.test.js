@@ -68,7 +68,9 @@ test('types de lieux livrés pour chaque entité, en FR et en NL, dans l’ordre
 
 test('une entité créée ensuite reçoit aussi les valeurs livrées', async () => {
   const cc = (await admin.post('/api/entites', { code: 'CC', nom_fr: 'Régie fictive', nom_nl: 'Fictieve regie' })).body.data;
-  assert.equal(getDb().prepare('SELECT COUNT(*) AS n FROM listes_valeurs WHERE entite_id = ?').get(cc.id).n, 10);
+  assert.equal(getDb().prepare("SELECT COUNT(*) AS n FROM listes_valeurs WHERE entite_id = ? AND liste = 'type_lieu'").get(cc.id).n, 10);
+  // 0.14.0 : motifs d'attente (5), motifs de refus (4) et causes de panne (7) livrés aussi.
+  assert.equal(getDb().prepare('SELECT COUNT(*) AS n FROM listes_valeurs WHERE entite_id = ?').get(cc.id).n, 26);
 });
 
 test('listes : lecture pour tout rôle de l’entité ; écriture par le responsable seul', async () => {

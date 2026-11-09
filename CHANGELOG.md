@@ -1,6 +1,24 @@
 # Journal des versions
 
-Version de l'application : **0.13.0** · Mis à jour le 08/11/2026
+Version de l'application : **0.14.0** · Mis à jour le 08/11/2026
+
+## 0.14.0 (08/11/2026)
+
+Étape 9 : cycle de vie des demandes (CYC-01, CYC-02, CYC-04, CYC-05, SUI-02, SUI-05, SUI-06, CLO-01, GES-01, PRI-03 ; DV-117 à DV-120). Migration `012_cycle_de_vie`. Aucune dépendance nouvelle.
+
+- `recette.sh` (DV-117) : mot de passe de démonstration saisi de façon visible (`read -r -p`), ligne effacée à Entrée, « Mot de passe reçu : N caractère(s) » ; un refus du contrôle 7 dit « mot de passe refusé, vérifiez la saisie (N caractère(s) reçu(s)) », « trop d'essais », « connexion par mot de passe fermée » ou « adresse ou mot de passe mal formé » au lieu d'un code HTTP ; le contrôle 5 lit `012_cycle_de_vie`.
+- Passages d'un état à l'autre en données (`backend/config/cycle-de-vie.json` : 15 états, 25 passages ; table `demande_transitions`) ; tout passage absent est refusé ; un passage désactivé n'est jamais réactivé. Permission nouvelle `demandes:traiter` (gestionnaire, responsable). Le gestionnaire démarre, met en attente avec un motif, reprend, termine, clôture avec la cause de la panne et un compte rendu interne, refuse avec un motif, annule ; « Planifiée » et « Confiée à un prestataire » restent fermés (DV-118) ; la qualification reste la seule voie vers « Qualifiée ».
+- Historique de chaque passage (`demande_historique` : auteur, canal, motif, commentaire public ou interne), rempli par la migration pour les demandes déjà en base ; volet de la fiche du service avec ses boutons d'action, son formulaire et l'historique.
+- Suspension du délai (DV-119) : une attente pour un motif coché dans Réglages de l'entité (par défaut « Réponse du demandeur attendue », « Accès impossible ») suspend le délai, dit « Délai suspendu » ; à la sortie, l'échéance de fin est repoussée du temps suspendu (ouvrable, calendaire pour P1).
+- Tableau de bord : six compteurs, dont « En attente depuis plus de N jours ouvrés » (réglage `demandes.attente_jours`, 5) et « À clôturer (travaux terminés) » ; une demande rouverte compte dans « À qualifier » ; filtre « Durée de l'attente » de la liste du service.
+- Demandeur et bénéficiaire (E-21 fermé) : ligne du temps sur la fiche ; « Compléter ma demande » (texte sous la description, photos ajoutées) tant qu'elle est ouverte ; « Annuler ma demande » avec un motif tant qu'elle n'a jamais été « En cours » ; avis en cinq niveaux à la clôture, un par clôture ; « Rouvrir ma demande » dans le délai de l'entité, délais recomptés depuis la réouverture.
+- Libellés des états par entité (CYC-04, `demande_etats`) : onglet « États des demandes » de Catégories et délais, texte du demandeur et de la GRC en FR et NL, retour aux libellés livrés.
+- Listes de valeurs nouvelles : motifs d'attente (5), motifs de refus (4), causes de panne (7) ; écran Listes de valeurs en boutons qui passent à la ligne. Réglage de type nouveau `codes_liste` (cases parmi les valeurs d'une liste).
+- Journal d'audit : `demande.transition` (états avant et après, motif nommé, `commentaire_donne`, `compte_rendu_donne`, `suspendu`, échéance avant et après), `demande.complement`, `demande.avis`, `etat_demande.update`, sans texte libre.
+- MCP : huit outils (`get_historique_demande`, `change_etat_demande` et `cancel_demande` en deux appels, `complete_demande`, `give_avis_demande`, `list_etats_demande`, `list_transitions_demande`, `update_etat_demande`) ; photo ajoutée à une demande envoyée hors MCP (E-17, cinq routes).
+- Téléphones : étiquette d'état qui passe à la ligne dans les volets (elle débordait de 103 px à 320 px depuis la 0.13.0) ; `mobile:check` ouvre les volets et signale un volet trop large (26 écrans).
+- Aide : fiches Mes demandes, Demandes de l'entité, Catégories et délais, Réglages de l'entité, Listes de valeurs, avec leurs questions ; six captures refaites ou nouvelles par langue ; deux intentions de l'assistant ; note de version (deux lignes pour tous, une pour qui traite les demandes, une pour le tableau de bord, une pour le responsable).
+- Tests : serveur 473 (437 en 0.13.0 ; `cycle.test.js` : 19, `suspension.test.js` : 7, `recette.test.js` : 2), interface 262 (238) et un contrôle des captures ; preuves d'échec dans `docs/fr/SECURITE.md`.
 
 ## 0.13.0 (08/11/2026)
 

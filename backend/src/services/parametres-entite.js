@@ -9,6 +9,8 @@
  * 0.7.0 (RGPD-10) : groupe « rgpd », mentions d'information FR et NL et contact du DPO de l'entité ; type texte_long
  * (plusieurs lignes) dont seules les variables du catalogue sont permises ; protectionDonnees() rend les textes prêts à
  * afficher (valeur vide : texte livré ; {entite} et {dpo} remplacés).
+ * 0.14.0 (DV-119) : type codes_liste, codes d'une liste de valeurs de l'entité séparés par des virgules (motifs d'attente
+ * qui suspendent le délai) ; chaque code doit exister dans la liste de l'entité ; la valeur est rangée et sans doublon.
  */
 const fs = require('fs');
 const path = require('path');
@@ -52,7 +54,7 @@ function fiche(entiteId, p) {
   const enBase = row && row.valeur !== null;
   return {
     entite_id: entiteId, cle: p.cle, groupe: p.groupe, type: p.type, max: p.max ?? null, min: p.min ?? null,
-    requis: !!p.requis, motif: p.motif ?? null, choix: p.choix ?? null, variables: p.variables ?? null,
+    requis: !!p.requis, motif: p.motif ?? null, choix: p.choix ?? null, variables: p.variables ?? null, liste: p.liste ?? null,
     libelle_fr: p.libelle_fr, libelle_nl: p.libelle_nl, description_fr: p.description_fr, description_nl: p.description_nl,
     valeur: enBase ? row.valeur : p.defaut, defaut: p.defaut, est_defaut: !enBase,
     updated_at: row ? row.updated_at : null, updated_by: row ? row.updated_by : null,
@@ -70,9 +72,16 @@ function get(user, cle) {
 }
 
 /** Contrôle selon le type du catalogue ; rend la valeur nettoyée ou refuse en nommant le réglage et le motif (R2, 0.12.0). */
-function controler(p, brute) {
+function controler(p, brute, entiteId) {
   const v = String(brute ?? '').trim();
   const non = (fr, nl) => refuser(p, fr, nl || fr);
+  if (p.type === 'codes_liste') {
+    const codes = [...new Set(v.split(',').map((c) => c.trim()).filter(Boolean))].sort();
+    const connus = new Set(getDb().prepare('SELECT code FROM listes_valeurs WHERE entite_id = ? AND liste = ?').all(entiteId, p.liste).map((r) => r.code));
+    const inconnu = codes.find((c) => !connus.has(c));
+    if (inconnu) non(`« ${inconnu.slice(0, 40)} » n'est pas une valeur de la liste`, `"${inconnu.slice(0, 40)}" is geen waarde van de lijst`);
+    return codes.join(',');
+  }
   if (p.type === 'entier') {
     if (!/^\d+$/.test(v)) non(`« ${v} » n'est pas un nombre entier`, `"${v}" is geen geheel getal`);
     const n = Number(v);
@@ -108,7 +117,7 @@ function update(user, cle, brute, channel = 'api') {
   gestion(user);
   const p = trouver(cle);
   const entiteId = user.entiteId;
-  const v = controler(p, brute);
+  const v = controler(p, brute, entiteId);
   // Un texte long vidé revient au texte livré (RGPD-10) : l'écran montre de nouveau le texte et la mention « Valeur livrée ».
   if (p.type === 'texte_long' && v === '') return reset(user, cle, channel);
   const avant = valeur(entiteId, cle);
@@ -149,4 +158,7 @@ function protectionDonnees(entiteId) {
   };
 }
 
-module.exports = { PARAMETRES, GROUPES, valeur, gestion, list, get, update, reset, protectionDonnees };
+/** Codes d'un réglage codes_liste pour une entité (0.14.0). */
+const codes = (entiteId, cle) => (valeur(entiteId, cle) || '').split(',').filter(Boolean);
+
+module.exports = { PARAMETRES, GROUPES, valeur, codes, gestion, list, get, update, reset, protectionDonnees };

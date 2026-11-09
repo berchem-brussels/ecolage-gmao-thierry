@@ -1,8 +1,10 @@
 #!/bin/bash
-# Contrôles automatiques après installation (0.12.0, DV-110 ; 0.13.0 : aucune migration nouvelle, dernière 011_faq), à lancer dans la session SSH du NAS, dans le dossier
+# Contrôles automatiques après installation (0.12.0, DV-110 ; 0.14.0 : migration 012_cycle_de_vie, saisie visible DV-117), à lancer dans la session SSH du NAS, dans le dossier
 # de l'application :   sudo bash recette.sh            (compte de démonstration multi-entites@demo.invalid)
 #                      sudo bash recette.sh <adresse>  (un autre compte de démonstration qui a un rôle dans deux entités)
-# Le mot de passe de démonstration est demandé et tapé sans affichage ; il n'est ni affiché, ni écrit, ni gardé.
+# Le mot de passe de démonstration est demandé et reste visible pendant la saisie (0.14.0, DV-117) ; la ligne est effacée
+# dès Entrée, puis seul le nombre de caractères reçus s'affiche. Il n'est ni écrit, ni gardé, ni recopié dans la sortie
+# à coller dans la conversation.
 # Lecture seule pour les données : rien n'est créé, modifié ni supprimé ; la connexion du compte laisse sa ligne
 # ordinaire au journal d'audit (contrôle 9). Une ligne OK ou ECHEC par contrôle, puis le bilan ; on colle la sortie
 # dans la conversation.
@@ -34,8 +36,14 @@ C_NL=$(curl -sk -o /dev/null -w '%{http_code} %{content_type}' "$BASE/aide-captu
 [ "$C_FR" = "200 image/jpeg" ] && [ "$C_NL" = "200 image/jpeg" ]; note $? "3. captures de l'aide servies (fr : $C_FR ; nl : $C_NL)"
 
 # 4 à 9. Contrôles du serveur, dans le conteneur de l'API (version, migration, refus, cloison, journal).
-read -r -s -p "Mot de passe de démonstration de $ADRESSE (rien ne s'affiche) : " MDP
-echo
+echo "Compte de démonstration : $ADRESSE (le mot de passe reste visible pendant la saisie, la ligne s'efface à Entrée)"
+# Invite courte : la ligne saisie tient sur une ligne du terminal, que la commande suivante efface.
+read -r -p "Mot de passe : " MDP
+MDP="${MDP%$'\r'}"
+# Efface la ligne saisie (le mot de passe ne reste ni à l'écran ni dans la sortie à coller), puis dit ce qui est reçu.
+printf '\033[1A\033[2K\r'
+echo "Mot de passe reçu : ${#MDP} caractère(s)."
+if [ -z "$MDP" ]; then echo "Aucun mot de passe reçu : relancez sudo bash recette.sh et tapez-le avant Entrée."; fi
 SORTIE=$(printf '%s\n' "$MDP" | docker exec -i "$APP_NAME-api" node src/recette-api.js "$VERSION" "$ADRESSE")
 unset MDP
 echo "$SORTIE" | grep -v '^SERVEUR '

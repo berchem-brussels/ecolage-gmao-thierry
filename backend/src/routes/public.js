@@ -73,6 +73,7 @@ router.post('/install', validate(S.installation), handle((req, res) => {
     require('../services/questions-categorie').seedEntite(e.lastInsertRowid); // questions livrées (DEM-05)
     priorites.seedEntite(e.lastInsertRowid);
     calendrier.seedEntite(e.lastInsertRowid);
+    require('../services/cycle').seedEntite(e.lastInsertRowid); // libellés livrés des états (CYC-04, 0.14.0)
     logAudit(r.lastInsertRowid, 'install.first_admin', 'user', r.lastInsertRowid, { email: b.email, entite: b.entite_code, langue: lang, modules: b.modules ?? null }, 'api', e.lastInsertRowid);
     return r.lastInsertRowid;
   })();

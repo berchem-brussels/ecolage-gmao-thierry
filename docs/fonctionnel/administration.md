@@ -1,6 +1,6 @@
 # Administration : paramètres, modules, réglages de l'entité, journal d'audit et nouveautés
 
-Version 0.10.0 · Fiche fonctionnelle (modèle du standard, section 17.8).
+Version 0.14.0 · Fiche fonctionnelle (modèle du standard, section 17.8).
 
 ## Objet
 
@@ -64,7 +64,9 @@ Régler l'application sans toucher au code et savoir qui a fait quoi (cahier des
 | Niveau de détail par défaut | Simple | idem |
 | Modules | Tous actifs sauf le portail public | `backend/config/modules.json` |
 | Contact du service technique, téléphone d'urgence | Vides | `backend/config/parametres-entite.json` |
-| Délai de réouverture | 7 jours (0 à 90) | idem |
+| Délai de réouverture | 7 jours (0 à 90), comptés depuis la clôture (0.14.0) | idem |
+| Motifs d'attente qui suspendent le délai (0.14.0) | « Réponse du demandeur attendue », « Accès impossible » (cases parmi les motifs d'attente actifs de l'entité) | idem |
+| Attente longue (0.14.0) | 5 jours ouvrables (1 à 60) | idem |
 | Contact du DPO, mentions d'information courte et complète FR et NL (0.7.0, RGPD-10) | DPO vide ; textes livrés (mission d'intérêt public, art. 6.1.e), variables `{entite}` et `{dpo}` ; un texte vidé revient au texte livré | idem, groupe `rgpd` |
 | Notes de version | Une note par version | `backend/config/notes-version.json` |
 | Connexion (0.10.0) | Comptes locaux ; annuaire, application, secret, adresse et domaines vides | En base (`app_settings`, clés `auth.*`), saisis à l'écran ; défauts dans `backend/src/settings.js` |
@@ -86,5 +88,5 @@ Aucune donnée personnelle nouvelle dans les paramètres : le contact est celui 
 
 - Couleurs, logo et icône de l'institution ne se règlent pas encore à l'écran.
 - Courriel, export de la configuration et écran « Mon affichage » arrivent à leurs étapes. Lecture de l'annuaire Microsoft (création des comptes, lot L6) et OAuth 2.1 du MCP (E-10) à venir : un agent doit avoir un compte dans la GMAO pour entrer avec Microsoft.
-- Le téléphone d'urgence et le délai de réouverture sont enregistrés mais ne servent qu'aux étapes 7 et 9.
+- Le téléphone d'urgence sert depuis la 0.7.0 (case « Danger ») ; le délai de réouverture, les motifs suspensifs et l'attente longue depuis la 0.14.0.
 - Seul le module Patrimoine se règle : les autres modules ne sont pas encore livrés.

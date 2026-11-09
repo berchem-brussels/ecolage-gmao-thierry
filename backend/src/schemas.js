@@ -64,9 +64,13 @@ const listeCodes = { type: 'string', maxLength: 300, pattern: '^[a-z0-9_]+(,[a-z
 const listePrio = { type: 'string', maxLength: 20, pattern: '^P[1-4](,P[1-4])*$' };
 const CANAUX_DEMANDE = ['ecran', 'mcp', 'api', 'telephone', 'courriel', 'grc', 'preventif'];
 const TRIS_DEMANDE = ['depot', 'numero', 'echeance', 'priorite'];
+/** États d'une demande (config/cycle-de-vie.json, 0.14.0). */
+const ETATS_DEMANDE = Object.keys(require('../config/cycle-de-vie.json').etats);
 const filtresGestion = {
   etats: listeCodes, priorites: listePrio, categorie_id: T.int(1), batiment_id: T.int(1),
   echeance: T.en('retard', 'proche', 'sans'), canal: T.en(...CANAUX_DEMANDE), danger: flag,
+  // 0.14.0 : en attente depuis plus de N jours ouvrés (réglage de l'entité).
+  attente: T.en('longue'),
   tri: T.en(...TRIS_DEMANDE), ordre: T.en('asc', 'desc'),
 };
 const vueFiltres = obj({ ...filtresGestion, q: T.str(100), ouvertes: flag });
@@ -268,6 +272,19 @@ module.exports = {
   demandeVoisines: obj({ lieu_id: T.int(1), categorie_id: T.int(1), limit: { ...T.int(1, 50), default: 5 } }, ['lieu_id']),
   // « Moi aussi » (DEM-04) : la remarque facultative est lisible du seul service technique.
   demandeSuivre: obj({ remarque: T.str(5000) }),
+  // Cycle de vie (0.14.0, CYC-01, CLO-01) : état d'arrivée, motif (valeur de la liste du passage), commentaire, compte rendu.
+  demandeTransition: obj({
+    etat: T.en(...ETATS_DEMANDE),
+    motif_id: { type: ['integer', 'null'], minimum: 1 },
+    commentaire: T.str(2000), compte_rendu: T.str(5000),
+  }, ['etat']),
+  // Point 5 (SUI-05, E-21) : complément du demandeur (texte, dans sa langue) ; annulation avec un motif.
+  demandeComplement: obj({ complement: T.reqStr(2000), langue: T.en('fr', 'nl') }, ['complement']),
+  demandeAnnulation: obj({ motif: T.reqStr(2000) }, ['motif']),
+  // Point 6 (SUI-06) : avis en cinq niveaux, commentaire facultatif.
+  demandeAvis: obj({ note: T.int(1, 5), commentaire: T.str(2000) }, ['note']),
+  etatDemandeParams: obj({ code: T.en(...ETATS_DEMANDE) }, ['code']),
+  etatDemandeUpdate: obj({ libelle_fr: T.reqStr(100), libelle_nl: T.reqStr(100), grc_fr: T.reqStr(100), grc_nl: T.reqStr(100) }),
   // Lieu de travail habituel choisi par la personne dans « Mon profil » ; null l'efface.
   lieuHabituel: obj({ lieu_id: lieuOuNul }, ['lieu_id']),
 

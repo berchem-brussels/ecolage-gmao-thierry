@@ -42,6 +42,8 @@ const RESSOURCES = [
   { route: 'GET /api/tickets/:id/screenshot', tool: 'get_ticket_screenshot', id: (ent) => objets[ent.code].ticket, statusOwn: 404 },
   // 0.12.0 : entrée de la FAQ propre à une entité (les entrées communes se lisent partout).
   { route: 'GET /api/faq/:id', tool: 'get_faq', id: (ent) => objets[ent.code].faq },
+  // 0.14.0 : historique d'une demande de l'autre entité.
+  { route: 'GET /api/demandes/:id/historique', tool: 'get_historique_demande', id: (ent) => objets[ent.code].demande },
 ];
 
 /** Écritures cloisonnées : même attente, 403 depuis l'autre entité, et l'objet n'a pas bougé. */
@@ -70,6 +72,13 @@ const ECRITURES = [
   // 0.12.0 : FAQ de l'autre entité, et question métier de l'autre entité transformée en entrée.
   { route: 'PUT /api/faq/:id', body: { question_fr: 'Piraté' }, tool: 'update_faq', id: (ent) => objets[ent.code].faq },
   { route: 'DELETE /api/faq/:id', body: { motif: 'Piraté' }, tool: 'prepare_deactivate_faq', id: (ent) => objets[ent.code].faq },
+  // 0.14.0 : changement d'état (annulation) d'une demande de l'autre entité.
+  { route: 'POST /api/demandes/:id/transitions', body: { etat: 'annulee', commentaire: 'Piraté' }, tool: 'prepare_change_etat_demande', id: (ent) => objets[ent.code].demande },
+  // 0.14.0, point 5 : complément, annulation et pièce ajoutée à une demande de l'autre entité.
+  { route: 'PUT /api/demandes/:id', body: { complement: 'Piraté' }, tool: 'complete_demande', id: (ent) => objets[ent.code].demande },
+  { route: 'DELETE /api/demandes/:id', body: { motif: 'Piraté' }, tool: 'prepare_cancel_demande', id: (ent) => objets[ent.code].demande },
+  { route: 'POST /api/demandes/:id/pieces', raw: true, tool: null, id: (ent) => objets[ent.code].demande },
+  { route: 'POST /api/demandes/:id/avis', body: { note: 1 }, tool: 'give_avis_demande', id: (ent) => objets[ent.code].demande },
   { route: 'POST /api/tickets/:id/faq', body: { question_fr: 'Piraté', question_nl: 'Piraté', answer_fr: 'Piraté', answer_nl: 'Piraté' }, tool: 'create_faq_from_ticket', id: (ent) => objets[ent.code].ticket },
 ];
 

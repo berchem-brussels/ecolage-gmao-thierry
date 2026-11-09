@@ -51,7 +51,8 @@ const PAGE = 50;
 /** Champs du détail qui valent 0 ou 1 (cases à cocher) ; « reponses » est un nombre et n'en fait pas partie. */
 // 0.9.0 : qualification d'une demande (première, priorité confirmée, photos visibles ; motif et consignes notés par 1).
 // 0.13.0 : validation d'une catégorie, comptes (mot de passe à changer, accès de secours), motif d'un ticket donné (D8).
-export const BOOLEENS = new Set(['danger', 'beneficiaire_texte', 'is_active', 'obligatoire', 'remarque', 'brouillon', 'premiere', 'priorite_confirmee', 'photos_visibles', 'motif_priorite', 'consignes', 'internal',
+// 0.14.0 : commentaire et compte rendu donnés lors d'un changement d'état d'une demande (le texte reste sur la fiche).
+export const BOOLEENS = new Set(['commentaire_donne', 'compte_rendu_donne', 'suspendu', 'danger', 'beneficiaire_texte', 'is_active', 'obligatoire', 'remarque', 'brouillon', 'premiere', 'priorite_confirmee', 'photos_visibles', 'motif_priorite', 'consignes', 'internal',
   'validation', 'must_change_password', 'is_admin_local', 'motif_donne']);
 const VIDE_DIT = new Set(['avant', 'apres']);
 /** Champs du détail qui portent un code traduit (R2, 0.9.1) : nom du champ → préfixe de la clé de traduction. */
@@ -65,6 +66,9 @@ export const CODES_ACTION: Record<string, Record<string, string>> = {
   'settings.auth': { mode: 'settings.mode' },
   'login.success': { method: 'audit.methode' },
   'sso.refused': { reason: 'audit.raison' },
+  // 0.14.0 : états de départ et d'arrivée d'un changement d'état ; état dont l'entité change les libellés.
+  'demande.transition': { de: 'demande.etat_service', vers: 'demande.etat_service' },
+  'etat_demande.update': { code: 'demande.etat_service' },
 };
 /**
  * Codes traduits selon la famille de l'action (0.13.0, D2 et D9) : famille (« lieu » pour lieu.create, lieu.update…) →
@@ -92,6 +96,8 @@ export const CHAMPS_FAMILLE: Record<string, Record<string, string>> = {
 const ROLES_CHAMPS = new Set(['role', 'from', 'to', 'user_role']);
 /** Champs de date sans heure : « 2026-12-26 » ou, pour un congé annuel, « 12-26 ». */
 const DATES = new Set(['date_debut', 'date_fin', 'date_souhaitee', 'date_convenue']);
+/** Instants de la base (UTC, « AAAA-MM-JJ HH:MM:SS ») montrés à l'heure du poste (0.14.0 : échéance repoussée). */
+const INSTANTS = new Set(['echeance_le']);
 /** Champs dont la valeur est une liste de noms de champs, affichés par leurs libellés (R4). */
 const LISTES_CHAMPS = new Set(['fields']);
 /** Valeur masquée par le serveur (secret client), dite en clair (R4). */
@@ -197,6 +203,7 @@ export default function JournalPage() {
       if (tp) return t(tp.titleKey);
     }
     if (DATES.has(cle) && typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v)) return dayjs(v).locale(lang).format('L');
+    if (INSTANTS.has(cle) && typeof v === 'string' && /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(v)) return dayjs(`${v.replace(' ', 'T')}Z`).locale(lang).format('L LT');
     if (cle === 'mois_jour' && typeof v === 'string' && /^\d{2}-\d{2}$/.test(v)) return dayjs(`2000-${v}`).locale(lang).format('D MMMM');
     if (vide(v)) return t('audit.aucun');
     return brut(v);

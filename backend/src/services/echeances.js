@@ -13,6 +13,10 @@
  *   6. Le délai propre d'une catégorie (jours ouvrables) remplace le délai de fin d'une priorité comptée en jours
  *      ouvrables ; il est ignoré pour une priorité comptée en heures. Fin vide : date convenue, pas d'échéance.
  * Sans aucun jour ouvré sur trois ans (horaire entièrement vide, par exemple), le calcul répond CALENDRIER_VIDE.
+ *   7. Suspension (0.14.0, PRI-03, DV-119) : le temps passé « En attente » pour un motif extérieur au service repousse
+ *      l'échéance d'autant de temps d'ouverture (minutes ouvrables comptées entre le début et la fin de l'attente) ;
+ *      pour une priorité en heures calendaires, d'autant de temps réel. « En attente depuis plus de N jours » se mesure
+ *      en jours ouvrés : la limite est le même moment N jours ouvrés plus tôt.
  */
 const { AppError } = require('../envelope');
 const calendrier = require('./calendrier');
@@ -130,6 +134,46 @@ function debutDecompte(cal, recu, unite) {
   return versInstant(d.dn, d.min);
 }
 
+/** Règle 7 : minutes d'ouverture entre deux instants (0 si fin <= début). */
+function minutesOuvrables(entiteId, debut, fin) {
+  if (fin <= debut) return 0;
+  const cal = calendrier.charger(entiteId);
+  const a = versLocal(debut);
+  const b = versLocal(fin);
+  let total = 0;
+  for (let dn = a.dn, i = 0; dn <= b.dn && i < GARDE_JOURS * 2; dn += 1, i += 1) {
+    const h = ouverture(cal, dn);
+    if (!h) continue;
+    const de = Math.max(h.o, dn === a.dn ? a.min : 0);
+    const a2 = Math.min(h.c, dn === b.dn ? b.min : 24 * 60);
+    if (a2 > de) total += a2 - de;
+  }
+  return Math.round(total);
+}
+
+/** Règle 7 : échéance repoussée de minutes ouvrables (ou calendaires pour une priorité en heures calendaires). */
+function repousser(entiteId, echeance, unite, { ouvrables = 0, calendaires = 0 }) {
+  if (unite === 'heures_calendaires') return new Date(echeance.getTime() + calendaires * 60000);
+  if (!ouvrables) return echeance;
+  const cal = calendrier.charger(entiteId);
+  const l = versLocal(echeance);
+  const r = plusHeuresOuvrables(cal, normaliser(cal, l.dn, l.min), ouvrables / 60);
+  return versInstant(r.dn, r.min);
+}
+
+/** Règle 7 : le même moment, N jours ouvrés plus tôt (limite de « en attente depuis plus de N jours »). */
+function joursOuvresAvant(entiteId, maintenant, n) {
+  const cal = calendrier.charger(entiteId);
+  const l = versLocal(maintenant);
+  let dn = l.dn;
+  for (let compte = 0, i = 0; compte < n; i += 1) {
+    if (i > GARDE_JOURS) throw new AppError(409, 'CALENDRIER_VIDE');
+    dn -= 1;
+    if (ouverture(cal, dn)) compte += 1;
+  }
+  return versInstant(dn, l.min);
+}
+
 const sortie = (date) => (date ? { utc: date.toISOString(), local: texteLocal(date) } : null);
 
 /**
@@ -166,4 +210,4 @@ function simuler(user, { priorite, recu_le, categorie_id } = {}) {
   return { ...r, categorie: cat ? { id: cat.id, code: cat.code, libelle_fr: cat.libelle_fr, libelle_nl: cat.libelle_nl } : null };
 }
 
-module.exports = { calculer, simuler, texteLocal, versInstant, versLocal };
+module.exports = { calculer, simuler, texteLocal, versInstant, versLocal, minutesOuvrables, repousser, joursOuvresAvant };

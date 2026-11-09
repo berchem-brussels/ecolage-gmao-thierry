@@ -5,6 +5,9 @@
  * 0.8.0 : pièces jointes du brouillon (DEM-09, DV-85), formulaire multipart lu par fichiers.js après le contrôle préalable.
  * 0.9.0 : tableau de bord du service technique (GES-01), filtres et tris de la liste (GES-02), qualification (GES-04,
  * PRI-01) ; services/qualification.js.
+ * 0.14.0 : cycle de vie (CYC-01, CYC-02, CLO-01) : historique de la fiche et passage d'un état à l'autre ; services/cycle.js.
+ * 0.14.0, point 5 (SUI-05, E-21) : PUT complète la demande (texte), DELETE l'annule avec un motif (annulation logique,
+ * CYC-05) ; POST /:id/pieces ajoute une photo ou un document à une demande envoyée (formulaire multipart, hors MCP, E-17).
  */
 const express = require('express');
 const { authMiddleware } = require('../auth');
@@ -13,6 +16,7 @@ const { ok, handle } = require('../envelope');
 const S = require('../schemas');
 const demandes = require('../services/demandes');
 const qualification = require('../services/qualification');
+const cycle = require('../services/cycle');
 const brouillons = require('../services/brouillons');
 const pieces = require('../services/pieces');
 const fichiers = require('../fichiers');
@@ -84,6 +88,32 @@ router.post('/:id/suivre', validateParams(idParam), validate(S.demandeSuivre), h
 // Qualification par le service technique (GES-04, PRI-01, 0.9.0) : « À qualifier » devient « Qualifiée ».
 router.post('/:id/qualifier', validateParams(idParam), validate(S.demandeQualifier), handle((req, res) => {
   ok(res, qualification.qualifier(req.user, Number(req.params.id), req.body), { resource: 'demandes' });
+}));
+
+// Complément et annulation par le demandeur ou le bénéficiaire (0.14.0, point 5).
+router.put('/:id', validateParams(idParam), validate(S.demandeComplement), handle((req, res) => {
+  ok(res, demandes.completer(req.user, Number(req.params.id), req.body), { resource: 'demandes' });
+}));
+router.delete('/:id', validateParams(idParam), validate(S.demandeAnnulation), handle((req, res) => {
+  ok(res, cycle.annuler(req.user, Number(req.params.id), req.body.motif), { resource: 'demandes' });
+}));
+const avantPieceDemande = handle((req, res, next) => { req.plafondsPieces = pieces.peutAjouterADemande(req.user, Number(req.params.id)); next(); });
+router.post('/:id/pieces', validateParams(idParam), avantPieceDemande, recevoirPiece, handle((req, res) => {
+  const annonce = fichiers.annonce(req, req.plafondsPieces.types);
+  ok(res, pieces.ajouter(req.user, req.file.buffer, annonce, req.file.originalname, 'api', Number(req.params.id)), { resource: 'pieces' }, null, 201);
+}));
+
+// Avis du demandeur ou du bénéficiaire sur une demande clôturée (0.14.0, point 6 ; SUI-06).
+router.post('/:id/avis', validateParams(idParam), validate(S.demandeAvis), handle((req, res) => {
+  ok(res, cycle.donnerAvis(req.user, Number(req.params.id), req.body), { resource: 'demandes' }, null, 201);
+}));
+
+// Cycle de vie (0.14.0) : historique lisible par qui lit la demande, passage contrôlé par la table des passages.
+router.get('/:id/historique', validateParams(idParam), handle((req, res) => {
+  ok(res, cycle.historique(req.user, Number(req.params.id)), { resource: 'demandes' });
+}));
+router.post('/:id/transitions', validateParams(idParam), validate(S.demandeTransition), handle((req, res) => {
+  ok(res, cycle.appliquer(req.user, Number(req.params.id), req.body), { resource: 'demandes' });
 }));
 
 module.exports = router;

@@ -1,8 +1,25 @@
 # Manifeste
 
-Version de l'application : **0.13.0** · Mis à jour le 08/11/2026
+Version de l'application : **0.14.0** · Mis à jour le 08/11/2026
 
 Fichiers changés, dépendances et suites par version. Les décomptes sont recopiés de la sortie des commandes.
+
+## 0.14.0 (08/11/2026)
+
+Fichiers comparés à l'étiquette `v0.13.0` du dépôt GitHub (fusion `5993563`, identique à l'archive 0.13.0 hors `dist/`) par `diff -rq` (hors `node_modules` et `dist`). Pour le contrôle du `git status` (`GITHUB.md`, section 5) : aucune ligne `D` attendue ; quinze lignes `A`, les autres `M`.
+
+- Nouveaux (lignes `A`) : `NOTES_LIVRAISON_v0.14.0.md` ; serveur `config/cycle-de-vie.json`, `src/routes/etats-demande.js`, `src/services/cycle.js`, `tests/cycle.test.js`, `tests/recette.test.js`, `tests/suspension.test.js` ; interface `src/components/demandes/ActionsDemandeur.tsx`, `ChangerEtat.tsx`, `HistoriqueDemande.tsx`, `src/components/referentiel/EtatsTab.tsx` ; captures `public/aide-captures/fr/mes-demandes-avis.jpg`, `referentiel-etats.jpg`, `public/aide-captures/nl/mes-demandes-avis.jpg`, `referentiel-etats.jpg`.
+- Modifiés, serveur : `config/listes-valeurs.json` (motifs d'attente, motifs de refus, causes de panne), `config/notes-version.json` (note 0.14.0), `config/parametres-entite.json` (`demandes.attente_suspend`, `demandes.attente_jours`, explication du délai de réouverture), `config/roles.json` (`demandes:traiter`) ; `src/app.js` (montage de `/api/etats-demande`), `src/database.js` (migration `012_cycle_de_vie`), `src/i18n-server.js` (onze codes), `src/mcp.js` (huit outils), `src/recette-api.js` (motif lisible, contrôle 5), `src/routes/demandes.js` (six routes), `src/routes/public.js` et `src/services/entites.js` (passages et libellés d'une entité nouvelle), `src/schemas.js`, `src/services/demandes.js` (champs du cycle, complément), `src/services/echeances.js` (`minutesOuvrables`, `repousser`, `joursOuvresAvant`), `src/services/journal.js` (motif nommé), `src/services/parametres-entite.js` (type `codes_liste`), `src/services/pieces.js` (ajout à une demande envoyée), `src/services/qualification.js` (états du catalogue, suspension, compteurs) ; tests `categories`, `cloison`, `demandes`, `lieux`, `mcp`, `notes-version`, `numerotation`, `parametres`, `parametres-entite`, `securite` ; `package.json` (0.14.0, trois fichiers de test) et `package-lock.json` (numéro).
+- Modifiés, interface : `src/components/ReglagesForm.tsx` (cases `codes_liste`), `demandes/PiecesDemande.tsx` (destination, champ masqué), `demandes/TableauBord.tsx` (six compteurs), `src/demandes.ts`, `src/help/topics/demandes-entite.ts`, `listes.ts`, `mes-demandes.ts`, `referentiel.ts`, `reglages-entite.ts`, `src/hints.ts`, `src/i18n.ts`, pages `DemandesPage` (ligne du temps, actions du demandeur, étiquette qui passe à la ligne), `GestionDemandesPage` (volet d'actions, filtre d'attente), `JournalPage` (cases et codes du cycle), `ListesValeursPage` (quatre listes), `ReferentielPage` (onglet États) ; `mobile-check/verifier-mobile.mjs` (volets, onglet États) ; captures `fr` et `nl` `demandes-entite-overview`, `demandes-entite-qualifier`, `listes-overview`, `mes-demandes-fiche` ; tests `demandes.test.tsx`, `pages.test.tsx` ; `package.json` et `package-lock.json` (0.14.0) ; `dist/` reconstruit.
+- Modifiés, documentation et racine : `recette.sh` (saisie visible, DV-117) ; `README.md`, `README.nl.md`, `README.en.md` ; `docs/fr`, `docs/nl`, `docs/en` (`APRES-DEPLOIEMENT.md`, `ARCHITECTURE.md`, `EXPLOITATION.md`, `MCP.md`, `SECURITE.md`) ; `docs/fonctionnel/administration.md`, `aide.md`, `demandes.md`, `referentiel-demandes.md`, `service-technique.md` ; fichiers de suivi (`ETAT.md`, `CHANGELOG.md`, `ECARTS-CDC.md`, `MANIFESTE.md`).
+- Inchangés : les deux Dockerfile, `nginx.conf`, `docker-entrypoint.sh`, `docker-compose.yml`, `.env.example`, `backup.sh`, `verifier-ports.sh`, `ci.yml`, `.gitignore`. La construction n'a pas besoin de `--no-cache`.
+- Retirés : aucun fichier.
+- Dépendances : aucune nouvelle ; verrous inchangés hors numéro de version. Aucun `npm audit fix`.
+- Contrôle DV-09 de la séance, avant toute modification : archive 0.13.0 conforme à `ETAT.md` (7 281 448 octets, 516 entrées, SHA-256 `05a59542…d7355b`) ; serveur 437/437 ; audit du serveur 0 ; interface 238 (+1 ignoré) sur trois lancements ; `help:check` 10/10 ; construction et accessibilité 0 erreur ; `mobile:check` 23 écrans, 4 largeurs, FR et NL, aucun défaut.
+- Suites de la 0.14.0 : serveur 473/473 ; interface 262 (+1 ignoré) sur trois lancements ; `help:check` 10/10 ; construction et accessibilité 0 erreur ; `npm audit --omit=dev` serveur 0, interface 3 modérées (E-09) ; `mobile:check` : 26 écrans, 4 largeurs, FR et NL, aucun défaut.
+- Preuves d'échec : `docs/fr/SECURITE.md`, section 0.14.0 (douze protections).
+- Navigateur réel : Chromium du bac à sable, serveur réel sur une base jetable de démonstration ; parcours complet d'une demande côté service et côté demandeur, FR et NL, aux largeurs de téléphone ; captures refaites par `npm run help:capture` (`HELP_ONLY`). Retour à la 0.13.0 (étiquette du dépôt) sur une base passée en 0.14.0 : démarre, lit les demandes et le tableau de bord ; remontée en 0.14.0 sans nouvelle migration.
+- Images Docker : non reconstruites dans le bac à sable.
 
 ## 0.13.0 (08/11/2026)
 

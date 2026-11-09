@@ -1,6 +1,6 @@
 # Serveur MCP
 
-Version de l'application : **0.13.0** · Mis à jour le 08/11/2026 · Le français fait foi.
+Version de l'application : **0.14.0** · Mis à jour le 08/11/2026 · Le français fait foi.
 
 ## Accès
 
@@ -12,13 +12,26 @@ Version de l'application : **0.13.0** · Mis à jour le 08/11/2026 · Le frança
 ## Règles
 
 - Chaque outil appelle la même fonction de service que la route REST, sous l'identité et les droits de la personne, dans son entité active.
-- Un test de parité échoue si une route n'a pas son outil ou l'inverse. Quatre routes binaires en sont exclues par une liste fermée : le dépôt et la lecture du fichier d'une photo d'un lieu, et, depuis la 0.8.0, d'une pièce jointe d'une demande (écart E-17).
+- Un test de parité échoue si une route n'a pas son outil ou l'inverse. Cinq routes binaires en sont exclues par une liste fermée : le dépôt et la lecture du fichier d'une photo d'un lieu, depuis la 0.8.0 d'une pièce jointe d'une demande, et depuis la 0.14.0 l'ajout d'un fichier à une demande envoyée (écart E-17).
 - Une désactivation, un retrait ou un effacement se fait en deux appels : `prepare_*` décrit l'effet et rend un jeton de cinq minutes lié à la personne, `confirm_*` exécute. Le droit d'écrire est vérifié dès `prepare_*`.
 - Descriptions en français et en néerlandais. Aucun outil de SQL libre.
 - Un module éteint (Paramètres, Modules) retire ses outils de `tools/list` et refuse leur appel (`MODULE_DISABLED`) ; module Patrimoine éteint : `create_lieu`, `update_lieu`, `deactivate_lieu`, `delete_lieu_photo`.
 - Depuis la 0.4.1, les fiches de catégorie, de priorité, de jour de l'horaire et de jour non ouvré portent `trace` (`etat`, `le`, `par`) : qui les a modifiées en dernier et quand, ou « livrée ». Le nom n'est rendu qu'aux personnes de l'entité. Aucun outil nouveau.
 - Depuis la 0.5.0, le serveur retire les espaces de début et de fin de tout texte reçu, par le MCP comme par l'API, sauf les mots de passe ; un champ obligatoire fait seulement d'espaces est refusé (`VALIDATION`), avant tout jeton de confirmation.
 - Les instructions envoyées au client demandent de commencer par `get_profile` : les données métier sont celles de l'entité active ; `select_entite` la change. Elles disent aussi que le MCP ne transporte aucun fichier, et qu'une demande se dépose par `create_demande`, le lieu proposé d'office étant `lieu_propose` dans `get_profile`, et les derniers lieux de ses demandes `lieux_recents` (0.7.5). Depuis la 0.8.0, elles disent que les pièces du brouillon partent avec la demande suivante, même déposée par `create_demande`, et qu'il faut le dire à la personne.
+
+## 0.14.0
+
+Outils nouveaux du cycle de vie (étape 9) :
+
+- `get_historique_demande` (`GET /api/demandes/:id/historique`) : chaque passage (de, vers, auteur, canal, motif, commentaire, date), dans les libellés de l'entité ; le service technique voit tout, le demandeur et le bénéficiaire ne voient pas les commentaires internes.
+- `change_etat_demande` (`POST /api/demandes/:id/transitions`) en deux appels (`prepare_change_etat_demande` décrit l'effet, `confirm_change_etat_demande` l'exécute) : `etat` d'arrivée ; `motif_id` (valeur active de `motif_attente`, `motif_refus` ou `cause_panne`) si le passage en demande un ; `commentaire` selon le passage ; `compte_rendu` à la clôture (interne). Permission `demandes:traiter`. Le demandeur ou le bénéficiaire rouvre par le même outil (`etat` `rouverte`, `commentaire` obligatoire), dans le délai de l'entité. Codes de refus : `TRANSITION_INTERDITE`, `TRANSITION_PAR_QUALIFICATION`, `MOTIF_REQUIS`, `MOTIF_INUTILE`, `COMMENTAIRE_REQUIS`, `COMMENTAIRE_INUTILE`, `COMPTE_RENDU_INUTILE`, `TRAVAUX_COMMENCES`, `DELAI_REOUVERTURE`.
+- `complete_demande` (`PUT /api/demandes/:id`) : complément du demandeur ou du bénéficiaire (`complement`, 2 000 caractères, `langue`), tant que la demande n'est pas fermée ; la description ne change pas.
+- `cancel_demande` (`DELETE /api/demandes/:id`) en deux appels : annulation par le demandeur ou le bénéficiaire avec un `motif`, tant que la demande n'a jamais été « En cours » ; rien n'est supprimé.
+- `give_avis_demande` (`POST /api/demandes/:id/avis`) : `note` de 1 à 5, `commentaire` facultatif, sur une demande « Clôturée », un avis par clôture (`AVIS_PAS_CLOTUREE`, `AVIS_DEJA_DONNE`).
+- `list_etats_demande` (`GET /api/etats-demande`), `list_transitions_demande` (`GET /api/etats-demande/transitions`) et `update_etat_demande` (`PUT /api/etats-demande/:code`, responsable : `libelle_fr`, `libelle_nl`, `grc_fr`, `grc_nl`).
+
+Outils enrichis : `get_demande` rend `etat_depuis`, les libellés de l'état de l'entité, la cause et le compte rendu (service), `transitions` (passages permis, service), `complements`, `completable`, `annulable`, `reouvrable`, `reouvrable_jusqu_au`, `avis_possible` et `avis` ; `get_tableau_bord` rend `attente_longue` (demandes en attente depuis plus de `demandes.attente_jours` jours ouvrés) et `a_cloturer` ; `list_demandes` prend `attente` = `longue`. Exemple : « Mets la demande AC-DI-2026-00003 en attente, accès impossible » : l'assistant lit la demande et ses `transitions`, cherche le motif par `list_listes_valeurs` (`motif_attente`), appelle `prepare_change_etat_demande`, dit l'effet (délai suspendu), puis `confirm_change_etat_demande` après accord.
 
 ## 0.13.0
 
@@ -152,14 +165,15 @@ Aucun outil nouveau ni modifié. Le message « Ce champ est obligatoire » de la
 | `list_notes_version`, `get_note_version`, `marquer_nouveautes_lues` | `GET /api/notes-version`, `GET /api/notes-version/:version`, `PUT /api/auth/nouveautes` (nouveau en 0.3.0) |
 | `list_users`, `get_user`, `create_user`, `update_user`, `prepare_deactivate_user`, `confirm_deactivate_user` | `/api/users` |
 
-Hors MCP : `POST /api/lieux/:id/photo` et `GET /api/lieux/:id/photo`, `POST /api/demandes/brouillon/pieces` et `GET /api/pieces/:id/fichier` (fichiers). La fiche d'un lieu rendue par `get_lieu` dit s'il a une photo (`has_photo`) et depuis quand (`photo_at`).
+Hors MCP : `POST /api/lieux/:id/photo` et `GET /api/lieux/:id/photo`, `POST /api/demandes/brouillon/pieces`, `POST /api/demandes/:id/pieces` (0.14.0) et `GET /api/pieces/:id/fichier` (fichiers). La fiche d'un lieu rendue par `get_lieu` dit s'il a une photo (`has_photo`) et depuis quand (`photo_at`).
 
 ## Exemples de demandes à l'assistant
 
 - « Quels tickets dois-je traiter ? » (traitant) L'assistant appelle `list_tickets_to_handle`, puis `get_ticket` pour le détail et le contexte (écran, version, dernière erreur).
 - « Réponds au ticket TCK-2026-00004 que la correction arrive avec la prochaine version. » L'assistant propose le texte, puis appelle `add_ticket_message` après accord.
 - « Signale une lampe en panne dans la salle du conseil. » L'assistant appelle `get_profile`, cherche le lieu par `list_lieux` (`q` « salle du conseil ») et la catégorie par `get_categories_arbre`, puis appelle `create_demande` et donne le numéro.
-- « Où en sont mes demandes ? » L'assistant appelle `list_demandes` avec `ouvertes` 1.
+- « Où en sont mes demandes ? » L'assistant appelle `list_demandes` avec `ouvertes` 1, puis `get_historique_demande` pour les étapes d'une demande.
+- « Annule ma demande AC-DI-2026-00012, le problème s'est réglé tout seul. » L'assistant appelle `prepare_cancel_demande` avec le motif, dit l'effet, puis `confirm_cancel_demande` après accord.
 - « Retire la photo que j'ai jointe par erreur à ma demande. » L'assistant lit la demande par `get_demande`, nomme la pièce, puis appelle `prepare_delete_piece` et, après accord, `confirm_delete_piece`.
 - « Montre-moi l'arbre du patrimoine du CPAS. » L'assistant appelle `get_profile`, `select_entite` si nécessaire, puis `get_lieux_arbre`.
 - « Ajoute le local 1.02, un bureau, au premier étage de la maison communale. » L'assistant cherche le niveau par `list_lieux`, le type par `list_listes_valeurs`, puis appelle `create_lieu`.

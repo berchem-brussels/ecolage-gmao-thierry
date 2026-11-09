@@ -1,11 +1,13 @@
 /**
- * Contrôles automatiques après installation, partie « serveur » (0.12.0, DV-110 ; 0.13.0 : aucune migration nouvelle, la dernière reste 011_faq), lancés par recette.sh dans le
+ * Contrôles automatiques après installation, partie « serveur » (0.12.0, DV-110 ; 0.14.0 : migration 012_cycle_de_vie), lancés par recette.sh dans le
  * conteneur de l'API : `docker exec -i <app>-api node src/recette-api.js <version> <adresse>`.
  *
  * Lecture seule pour les données métier : rien n'est créé, modifié ni supprimé. Seules la connexion du compte de
  * démonstration et ses changements d'entité laissent leurs lignes ordinaires au journal (login.success, session.entite),
  * ce que le contrôle 9 vérifie justement. La base est lue en mémoire (sql.js), jamais réécrite.
- * Le mot de passe arrive sur l'entrée standard, tapé sans affichage dans recette.sh ; il n'est ni affiché ni écrit.
+ * Le mot de passe arrive sur l'entrée standard, tapé en clair dans recette.sh puis effacé de l'écran (0.14.0, DV-117) ;
+ * il n'est ni affiché ni écrit. Un refus de connexion se dit en clair (mot de passe refusé, compte bloqué), jamais par
+ * un code HTTP seul.
  * Sortie : une ligne « OK » ou « ECHEC » par contrôle, puis le bilan ; code de sortie 1 au moindre échec.
  */
 const fs = require('fs');
@@ -37,6 +39,17 @@ function client() {
   };
 }
 
+/** Explication lisible d'un échec de connexion du contrôle 7 (DV-117). */
+function motifConnexion(status, longueur) {
+  if (status === 200) return '';
+  if (longueur === 0) return 'aucun mot de passe reçu, relancez le script et tapez-le avant Entrée';
+  if (status === 401) return `mot de passe refusé, vérifiez la saisie (${longueur} caractère(s) reçu(s))`;
+  if (status === 429) return 'trop d’essais, compte bloqué un moment : attendez quelques minutes avant de relancer';
+  if (status === 403) return 'connexion par mot de passe fermée pour ce compte (mode Microsoft seul)';
+  if (status === 400) return 'adresse ou mot de passe mal formé, vérifiez la saisie';
+  return `connexion impossible (HTTP ${status})`;
+}
+
 async function lireBase() {
   const SQL = await initSqlJs();
   return new SQL.Database(fs.readFileSync(DB_PATH));
@@ -53,8 +66,10 @@ async function main() {
   // 5. Migration de la version appliquée (lecture de schema_migrations et de la table nouvelle).
   const db = await lireBase();
   const migr = db.exec("SELECT name FROM schema_migrations ORDER BY id DESC LIMIT 1")[0]?.values?.[0]?.[0];
-  const table = db.exec("SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name = 'help_faq'")[0]?.values?.[0]?.[0];
-  note(migr === '011_faq' && table === 1, 5, 'migration 011_faq appliquée, table de la FAQ présente', migr);
+  const table = db.exec("SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name = 'demande_historique'")[0]?.values?.[0]?.[0];
+  const passages = db.exec('SELECT COUNT(*) FROM demande_transitions WHERE is_active = 1')[0]?.values?.[0]?.[0];
+  note(migr === '012_cycle_de_vie' && table === 1 && passages > 0, 5, 'migration 012_cycle_de_vie appliquée, historique des demandes et table des passages présents',
+    `${migr}, ${passages ?? 0} passage(s)`);
 
   // 6. Refus sans session.
   const sans = await Promise.all(['/api/demandes', '/api/faq', '/api/tickets', '/api/audit'].map((u) => anonyme('GET', u)));
@@ -67,7 +82,7 @@ async function main() {
   const login = await c('POST', '/api/auth/login', { email: ADRESSE, password: motDePasse });
   const me = (await c('GET', '/api/auth/me')).body?.data;
   const entites = me?.entites || [];
-  note(login.status === 200 && entites.length >= 2, 7, `connexion de ${ADRESSE}, rôles dans deux entités`, login.status === 200 ? entites.map((e) => e.code).join(', ') : `HTTP ${login.status}`);
+  note(login.status === 200 && entites.length >= 2, 7, `connexion de ${ADRESSE}, rôles dans deux entités`, login.status === 200 ? entites.map((e) => e.code).join(', ') : motifConnexion(login.status, motDePasse.length));
   if (login.status !== 200 || entites.length < 2) return;
   const [a, b] = entites;
   const depart = me.entite_active_id;
@@ -102,7 +117,9 @@ async function main() {
 
 }
 
-main()
+if (require.main !== module) {
+  module.exports = { motifConnexion };
+} else main()
   .catch((e) => { note(false, 0, 'erreur du script', e.message); })
   .finally(() => {
     const ko = resultats.filter((x) => !x).length;

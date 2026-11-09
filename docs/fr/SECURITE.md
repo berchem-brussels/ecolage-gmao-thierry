@@ -2,6 +2,52 @@
 
 Le français fait foi. Grille de la section 10.2 du standard, rejouée à chaque version. « Non joué » veut dire que le contrôle n'a pas tourné.
 
+## 0.14.0 (08/11/2026)
+
+Étape 9 : cycle de vie des demandes (passages en données, historique, complément, annulation, avis et réouverture par le demandeur, suspension du délai, libellés des états par entité) ; `recette.sh` en saisie visible (DV-117). Environnement : bac à sable de Claude, Node 22.23.4. Migration `012_cycle_de_vie`. Aucune dépendance nouvelle.
+
+| Famille | Contrôle | Résultat |
+| --- | --- | --- |
+| Autorisation (IDOR) | Passage, historique, complément, annulation, photo ajoutée et avis : demande d'une autre entité 403, inconnue 404, avant tout autre contrôle ; libellés des états lus et modifiés dans l'entité active seulement ; même réponse par l'API et par le MCP | Conforme (`cloison.test.js` : six routes de plus, `cycle.test.js`) |
+| Autorisation | Passages du service réservés à `demandes:traiter` (gestionnaire, responsable) ; demandeur et bénéficiaire limités à l'annulation et à la réouverture ; qui suit seulement (« Moi aussi ») ni complète, ni annule, ni note ; un état que le demandeur ne peut jamais viser rend 403, jamais 409 (rien n'est révélé sur l'état) ; libellés des états réservés à `parametres:gerer` | Conforme (`cycle.test.js`) |
+| Logique | Tout passage absent ou désactivé refusé (`TRANSITION_INTERDITE`) avant toute écriture ; qualification seule voie vers « Qualifiée » ; annulation par le demandeur refusée dès que la demande a été « En cours » (`TRAVAUX_COMMENCES`) ; réouverture seulement d'une demande « Clôturée », dans le délai de l'entité (`DELAI_REOUVERTURE`) ; un avis par clôture (`AVIS_DEJA_DONNE`) ; rien ne se supprime (CYC-05) | Conforme (`cycle.test.js`) |
+| Logique | Suspension : seul un motif coché dans les réglages de l'entité suspend ; temps suspendu ajouté à l'échéance à la sortie de l'attente (ouvrable, ou calendaire pour P1) ; date convenue inchangée ; demande suspendue jamais comptée en retard | Conforme (`suspension.test.js`) |
+| Validation | Schémas `ajv` (`additionalProperties: false`) : état parmi le catalogue, motif entier, textes de 1 à 2 000 caractères, note de 1 à 5 ; motif contrôlé contre la liste du passage et l'entité ; motif, commentaire et compte rendu exigés ou refusés selon le passage ; codes de `codes_liste` contrôlés contre la liste de l'entité | Conforme (`cycle.test.js`, `parametres-entite.test.js`) |
+| Injections | Requêtes paramétrées ; colonnes des états et des passages tirées de listes fermées (`COLONNES_ETAT`, `COLONNES_TRANSITION`) | Conforme (`securite.test.js`) |
+| Données (RGPD) | Journal d'audit sans texte libre : `commentaire_donne`, `compte_rendu_donne` (0 ou 1), motif par son identifiant nommé à la lecture ; commentaire interne et compte rendu jamais rendus au demandeur ; complément sous la description, qui ne change pas | Conforme (`cycle.test.js`, `demandes.test.js`) |
+| Fichiers | Photo ajoutée à une demande envoyée par le lecteur commun (`multer`, type sur les premiers octets, métadonnées retirées), plafonds de l'entité, droits contrôlés avant la lecture du fichier ; route hors MCP (E-17, cinquième route) | Conforme (`cycle.test.js`, `mcp.test.js`) |
+| Interface | Volets des fiches tenus dans 320 px (étiquette d'état qui passe à la ligne ; défaut de la 0.13.0 détecté par `mobile:check`, 103 px) ; champ de fichier natif masqué ; groupe de cases nommé (`role="group"`) | Conforme (`npm run mobile:check` : 26 écrans, 4 largeurs, FR et NL, aucun défaut ; `npm run a11y` 0) |
+| Secrets | `recette.sh` : mot de passe de démonstration saisi de façon visible (DV-117), ligne effacée à Entrée, seule sa longueur est affichée ; il ne part que vers le conteneur par l'entrée standard, jamais écrit ni gardé | Conforme (`recette.test.js`) |
+| Secrets commités | Aucune valeur de NIXUS, aucune adresse électronique réelle ni photo réelle dans l'archive (captures refaites sur une base de démonstration) | Conforme |
+| Infrastructure | Dockerfile, compose, `nginx.conf`, `backup.sh`, `.env`, `ci.yml` inchangés | Conforme |
+| Dépendances | `npm audit --omit=dev` serveur | 0 vulnérabilité |
+| Dépendances | `npm audit --omit=dev` interface | 3 modérées (E-09), inchangées |
+| LLM et MCP | Huit outils nouveaux sous les droits de la personne ; passage d'état et annulation en deux appels (`prepare_*`, `confirm_*`), droits vérifiés dès `prepare_*` ; parité route et outil | Conforme (`mcp.test.js`, `cycle.test.js`) |
+| Migration | `012_cycle_de_vie` ajoute cinq tables et sept colonnes, sans rien retirer ; la 0.13.0 démarre sur une base passée en 0.14.0 (essayé le 08/11/2026) ; retour recommandé avec la sauvegarde du jour (notes de livraison) | Conforme |
+
+Les trois contrôles qui ne restent jamais « non joués » (secrets commités, contrôle d'accès côté serveur, IDOR) ont été joués.
+
+### Preuve d'échec des nouveaux tests (0.14.0)
+
+Chaque protection retirée seule du code de la 0.14.0, les tests nouveaux échouent ; protection remise, tout réussit.
+
+| Protection retirée | Tests en échec |
+| --- | --- |
+| `cycle.js` : 403 au demandeur pour un état qu'il ne peut viser | 2 sur 19 (`cycle.test.js`) |
+| `cycle.js` : personne étrangère à la demande refusée | 3 sur 19 |
+| `cycle.js` : demande d'une autre entité refusée | 6 sur 87 (`cycle.test.js`, `cloison.test.js`) |
+| `cycle.js` : annulation bloquée après « En cours » | 1 sur 19 |
+| `cycle.js` : délai de réouverture | 1 sur 19 |
+| `cycle.js` : motif obligatoire | 2 sur 19 |
+| `cycle.js` : un avis par clôture | 1 sur 19 |
+| `cycle.js` : commentaire recopié au journal | 1 sur 19 |
+| `cycle.js` : suspension réservée à une attente suspensive | 1 sur 7 (`suspension.test.js`) |
+| `cycle.js` : libellés des états réservés à `parametres:gerer` | 1 sur 87 |
+| `recette-api.js` : motif lisible d'un refus 401 | 1 sur 2 (`recette.test.js`) |
+| `recette.sh` : saisie masquée (`read -rs`) | 1 sur 2 |
+
+Code de la 0.14.0 : tout réussi (serveur 473/473, interface 262 et un test des captures joué par `npm run help:check`).
+
 ## 0.13.0 (08/11/2026)
 
 Étape 8 ter (DV-101) : photo de l'endroit sur la fiche d'une demande pour le service technique, filtre « Sans photo » dans Patrimoine ; défauts D1 à D10 du contrôle complet DV-113 et remarques M1 à M5 de la recette de la 0.12.0. Environnement : bac à sable de Claude, Node 22.23.4. Aucune migration, aucune dépendance nouvelle.

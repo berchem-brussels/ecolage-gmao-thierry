@@ -1,6 +1,6 @@
 # MCP-server
 
-Versie van de toepassing: **0.13.0** · Bijgewerkt op 08/11/2026 · De Franse tekst is rechtsgeldig (`docs/fr/MCP.md`).
+Versie van de toepassing: **0.14.0** · Bijgewerkt op 08/11/2026 · De Franse tekst is rechtsgeldig (`docs/fr/MCP.md`).
 
 ## Toegang en regels
 
@@ -9,6 +9,10 @@ Versie van de toepassing: **0.13.0** · Bijgewerkt op 08/11/2026 · De Franse te
 - Authenticatie: de sessie, of het sessietoken in `Authorization: Bearer`. OAuth 2.1 met PKCE komt in stap 44 (afwijking E-10).
 - Limiet: 60 oproepen per minuut en per persoon.
 - Elke tool roept dezelfde dienstfunctie op als de REST-route, met de identiteit en de rechten van de persoon, in haar actieve entiteit. Een deactivering, intrekking of wissing gebeurt in twee oproepen (`prepare_*`, dan `confirm_*`). Geen tool voor vrije SQL.
+
+## 0.14.0
+
+Nieuwe tools: `get_historique_demande` (historiek van een aanvraag; de aanvrager ziet de interne notities niet), `change_etat_demande` in twee oproepen (`prepare_change_etat_demande`, `confirm_change_etat_demande`: eindstatus `etat`, `motif_id`, `commentaire`, `compte_rendu` volgens de overgang; ook heropenen door de aanvrager met `etat` `rouverte`), `list_etats_demande`, `list_transitions_demande`, `update_etat_demande` (benamingen per entiteit, verantwoordelijke), `complete_demande` (aanvulling door de aanvrager of de begunstigde), `cancel_demande` in twee oproepen (annuleren met een reden, zolang de werken niet begonnen zijn) en `give_avis_demande` (score 1 tot 5, één per afsluiting). `get_demande` geeft `transitions` (dienst), `complements`, `completable`, `annulable`, `reouvrable`, `reouvrable_jusqu_au`, `avis_possible`, `avis`. `get_tableau_bord` geeft `attente_longue` en `a_cloturer`; `list_demandes` krijgt `attente` = `longue`. Een foto toevoegen aan een verstuurde aanvraag blijft buiten de MCP (`POST /api/demandes/:id/pieces`, E-17, vijf routes).
 
 ## 0.13.0
 

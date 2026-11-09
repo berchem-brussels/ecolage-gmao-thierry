@@ -31,6 +31,9 @@
  *      et enregistrées avec la demande, texte compris. Elles sont lues sur la fiche par le demandeur et par le service.
  *  12. Pièces jointes (DEM-09, 0.8.0, services/pieces.js) : celles du brouillon passent à la demande dans la transaction
  *      d'envoi ; la fiche les rend au demandeur, au bénéficiaire et au service technique, pas à qui suit seulement.
+ *  14. Cycle de vie (0.14.0, services/cycle.js) : le dépôt s'inscrit dans l'historique de la fiche ; la fiche rend
+ *      l'état depuis quand, le libellé de l'état réglé par l'entité (CYC-04) et, pour le service technique, les passages
+ *      que la personne peut faire, la cause de la panne et le compte rendu de la clôture (internes).
  *  13. Qualification et échéances (0.9.0, services/qualification.js) : les échéances de prise en charge et de fin sont
  *      enregistrées au dépôt ; la fiche rend l'échéance qui compte et le retard. Le service technique lit en plus la
  *      priorité proposée, le motif d'un changement, la durée estimée, les consignes à l'ouvrier et qui a qualifié ;
@@ -62,12 +65,17 @@ const COLUMNS = `d.id, d.entite_id, d.numero, d.annee, d.sequence, d.description
   d.priorite_proposee, d.motif_priorite, d.prise_en_charge_le, d.echeance_le, d.date_convenue, d.duree_estimee_minutes,
   d.consignes, d.photos_visibles, d.qualifiee_par, qp.first_name AS qualifiee_par_prenom, qp.last_name AS qualifiee_par_nom, d.qualifiee_le,
   (SELECT COUNT(*) FROM demande_suiveurs s WHERE s.demande_id = d.id) AS nb_suiveurs,
+  d.etat_depuis, ee.libelle_fr AS etat_libelle_fr, ee.libelle_nl AS etat_libelle_nl,
+  d.cause_id, cp.code AS cause_code, cp.libelle_fr AS cause_libelle_fr, cp.libelle_nl AS cause_libelle_nl, d.compte_rendu,
+  d.attente_suspend, d.suspendu_ouvrable_min, d.suspendu_calendaire_min,
   d.is_demo, d.created_at, d.updated_at`;
 const FROM = `FROM demandes d JOIN lieux l ON l.id = d.lieu_id JOIN categories c ON c.id = d.categorie_id
   LEFT JOIN categories p ON p.id = c.parent_id JOIN users u ON u.id = d.demandeur_id LEFT JOIN users b ON b.id = d.beneficiaire_id
-  LEFT JOIN users qp ON qp.id = d.qualifiee_par`;
+  LEFT JOIN users qp ON qp.id = d.qualifiee_par LEFT JOIN demande_etats ee ON ee.entite_id = d.entite_id AND ee.code = d.etat
+  LEFT JOIN listes_valeurs cp ON cp.id = d.cause_id`;
 /** Champs internes au service technique (0.9.0) : retirés de la fiche rendue au demandeur et à qui suit la demande. */
-const INTERNES = ['priorite_proposee', 'motif_priorite', 'duree_estimee_minutes', 'consignes', 'qualifiee_par', 'qualifiee_par_prenom', 'qualifiee_par_nom', 'qualifiee_le'];
+const INTERNES = ['priorite_proposee', 'motif_priorite', 'duree_estimee_minutes', 'consignes', 'qualifiee_par', 'qualifiee_par_prenom', 'qualifiee_par_nom', 'qualifiee_le',
+  'cause_id', 'cause_code', 'cause_libelle_fr', 'cause_libelle_nl', 'compte_rendu', 'attente_suspend', 'suspendu_ouvrable_min', 'suspendu_calendaire_min'];
 const LIEU = 'SELECT id, entite_id, parent_id, nature, code, nom_fr, nom_nl, is_active FROM lieux WHERE id = ?';
 const ETATS_FERMES = ['cloturee', 'refusee', 'refusee_validation', 'fusionnee', 'annulee'];
 const SUIVIE = 'SELECT 1 FROM demande_suiveurs WHERE demande_id = ? AND user_id = ?';
@@ -199,11 +207,58 @@ function get(user, id) {
   if (peut(user, 'demandes:entite')) {
     f.suiveurs = suiveurs(d.id);
     f.photo_lieu = photoDuLieu(f.lieu_chemin);
+    // Passages que la personne peut faire depuis l'état courant (0.14.0, CYC-01).
+    f.transitions = require('./cycle').permises(user, d);
   }
   // Pièces jointes (0.8.0) : demandeur, bénéficiaire et service technique ; null pour qui suit seulement la demande.
   const litPieces = d.demandeur_id === user.id || d.beneficiaire_id === user.id || peut(user, 'demandes:entite');
   f.pieces = litPieces ? require('./pieces').deDemande(d.id, user, d) : null;
+  // Cycle de vie (0.14.0, point 5 ; SUI-05) : compléments datés, lus par qui lit la demande ; pour le demandeur et le
+  // bénéficiaire, ce qu'ils peuvent encore faire (compléter tant que la demande est ouverte, annuler tant que les
+  // travaux n'ont pas commencé).
+  f.complements = complements(d.id);
+  const concerne = d.demandeur_id === user.id || (!!d.beneficiaire_id && d.beneficiaire_id === user.id);
+  f.completable = concerne && !ETATS_FERMES.includes(d.etat) ? 1 : 0;
+  const cycle = require('./cycle');
+  const passages = concerne ? cycle.permises(user, d, 'demandeur') : [];
+  f.annulable = passages.some((t) => t.vers === 'annulee') ? 1 : 0;
+  // Point 6 (SUI-06) : avis à la clôture et réouverture dans le délai de l'entité ; le service lit les avis.
+  f.reouvrable = passages.some((t) => t.vers === 'rouverte') ? 1 : 0;
+  const limite = f.reouvrable ? cycle.limiteReouverture(d) : null;
+  f.reouvrable_jusqu_au = limite ? limite.toISOString().replace('T', ' ').slice(0, 19) : null;
+  f.avis_possible = cycle.avisPossible(user, d) ? 1 : 0;
+  f.avis = concerne || peut(user, 'demandes:entite') ? cycle.avisDe(d.id) : [];
   return f;
+}
+
+/** Compléments d'une demande, du plus ancien au plus récent ; l'auteur est « demandeur » ou « bénéficiaire ». */
+function complements(demandeId) {
+  return getDb().prepare(`SELECT c.id, c.texte, c.langue, c.created_at,
+      CASE WHEN c.user_id = d.demandeur_id THEN 'demandeur' ELSE 'beneficiaire' END AS auteur
+    FROM demande_complements c JOIN demandes d ON d.id = c.demande_id WHERE c.demande_id = ? ORDER BY c.created_at, c.id`).all(demandeId);
+}
+
+/**
+ * Complément d'une demande par son demandeur ou son bénéficiaire (0.14.0, point 5 ; SUI-05, E-21) : un texte daté,
+ * ajouté sans changer la description d'origine, tant que la demande n'est pas fermée. Le journal garde le numéro et la
+ * longueur, jamais le texte (DV-116).
+ */
+function completer(user, id, { complement, langue }, channel = 'api') {
+  const entiteId = entiteActive(user);
+  const d = getDb().prepare('SELECT id, entite_id, numero, etat, demandeur_id, beneficiaire_id FROM demandes WHERE id = ?').get(id);
+  if (!d) throw new AppError(404, 'NOT_FOUND');
+  if (d.entite_id !== entiteId) throw new AppError(403, 'FORBIDDEN');
+  if (d.demandeur_id !== user.id && d.beneficiaire_id !== user.id) throw new AppError(403, 'FORBIDDEN');
+  assertActif('demandes');
+  if (ETATS_FERMES.includes(d.etat)) throw new AppError(409, 'DEMANDE_FERMEE');
+  const db = getDb();
+  db.transaction(() => {
+    const r = db.prepare('INSERT INTO demande_complements (demande_id, entite_id, user_id, texte, langue, canal) VALUES (?, ?, ?, ?, ?, ?)')
+      .run(d.id, d.entite_id, user.id, complement, langue || user.lang || 'fr', CANAUX[channel] || 'api');
+    db.prepare("UPDATE demandes SET updated_by = ?, updated_at = datetime('now') WHERE id = ?").run(user.id, d.id);
+    logAudit(user.id, 'demande.complement', 'demande', d.id, { numero: d.numero, complement_id: r.lastInsertRowid, longueur: complement.length }, channel, entiteId);
+  })();
+  return get(user, d.id);
 }
 
 /** Tris de la liste (GES-02, 0.9.0) : colonne SQL de chaque tri. Ouvertes en tête dans tous les cas. */
@@ -237,9 +292,10 @@ function valeurs(texte, admises, champ) {
  * Filtres du service technique (0.9.0, GES-02) : etats et priorites (listes séparées par des virgules), categorie_id
  * (un domaine compte ses natures), batiment_id (un lieu compte tout ce qu'il contient), echeance (retard, proche,
  * sans), canal, danger. La recherche q porte aussi sur le nom du demandeur dans le périmètre de l'entité.
+ * 0.14.0 : attente=longue, demandes « En attente » depuis plus de N jours ouvrés (compteur du tableau de bord).
  */
 function list(user, { limit = 50, offset = 0, q, etat, etats, priorites, categorie_id: categorieId, batiment_id: batimentId,
-  echeance, canal, danger, ouvertes, tri, ordre, perimetre = 'miennes' } = {}) {
+  echeance, attente, canal, danger, ouvertes, tri, ordre, perimetre = 'miennes' } = {}) {
   const entiteId = entiteActive(user);
   const where = ['d.entite_id = ?'];
   const params = [entiteId];
@@ -271,6 +327,10 @@ function list(user, { limit = 50, offset = 0, q, etat, etats, priorites, categor
   }
   if (echeance) {
     const f = qualification.filtreEcheance(entiteId, echeance);
+    where.push(f.sql); params.push(...f.params);
+  }
+  if (attente === 'longue') {
+    const f = qualification.filtreAttente(entiteId);
     where.push(f.sql); params.push(...f.params);
   }
   if (canal) { where.push('d.canal = ?'); params.push(canal); }
@@ -365,12 +425,14 @@ function create(user, data, channel = 'api') {
     const n = numerotation.attribuer(entiteId, 'demande', maintenant);
     const r = db.prepare(`INSERT INTO demandes (entite_id, numero, annee, sequence, lieu_id, categorie_id, description, langue, etat,
       priorite, danger, canal, demandeur_id, beneficiaire_id, beneficiaire_texte, date_souhaitee, creneau,
-      priorite_proposee, prise_en_charge_le, echeance_le, created_by, updated_by, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'a_qualifier', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
+      priorite_proposee, prise_en_charge_le, echeance_le, created_by, updated_by, created_at, updated_at, etat_depuis)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'a_qualifier', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
       .run(entiteId, n.numero, n.annee, n.sequence, data.lieu_id, data.categorie_id, data.description, langue,
         priorite, danger, CANAUX[channel] || 'api', user.id, beneficiaireId, beneficiaireTexte, dateSouhaitee, data.creneau || null,
-        priorite, ech.prise_en_charge_le, ech.echeance_le, user.id, user.id, versSql(maintenant), versSql(maintenant));
+        priorite, ech.prise_en_charge_le, ech.echeance_le, user.id, user.id, versSql(maintenant), versSql(maintenant), versSql(maintenant));
     questions.enregistrer(r.lastInsertRowid, reponses);
+    // Historique de la fiche (0.14.0, CYC-02) : la réception est sa première étape.
+    require('./cycle').ecrire(db, { demandeId: r.lastInsertRowid, entiteId, de: null, vers: 'a_qualifier', userId: user.id, channel, quand: versSql(maintenant) });
     // Les pièces jointes du brouillon passent à la demande (DV-85, 0.8.0), avant l'effacement du brouillon.
     const nbPieces = require('./pieces').rattacher(user.id, entiteId, r.lastInsertRowid);
     // Le brouillon du formulaire n'a plus lieu d'être (DEM-11, 0.7.0).
@@ -541,4 +603,4 @@ function choisirLieuHabituel(user, lieuId, channel = 'api') {
   logAudit(user.id, 'user.lieu_habituel', 'user', user.id, { avant: avant ?? null, apres: lieuId }, channel, entite);
 }
 
-module.exports = { list, get, create, voisines, suivre, beneficiaires, lieuPropose, lieuxRecents, controlerLieuHabituel, choisirLieuHabituel, chemin, lieuDeDemande, categorieDeDemande, descendants };
+module.exports = { list, get, load, create, completer, voisines, suivre, beneficiaires, lieuPropose, lieuxRecents, controlerLieuHabituel, choisirLieuHabituel, chemin, lieuDeDemande, categorieDeDemande, descendants };

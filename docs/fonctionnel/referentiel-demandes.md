@@ -1,6 +1,6 @@
 # Référentiel des demandes : catégories, priorités, délais et calendrier
 
-Version 0.7.0 · Fiche fonctionnelle (modèle du standard, section 17.8).
+Version 0.14.0 · Fiche fonctionnelle (modèle du standard, section 17.8).
 
 ## Objet
 
@@ -36,6 +36,7 @@ Préparer ce dont la demande d'intervention aura besoin dès l'étape 5 : les ca
 | 16 | Le journal ne note que les champs changés, avec l'ancienne et la nouvelle valeur ; un enregistrement sans changement n'écrit rien (0.4.1) | DV-04, recette du 23/10/2026 |
 | 17 | Chaque fiche (catégorie, priorité, jour de l'horaire, congé, fermeture) porte « Modifié le JJ/MM/AAAA à HH:MM par <nom> », « Créé le … » pour une fiche ajoutée et jamais modifiée, « Valeur livrée, rétablie le … » après un retour aux valeurs livrées, ou « Valeur livrée ». Le nom n'est rendu qu'aux personnes de l'entité ; sinon la date seule (0.4.1) | DV-34, recette du 23/10/2026 |
 | 18 | Questions du formulaire (0.7.0) : sur la fiche d'un domaine ou d'une nature, « Oui ou non » ou un choix parmi 2 à 6 réponses, FR et NL, facultatives sauf « Obligatoire », dix actives au plus, rangées par flèches, désactivées avec un motif ; une nature pose d'abord celles de son domaine ; l'aperçu des tuiles les montre ; trois questions livrées (plomberie, prises, chauffage), à adapter en atelier | DEM-05, DV-62, D-11 |
+| 19 | Libellés des états par entité (0.14.0) : le responsable règle, pour chaque état en usage, le texte lu par le demandeur et le texte envoyé à la GRC, en FR et en NL (100 caractères) ; « Revenir aux libellés livrés » ; les états à venir (validation, planification, prestataire, fusion) arrivent avec leur étape | CYC-04 |
 
 ## Écrans
 
@@ -45,6 +46,7 @@ Préparer ce dont la demande d'intervention aura besoin dès l'étape 5 : les ca
 | Onglet Priorités et délais | Une carte par priorité : libellés et descriptions FR et NL, décompte en boutons, prise en charge, fin, « Date convenue », couleur, valeurs livrées | « Enregistrer », « Revenir aux valeurs livrées » | « Délais incohérents… » |
 | Onglet Calendrier | Horaire des sept jours ; jours fériés de l'année précédente, en cours et suivante ; congés et fermetures avec leur date en toutes lettres | Interrupteur « Ouvré », heures de début et de fin, « Enregistrer » ; « Créer » un congé ou une fermeture ; désactivation avec motif, réactivation | « Horaire invalide… », « Ce congé existe déjà… » |
 | Onglet Simulateur | Priorité ou catégorie, date et heure de réception | « Calculer » : début du décompte, prise en charge, fin ou date convenue, origine du délai | « Aucun jour ouvré dans le calendrier de l'entité… » |
+| Onglet États des demandes (0.14.0) | Une carte par état en usage (neuf) : libellé vu par le demandeur et libellé envoyé à la GRC, FR et NL ; libellés livrés rappelés ; état fermé, délai suspendu selon le motif ; mention « Modifié le … par … » | « Enregistrer », « Revenir aux libellés livrés » | « Ce champ est obligatoire » |
 | Aide, Mode d'emploi et FAQ | Rubrique « Délais des demandes » pour tous, rubrique « Catégories et délais » pour le responsable ; quatre questions (la quinzième, sur la mention « Modifié le … par … », en 0.4.1) | | |
 
 ## Paramètres et défauts
@@ -64,13 +66,13 @@ Aucune donnée personnelle nouvelle : catégories, priorités, horaires et jours
 
 | Canal | Contenu |
 | --- | --- |
-| API | `/api/categories` (et `/arbre`, `/:id/questions`), `/api/questions-categorie/:id`, `/api/priorites`, `/api/horaires`, `/api/jours-non-ouvres`, `/api/jours-feries`, `GET /api/echeances/simulation` |
+| API | `/api/categories` (et `/arbre`, `/:id/questions`), `/api/questions-categorie/:id`, `/api/priorites`, `/api/horaires`, `/api/jours-non-ouvres`, `/api/jours-feries`, `GET /api/echeances/simulation`, `/api/etats-demande` (0.14.0) |
 | MCP | Un outil par route (25 outils exposés en 0.4.0, plus six pour les questions en 0.7.0) ; désactivation et retour aux valeurs livrées en deux appels ; `simuler_echeance` en lecture |
 | Webhooks, imports, exports | Aucun dans cette version ; la GRC lira les catégories à l'étape 38 |
 
 ## Limites
 
 - Le circuit de validation est enregistré ; la validation par le chef de service s'applique à l'étape 11.
-- L'échéance s'affichera sur les fiches à l'étape 8 ; la suspension du décompte pendant une attente (PRI-03) aussi.
+- L'échéance s'affiche sur les fiches depuis la 0.9.0 ; la suspension du décompte pendant une attente (PRI-03) depuis la 0.14.0 (motifs suspensifs dans Réglages de l'entité).
 - Le corps de métier par défaut (REF-06) vient avec l'étape 15 ; les questions par catégorie (DEM-05) sont livrées en 0.7.0.
 - Les valeurs livrées sont celles du cahier des charges en attendant l'atelier métier (D-11).

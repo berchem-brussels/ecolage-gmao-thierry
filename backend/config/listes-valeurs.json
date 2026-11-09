@@ -1,5 +1,5 @@
 {
-  "_description": "Catalogue des listes de valeurs réglables dans l'application (cahier des charges REF-08, LNG-02 ; standard v3.2, section 11.3, niveau Métier). Chaque liste existe une fois par entité. Les valeurs « defauts » sont créées pour chaque entité active au démarrage du serveur si leur code manque ; une valeur désactivée n'est jamais recréée. « gestion » : permission qui écrit dans la liste.",
+  "_description": "Catalogue des listes de valeurs réglables dans l'application (cahier des charges REF-08, LNG-02 ; standard v3.2, section 11.3, niveau Métier). Chaque liste existe une fois par entité. Les valeurs « defauts » sont créées pour chaque entité active au démarrage du serveur si leur code manque ; une valeur désactivée n'est jamais recréée. « gestion » : permission qui écrit dans la liste. 0.14.0 : motifs d'attente, motifs de refus et causes de panne du cycle de vie d'une demande.",
   "listes": {
     "type_lieu": {
       "label_fr": "Types de lieux",
@@ -16,6 +16,43 @@
         { "code": "stockage", "libelle_fr": "Stockage", "libelle_nl": "Opslag" },
         { "code": "technique", "libelle_fr": "Local technique", "libelle_nl": "Technisch lokaal" },
         { "code": "exterieur", "libelle_fr": "Extérieur", "libelle_nl": "Buitenruimte" }
+      ]
+    },
+    "motif_attente": {
+      "label_fr": "Motifs d'attente",
+      "label_nl": "Redenen van wachten",
+      "gestion": "listes:gerer",
+      "defauts": [
+        { "code": "piece", "libelle_fr": "Pièce à commander", "libelle_nl": "Onderdeel te bestellen" },
+        { "code": "prestataire", "libelle_fr": "Prestataire extérieur nécessaire", "libelle_nl": "Externe aannemer nodig" },
+        { "code": "acces", "libelle_fr": "Accès impossible", "libelle_nl": "Toegang onmogelijk" },
+        { "code": "demandeur", "libelle_fr": "Réponse du demandeur attendue", "libelle_nl": "Antwoord van de aanvrager verwacht" },
+        { "code": "budget", "libelle_fr": "Budget à obtenir", "libelle_nl": "Budget te verkrijgen" }
+      ]
+    },
+    "motif_refus": {
+      "label_fr": "Motifs de refus",
+      "label_nl": "Redenen van weigering",
+      "gestion": "listes:gerer",
+      "defauts": [
+        { "code": "hors_competence", "libelle_fr": "Hors des missions du service technique", "libelle_nl": "Buiten de opdrachten van de technische dienst" },
+        { "code": "doublon", "libelle_fr": "Déjà signalé dans une autre demande", "libelle_nl": "Al gemeld in een andere aanvraag" },
+        { "code": "non_fondee", "libelle_fr": "Aucun problème constaté", "libelle_nl": "Geen probleem vastgesteld" },
+        { "code": "autre_canal", "libelle_fr": "À adresser à un autre service", "libelle_nl": "Te richten aan een andere dienst" }
+      ]
+    },
+    "cause_panne": {
+      "label_fr": "Causes de panne",
+      "label_nl": "Oorzaken van defect",
+      "gestion": "listes:gerer",
+      "defauts": [
+        { "code": "usure", "libelle_fr": "Usure normale", "libelle_nl": "Normale slijtage" },
+        { "code": "defaut", "libelle_fr": "Défaut du matériel", "libelle_nl": "Defect van het materiaal" },
+        { "code": "mauvais_usage", "libelle_fr": "Mauvaise utilisation", "libelle_nl": "Verkeerd gebruik" },
+        { "code": "degradation", "libelle_fr": "Dégradation", "libelle_nl": "Beschadiging" },
+        { "code": "intemperies", "libelle_fr": "Intempéries", "libelle_nl": "Slecht weer" },
+        { "code": "amenagement", "libelle_fr": "Sans panne (aménagement, demande de service)", "libelle_nl": "Zonder defect (inrichting, dienstverzoek)" },
+        { "code": "inconnue", "libelle_fr": "Cause inconnue", "libelle_nl": "Onbekende oorzaak" }
       ]
     }
   }

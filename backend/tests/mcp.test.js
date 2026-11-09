@@ -38,14 +38,15 @@ test('initialize et liste des outils, descriptions FR et NL', async () => {
  * demande, 0.8.0), que le corps JSON-RPC limité à 256 ko ne porte pas. Les effacements ont leur outil
  * (delete_lieu_photo, delete_piece) ; la fiche et la liste des pièces aussi (get_piece, list_pieces_brouillon).
  */
-const HORS_MCP = new Set(['POST /api/lieux/:id/photo', 'GET /api/lieux/:id/photo', 'POST /api/demandes/brouillon/pieces', 'GET /api/pieces/:id/fichier']);
+// 0.14.0 (point 5) : photo ajoutée à une demande envoyée, même lecteur de fichiers que le brouillon (écart E-17 étendu).
+const HORS_MCP = new Set(['POST /api/lieux/:id/photo', 'GET /api/lieux/:id/photo', 'POST /api/demandes/brouillon/pieces', 'GET /api/pieces/:id/fichier', 'POST /api/demandes/:id/pieces']);
 
 test('parité : chaque route de ressource a son outil ; chaque outil a sa route', () => {
   const routes = collectRoutes(srv.app)
-    .filter((r) => /^\/api\/(entites|roles|roles-utilisateurs|users|listes-valeurs|lieux|categories|questions-categorie|priorites|horaires|jours-non-ouvres|jours-feries|echeances|demandes|pieces|vues-demandes|parametres|modules|parametres-entite|audit|notes-version|settings\/auth|tickets|faq)(\/|$)/.test(r.path) || ['/api/auth/me', '/api/auth/entite', '/api/auth/nouveautes', '/api/auth/lieu-habituel'].includes(r.path))
+    .filter((r) => /^\/api\/(entites|roles|roles-utilisateurs|users|listes-valeurs|lieux|categories|questions-categorie|priorites|horaires|jours-non-ouvres|jours-feries|echeances|demandes|pieces|vues-demandes|parametres|modules|parametres-entite|audit|notes-version|settings\/auth|tickets|faq|etats-demande)(\/|$)/.test(r.path) || ['/api/auth/me', '/api/auth/entite', '/api/auth/nouveautes', '/api/auth/lieu-habituel'].includes(r.path))
     .map((r) => `${r.method} ${r.path}`)
     .filter((r) => !HORS_MCP.has(r));
-  assert.equal(HORS_MCP.size, 4, 'la liste des exceptions ne grandit pas sans écart consigné (E-17)');
+  assert.equal(HORS_MCP.size, 5, 'la liste des exceptions ne grandit pas sans écart consigné (E-17, étendu en 0.14.0)');
   const covered = TOOLS.map((t) => t.route);
   for (const r of routes) assert.ok(covered.includes(r), `route sans outil MCP : ${r}`);
   for (const c of covered) assert.ok(routes.includes(c), `outil sans route : ${c}`);

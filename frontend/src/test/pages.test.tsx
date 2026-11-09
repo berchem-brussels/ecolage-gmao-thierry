@@ -47,6 +47,18 @@ const parametres = [
   { cle: 'app.default_lang', groupe: 'affichage', type: 'choix', requis: true, max: null, choix: [{ valeur: 'fr', libelle_fr: 'Français', libelle_nl: 'Frans' }, { valeur: 'nl', libelle_fr: 'Néerlandais', libelle_nl: 'Nederlands' }], libelle_fr: 'Langue par défaut', libelle_nl: 'Standaardtaal', description_fr: 'Langue de connexion.', description_nl: 'Aanmeldtaal.', valeur: 'fr', defaut: 'fr', est_defaut: true, updated_at: null },
 ];
 const pe = (cle: string, groupe: string, type: string, valeur: string, extra: Record<string, unknown> = {}) => ({ entite_id: 1, cle, groupe, type, max: null, min: null, libelle_fr: cle, libelle_nl: cle, description_fr: 'd', description_nl: 'd', valeur, defaut: '', est_defaut: valeur === '', updated_at: null, ...extra });
+// 0.14.0 : motifs d'attente de l'entité (une valeur désactivée, non proposée).
+const motifsAttente = [
+  { id: 41, entite_id: 1, liste: 'motif_attente', code: 'piece', libelle_fr: 'Pièce à commander', libelle_nl: 'Onderdeel te bestellen', ordre: 10, is_active: 1, motif_desactivation: null, created_at: '', updated_at: '' },
+  { id: 42, entite_id: 1, liste: 'motif_attente', code: 'acces', libelle_fr: 'Accès impossible', libelle_nl: 'Toegang onmogelijk', ordre: 20, is_active: 1, motif_desactivation: null, created_at: '', updated_at: '' },
+  { id: 43, entite_id: 1, liste: 'motif_attente', code: 'demandeur', libelle_fr: 'Réponse du demandeur attendue', libelle_nl: 'Antwoord van de aanvrager verwacht', ordre: 30, is_active: 1, motif_desactivation: null, created_at: '', updated_at: '' },
+  { id: 44, entite_id: 1, liste: 'motif_attente', code: 'budget', libelle_fr: 'Budget à obtenir', libelle_nl: 'Budget te verkrijgen', ordre: 40, is_active: 0, motif_desactivation: 'x', created_at: '', updated_at: '' },
+];
+// 0.14.0 (CYC-04) : libellés des états d'une demande dans l'entité (la GRC reprend le texte du demandeur).
+const etat = (code: string, fr: string, nl: string, extra: Record<string, unknown> = {}) => ({ id: code.length, entite_id: 1, code, libelle_fr: fr, libelle_nl: nl, grc_fr: fr, grc_nl: nl,
+  updated_at: '2026-11-08 10:00:00', livre_fr: fr, livre_nl: nl, ferme: 0, compte_retard: 1, suspend: 'non', trace: { etat: 'livree', le: null, par: null }, ...extra });
+const etatsDemande = [etat('brouillon', 'Brouillon', 'Ontwerp'), etat('a_qualifier', 'Reçue par le service technique', 'Ontvangen door de technische dienst'),
+  etat('en_attente', 'En attente d’un élément', 'In wacht', { livre_fr: 'En attente', suspend: 'selon_motif', trace: { etat: 'modifiee', le: '2026-11-08T09:00:00Z', par: 'Rita Responsable' } })];
 const parametresEntite = [
   pe('contact.nom_fr', 'contact', 'texte', 'Service technique fictif', { libelle_fr: 'Nom du service en français' }),
   pe('contact.nom_nl', 'contact', 'texte', 'Fictieve technische dienst'),
@@ -57,6 +69,8 @@ const parametresEntite = [
   pe('rgpd.dpo_contact', 'rgpd', 'texte', 'dpo@exemple.test', { max: 300, libelle_fr: 'Contact du DPO' }),
   pe('rgpd.mention_fr', 'rgpd', 'texte_long', '{entite} traite vos données. {dpo}', { max: 3000, variables: ['entite', 'dpo'], est_defaut: true, libelle_fr: 'Mention complète, en français' }),
   pe('demandes.delai_reouverture_jours', 'demandes', 'entier', '7', { min: 0, max: 90, defaut: '7', est_defaut: true, libelle_fr: 'Délai de réouverture après clôture (jours)' }),
+  // 0.14.0 (DV-119) : motifs d'attente qui suspendent le délai, cases à cocher d'une liste de l'entité.
+  pe('demandes.attente_suspend', 'demandes', 'codes_liste', 'acces,demandeur', { liste: 'motif_attente', defaut: 'acces,demandeur', est_defaut: true, libelle_fr: "Motifs d'attente qui suspendent le délai" }),
 ];
 const journal = [
   { id: 2, created_at: '2026-10-22 08:30:00', action: 'lieu.update', entity_type: 'lieu', entity_id: 4, channel: 'mcp', details: { nom_fr: 'Salle du conseil' }, entite_id: 1, entite_code: 'AA', user_id: 1, user_email: 'a@exemple.test', user_first_name: 'Ada', user_last_name: 'Admin' },
@@ -170,10 +184,11 @@ beforeEach(() => {
       : url.startsWith('/api/tickets') && init?.method === 'POST' ? { data: { id: 8, reference: 'TCK-2026-00008' }, meta: { envelope: 1 } }
       : url.startsWith('/api/tickets') ? page(ticketsListe)
       : url.startsWith('/api/lieux/arbre') ? { data: arbre, meta: { envelope: 1 } }
-      : url.startsWith('/api/listes-valeurs') ? page(valeurs)
+      : url.startsWith('/api/listes-valeurs') ? page([...valeurs, ...motifsAttente].filter((v) => (url.includes('liste=') ? url.includes(`liste=${v.liste}`) : v.liste === 'type_lieu')))
       : url.startsWith('/api/categories/arbre') ? { data: arbreCategories, meta: { envelope: 1 } }
       : /^\/api\/categories\/10\/questions/.test(url) ? { data: questionsPlomberie, meta: { envelope: 1, max_actives: 10 } }
       : /^\/api\/categories\/\d+\/questions/.test(url) ? { data: [], meta: { envelope: 1, max_actives: 10 } }
+      : url.startsWith('/api/etats-demande') ? { data: init?.method === 'PUT' ? etatsDemande[1] : etatsDemande, meta: { envelope: 1 } }
       : url.startsWith('/api/priorites') ? page(priorites)
       : url.startsWith('/api/horaires') ? page(horaires)
       : url.startsWith('/api/jours-non-ouvres') ? page(joursNonOuvres)
@@ -287,6 +302,13 @@ describe('écrans', () => {
     expect(screen.getByText('Désactivée')).toBeInTheDocument();
   });
 
+  it('0.14.0 : quatre listes au choix, en boutons (types de lieux, motifs d’attente, motifs de refus, causes de panne)', async () => {
+    render(wrap(ListesValeursPage, 'fr'));
+    await screen.findByText('Bureau');
+    for (const l of ['Types de lieux', "Motifs d'attente", 'Motifs de refus', 'Causes de panne']) expect(screen.getByRole('radio', { name: l })).toBeInTheDocument();
+    expect(screen.getByRole('radio', { name: 'Types de lieux' })).toBeChecked();
+  });
+
   it('le menu propose le patrimoine au gestionnaire, mais pas les listes de valeurs réservées au responsable', async () => {
     render(wrap(AppLayout, 'fr'));
     // jsdom n'a pas de largeur d'écran : la mise en page est celle du téléphone, le menu s'ouvre par son bouton.
@@ -294,6 +316,24 @@ describe('écrans', () => {
     expect(await screen.findByText('Patrimoine')).toBeInTheDocument();
     expect(screen.queryByText('Listes de valeurs')).toBeNull();
     expect(screen.queryByText('Catégories et délais')).toBeNull();
+  });
+
+  it('0.14.0 (CYC-04) : onglet « États des demandes », états en usage seulement, texte modifié signalé, enregistrement', async () => {
+    render(wrap(ReferentielPage, 'fr', FALLBACK_SETTINGS, ['/referentiel?onglet=etats']));
+    expect(await screen.findByRole('tab', { name: 'États des demandes' })).toHaveAttribute('aria-selected', 'true');
+    expect((await screen.findAllByDisplayValue('En attente d’un élément')).length).toBe(2);
+    expect(screen.queryByText('Brouillon')).toBeNull();
+    expect(screen.getByText(/le délai peut être suspendu selon le motif/)).toBeInTheDocument();
+    expect(screen.getByText(/Rita Responsable/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Revenir aux libellés livrés' })).toBeInTheDocument();
+    const champ = screen.getAllByLabelText('Texte du demandeur en français')[0] as HTMLInputElement;
+    expect(champ).toHaveValue('Reçue par le service technique');
+    fireEvent.change(champ, { target: { value: 'Bien reçue' } });
+    fireEvent.click(within(champ.closest('.ant-card') as HTMLElement).getByRole('button', { name: 'Enregistrer' }));
+    const appels = (fetch as unknown as { mock: { calls: [string, RequestInit?][] } }).mock.calls;
+    await waitFor(() => expect(appels.some(([u, i]) => u === '/api/etats-demande/a_qualifier' && i?.method === 'PUT')).toBe(true));
+    const [, init] = appels.find(([u, i]) => u === '/api/etats-demande/a_qualifier' && i?.method === 'PUT')!;
+    expect(JSON.parse(String(init!.body))).toMatchObject({ libelle_fr: 'Bien reçue', libelle_nl: 'Ontvangen door de technische dienst' });
   });
 
   it('catégories : arbre avec la priorité en vigueur et aperçu des tuiles du demandeur, domaine puis natures', async () => {
@@ -967,6 +1007,22 @@ describe('remarques de la recette de la 0.11.0 (0.12.0, DV-109)', () => {
     expect((await screen.findAllByText('(standaardwaarde)')).length).toBeGreaterThan(0);
   });
 
+  it('0.14.0 (DV-119) : motifs qui suspendent le délai en cases à cocher (valeurs actives) ; enregistrés en codes rangés', async () => {
+    render(wrap(ReglagesEntitePage, 'fr'));
+    const groupe = await screen.findByRole('group', { name: "Motifs d'attente qui suspendent le délai" });
+    await waitFor(() => expect(within(groupe).getAllByRole('checkbox')).toHaveLength(3));
+    expect(within(groupe).getByRole('checkbox', { name: 'Accès impossible' })).toBeChecked();
+    expect(within(groupe).getByRole('checkbox', { name: 'Réponse du demandeur attendue' })).toBeChecked();
+    expect(within(groupe).getByRole('checkbox', { name: 'Pièce à commander' })).not.toBeChecked();
+    expect(within(groupe).queryByRole('checkbox', { name: 'Budget à obtenir' })).toBeNull();
+    fireEvent.click(within(groupe).getByRole('checkbox', { name: 'Pièce à commander' }));
+    fireEvent.click(within(groupe.closest('.ant-card') as HTMLElement).getByRole('button', { name: 'Enregistrer' }));
+    const appels = (fetch as unknown as { mock: { calls: [string, RequestInit?][] } }).mock.calls;
+    await waitFor(() => expect(appels.some(([u, i]) => u === '/api/parametres-entite/demandes.attente_suspend' && i?.method === 'PUT')).toBe(true));
+    const [, init] = appels.find(([u, i]) => u === '/api/parametres-entite/demandes.attente_suspend' && i?.method === 'PUT')!;
+    expect(JSON.parse(String(init!.body))).toEqual({ valeur: 'acces,demandeur,piece' });
+  });
+
   it('R2 : un refus du serveur s’affiche sous le réglage refusé avec le message qui nomme le réglage et la valeur', async () => {
     const avant = fetch as unknown as (u: string, i?: RequestInit) => Promise<unknown>;
     const refus = 'Valeur refusée pour « Nom du service en français » : 200 caractères au plus (201 tapés).';
@@ -1270,7 +1326,8 @@ describe('journal d’audit sans code brut (0.13.0, point 2 ; défauts D2, D3, D
     horaires: 'jour debut fin',
     users: 'email first_name last_name user_role entite_id preferred_lang ui_mode theme must_change_password is_active lieu_habituel_id is_admin_local',
     nettoyage: 'valeur value cle',
-    services: 'email role entite_id user_id from to motif module type priority fields internal motif_donne liste code version nom filtres niveau obligatoire octets largeur hauteur demande_id numero brouillon comptes lieux entite langue modules remarque microsoft_code method avant apres ticket reason danger beneficiaire_id beneficiaire_texte date_souhaitee reponses pieces premiere priorite_confirmee etat motif_priorite duree_estimee_minutes consignes photos_visibles date_convenue lieu_id categorie_id',
+    services: 'email role entite_id user_id from to motif module type priority fields internal motif_donne liste code version nom filtres niveau obligatoire octets largeur hauteur demande_id numero brouillon comptes lieux entite langue modules remarque microsoft_code method avant apres ticket reason danger beneficiaire_id beneficiaire_texte date_souhaitee reponses pieces premiere priorite_confirmee etat motif_priorite duree_estimee_minutes consignes photos_visibles date_convenue lieu_id categorie_id de vers motif_id commentaire_donne compte_rendu_donne suspendu echeance_le complement_id longueur note',
+    demande_etats: 'libelle_fr libelle_nl grc_fr grc_nl',
   };
   it('chaque champ écrit au journal a son libellé, en FR et en NL', () => {
     const manquants = [...new Set(Object.values(CHAMPS_ECRITS).join(' ').split(' '))]
@@ -1296,9 +1353,11 @@ describe('journal d’audit sans code brut (0.13.0, point 2 ; défauts D2, D3, D
 
   for (const [lang, attendus] of [
     ['fr', ['Libellé en français : Mobilier de bureau', 'Nom du pouvoir local en français', 'Photo JPEG', 'Mes demandes', 'Motif donné', 'Oui',
-      'Gestionnaire technique', 'Jour', 'Lundi', 'Heure de début : 07:45', 'Type de lieu : Bureau', 'Congé', '8 mai', 'Nature', 'Bâtiment', 'Pictogramme : Éclair']],
+      'Gestionnaire technique', 'Jour', 'Lundi', 'Heure de début : 07:45', 'Type de lieu : Bureau', 'Congé', '8 mai', 'Nature', 'Bâtiment', 'Pictogramme : Éclair',
+      'État de départ', 'Qualifiée', "État d'arrivée", 'Pièce à commander', 'Commentaire donné', 'Délai suspendu', 'Échéance de fin']],
     ['nl', ['Benaming in het Frans : Mobilier de bureau', 'Naam van het lokaal bestuur in het Frans', 'JPEG-foto', 'Mijn aanvragen', 'Reden opgegeven', 'Ja',
-      'Technisch beheerder', 'Maandag', 'Beginuur : 07:45', 'Soort plaats : Kantoor', 'Jaarlijkse verlofdag', '8 mei', 'Gebouw']],
+      'Technisch beheerder', 'Maandag', 'Beginuur : 07:45', 'Soort plaats : Kantoor', 'Jaarlijkse verlofdag', '8 mei', 'Gebouw',
+      'Beginstatus', 'Gekwalificeerd', 'Onderdeel te bestellen', 'Opmerking gegeven', 'Termijn opgeschort', 'Einddatum']],
   ] as const) {
     it(`détail des lignes sans clé ni code brut (${lang})`, async () => {
       const ada = { entite_id: 1, entite_code: 'AA', user_id: 1, user_email: 'a@exemple.test', user_first_name: 'Ada', user_last_name: 'Admin', channel: 'api', entity_id: 3 };
@@ -1315,6 +1374,10 @@ describe('journal d’audit sans code brut (0.13.0, point 2 ; défauts D2, D3, D
           noms: { 'avant.type_id': { type: 'valeur', id: 2, code: 'salle_reunion', nom_fr: 'Salle de réunion', nom_nl: 'Vergaderzaal' }, 'apres.type_id': { type: 'valeur', id: 1, code: 'bureau', nom_fr: 'Bureau', nom_nl: 'Kantoor' } } },
         { ...ada, id: 199, created_at: '2026-11-08 07:08:00', action: 'jour_non_ouvre.create', entity_type: 'jour_non_ouvre', details: { nature: 'conge', mois_jour: '05-08', date_debut: null, date_fin: null } },
         { ...ada, id: 200, created_at: '2026-11-08 07:09:00', action: 'lieu.create', entity_type: 'lieu', details: { code: 'AA-B9', nature: 'batiment' } },
+        // 0.14.0 : changement d'état d'une demande, motif nommé par le serveur.
+        { ...ada, id: 202, created_at: '2026-11-08 07:11:00', action: 'demande.transition', entity_type: 'demande',
+          details: { numero: 'AA-DI-2026-00009', de: 'qualifiee', vers: 'en_attente', motif_id: 41, commentaire_donne: 1, suspendu: 1, avant: { echeance_le: '2026-11-09 13:05:00' }, apres: { echeance_le: '2026-11-10 09:35:00' } },
+          noms: { motif_id: { type: 'valeur', id: 41, code: 'piece', nom_fr: 'Pièce à commander', nom_nl: 'Onderdeel te bestellen', entite_code: 'AA' } } },
       ];
       (journal as unknown as Record<string, unknown>[]).push(...lignes);
       try {
@@ -1325,7 +1388,7 @@ describe('journal d’audit sans code brut (0.13.0, point 2 ; défauts D2, D3, D
         const cellules = [...container.querySelectorAll('.ant-descriptions-item-label, .ant-descriptions-item-content')].map((c) => c.textContent || '');
         const tout = cellules.join(' ¦ ');
         for (const a of attendus) expect(tout, a).toContain(a);
-        for (const brut of ['libelle_fr', 'app.organisation_fr', 'image/jpeg', 'mes-demandes', 'motif_donne', 'type_id', 'mois_jour', '05-08', 'conge', 'batiment', 'icone', 'salle_reunion']) {
+        for (const brut of ['libelle_fr', 'app.organisation_fr', 'image/jpeg', 'mes-demandes', 'motif_donne', 'type_id', 'mois_jour', '05-08', 'conge', 'batiment', 'icone', 'salle_reunion', 'qualifiee', 'en_attente', 'commentaire_donne', 'motif_id', '41', 'echeance_le', '13:05:00']) {
           expect(cellules.some((c) => c.split(/[\s:·,()]+/).includes(brut)), brut).toBe(false);
         }
       } finally { journal.splice(journal.length - lignes.length, lignes.length); }

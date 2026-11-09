@@ -11,6 +11,8 @@
  *   5. Compteur « n sur max » ; bouton désactivé au maximum ; bloc absent si l'entité ferme le dépôt (0) et qu'aucune
  *      pièce n'est là. Un refus du serveur s'affiche dans la langue de la personne, la saisie reste.
  * L'état (pièces et plafonds) est tenu par la page : il entre dans le brouillon et dans le rappel « Recommencer à zéro ».
+ * 0.14.0 (point 5, SUI-05) : « destination » envoie les fichiers à une demande déjà envoyée (complément du demandeur) ;
+ * « Retirer » suit alors le droit rendu par le serveur (peut_retirer).
  */
 import { useRef, useState } from 'react';
 import { Alert, Button, Space, Typography } from 'antd';
@@ -25,12 +27,14 @@ interface Props {
   pieces: Piece[];
   plafonds: PlafondsPieces | null;
   onChange: (pieces: Piece[]) => void;
+  /** Adresse d'envoi : le brouillon par défaut, ou /demandes/:id/pieces pour compléter une demande envoyée (0.14.0). */
+  destination?: string;
 }
 
 const PDF = 'application/pdf';
 const sansExtension = (nom: string) => nom.replace(/\.[A-Za-z0-9]{1,5}$/, '');
 
-export default function PiecesDemande({ pieces, plafonds, onChange }: Props) {
+export default function PiecesDemande({ pieces, plafonds, onChange, destination = '/demandes/brouillon/pieces' }: Props) {
   const { t } = useI18n();
   const entree = useRef<HTMLInputElement>(null);
   const [envoi, setEnvoi] = useState<string | null>(null);
@@ -67,7 +71,7 @@ export default function PiecesDemande({ pieces, plafonds, onChange }: Props) {
           refus.push(t('demande.pieces.erreur.type').replace('{nom}', f.name));
           continue;
         }
-        const p = await api.upload<Piece>('/demandes/brouillon/pieces', blob, nom);
+        const p = await api.upload<Piece>(destination, blob, nom);
         courantes = [...courantes, p];
         onChange(courantes);
       } catch (e) {
@@ -100,7 +104,8 @@ export default function PiecesDemande({ pieces, plafonds, onChange }: Props) {
           {t('demande.pieces.compteur').replace('{n}', String(pieces.length)).replace('{max}', String(plafonds.nombre))}
         </Typography.Text>
       </Space>
-      <input ref={entree} type="file" accept={accept} multiple hidden aria-hidden="true" tabIndex={-1}
+      {/* display: none en plus de hidden : dans un Form.Item, Ant Design affiche les champs de fichier (0.14.0). */}
+      <input ref={entree} type="file" accept={accept} multiple hidden aria-hidden="true" tabIndex={-1} style={{ display: 'none' }}
         data-testid="dem-pieces-entree" onChange={(e) => { ajouter(e.target.files); }} />
       <Typography.Text id="dem-pieces-consigne" type="secondary" style={{ fontSize: 12, display: 'block', marginTop: 6 }}>
         {t('demande.pieces.consigne')}{' '}
@@ -112,7 +117,7 @@ export default function PiecesDemande({ pieces, plafonds, onChange }: Props) {
         <Alert type="warning" showIcon style={{ marginTop: 8 }} role="alert"
           message={erreurs.length === 1 ? erreurs[0] : <ul style={{ margin: 0, paddingInlineStart: 18 }}>{erreurs.map((x) => <li key={x}>{x}</li>)}</ul>} />
       )}
-      <VignettesPieces pieces={pieces} peutRetirer={() => true} onRetirer={retirer} />
+      <VignettesPieces pieces={pieces} peutRetirer={(p) => p.brouillon === 1 || p.peut_retirer === 1} onRetirer={retirer} />
     </div>
   );
 }

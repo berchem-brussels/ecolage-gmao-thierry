@@ -17,6 +17,9 @@
  * bord, filtres, tris, vues, qualification). La fiche du service montre l'état avec le libellé du service, les
  * échéances, le retard et la qualification (priorité proposée, motif, durée, consignes, qui a qualifié).
  * 0.13.0 (étape 8 ter, DV-101) : la fiche du service montre la photo de l'endroit, sous « Où ? ».
+ * 0.14.0 (étape 9, point 5 ; SUI-02, SUI-05, CYC-04) : l'état vu par le demandeur porte le libellé réglé par l'entité ;
+ * la fiche montre les compléments (au demandeur et au service) ; « Mes demandes » ajoute la ligne du temps et les
+ * boutons « Compléter ma demande » et « Annuler ma demande » selon les droits rendus par le serveur.
  */
 import { useCallback, useEffect, useState } from 'react';
 import { Alert, Button, Card, Descriptions, Drawer, Grid, Input, List, Segmented, Space, Table, Tag, Typography, message } from 'antd';
@@ -29,6 +32,8 @@ import { useAuth } from '../contexts/AuthContext';
 import { Icone } from '../referentiel';
 import { type Demande, type Piece, COULEUR_ETAT, beneficiaireTexte, cheminTexte, dateDepot, dateSouhaitee, duree, extrait, finAnnoncee, instant } from '../demandes';
 import GestionDemandesPage from './GestionDemandesPage';
+import HistoriqueDemande from '../components/demandes/HistoriqueDemande';
+import { AnnulerForm, AvisDemandeur, AvisDonne, BoutonsDemandeur, CompleterForm, ReouvrirForm } from '../components/demandes/ActionsDemandeur';
 
 /** Mention « Danger » (0.7.0, DEM-06), à côté de l'état. */
 export function DangerTag() {
@@ -42,9 +47,12 @@ type Filtre = 'toutes' | 'ouvertes' | 'closes';
  * Étiquette d'état : libellé simple vu par le demandeur (cahier des charges, section 8.1) ; libellé du service
  * technique (« À qualifier », « Qualifiée »…) avec service (0.9.0).
  */
-export function EtatTag({ etat, service = false }: { etat: Demande['etat']; service?: boolean }) {
-  const { t } = useI18n();
-  return <Tag color={COULEUR_ETAT[etat]} style={{ marginInlineEnd: 0 }}>{t(`demande.${service ? 'etat_service' : 'etat'}.${etat}`)}</Tag>;
+export function EtatTag({ etat, service = false, d }: { etat: Demande['etat']; service?: boolean; d?: Pick<Demande, 'etat_libelle_fr' | 'etat_libelle_nl'> }) {
+  const { t, lang } = useI18n();
+  // 0.14.0 (CYC-04) : le demandeur lit le libellé réglé par l'entité quand le serveur le rend.
+  const entite = !service && d ? (lang === 'nl' ? d.etat_libelle_nl : d.etat_libelle_fr) : null;
+  // Libellé long (« Reçue par le service technique ») : retour à la ligne permis, la fiche tient dans 320 px (0.14.0).
+  return <Tag color={COULEUR_ETAT[etat]} style={{ marginInlineEnd: 0, whiteSpace: 'normal' }}>{entite || t(`demande.${service ? 'etat_service' : 'etat'}.${etat}`)}</Tag>;
 }
 
 /** Fiche d'une demande en lecture (0.5.0) ; la ligne du temps et les messages arrivent aux étapes 9 et 10. */
@@ -68,7 +76,17 @@ export function FicheDemande({ d, avecDemandeur, service = false, onChange }: { 
     {d.pour_moi === 1 && <Alert type="info" showIcon message={`${t('demande.pour_moi.fiche')} ${d.demandeur_prenom || ''} ${d.demandeur_nom || ''}.`} style={{ marginBottom: 12 }} />}
     <Descriptions column={1} size="small" bordered>
       <Descriptions.Item label={t('demande.champ.numero')}><Typography.Text strong copyable>{d.numero}</Typography.Text></Descriptions.Item>
-      <Descriptions.Item label={t('demande.champ.etat')}><EtatTag etat={d.etat} service={service} /></Descriptions.Item>
+      <Descriptions.Item label={t('demande.champ.etat')}>
+        <EtatTag etat={d.etat} service={service} d={d} />
+        {service && d.etat_depuis && <Typography.Text type="secondary" style={{ fontSize: 13 }}> {t('cycle.depuis')} {instant(d.etat_depuis)}</Typography.Text>}
+      </Descriptions.Item>
+      {service && d.cause_code && <Descriptions.Item label={t('cycle.motif.cause_panne')}>{lang === 'nl' ? d.cause_libelle_nl : d.cause_libelle_fr}</Descriptions.Item>}
+      {service && (d.avis || []).length > 0 && (
+        <Descriptions.Item label={t('avis.titre.service')}>
+          <Space direction="vertical" size={8}>{(d.avis || []).map((a) => <AvisDonne key={a.id} a={a} />)}</Space>
+        </Descriptions.Item>
+      )}
+      {service && d.compte_rendu && <Descriptions.Item label={t('cycle.compte_rendu')}><span style={{ whiteSpace: 'pre-wrap' }}>{d.compte_rendu}</span></Descriptions.Item>}
       {service && d.priorite && (
         <Descriptions.Item label={t('gest.col.priorite')}>
           <Space size={6} wrap>
@@ -83,6 +101,8 @@ export function FicheDemande({ d, avecDemandeur, service = false, onChange }: { 
           <Space direction="vertical" size={2}>
             {d.prise_en_charge_le && <span className={d.etat === 'a_qualifier' && d.retard ? 'dem-retard' : undefined}>{t('gest.echeance.prise_en_charge')} : {instant(d.prise_en_charge_le)}</span>}
             <span className={d.etat !== 'a_qualifier' && d.retard ? 'dem-retard' : undefined}>{t('gest.echeance.fin')} : {d.echeance_le ? instant(d.echeance_le) : t('demande.delai.convenir')}</span>
+            {d.echeance_type === 'suspendu' && <Tag color="orange" style={{ alignSelf: 'flex-start' }}>{t('gest.echeance.suspendu')}</Tag>}
+            {d.echeance_type === 'suspendu' && <Typography.Text type="secondary" style={{ fontSize: 13 }}>{t('gest.echeance.suspendu.aide')}</Typography.Text>}
             {d.retard === 1 && <Tag color="red" style={{ alignSelf: 'flex-start' }}>{t('gest.retard')}</Tag>}
           </Space>
         </Descriptions.Item>
@@ -103,6 +123,18 @@ export function FicheDemande({ d, avecDemandeur, service = false, onChange }: { 
       <Descriptions.Item label={t('demande.champ.description')}>
         <span lang={d.langue} style={{ whiteSpace: 'pre-wrap' }}>{d.description}</span>
       </Descriptions.Item>
+      {(d.complements || []).length > 0 && (
+        <Descriptions.Item label={t('demande.champ.complements')}>
+          <Space direction="vertical" size={8} style={{ width: '100%' }}>
+            {(d.complements || []).map((c) => (
+              <div key={c.id}>
+                <Typography.Text type="secondary" style={{ fontSize: 12 }}>{dateDepot(c.created_at)}{c.auteur === 'beneficiaire' ? ` · ${t('demande.complement.beneficiaire')}` : ''}</Typography.Text>
+                <div lang={c.langue} style={{ whiteSpace: 'pre-wrap' }}>{c.texte}</div>
+              </div>
+            ))}
+          </Space>
+        </Descriptions.Item>
+      )}
       {d.pieces && d.pieces.length > 0 && (
         <Descriptions.Item label={t('demande.champ.pieces')}>
           <VignettesPieces pieces={d.pieces} peutRetirer={(p) => p.peut_retirer === 1} onRetirer={retirer} label={t('demande.champ.pieces')} />
@@ -159,6 +191,9 @@ function MesDemandes() {
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(false);
   const [fiche, setFiche] = useState<Demande | null>(null);
+  /** 0.14.0, point 5 : complément ou annulation en cours de saisie ; ligne du temps rechargée après. */
+  const [action, setAction] = useState<'completer' | 'annuler' | 'reouvrir' | null>(null);
+  const [histo, setHisto] = useState(0);
   const taille = 20;
 
   const charger = useCallback(async () => {
@@ -174,12 +209,13 @@ function MesDemandes() {
 
   const ouverte = params.get('demande');
   const chargerFiche = useCallback(() => {
-    if (!ouverte) { setFiche(null); return; }
+    if (!ouverte) { setFiche(null); setAction(null); return; }
     api.get<Demande>(`/demandes/${ouverte}`).then(setFiche).catch(() => setFiche(null));
   }, [ouverte]);
+  const apresAction = (d: Demande) => { setFiche(d); setAction(null); setHisto((n) => n + 1); charger(); };
   useEffect(() => { chargerFiche(); }, [chargerFiche]);
   const ouvrir = (d: Demande) => { const p = new URLSearchParams(params); p.set('demande', String(d.id)); setParams(p); };
-  const fermer = () => { const p = new URLSearchParams(params); p.delete('demande'); setParams(p); };
+  const fermer = () => { setAction(null); const p = new URLSearchParams(params); p.delete('demande'); setParams(p); };
 
   const cat = (d: Demande) => (lang === 'nl' ? d.categorie_libelle_nl : d.categorie_libelle_fr);
   const lieu = (d: Demande) => (lang === 'nl' ? d.lieu_nom_nl : d.lieu_nom_fr);
@@ -207,7 +243,7 @@ function MesDemandes() {
                 <Space direction="vertical" size={4} style={{ width: '100%' }}>
                   <Space style={{ justifyContent: 'space-between', width: '100%' }} wrap>
                     <Button type="link" onClick={() => ouvrir(d)} style={{ paddingInline: 0, fontWeight: 600 }}>{d.numero}</Button>
-                    <Space size={4}>{d.danger === 1 && <DangerTag />}<EtatTag etat={d.etat} /></Space>
+                    <Space size={4}>{d.danger === 1 && <DangerTag />}<EtatTag etat={d.etat} d={d} /></Space>
                   </Space>
                   <Typography.Text><Icone code={d.categorie_icone} style={{ color: 'var(--app-primary)' }} /> {cat(d)}</Typography.Text>
                   {d.suivie === 1 && <Tag color="green" style={{ alignSelf: 'flex-start' }}>{t('demande.suivie.tag')}</Tag>}
@@ -239,14 +275,28 @@ function MesDemandes() {
                 <Typography.Text type="secondary" style={{ fontSize: 12 }}>{cheminTexte(d.lieu_chemin.slice(0, -1), lang)}</Typography.Text>
               </div>
             ) },
-            { title: t('demande.champ.etat'), key: 'etat', render: (_, d) => <Space size={4} wrap>{d.danger === 1 && <DangerTag />}<EtatTag etat={d.etat} /></Space> },
+            { title: t('demande.champ.etat'), key: 'etat', render: (_, d) => <Space size={4} wrap>{d.danger === 1 && <DangerTag />}<EtatTag etat={d.etat} d={d} /></Space> },
             { title: t('demande.champ.depot'), key: 'depot', render: (_, d) => dateDepot(d.created_at) },
             { title: t('demande.champ.delai'), key: 'delai', render: (_, d) => delai(d) },
           ]} />
       )}
-      <Drawer open={!!fiche} onClose={fermer} width={mobile ? '100%' : 520} title={fiche ? `${t('demande.fiche')} ${fiche.numero}` : ''}>
-        {fiche && <FicheDemande d={fiche} avecDemandeur={false} onChange={chargerFiche} />}
-        {fiche && <Typography.Paragraph type="secondary" style={{ marginTop: 12, fontSize: 13 }}>{t('demande.fiche.suite')}</Typography.Paragraph>}
+      <Drawer open={!!fiche} onClose={fermer} width={mobile ? '100%' : 520}
+        title={fiche ? `${action ? t(`demandeur.${action}`) : t('demande.fiche')} ${fiche.numero}` : ''}>
+        {fiche && (action === 'completer'
+          ? <CompleterForm key={`c-${fiche.id}`} d={fiche} onCancel={() => setAction(null)} onDone={apresAction} />
+          : action === 'annuler'
+            ? <AnnulerForm key={`a-${fiche.id}`} d={fiche} onCancel={() => setAction(null)} onDone={apresAction} />
+            : action === 'reouvrir'
+              ? <ReouvrirForm key={`r-${fiche.id}`} d={fiche} onCancel={() => setAction(null)} onDone={apresAction} />
+              : (
+              <>
+                <AvisDemandeur key={`v-${fiche.id}-${fiche.avis?.length || 0}`} d={fiche} onDone={apresAction} />
+                <BoutonsDemandeur d={fiche} onChoisir={setAction} />
+                <FicheDemande d={fiche} avecDemandeur={false} onChange={chargerFiche} />
+                <HistoriqueDemande demandeId={fiche.id} service={false} rafraichir={histo} />
+                <Typography.Paragraph type="secondary" style={{ marginTop: 12, fontSize: 13 }}>{t('demande.fiche.suite')}</Typography.Paragraph>
+              </>
+            ))}
       </Drawer>
     </div>
   );

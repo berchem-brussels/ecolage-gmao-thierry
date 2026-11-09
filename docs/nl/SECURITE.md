@@ -2,6 +2,10 @@
 
 De Franse tekst (`docs/fr/SECURITE.md`) is rechtsgeldig en bevat het volledige rooster per versie.
 
+## 0.14.0 (08/11/2026)
+
+Levenscyclus van de aanvragen, migratie `012_cycle_de_vie`. Getest: overgang, historiek, aanvulling, annulering, foto en beoordeling van een aanvraag van de andere entiteit 403 (API en MCP); overgangen van de dienst enkel met `demandes:traiter`; de aanvrager en de begunstigde enkel annuleren en heropenen, wie alleen volgt niets; een status die de aanvrager nooit mag bereiken geeft 403, nooit 409; elke ontbrekende overgang geweigerd; annuleren geweigerd zodra de aanvraag « Bezig » was; heropenen enkel binnen de termijn; één beoordeling per afsluiting; opschorting enkel voor een aangevinkte reden; geen vrije tekst in het auditlogboek (`commentaire_donne`, `compte_rendu_donne`). `recette.sh`: wachtwoord zichtbaar getypt, enkel de lengte getoond. Elke bescherming apart verwijderd: minstens één fout. Geen nieuwe afhankelijkheid.
+
 ## 0.13.0 (08/11/2026)
 
 Foto van de plek op de fiche van een aanvraag, enkel voor de technische dienst (`photo_lieu`), filter « Zonder foto » in Patrimonium (`has_photo`), correcties D1 tot D10 en M1 tot M5. Getest: de foto en de aanvraag van de andere entiteit 403; nooit aan de aanvrager; `has_photo` enkel 0 of 1 en enkel de actieve entiteit; de reden van een ticketstatus niet meer in het auditlogboek (`motif_donne`); geen rauwe code meer in het logboek; kop tot 320 px. Elke correctie apart verwijderd: minstens één fout. Geen migratie, geen nieuwe afhankelijkheid.

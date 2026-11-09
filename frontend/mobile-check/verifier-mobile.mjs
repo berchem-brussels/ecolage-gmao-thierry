@@ -7,6 +7,8 @@
  *   npx playwright install chromium   (une fois)
  *   MOBILE_BASE_URL=https://… MOBILE_USER=… MOBILE_PASSWORD=… npm run mobile:check
  * MOBILE_CHROMIUM : chemin d'un Chromium déjà installé (facultatif). Code de sortie 1 si un défaut est trouvé.
+ * 0.14.0 (point 7) : ouvre aussi la fiche (volet latéral) d'une demande de la personne et d'une demande de l'entité, si
+ * elles existent, et signale un volet plus large que l'écran (un tableau qui déborde sans faire défiler la page).
  */
 import { chromium, devices } from '@playwright/test';
 
@@ -16,7 +18,7 @@ const PASSWORD = process.env.MOBILE_PASSWORD;
 if (!USER || !PASSWORD) { console.error('MOBILE_USER et MOBILE_PASSWORD sont requis.'); process.exit(2); }
 
 const ROUTES = ['/', '/demandes/nouvelle', '/demandes', '/demandes-entite', '/patrimoine', '/listes',
-  '/referentiel', '/referentiel?onglet=priorites', '/referentiel?onglet=calendrier', '/referentiel?onglet=simulateur',
+  '/referentiel', '/referentiel?onglet=priorites', '/referentiel?onglet=calendrier', '/referentiel?onglet=simulateur', '/referentiel?onglet=etats',
   '/patrimoine?photo=sans', '/reglages-entite', '/entites', '/users', '/parametres', '/parametres?onglet=modules', '/parametres?onglet=connexion',
   '/parametres?onglet=tickets', '/journal', '/tickets', '/help', '/help?fiche=journal', '/accessibility'];
 const APPAREILS = [
@@ -37,11 +39,14 @@ const mesurer = () => {
   const petits = [...document.querySelectorAll('input:not([type=checkbox]):not([type=radio]):not([type=file]):not([type=hidden]), textarea')]
     .filter((i) => i.getBoundingClientRect().width && parseFloat(getComputedStyle(i).fontSize) < 16).length;
   const h = document.querySelector('header');
-  return { large: document.documentElement.scrollWidth, W, sort, petits, entete: h ? h.scrollWidth - h.clientWidth : 0 };
+  const volet = document.querySelector('.ant-drawer-open .ant-drawer-body');
+  return { large: document.documentElement.scrollWidth, W, sort, petits, entete: h ? h.scrollWidth - h.clientWidth : 0,
+    volet: volet ? volet.scrollWidth - volet.clientWidth : 0 };
 };
 
 const navigateur = await chromium.launch(process.env.MOBILE_CHROMIUM ? { executablePath: process.env.MOBILE_CHROMIUM } : {});
 const defauts = [];
+let nbEcrans = ROUTES.length;
 let langueInitiale = null;
 for (const [nom, appareil] of APPAREILS) {
   for (const lang of ['fr', 'nl']) {
@@ -62,7 +67,14 @@ for (const [nom, appareil] of APPAREILS) {
       const me = await fetch('/api/auth/me').then((r) => r.json());
       await fetch('/api/auth/preferences', { method: 'PUT', headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': me.data.csrf_token }, body: JSON.stringify({ preferred_lang: lg }) });
     }, lang);
-    for (const r of ROUTES) {
+    // Fiches (volets) : une demande de la personne, une demande de l'entité (service technique), lues par l'API.
+    const fiches = await page.evaluate(async () => {
+      const une = async (u) => { const r = await fetch(u); if (!r.ok) return null; const j = await r.json(); return j.data && j.data[0] ? j.data[0].id : null; };
+      return { mienne: await une('/api/demandes?limit=1'), entite: await une('/api/demandes?perimetre=entite&limit=1') };
+    });
+    const routes = [...ROUTES, ...(fiches.mienne ? [`/demandes?demande=${fiches.mienne}`] : []), ...(fiches.entite ? [`/demandes-entite?demande=${fiches.entite}`] : [])];
+    if (nom === APPAREILS[0][0] && lang === 'fr') nbEcrans = routes.length;
+    for (const r of routes) {
       await page.goto(B + r);
       await page.waitForTimeout(1200);
       const m = await page.evaluate(mesurer);
@@ -71,6 +83,7 @@ for (const [nom, appareil] of APPAREILS) {
       if (m.sort.length) pb.push(`sort de l'écran : ${m.sort.join(', ')}`);
       if (m.petits) pb.push(`${m.petits} champ(s) en moins de 16 px`);
       if (m.entete > 1) pb.push(`en-tête trop large de ${m.entete} px`);
+      if (m.volet > 1) pb.push(`volet trop large de ${m.volet} px`);
       if (pb.length) defauts.push(`${nom} · ${lang.toUpperCase()} · ${r} : ${pb.join(' ; ')}`);
     }
     if (erreurs.length) defauts.push(`${nom} · ${lang.toUpperCase()} · erreurs : ${[...new Set(erreurs)].join(' ; ')}`);
@@ -84,5 +97,5 @@ for (const [nom, appareil] of APPAREILS) {
   }
 }
 await navigateur.close();
-console.log(defauts.length ? defauts.join('\n') : `Aucun défaut : ${ROUTES.length} écrans, ${APPAREILS.length} largeurs, FR et NL.`);
+console.log(defauts.length ? defauts.join('\n') : `Aucun défaut : ${nbEcrans} écrans, ${APPAREILS.length} largeurs, FR et NL.`);
 process.exit(defauts.length ? 1 : 0);
