@@ -1,6 +1,6 @@
 # Architecture
 
-Version 0.13.0 · Le français fait foi.
+Version 0.14.0 · Le français fait foi.
 
 ## Services
 
@@ -11,7 +11,7 @@ Version 0.13.0 · Le français fait foi.
 
 Base `sql.js` dans le volume `db-data` (`/app/data/app.db`), écrite par le seul processus `api`. Photos des lieux dans le même volume (`/app/data/photos`, variable `PHOTOS_DIR`) et, depuis la 0.8.0, pièces jointes des demandes (`/app/data/pieces`, variable `PIECES_DIR`), hors de la racine web, lues par des routes authentifiées. Certificat dans le volume `ssl-certs`. PostgreSQL 16 arrive au lot L7 (standard, section 5).
 
-## Tables (migrations `001_noyau` à `010_tickets`)
+## Tables (migrations `001_noyau` à `012_cycle_de_vie`)
 
 | Table | Rôle | Points clés |
 | --- | --- | --- |
@@ -39,6 +39,12 @@ Base `sql.js` dans le volume `db-data` (`/app/data/app.db`), écrite par le seul
 | `auth_pending` | Connexions Microsoft en cours (0.10.0) | `state`, `nonce`, vérificateur PKCE et chemin de retour, 15 minutes au plus ; `users.oid` (identifiant Microsoft, unique) et `users.is_admin_local` (accès de secours) ajoutés par `009_sso` |
 | `tickets` | Tickets de l'application (0.11.0, standard 13.5) | `reference` unique `TCK-AAAA-NNNNN` ; `type` (`incident`, `bug`, `question`, `wish`), `queue` (`business`, `it`), impact, gravité et priorité P1 à P4, `status` en table des transitions ; `entite_id` : entité active du demandeur au signalement, qui cloisonne la file métier ; capture en data URL nettoyée ; échéances de prise en charge et de résolution |
 | `ticket_messages` | Fil d'un ticket (0.11.0) | `kind` `message` ou `event` (événement codé, traduit à l'écran), `is_internal` (note interne invisible du demandeur) ; rien n'est supprimé |
+| `help_faq` | FAQ locale (0.12.0) | `entite_id` (nul : entrée commune), `topic_id`, question et réponse FR et NL, `source_ticket_id`, `is_active`, `motif_desactivation` |
+| `demande_transitions` | Passages permis d'un état à l'autre (0.14.0) | (`de_etat`, `vers_etat`, `acteur`) unique, `acteur` `service` ou `demandeur` ; `permission`, `via` (`qualifier`), `motif_liste`, `commentaire` (`interdit`, `facultatif`, `obligatoire`), `commentaire_public`, `compte_rendu`, `condition` (`jamais_en_cours`, `delai_reouverture`), `is_active` ; copiés de `config/cycle-de-vie.json`, jamais réactivés une fois désactivés |
+| `demande_etats` | Libellés des états par entité (0.14.0, CYC-04) | (`entite_id`, `code`) unique ; `libelle_fr`, `libelle_nl` (demandeur), `grc_fr`, `grc_nl` (GRC), trace |
+| `demande_historique` | Historique des passages (0.14.0, CYC-02) | `demande_id`, `de_etat`, `vers_etat`, `user_id`, `motif_id`, `commentaire`, `commentaire_public`, `canal` ; jamais modifié ni effacé |
+| `demande_complements` | Compléments du demandeur (0.14.0, SUI-05) | `demande_id`, `user_id`, `texte` (1 à 2 000 caractères), `langue` ; la description ne change jamais |
+| `demande_avis` | Avis du demandeur à la clôture (0.14.0, SUI-06) | `demande_id`, `user_id`, `note` 1 à 5, `commentaire` facultatif ; un par clôture |
 | `schema_migrations` | Journal des migrations | |
 
 ## Rôles
@@ -125,6 +131,11 @@ Photo : `POST /api/lieux/:id/photo` reçoit le fichier en formulaire multipart, 
 | `GET /api/demandes/tableau-bord` (0.9.0) | `demandes:entite` | `services/qualification.js` |
 | `POST /api/demandes/:id/qualifier` (0.9.0) | `demandes:qualifier`, demande de l'entité active, état `a_qualifier` ou `qualifiee` | `services/qualification.js` |
 | `/api/vues-demandes` (cinq routes, 0.9.0 ; `DELETE` = suppression réelle) | `demandes:entite` ; vues de la personne seule | `services/vues-demandes.js` |
+| `GET /api/demandes/:id/historique` (0.14.0) | service technique (tout) ; demandeur et bénéficiaire (sans les notes internes) ; demande de l'entité active | `services/cycle.js` |
+| `POST /api/demandes/:id/transitions` (0.14.0) | `demandes:traiter` selon la table des passages ; demandeur ou bénéficiaire pour l'annulation et la réouverture | `services/cycle.js` |
+| `PUT /api/demandes/:id` (complément), `DELETE /api/demandes/:id` (annulation avec motif, jamais de suppression), `POST /api/demandes/:id/pieces`, `POST /api/demandes/:id/avis` (0.14.0) | demandeur ou bénéficiaire, demande ouverte (complément, photo), jamais « En cours » (annulation), « Clôturée » (avis) | `services/demandes.js`, `services/cycle.js`, `services/pieces.js` |
+| `GET /api/etats-demande`, `GET /api/etats-demande/transitions` (0.14.0) | rôle dans l'entité active | `services/cycle.js` |
+| `PUT /api/etats-demande/:code` (0.14.0) | `parametres:gerer` | `services/cycle.js` |
 | `POST /api/mcp` | session ou jeton porteur | `mcp.js` |
 | `GET /api/openapi.json` | session | `openapi.js` |
 
@@ -308,6 +319,14 @@ Repris du gabarit 1.3.0 (`services/tickets.js`, `routes/tickets.js`, schémas, n
 - Table `help_faq` (migration `011_faq`) : `entite_id` (nul : entrée commune), `topic_id` (fiche d'un écran), question et réponse FR et NL, `source_ticket_id` (une entrée au plus par ticket), `is_active` et `motif_desactivation`. Service `services/faq.js`, routes `/api/faq`, `POST /api/tickets/:id/faq`, six outils MCP. Permission `faq:gerer` (gestionnaire, responsable).
 - Refus d'un réglage nommé (`services/refus-reglage.js`) : `AppError` porte un texte FR et NL propre au refus, rendu à la place du message général du code par l'API et le MCP (`messageOf`).
 - Contrôles après installation : `recette.sh` (racine) et `backend/src/recette-api.js` (dans le conteneur de l'API, lecture seule).
+
+## Cycle de vie des demandes (0.14.0)
+
+- Catalogue `backend/config/cycle-de-vie.json` : 15 états (fermé ou non, compte ou non pour le retard, suspension `non` ou `selon_motif`, libellés livrés FR et NL) et 25 passages, copiés au démarrage dans `demande_transitions` (un passage désactivé n'est jamais réactivé) et, par entité, dans `demande_etats`. Migration `012_cycle_de_vie` : cinq tables, sept colonnes de `demandes` (`etat_depuis`, `cause_id`, `compte_rendu`, `attente_suspend`, `suspendu_ouvrable_min`, `suspendu_calendaire_min`, `decompte_depuis`) et historique des demandes déjà en base (réception, qualification).
+- Service `services/cycle.js` : ordre des contrôles entité, demande (404, 403), permission (403 ; un demandeur ne reçoit jamais 409 pour un état qu'il ne peut viser), module, passage (409), motif, commentaire, compte rendu ; écriture du passage, de l'historique et du journal dans une transaction ; annulation, avis, réouverture ; permission nouvelle `demandes:traiter`.
+- Suspension (PRI-03, DV-119) : l'attente pour un motif coché dans `demandes.attente_suspend` (réglage de type `codes_liste`) suspend ; à la sortie, l'échéance de fin est repoussée du temps suspendu par `echeances.repousser` (minutes ouvrables par `minutesOuvrables`, ou calendaires pour une priorité en heures calendaires) ; à la réouverture, échéances recalculées depuis `decompte_depuis`.
+- Routes `GET /api/demandes/:id/historique`, `POST /api/demandes/:id/transitions`, `PUT /api/demandes/:id` (complément), `DELETE /api/demandes/:id` (annulation avec motif), `POST /api/demandes/:id/pieces` (photo ajoutée, hors MCP, E-17), `POST /api/demandes/:id/avis`, `GET /api/etats-demande`, `GET /api/etats-demande/transitions`, `PUT /api/etats-demande/:code` ; huit outils MCP. Tableau de bord : `attente_longue` (`demandes.attente_jours`, jours ouvrés par `joursOuvresAvant`) et `a_cloturer`, filtre `attente=longue`.
+- Interface : `components/demandes/ChangerEtat.tsx` (boutons et formulaire du passage), `HistoriqueDemande.tsx`, `ActionsDemandeur.tsx` (compléter, annuler, rouvrir, avis), `components/referentiel/EtatsTab.tsx` (onglet « États des demandes »).
 
 ## Photo de l'endroit, filtre « Sans photo », téléphones (0.13.0)
 

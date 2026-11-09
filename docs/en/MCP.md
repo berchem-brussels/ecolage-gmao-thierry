@@ -1,6 +1,6 @@
 # MCP server
 
-Application version: **0.13.0** · Updated on 08/11/2026 · The French text prevails (`docs/fr/MCP.md`).
+Application version: **0.14.0** · Updated on 08/11/2026 · The French text prevails (`docs/fr/MCP.md`).
 
 ## Access and rules
 
@@ -9,6 +9,10 @@ Application version: **0.13.0** · Updated on 08/11/2026 · The French text prev
 - Authentication: the session, or the session token in `Authorization: Bearer`. OAuth 2.1 with PKCE arrives at step 44 (deviation E-10).
 - Limit: 60 calls per minute per person.
 - Each tool calls the same service function as the REST route, with the person's identity and rights, in their active entity. A deactivation, withdrawal or erasure takes two calls (`prepare_*`, then `confirm_*`). No free SQL tool.
+
+## 0.14.0
+
+New tools: `get_historique_demande` (history of a request; the requester does not see internal notes), `change_etat_demande` in two calls (`prepare_change_etat_demande`, `confirm_change_etat_demande`: target status `etat`, `motif_id`, `commentaire`, `compte_rendu` according to the transition; also reopening by the requester with `etat` `rouverte`), `list_etats_demande`, `list_transitions_demande`, `update_etat_demande` (labels per entity, head of department), `complete_demande` (addition by the requester or the beneficiary), `cancel_demande` in two calls (cancellation with a reason, as long as work has not started) and `give_avis_demande` (score 1 to 5, one per closure). `get_demande` returns `transitions` (service), `complements`, `completable`, `annulable`, `reouvrable`, `reouvrable_jusqu_au`, `avis_possible`, `avis`. `get_tableau_bord` returns `attente_longue` and `a_cloturer`; `list_demandes` takes `attente` = `longue`. Adding a photo to a sent request stays outside MCP (`POST /api/demandes/:id/pieces`, E-17, five routes).
 
 ## 0.13.0
 

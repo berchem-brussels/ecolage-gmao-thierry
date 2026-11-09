@@ -11,6 +11,8 @@ const { startServer, setup, person, client, INSTALL } = require('./helpers');
 const { getDb } = require('../src/database');
 const { VERSION } = require('../src/config');
 const notes = require('../src/services/notes-version');
+/** Notes d'une version précédente : la note de la 0.14.0, plus récente, est éprouvée par son propre test (fin du fichier). */
+const avant014 = (n) => n.version !== '0.14.0';
 
 let srv;
 let admin;
@@ -21,7 +23,8 @@ const parse = (r) => JSON.parse(r.body.result.content[0].text);
 const tool = async (c, name, args = {}) => parse(await c.mcp('tools/call', { name, arguments: args }));
 // Note la plus récente qui a une ligne pour tout le monde : la plus récente que lit un demandeur (la 0.4.1 n'en a pas).
 const CATALOGUE = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'config', 'notes-version.json'), 'utf8')).notes;
-const DERNIERE_TOUS = CATALOGUE.find((n) => n.lignes.some((l) => l.public === 'tous')).version;
+const DERNIERE_TOUS_TOUTES = CATALOGUE.find((n) => n.lignes.some((l) => l.public === 'tous')).version;
+const DERNIERE_TOUS = CATALOGUE.filter(avant014).find((n) => n.lignes.some((l) => l.public === 'tous')).version;
 const relogin = async (email, password) => {
   const c = client(srv.base);
   const r = await c.post('/api/auth/login', { email, password });
@@ -59,7 +62,7 @@ test('compte nouveau : aucune note de la version en cours à sa première connex
 
 test('compte qui a connu la 0.3.0 : notes de la 0.7.0, de la 0.5.2, de la 0.5.1, de la 0.5.0, de la 0.4.0 et de la 0.3.1, la plus récente en tête', async () => {
   getDb().prepare("UPDATE users SET version_vue = '0.3.0' WHERE id = ?").run(agent.id);
-  const a = (await agent.get('/api/auth/me')).body.data.nouveautes;
+  const a = (await agent.get('/api/auth/me')).body.data.nouveautes.filter(avant014);
   assert.deepEqual(a.map((n) => n.version), ['0.13.0', '0.12.0', '0.11.0', '0.9.0', '0.8.0', '0.7.5', '0.7.1', '0.7.0', '0.5.2', '0.5.1', '0.5.0', '0.4.0', '0.3.1']);
   assert.match(a[12].lignes[0].fr, /Android/);
   await agent.put('/api/auth/nouveautes', {});
@@ -67,11 +70,11 @@ test('compte qui a connu la 0.3.0 : notes de la 0.7.0, de la 0.5.2, de la 0.5.1,
 
 test('note de la 0.4.0 : le demandeur lit la ligne sur les délais ; le responsable, en plus, catégories et délais', async () => {
   getDb().prepare("UPDATE users SET version_vue = '0.3.1' WHERE id IN (?, ?)").run(agent.id, resp.id);
-  const a = (await agent.get('/api/auth/me')).body.data.nouveautes;
+  const a = (await agent.get('/api/auth/me')).body.data.nouveautes.filter(avant014);
   assert.deepEqual(a.map((n) => n.version), ['0.13.0', '0.12.0', '0.11.0', '0.9.0', '0.8.0', '0.7.5', '0.7.1', '0.7.0', '0.5.2', '0.5.1', '0.5.0', '0.4.0']);
   assert.equal(a[11].lignes.length, 1);
   assert.match(a[11].lignes[0].fr, /délai/);
-  const r = (await resp.get('/api/auth/me')).body.data.nouveautes;
+  const r = (await resp.get('/api/auth/me')).body.data.nouveautes.filter(avant014);
   const r040 = r.find((n) => n.version === '0.4.0');
   assert.equal(r040.lignes.length, 3);
   assert.ok(r040.lignes.some((l) => /Catégories et délais/.test(l.fr) && /Categorieën en termijnen/.test(l.nl)));
@@ -82,13 +85,13 @@ test('note de la 0.4.0 : le demandeur lit la ligne sur les délais ; le responsa
 test('note de la 0.4.1 : rien pour le demandeur ; mention et simulateur pour le responsable ; journal pour l’administrateur', async () => {
   getDb().prepare("UPDATE users SET version_vue = '0.4.0' WHERE id IN (?, ?)").run(agent.id, resp.id);
   getDb().prepare("UPDATE users SET version_vue = '0.4.0' WHERE email = ?").run(INSTALL.email);
-  assert.deepEqual((await agent.get('/api/auth/me')).body.data.nouveautes.map((n) => n.version), ['0.13.0', '0.12.0', '0.11.0', '0.9.0', '0.8.0', '0.7.5', '0.7.1', '0.7.0', '0.5.2', '0.5.1', '0.5.0'], 'aucune ligne de la 0.4.1 pour le demandeur');
-  const r = (await resp.get('/api/auth/me')).body.data.nouveautes;
+  assert.deepEqual((await agent.get('/api/auth/me')).body.data.nouveautes.filter(avant014).map((n) => n.version), ['0.13.0', '0.12.0', '0.11.0', '0.9.0', '0.8.0', '0.7.5', '0.7.1', '0.7.0', '0.5.2', '0.5.1', '0.5.0'], 'aucune ligne de la 0.4.1 pour le demandeur');
+  const r = (await resp.get('/api/auth/me')).body.data.nouveautes.filter(avant014);
   assert.deepEqual(r.map((n) => n.version), ['0.13.0', '0.12.0', '0.11.0', '0.9.1', '0.9.0', '0.8.0', '0.7.5', '0.7.1', '0.7.0', '0.5.2', '0.5.1', '0.5.0', '0.4.1']);
   assert.equal(r[12].lignes.length, 2);
   assert.ok(r[12].lignes.some((l) => /Valeur livrée/.test(l.fr) && /Geleverde waarde/.test(l.nl)));
   assert.ok(r[12].lignes.some((l) => /simulateur/.test(l.fr) && /Android/.test(l.fr)));
-  const a = (await admin.get('/api/auth/me')).body.data.nouveautes;
+  const a = (await admin.get('/api/auth/me')).body.data.nouveautes.filter(avant014);
   assert.ok(a.find((n) => n.version === '0.4.1').lignes.some((l) => /journal d'audit/.test(l.fr) && /oude en de nieuwe waarde/.test(l.nl)));
   await agent.put('/api/auth/nouveautes', {});
   await resp.put('/api/auth/nouveautes', {});
@@ -97,11 +100,11 @@ test('note de la 0.4.1 : rien pour le demandeur ; mention et simulateur pour le 
 
 test('note de la 0.5.0 : dépôt et suivi pour tous ; demandes de l’entité et numérotation pour le responsable', async () => {
   getDb().prepare("UPDATE users SET version_vue = '0.4.1' WHERE id IN (?, ?)").run(agent.id, resp.id);
-  const a = (await agent.get('/api/auth/me')).body.data.nouveautes;
+  const a = (await agent.get('/api/auth/me')).body.data.nouveautes.filter(avant014);
   assert.deepEqual(a.map((n) => n.version), ['0.13.0', '0.12.0', '0.11.0', '0.9.0', '0.8.0', '0.7.5', '0.7.1', '0.7.0', '0.5.2', '0.5.1', '0.5.0']);
   assert.equal(a[10].lignes.length, 3, 'demandeur : lignes « tous »');
   assert.ok(a[10].lignes.some((l) => /Nouvelle demande/.test(l.fr) && /Nieuwe aanvraag/.test(l.nl)));
-  const r = (await resp.get('/api/auth/me')).body.data.nouveautes;
+  const r = (await resp.get('/api/auth/me')).body.data.nouveautes.filter(avant014);
   assert.equal(r[11].lignes.length, 5, 'responsable : plus les demandes de l’entité et la numérotation');
   assert.ok(r[11].lignes.some((l) => /numérotation/.test(l.fr) && /nummering/.test(l.nl)));
   await agent.put('/api/auth/nouveautes', {});
@@ -110,18 +113,18 @@ test('note de la 0.5.0 : dépôt et suivi pour tous ; demandes de l’entité et
 
 test('compte qui a connu la version précédente : la note s’affiche, filtrée selon son public, jusqu’au « lu »', async () => {
   getDb().prepare("UPDATE users SET version_vue = '0.2.0' WHERE id IN (?, ?)").run(agent.id, resp.id);
-  const a = (await agent.get('/api/auth/me')).body.data.nouveautes;
+  const a = (await agent.get('/api/auth/me')).body.data.nouveautes.filter(avant014);
   assert.equal(a[0].version, DERNIERE_TOUS, 'la plus récente qui le concerne en tête');
   assert.ok(a.every((n) => notes.comparer(n.version, '0.2.0') > 0 && notes.comparer(n.version, VERSION) <= 0), 'notes après la dernière lue, jusqu’à la version installée');
   const n030 = (l) => l.find((n) => n.version === '0.3.0');
   assert.equal(n030(a).lignes.length, 2, 'demandeur : lignes « tous » seulement');
-  const r = (await resp.get('/api/auth/me')).body.data.nouveautes;
+  const r = (await resp.get('/api/auth/me')).body.data.nouveautes.filter(avant014);
   assert.equal(n030(r).lignes.length, 3, 'responsable : plus la ligne de ses réglages');
   assert.ok(n030(r).lignes.some((l) => /Réglages de l'entité/.test(l.fr) && /Instellingen van de entiteit/.test(l.nl)));
   const lu = await agent.put('/api/auth/nouveautes', {});
   assert.equal(lu.status, 200);
-  assert.deepEqual(lu.body.data.nouveautes, []);
-  assert.deepEqual((await agent.get('/api/auth/me')).body.data.nouveautes, [], 'une seule fois');
+  assert.deepEqual(lu.body.data.nouveautes.filter(avant014), []);
+  assert.deepEqual((await agent.get('/api/auth/me')).body.data.nouveautes.filter(avant014), [], 'une seule fois');
   assert.ok(getDb().prepare("SELECT 1 FROM audit_log WHERE action = 'nouveautes.lues' AND user_id = ?").get(agent.id));
   const n = getDb().prepare("SELECT COUNT(*) AS n FROM audit_log WHERE action = 'nouveautes.lues'").get().n;
   await agent.put('/api/auth/nouveautes', {});
@@ -138,12 +141,12 @@ test('la note est aussi rendue à la connexion, et l’administrateur voit ses l
 
 test('compte sans version notée : aucune note (jamais d’erreur)', async () => {
   getDb().prepare('UPDATE users SET version_vue = NULL WHERE id = ?').run(resp.id);
-  assert.deepEqual((await resp.get('/api/auth/me')).body.data.nouveautes, []);
+  assert.deepEqual((await resp.get('/api/auth/me')).body.data.nouveautes.filter(avant014), []);
 });
 
 test('toutes les notes relisibles, de la plus récente à la plus ancienne ; une version inconnue : 404', async () => {
   const l = (await agent.get('/api/notes-version')).body.data;
-  assert.equal(l[0].version, DERNIERE_TOUS);
+  assert.equal(l[0].version, DERNIERE_TOUS_TOUTES);
   // Depuis la 0.7.2 (note réservée à l'administrateur), seul l'administrateur lit à coup sûr la note de la version installée.
   assert.equal((await admin.get('/api/notes-version')).body.data[0].version, VERSION, 'l’administrateur lit la note de la version installée');
   assert.ok(l.length >= 3);
@@ -155,7 +158,7 @@ test('toutes les notes relisibles, de la plus récente à la plus ancienne ; une
 
 test('notes par MCP : lecture et « lu »', async () => {
   getDb().prepare("UPDATE users SET version_vue = '0.2.0' WHERE id = ?").run(agent.id);
-  assert.equal((await tool(agent, 'list_notes_version')).data.rows[0].version, DERNIERE_TOUS);
+  assert.equal((await tool(agent, 'list_notes_version')).data.rows[0].version, DERNIERE_TOUS_TOUTES);
   assert.equal((await tool(agent, 'get_note_version', { version: '0.2.0' })).data.version, '0.2.0');
   const p = await tool(agent, 'marquer_nouveautes_lues');
   assert.deepEqual(p.data.nouveautes, []);
@@ -164,12 +167,12 @@ test('notes par MCP : lecture et « lu »', async () => {
 
 test('note de la 0.5.1 : liste des bâtiments refermable et message sous un champ obligatoire, pour tous, en FR et en NL', async () => {
   getDb().prepare("UPDATE users SET version_vue = '0.5.0' WHERE id IN (?, ?)").run(agent.id, resp.id);
-  const a = (await agent.get('/api/auth/me')).body.data.nouveautes;
+  const a = (await agent.get('/api/auth/me')).body.data.nouveautes.filter(avant014);
   assert.deepEqual(a.map((n) => n.version), ['0.13.0', '0.12.0', '0.11.0', '0.9.0', '0.8.0', '0.7.5', '0.7.1', '0.7.0', '0.5.2', '0.5.1']);
   assert.equal(a[9].lignes.length, 2);
   assert.ok(a[9].lignes.some((l) => /Masquer la liste/.test(l.fr) && /Lijst verbergen/.test(l.nl)));
   assert.ok(a[9].lignes.some((l) => /Ce champ est obligatoire/.test(l.fr) && /Dit veld is verplicht/.test(l.nl)));
-  const r = (await resp.get('/api/auth/me')).body.data.nouveautes;
+  const r = (await resp.get('/api/auth/me')).body.data.nouveautes.filter(avant014);
   assert.deepEqual(r.map((n) => n.version), ['0.13.0', '0.12.0', '0.11.0', '0.9.1', '0.9.0', '0.8.0', '0.7.5', '0.7.1', '0.7.0', '0.5.2', '0.5.1']);
   assert.equal(r[10].lignes.length, 2, 'aucune ligne réservée au responsable');
   await agent.put('/api/auth/nouveautes', {});
@@ -178,12 +181,12 @@ test('note de la 0.5.1 : liste des bâtiments refermable et message sous un cham
 
 test('note de la 0.5.2 : téléphone sans agrandissement au toucher d’un champ et message de l’adresse e-mail, pour tous, en FR et en NL', async () => {
   getDb().prepare("UPDATE users SET version_vue = '0.5.1' WHERE id IN (?, ?)").run(agent.id, resp.id);
-  const a = (await agent.get('/api/auth/me')).body.data.nouveautes;
+  const a = (await agent.get('/api/auth/me')).body.data.nouveautes.filter(avant014);
   assert.deepEqual(a.map((n) => n.version), ['0.13.0', '0.12.0', '0.11.0', '0.9.0', '0.8.0', '0.7.5', '0.7.1', '0.7.0', '0.5.2']);
   assert.equal(a[8].lignes.length, 2);
   assert.ok(a[8].lignes.some((l) => /deux doigts/.test(l.fr) && /twee vingers/.test(l.nl)));
   assert.ok(a[8].lignes.some((l) => /Adresse e-mail non valide/.test(l.fr) && /Ongeldig e-mailadres/.test(l.nl)));
-  const r = (await resp.get('/api/auth/me')).body.data.nouveautes;
+  const r = (await resp.get('/api/auth/me')).body.data.nouveautes.filter(avant014);
   assert.deepEqual(r.map((n) => n.version), ['0.13.0', '0.12.0', '0.11.0', '0.9.1', '0.9.0', '0.8.0', '0.7.5', '0.7.1', '0.7.0', '0.5.2']);
   assert.equal(r[9].lignes.length, 2, 'aucune ligne réservée au responsable');
   await agent.put('/api/auth/nouveautes', {});
@@ -192,14 +195,14 @@ test('note de la 0.5.2 : téléphone sans agrandissement au toucher d’un champ
 
 test('note de la 0.7.0 : formulaire complet pour tous ; fiche pour le service technique, questions et mentions pour le responsable, en FR et en NL', async () => {
   getDb().prepare("UPDATE users SET version_vue = '0.5.2' WHERE id IN (?, ?)").run(agent.id, resp.id);
-  const a = (await agent.get('/api/auth/me')).body.data.nouveautes;
+  const a = (await agent.get('/api/auth/me')).body.data.nouveautes.filter(avant014);
   assert.deepEqual(a.map((n) => n.version), ['0.13.0', '0.12.0', '0.11.0', '0.9.0', '0.8.0', '0.7.5', '0.7.1', '0.7.0']);
   assert.equal(a[7].lignes.length, 3, 'trois lignes pour tous, aucune réservée');
   for (const [fr, nl] of [[/Moi aussi/, /Ik ook/], [/Danger/, /Gevaar/], [/Pour quelqu'un d'autre/, /Voor iemand anders/], [/Reprendre/, /Verdergaan/], [/En savoir plus/, /Meer weten/]]) {
     assert.ok(a[7].lignes.some((l) => fr.test(l.fr) && nl.test(l.nl)), String(fr));
   }
   for (const l of a[7].lignes) assert.doesNotMatch(`${l.fr} ${l.nl}`, /GMAO|\bDI\b|RGPD|AVG|MCP/, 'sans jargon');
-  const r = (await resp.get('/api/auth/me')).body.data.nouveautes;
+  const r = (await resp.get('/api/auth/me')).body.data.nouveautes.filter(avant014);
   assert.equal(r[8].lignes.length, 5, 'le responsable lit aussi les lignes du service technique, des questions et des mentions');
   assert.ok(r[8].lignes.some((l) => /Catégories et délais/.test(l.fr) && /Categorieën en termijnen/.test(l.nl)));
   assert.ok(r[8].lignes.some((l) => /Protection des données/.test(l.fr) && /Gegevensbescherming/.test(l.nl)));
@@ -209,12 +212,12 @@ test('note de la 0.7.0 : formulaire complet pour tous ; fiche pour le service te
 
 test('note de la 0.7.1 : brouillon gardé avec le lieu proposé pour tous ; texte livré de la mention pour le responsable, en FR et en NL', async () => {
   getDb().prepare("UPDATE users SET version_vue = '0.7.0' WHERE id IN (?, ?)").run(agent.id, resp.id);
-  const a = (await agent.get('/api/auth/me')).body.data.nouveautes;
+  const a = (await agent.get('/api/auth/me')).body.data.nouveautes.filter(avant014);
   assert.deepEqual(a.map((n) => n.version), ['0.13.0', '0.12.0', '0.11.0', '0.9.0', '0.8.0', '0.7.5', '0.7.1']);
   assert.equal(a[6].lignes.length, 1, 'une ligne pour tous');
   assert.ok(/Brouillon enregistré/.test(a[6].lignes[0].fr) && /Ontwerp bewaard/.test(a[6].lignes[0].nl));
   assert.doesNotMatch(`${a[6].lignes[0].fr} ${a[6].lignes[0].nl}`, /GMAO|\bDI\b|RGPD|AVG|MCP/, 'sans jargon');
-  const r = (await resp.get('/api/auth/me')).body.data.nouveautes;
+  const r = (await resp.get('/api/auth/me')).body.data.nouveautes.filter(avant014);
   assert.equal(r[7].lignes.length, 2);
   assert.ok(r[7].lignes.some((l) => /Responsable du traitement/.test(l.fr) && /Verwerkingsverantwoordelijke/.test(l.nl)));
   await agent.put('/api/auth/nouveautes', {});
@@ -224,9 +227,9 @@ test('note de la 0.7.1 : brouillon gardé avec le lieu proposé pour tous ; text
 test('note de la 0.7.2 : une ligne pour l’administrateur seulement ; rien de plus pour le demandeur ni pour le responsable, en FR et en NL', async () => {
   getDb().prepare("UPDATE users SET version_vue = '0.7.1' WHERE id IN (?, ?)").run(agent.id, resp.id);
   getDb().prepare("UPDATE users SET version_vue = '0.7.1' WHERE email = ?").run(INSTALL.email);
-  assert.deepEqual((await agent.get('/api/auth/me')).body.data.nouveautes.map((n) => n.version), ['0.13.0', '0.12.0', '0.11.0', '0.9.0', '0.8.0', '0.7.5'], '0.9.0, 0.8.0 et 0.7.5 pour le demandeur');
-  assert.deepEqual((await resp.get('/api/auth/me')).body.data.nouveautes.map((n) => n.version), ['0.13.0', '0.12.0', '0.11.0', '0.9.1', '0.9.0', '0.8.0', '0.7.5'], '0.9.1, 0.9.0, 0.8.0 et 0.7.5 pour le responsable');
-  const a = (await admin.get('/api/auth/me')).body.data.nouveautes;
+  assert.deepEqual((await agent.get('/api/auth/me')).body.data.nouveautes.filter(avant014).map((n) => n.version), ['0.13.0', '0.12.0', '0.11.0', '0.9.0', '0.8.0', '0.7.5'], '0.9.0, 0.8.0 et 0.7.5 pour le demandeur');
+  assert.deepEqual((await resp.get('/api/auth/me')).body.data.nouveautes.filter(avant014).map((n) => n.version), ['0.13.0', '0.12.0', '0.11.0', '0.9.1', '0.9.0', '0.8.0', '0.7.5'], '0.9.1, 0.9.0, 0.8.0 et 0.7.5 pour le responsable');
+  const a = (await admin.get('/api/auth/me')).body.data.nouveautes.filter(avant014);
   assert.deepEqual(a.map((n) => n.version), ['0.13.0', '0.12.0', '0.11.0', '0.10.0', '0.9.1', '0.9.0', '0.8.0', '0.7.5', '0.7.4', '0.7.3', '0.7.2']);
   assert.equal(a[10].lignes.length, 1);
   assert.ok(/EUPL-1\.2/.test(a[10].lignes[0].fr) && /EUPL-1\.2/.test(a[10].lignes[0].nl));
@@ -238,9 +241,9 @@ test('note de la 0.7.2 : une ligne pour l’administrateur seulement ; rien de p
 test('note de la 0.7.3 : une ligne pour l’administrateur seulement (correctif de sécurité) ; rien de plus pour le demandeur ni pour le responsable, en FR et en NL', async () => {
   getDb().prepare("UPDATE users SET version_vue = '0.7.2' WHERE id IN (?, ?)").run(agent.id, resp.id);
   getDb().prepare("UPDATE users SET version_vue = '0.7.2' WHERE email = ?").run(INSTALL.email);
-  assert.deepEqual((await agent.get('/api/auth/me')).body.data.nouveautes.map((n) => n.version), ['0.13.0', '0.12.0', '0.11.0', '0.9.0', '0.8.0', '0.7.5'], '0.9.0, 0.8.0 et 0.7.5 pour le demandeur');
-  assert.deepEqual((await resp.get('/api/auth/me')).body.data.nouveautes.map((n) => n.version), ['0.13.0', '0.12.0', '0.11.0', '0.9.1', '0.9.0', '0.8.0', '0.7.5'], '0.9.1, 0.9.0, 0.8.0 et 0.7.5 pour le responsable');
-  const a = (await admin.get('/api/auth/me')).body.data.nouveautes;
+  assert.deepEqual((await agent.get('/api/auth/me')).body.data.nouveautes.filter(avant014).map((n) => n.version), ['0.13.0', '0.12.0', '0.11.0', '0.9.0', '0.8.0', '0.7.5'], '0.9.0, 0.8.0 et 0.7.5 pour le demandeur');
+  assert.deepEqual((await resp.get('/api/auth/me')).body.data.nouveautes.filter(avant014).map((n) => n.version), ['0.13.0', '0.12.0', '0.11.0', '0.9.1', '0.9.0', '0.8.0', '0.7.5'], '0.9.1, 0.9.0, 0.8.0 et 0.7.5 pour le responsable');
+  const a = (await admin.get('/api/auth/me')).body.data.nouveautes.filter(avant014);
   assert.deepEqual(a.map((n) => n.version), ['0.13.0', '0.12.0', '0.11.0', '0.10.0', '0.9.1', '0.9.0', '0.8.0', '0.7.5', '0.7.4', '0.7.3']);
   assert.equal(a[9].lignes.length, 1);
   assert.ok(/sécurité/.test(a[9].lignes[0].fr) && /Beveiligingscorrectie/.test(a[9].lignes[0].nl));
@@ -253,9 +256,9 @@ test('note de la 0.7.3 : une ligne pour l’administrateur seulement (correctif 
 test('note de la 0.7.4 : une ligne pour l’administrateur seulement (noms dans le journal d’audit) ; rien de plus pour le demandeur ni pour le responsable, en FR et en NL', async () => {
   getDb().prepare("UPDATE users SET version_vue = '0.7.3' WHERE id IN (?, ?)").run(agent.id, resp.id);
   getDb().prepare("UPDATE users SET version_vue = '0.7.3' WHERE email = ?").run(INSTALL.email);
-  assert.deepEqual((await agent.get('/api/auth/me')).body.data.nouveautes.map((n) => n.version), ['0.13.0', '0.12.0', '0.11.0', '0.9.0', '0.8.0', '0.7.5'], '0.9.0, 0.8.0 et 0.7.5 pour le demandeur');
-  assert.deepEqual((await resp.get('/api/auth/me')).body.data.nouveautes.map((n) => n.version), ['0.13.0', '0.12.0', '0.11.0', '0.9.1', '0.9.0', '0.8.0', '0.7.5'], '0.9.1, 0.9.0, 0.8.0 et 0.7.5 pour le responsable');
-  const a = (await admin.get('/api/auth/me')).body.data.nouveautes;
+  assert.deepEqual((await agent.get('/api/auth/me')).body.data.nouveautes.filter(avant014).map((n) => n.version), ['0.13.0', '0.12.0', '0.11.0', '0.9.0', '0.8.0', '0.7.5'], '0.9.0, 0.8.0 et 0.7.5 pour le demandeur');
+  assert.deepEqual((await resp.get('/api/auth/me')).body.data.nouveautes.filter(avant014).map((n) => n.version), ['0.13.0', '0.12.0', '0.11.0', '0.9.1', '0.9.0', '0.8.0', '0.7.5'], '0.9.1, 0.9.0, 0.8.0 et 0.7.5 pour le responsable');
+  const a = (await admin.get('/api/auth/me')).body.data.nouveautes.filter(avant014);
   assert.deepEqual(a.map((n) => n.version), ['0.13.0', '0.12.0', '0.11.0', '0.10.0', '0.9.1', '0.9.0', '0.8.0', '0.7.5', '0.7.4']);
   assert.equal(a[8].lignes.length, 1);
   assert.ok(/journal d'audit/.test(a[8].lignes[0].fr) && /auditlogboek/.test(a[8].lignes[0].nl));
@@ -268,13 +271,13 @@ test('note de la 0.7.4 : une ligne pour l’administrateur seulement (noms dans 
 test('note de la 0.7.5 : deux lignes pour tous (lieux récents, connexion), une de plus pour l’administrateur (journal), en FR et en NL', async () => {
   getDb().prepare("UPDATE users SET version_vue = '0.7.4' WHERE id IN (?, ?)").run(agent.id, resp.id);
   getDb().prepare("UPDATE users SET version_vue = '0.7.4' WHERE email = ?").run(INSTALL.email);
-  const g = (await agent.get('/api/auth/me')).body.data.nouveautes;
+  const g = (await agent.get('/api/auth/me')).body.data.nouveautes.filter(avant014);
   assert.deepEqual(g.map((n) => n.version), ['0.13.0', '0.12.0', '0.11.0', '0.9.0', '0.8.0', '0.7.5']);
   assert.equal(g[5].lignes.length, 2);
   assert.ok(g[5].lignes.some((l) => /Vos lieux récents/.test(l.fr) && /Uw recente plaatsen/.test(l.nl)));
   assert.ok(g[5].lignes.some((l) => /Identifiants incorrects/.test(l.fr) && /Ongeldige aanmeldgegevens/.test(l.nl)));
-  assert.equal((await resp.get('/api/auth/me')).body.data.nouveautes[5].lignes.length, 2);
-  const a = (await admin.get('/api/auth/me')).body.data.nouveautes;
+  assert.equal((await resp.get('/api/auth/me')).body.data.nouveautes.filter(avant014)[5].lignes.length, 2);
+  const a = (await admin.get('/api/auth/me')).body.data.nouveautes.filter(avant014);
   assert.deepEqual(a.map((n) => n.version), ['0.13.0', '0.12.0', '0.11.0', '0.10.0', '0.9.1', '0.9.0', '0.8.0', '0.7.5']);
   assert.equal(a[7].lignes.length, 3);
   assert.ok(a[7].lignes.some((l) => /« Oui » ou « Non »/.test(l.fr) && /« Ja » of « Nee »/.test(l.nl)));
@@ -286,11 +289,11 @@ test('note de la 0.7.5 : deux lignes pour tous (lieux récents, connexion), une 
 
 test('note de la 0.8.0 : une ligne pour tous (photos), une de plus pour le responsable (réglages des pièces jointes), en FR et en NL', async () => {
   getDb().prepare("UPDATE users SET version_vue = '0.7.5' WHERE id IN (?, ?)").run(agent.id, resp.id);
-  const g = (await agent.get('/api/auth/me')).body.data.nouveautes;
+  const g = (await agent.get('/api/auth/me')).body.data.nouveautes.filter(avant014);
   assert.deepEqual(g.map((n) => n.version), ['0.13.0', '0.12.0', '0.11.0', '0.9.0', '0.8.0']);
   assert.equal(g[4].lignes.length, 1);
   assert.ok(/Ajouter une photo ou un document/.test(g[4].lignes[0].fr) && /Foto of document toevoegen/.test(g[4].lignes[0].nl));
-  const r = (await resp.get('/api/auth/me')).body.data.nouveautes;
+  const r = (await resp.get('/api/auth/me')).body.data.nouveautes.filter(avant014);
   assert.equal(r[5].lignes.length, 2);
   assert.ok(r[5].lignes.some((l) => /Pièces jointes des demandes/.test(l.fr) && /Bijlagen bij aanvragen/.test(l.nl)));
   for (const l of r[5].lignes) assert.doesNotMatch(`${l.fr} ${l.nl}`, /GMAO|\bDI\b|RGPD|AVG|MCP|multer|pieces\./, 'sans jargon');
@@ -300,11 +303,11 @@ test('note de la 0.8.0 : une ligne pour tous (photos), une de plus pour le respo
 
 test('note de la 0.9.0 : une ligne pour tous (prise en charge), deux pour le service technique, une pour le responsable, en FR et en NL', async () => {
   getDb().prepare("UPDATE users SET version_vue = '0.8.0' WHERE id IN (?, ?)").run(agent.id, resp.id);
-  const g = (await agent.get('/api/auth/me')).body.data.nouveautes;
+  const g = (await agent.get('/api/auth/me')).body.data.nouveautes.filter(avant014);
   assert.deepEqual(g.map((n) => n.version), ['0.13.0', '0.12.0', '0.11.0', '0.9.0']);
   assert.equal(g[3].lignes.length, 1);
   assert.ok(/Prise en charge/.test(g[3].lignes[0].fr) && /In behandeling/.test(g[3].lignes[0].nl));
-  const r = (await resp.get('/api/auth/me')).body.data.nouveautes;
+  const r = (await resp.get('/api/auth/me')).body.data.nouveautes.filter(avant014);
   assert.equal(r[4].lignes.length, 4, 'responsable : tous, service technique (2), réglages');
   assert.ok(r[4].lignes.some((l) => /Tableau de bord/.test(l.fr) && /Dashboard/.test(l.nl)));
   assert.ok(r[4].lignes.some((l) => /Qualifier/.test(l.fr) && /Kwalificeren/.test(l.nl)));
@@ -316,12 +319,12 @@ test('note de la 0.9.0 : une ligne pour tous (prise en charge), deux pour le ser
 test('note de la 0.9.1 : rien pour le demandeur ; compteurs pour le service technique ; libellé de l’état du journal pour l’administrateur, en FR et en NL', async () => {
   getDb().prepare("UPDATE users SET version_vue = '0.9.0' WHERE id IN (?, ?)").run(agent.id, resp.id);
   getDb().prepare("UPDATE users SET version_vue = '0.9.0' WHERE email = ?").run(INSTALL.email);
-  assert.deepEqual((await agent.get('/api/auth/me')).body.data.nouveautes.map((n) => n.version), ['0.13.0', '0.12.0', '0.11.0'], 'aucune ligne de la 0.9.1 pour le demandeur');
-  const r = (await resp.get('/api/auth/me')).body.data.nouveautes;
+  assert.deepEqual((await agent.get('/api/auth/me')).body.data.nouveautes.filter(avant014).map((n) => n.version), ['0.13.0', '0.12.0', '0.11.0'], 'aucune ligne de la 0.9.1 pour le demandeur');
+  const r = (await resp.get('/api/auth/me')).body.data.nouveautes.filter(avant014);
   assert.deepEqual(r.map((n) => n.version), ['0.13.0', '0.12.0', '0.11.0', '0.9.1']);
   assert.equal(r[3].lignes.length, 1);
   assert.ok(/compteurs du tableau de bord/.test(r[3].lignes[0].fr) && /tellers van het dashboard/.test(r[3].lignes[0].nl));
-  const a = (await admin.get('/api/auth/me')).body.data.nouveautes;
+  const a = (await admin.get('/api/auth/me')).body.data.nouveautes.filter(avant014);
   const n091 = a.find((n) => n.version === '0.9.1');
   assert.ok(n091.lignes.some((l) => /journal d'audit/.test(l.fr) && /À qualifier/.test(l.fr) && /Te kwalificeren/.test(l.nl)));
   for (const l of [...r[3].lignes, ...n091.lignes]) assert.doesNotMatch(`${l.fr} ${l.nl}`, /GMAO|\bDI\b|RGPD|AVG|MCP|a_qualifier|qualifiee/, 'sans jargon ni code');
@@ -333,9 +336,9 @@ test('note de la 0.9.1 : rien pour le demandeur ; compteurs pour le service tech
 test('note de la 0.10.0 : deux lignes pour l’administrateur seulement (connexion Microsoft, accès de secours) ; rien pour le demandeur ni pour le responsable, en FR et en NL', async () => {
   getDb().prepare("UPDATE users SET version_vue = '0.9.1' WHERE id IN (?, ?)").run(agent.id, resp.id);
   getDb().prepare("UPDATE users SET version_vue = '0.9.1' WHERE email = ?").run(INSTALL.email);
-  assert.deepEqual((await agent.get('/api/auth/me')).body.data.nouveautes.map((n) => n.version), ['0.13.0', '0.12.0', '0.11.0'], 'rien de la 0.10.0 pour le demandeur');
-  assert.deepEqual((await resp.get('/api/auth/me')).body.data.nouveautes.map((n) => n.version), ['0.13.0', '0.12.0', '0.11.0'], 'rien de la 0.10.0 pour le responsable');
-  const a = (await admin.get('/api/auth/me')).body.data.nouveautes;
+  assert.deepEqual((await agent.get('/api/auth/me')).body.data.nouveautes.filter(avant014).map((n) => n.version), ['0.13.0', '0.12.0', '0.11.0'], 'rien de la 0.10.0 pour le demandeur');
+  assert.deepEqual((await resp.get('/api/auth/me')).body.data.nouveautes.filter(avant014).map((n) => n.version), ['0.13.0', '0.12.0', '0.11.0'], 'rien de la 0.10.0 pour le responsable');
+  const a = (await admin.get('/api/auth/me')).body.data.nouveautes.filter(avant014);
   assert.deepEqual(a.map((n) => n.version), ['0.13.0', '0.12.0', '0.11.0', '0.10.0']);
   assert.equal(a[3].lignes.length, 2);
   assert.ok(/Connexion Microsoft/.test(a[3].lignes[0].fr) && /Portal/.test(a[3].lignes[0].fr) && /Microsoft-aanmelding/.test(a[3].lignes[0].nl));
@@ -349,14 +352,14 @@ test('note de la 0.10.0 : deux lignes pour l’administrateur seulement (connexi
 test('note de la 0.11.0 : « Signaler » et nouveautés pour tous ; questions de l’entité pour le service technique ; files, délais et connexion pour l’administrateur, en FR et en NL', async () => {
   getDb().prepare("UPDATE users SET version_vue = '0.10.0' WHERE id IN (?, ?)").run(agent.id, resp.id);
   getDb().prepare("UPDATE users SET version_vue = '0.10.0' WHERE email = ?").run(INSTALL.email);
-  const g = (await agent.get('/api/auth/me')).body.data.nouveautes;
+  const g = (await agent.get('/api/auth/me')).body.data.nouveautes.filter(avant014);
   assert.deepEqual(g.map((n) => n.version), ['0.13.0', '0.12.0', '0.11.0']);
   assert.equal(g[2].lignes.length, 2, 'demandeur : les deux lignes pour tous');
   assert.ok(/« Signaler »/.test(g[2].lignes[0].fr) && /« Melden »/.test(g[2].lignes[0].nl));
-  const r = (await resp.get('/api/auth/me')).body.data.nouveautes;
+  const r = (await resp.get('/api/auth/me')).body.data.nouveautes.filter(avant014);
   assert.equal(r[2].lignes.length, 3, 'responsable : tous, plus les questions de son entité');
   assert.ok(r[2].lignes.some((l) => /questions des agents de votre entité/.test(l.fr) && /vragen van de medewerkers van uw entiteit/.test(l.nl)));
-  const a = (await admin.get('/api/auth/me')).body.data.nouveautes;
+  const a = (await admin.get('/api/auth/me')).body.data.nouveautes.filter(avant014);
   assert.equal(a[2].lignes.length, 4, 'administrateur : tous, files et délais, connexion Microsoft');
   assert.ok(a[2].lignes.some((l) => /onglet « Tickets »/.test(l.fr) && /tabblad « Tickets »/.test(l.nl)));
   assert.ok(a[2].lignes.some((l) => /ID d'un secret/.test(l.fr)));
@@ -369,14 +372,14 @@ test('note de la 0.11.0 : « Signaler » et nouveautés pour tous ; questions de
 test('note de la 0.12.0 : aide par écran pour tous ; FAQ de l’entité pour le service technique ; réglages, journal et FAQ commune pour l’administrateur, en FR et en NL', async () => {
   getDb().prepare("UPDATE users SET version_vue = '0.11.0' WHERE id IN (?, ?)").run(agent.id, resp.id);
   getDb().prepare("UPDATE users SET version_vue = '0.11.0' WHERE email = ?").run(INSTALL.email);
-  const g = (await agent.get('/api/auth/me')).body.data.nouveautes;
+  const g = (await agent.get('/api/auth/me')).body.data.nouveautes.filter(avant014);
   assert.deepEqual(g.map((n) => n.version), ['0.13.0', '0.12.0']);
   assert.equal(g[1].lignes.length, 2, 'demandeur : les deux lignes pour tous');
   assert.ok(/« Aide »/.test(g[1].lignes[0].fr) && /« Help »/.test(g[1].lignes[0].nl));
-  const r = (await resp.get('/api/auth/me')).body.data.nouveautes;
+  const r = (await resp.get('/api/auth/me')).body.data.nouveautes.filter(avant014);
   assert.equal(r[1].lignes.length, 3, 'responsable : tous, plus la FAQ de son entité');
   assert.ok(r[1].lignes.some((l) => /Ajouter à la FAQ/.test(l.fr) && /Toevoegen aan de FAQ/.test(l.nl)));
-  const a = (await admin.get('/api/auth/me')).body.data.nouveautes;
+  const a = (await admin.get('/api/auth/me')).body.data.nouveautes.filter(avant014);
   assert.equal(a[1].lignes.length, 4, 'administrateur : tous, réglages et journal, FAQ commune');
   for (const l of [...r[1].lignes, ...a[1].lignes]) assert.doesNotMatch(`${l.fr} ${l.nl}`, /GMAO|\bDI\b|RGPD|AVG|MCP|TCK|topic|HelpTopic|VALIDATION|tooltip/, 'sans jargon');
   await agent.put('/api/auth/nouveautes', {});
@@ -387,19 +390,35 @@ test('note de la 0.12.0 : aide par écran pour tous ; FAQ de l’entité pour le
 test('note de la 0.13.0 : téléphone et aide pour tous ; photo de l’endroit et « Sans photo » pour le service technique ; journal pour l’administrateur, en FR et en NL', async () => {
   getDb().prepare("UPDATE users SET version_vue = '0.12.0' WHERE id IN (?, ?)").run(agent.id, resp.id);
   getDb().prepare("UPDATE users SET version_vue = '0.12.0' WHERE email = ?").run(INSTALL.email);
-  const g = (await agent.get('/api/auth/me')).body.data.nouveautes;
+  const g = (await agent.get('/api/auth/me')).body.data.nouveautes.filter(avant014);
   assert.deepEqual(g.map((n) => n.version), ['0.13.0']);
   assert.equal(g[0].lignes.length, 2, 'demandeur : les deux lignes pour tous');
   assert.ok(/téléphone/.test(g[0].lignes[0].fr) && /telefoon/.test(g[0].lignes[0].nl));
   assert.ok(/iPhone comme Android/.test(g[0].lignes[0].fr) && /iPhone zoals Android/.test(g[0].lignes[0].nl));
-  const r = (await resp.get('/api/auth/me')).body.data.nouveautes;
+  const r = (await resp.get('/api/auth/me')).body.data.nouveautes.filter(avant014);
   assert.equal(r[0].lignes.length, 3, 'responsable : tous, plus la photo de l’endroit et « Sans photo »');
   assert.ok(r[0].lignes.some((l) => /photo de l'endroit/.test(l.fr) && /« Zonder foto »/.test(l.nl)));
-  const a = (await admin.get('/api/auth/me')).body.data.nouveautes;
+  const a = (await admin.get('/api/auth/me')).body.data.nouveautes.filter(avant014);
   assert.equal(a[0].lignes.length, 3, 'administrateur : tous, plus le journal');
   assert.ok(a[0].lignes.some((l) => /Journal d'audit/.test(l.fr) && /Auditlogboek/.test(l.nl)));
   for (const l of [...r[0].lignes, ...a[0].lignes]) assert.doesNotMatch(`${l.fr} ${l.nl}`, /GMAO|\bDI\b|RGPD|AVG|MCP|TCK|has_photo|photo_lieu|motif_donne|MIME|JPEG/, 'sans jargon');
   await agent.put('/api/auth/nouveautes', {});
   await resp.put('/api/auth/nouveautes', {});
   await admin.put('/api/auth/nouveautes', {});
+});
+
+test('note de la 0.14.0 : suivi, avis et réouverture pour tous ; passages pour le service technique ; compteurs ; réglages pour le responsable, en FR et en NL', async () => {
+  getDb().prepare("UPDATE users SET version_vue = '0.13.0' WHERE id IN (?, ?)").run(agent.id, resp.id);
+  const g = (await agent.get('/api/auth/me')).body.data.nouveautes;
+  assert.deepEqual(g.map((n) => n.version), ['0.14.0']);
+  assert.equal(g[0].lignes.length, 2, 'demandeur : les deux lignes pour tous');
+  assert.ok(/compléter/.test(g[0].lignes[0].fr) && /aanvullen/.test(g[0].lignes[0].nl));
+  assert.ok(/rouvrez/.test(g[0].lignes[1].fr) && /heropen/.test(g[0].lignes[1].nl));
+  const r = (await resp.get('/api/auth/me')).body.data.nouveautes;
+  assert.equal(r[0].lignes.length, 5, 'responsable : tous, passages, compteurs et réglages');
+  assert.ok(r[0].lignes.some((l) => /suspend le délai/.test(l.fr) && /schort de termijn op/.test(l.nl)));
+  assert.ok(r[0].lignes.some((l) => /États des demandes/.test(l.fr)));
+  for (const l of r[0].lignes) assert.doesNotMatch(`${l.fr} ${l.nl}`, /GMAO|\bDI\b|RGPD|AVG|MCP|transition|codes_liste/, 'sans jargon');
+  await agent.put('/api/auth/nouveautes', {});
+  await resp.put('/api/auth/nouveautes', {});
 });

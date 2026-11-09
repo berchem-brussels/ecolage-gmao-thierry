@@ -1,22 +1,23 @@
 /**
  * Tableau de bord du service technique (version 0.9.0 ; cahier des charges GES-01, PRI-03 ; DV-92) : quatre compteurs
- * de l'entité active, chacun en lien vers la liste du service déjà filtrée (même total que le compteur). Les compteurs
- * « en attente depuis N jours », « à clôturer » et « échéances préventives » arrivent avec le cycle de vie (étape 9)
- * et le préventif. Le retard s'affiche en rouge et par une icône : la couleur n'est jamais seule à le dire.
+ * de l'entité active, chacun en lien vers la liste du service déjà filtrée (même total que le compteur). 0.14.0 :
+ * « En attente depuis plus de N jours » (N réglé par l'entité) et « À clôturer » ; « échéances préventives » arrivera
+ * avec le préventif. Le retard s'affiche en rouge et par une icône : la couleur n'est jamais seule à le dire.
  * 0.9.1 (R1, DV-94) : la page qui l'affiche peut demander un nouveau chargement par `rafraichir` (après une
  * qualification) ; les compteurs restent affichés pendant ce chargement, ils ne repassent à « … » qu'au changement
  * d'entité.
  */
 import { useEffect, useRef, useState } from 'react';
 import { Card, Typography } from 'antd';
-import { ClockCircleOutlined, InboxOutlined, ThunderboltOutlined, WarningOutlined } from '@ant-design/icons';
+import { CheckCircleOutlined, ClockCircleOutlined, InboxOutlined, PauseCircleOutlined, ThunderboltOutlined, WarningOutlined } from '@ant-design/icons';
 import { Link } from 'react-router-dom';
 import api from '../../api';
 import { useAuth } from '../../contexts/AuthContext';
 import { useI18n } from '../../contexts/I18nContext';
 import { COMPTEURS, type TableauBord as Bord, urlGestion } from '../../demandes';
 
-const ICONES = { a_qualifier: InboxOutlined, en_retard: WarningOutlined, p1_p2: ThunderboltOutlined, echeance_proche: ClockCircleOutlined };
+const ICONES = { a_qualifier: InboxOutlined, en_retard: WarningOutlined, p1_p2: ThunderboltOutlined, echeance_proche: ClockCircleOutlined,
+  attente_longue: PauseCircleOutlined, a_cloturer: CheckCircleOutlined };
 
 export default function TableauBord({ titre = true, rafraichir = 0 }: { titre?: boolean; rafraichir?: number }) {
   const { t } = useI18n();
@@ -50,7 +51,7 @@ export default function TableauBord({ titre = true, rafraichir = 0 }: { titre?: 
             <Link key={cle} to={urlGestion(filtres)} className={`bord-compteur${alerte ? ' bord-alerte' : ''}`}>
               <Card size="small" hoverable style={{ height: '100%' }}>
                 <div className="bord-nombre"><Icone aria-hidden /> <span aria-busy={n === null}>{n === null ? '…' : n}</span></div>
-                <div className="bord-libelle">{t(`bord.${cle}`)}</div>
+                <div className="bord-libelle">{t(`bord.${cle}`).replace('{n}', String(bord?.jours_attente ?? 5))}</div>
               </Card>
             </Link>
           );

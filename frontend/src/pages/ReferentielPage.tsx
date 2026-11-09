@@ -1,7 +1,8 @@
 /**
  * Référentiel des demandes de l'entité active (responsable du service technique ; cahier des charges REF-06, PRI-01,
  * PRI-02, ADM-03 ; décision D-11). Quatre onglets : catégories en arbre avec l'aperçu des tuiles, priorités et délais,
- * calendrier des jours ouvrables, simulateur d'échéance. L'onglet ouvert est dans l'adresse (?onglet=priorites).
+ * calendrier des jours ouvrables, simulateur d'échéance ; 0.14.0 (CYC-04) : états des demandes, libellés du demandeur
+ * et de la GRC. L'onglet ouvert est dans l'adresse (?onglet=priorites).
  * Changer d'entité active recharge chaque onglet.
  */
 import { useCallback, useEffect, useState } from 'react';
@@ -15,8 +16,9 @@ import CategoriesTab from '../components/referentiel/CategoriesTab';
 import PrioritesTab from '../components/referentiel/PrioritesTab';
 import CalendrierTab from '../components/referentiel/CalendrierTab';
 import SimulateurTab from '../components/referentiel/SimulateurTab';
+import EtatsTab from '../components/referentiel/EtatsTab';
 
-const ONGLETS = ['categories', 'priorites', 'calendrier', 'simulateur'];
+const ONGLETS = ['categories', 'priorites', 'calendrier', 'simulateur', 'etats'];
 
 export default function ReferentielPage() {
   const { t, tField } = useI18n();
@@ -50,6 +52,7 @@ export default function ReferentielPage() {
           { key: 'priorites', label: t('ref.tab.priorites'), children: <PrioritesTab priorites={priorites} onChange={remplacer} /> },
           { key: 'calendrier', label: t('ref.tab.calendrier'), children: <CalendrierTab /> },
           { key: 'simulateur', label: t('ref.tab.simulateur'), children: <SimulateurTab priorites={priorites} categories={categories} /> },
+          { key: 'etats', label: t('ref.tab.etats'), children: <EtatsTab /> },
         ]} />
     </div>
   );

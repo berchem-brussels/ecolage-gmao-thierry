@@ -52,6 +52,8 @@ const REFERENCES = [
   // 0.13.0 : type d'un lieu modifié (valeur de la liste « type_lieu »).
   { chemin: 'avant.type_id', type: 'valeur', entity: 'lieu' },
   { chemin: 'apres.type_id', type: 'valeur', entity: 'lieu' },
+  // 0.14.0 : motif d'un changement d'état (motif d'attente, de refus, cause de la panne à la clôture).
+  { chemin: 'motif_id', type: 'valeur', action: 'demande.transition' },
 ];
 const NOMS = {
   lieu: `SELECT l.id, l.code, l.nom_fr, l.nom_nl, e.code AS entite_code FROM lieux l LEFT JOIN entites e ON e.id = l.entite_id

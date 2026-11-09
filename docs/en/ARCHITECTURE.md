@@ -1,6 +1,10 @@
 # Architecture
 
-Application version: **0.13.0** · The French text prevails (`docs/fr/ARCHITECTURE.md`); this file summarises each version.
+Application version: **0.14.0** · The French text prevails (`docs/fr/ARCHITECTURE.md`); this file summarises each version.
+
+## Life cycle of requests (0.14.0)
+
+Catalogue `backend/config/cycle-de-vie.json` (15 statuses, 25 transitions), copied at start-up into `demande_transitions` and, per entity, into `demande_etats` (labels for the requester and for the CRM). Migration `012_cycle_de_vie`: tables `demande_transitions`, `demande_etats`, `demande_historique`, `demande_complements`, `demande_avis`, seven columns of `demandes`. Service `services/cycle.js`: order of checks (entity, request 404 or 403, permission 403, module, transition 409), new permission `demandes:traiter`, deadline suspended during a wait for a ticked reason. Nine routes (`/api/demandes/:id/historique`, `/transitions`, `PUT` and `DELETE /api/demandes/:id`, `/pieces`, `/avis`, `/api/etats-demande`), eight MCP tools. Interface: `ChangerEtat.tsx`, `HistoriqueDemande.tsx`, `ActionsDemandeur.tsx`, `EtatsTab.tsx`.
 
 ## Help per screen and local FAQ (0.12.0)
 

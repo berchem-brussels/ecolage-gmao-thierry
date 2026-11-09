@@ -16,6 +16,9 @@
  *      (a_qualifier) ; le gestionnaire et le responsable (« pieces:supprimer ») à tout moment. L'ouvrier : jamais.
  *   6. Brouillon effacé (« Recommencer à zéro ») : ses pièces aussi. Pièces de brouillon de plus de 30 jours sans
  *      brouillon : effacées avec la purge des brouillons.
+ *   7. Complément (0.14.0, point 5 ; SUI-05) : le demandeur ou le bénéficiaire ajoute une photo ou un document à sa
+ *      demande tant qu'elle n'est pas fermée, dans le plafond de l'entité (pièces de la demande comptées) ; il peut la
+ *      retirer seulement si elle a été déposée tant que la demande était « Reçue » (règle 5 inchangée).
  * Le MCP lit les pièces et les supprime (deux appels) ; il ne transporte aucun fichier (écart E-17).
  */
 const crypto = require('crypto');
@@ -116,9 +119,28 @@ function peutAjouter(user) {
   return p;
 }
 
+/**
+ * Règle 7 : contrôle préalable à l'ajout d'une pièce à une demande déjà envoyée (avant la lecture du fichier) : demande
+ * de l'entité active, demandeur ou bénéficiaire, demande ouverte, plafond de l'entité. Rend les plafonds et la demande.
+ */
+function peutAjouterADemande(user, demandeId) {
+  const entiteId = entiteActive(user);
+  const d = getDb().prepare('SELECT id, entite_id, numero, etat, demandeur_id, beneficiaire_id FROM demandes WHERE id = ?').get(demandeId);
+  if (!d) throw new AppError(404, 'NOT_FOUND');
+  if (d.entite_id !== entiteId) throw new AppError(403, 'FORBIDDEN');
+  if (d.demandeur_id !== user.id && d.beneficiaire_id !== user.id) throw new AppError(403, 'FORBIDDEN');
+  assertActif('demandes');
+  if (require('./cycle').FERMES.includes(d.etat)) throw new AppError(409, 'DEMANDE_FERMEE');
+  const p = plafonds(entiteId);
+  if (p.nombre === 0) throw new AppError(409, 'PIECES_FERMEES');
+  const n = getDb().prepare('SELECT COUNT(*) AS n FROM pieces_jointes WHERE demande_id = ?').get(d.id).n;
+  if (n >= p.nombre) throw new AppError(409, 'PIECES_PLAFOND', [`${p.nombre}`]);
+  return { ...p, demande: d };
+}
+
 /** Ajoute une pièce au brouillon : contrôle du contenu, fichier écrit sous un nom généré, ligne au journal sans contenu. */
-function ajouter(user, buf, annonce, origine, channel = 'api') {
-  const p = peutAjouter(user);
+function ajouter(user, buf, annonce, origine, channel = 'api', demandeId = null) {
+  const p = demandeId ? peutAjouterADemande(user, demandeId) : peutAjouter(user);
   if (!Buffer.isBuffer(buf) || !buf.length) throw new AppError(400, 'FILE_MISSING');
   if (buf.length > p.octets) throw new AppError(413, 'PAYLOAD_TOO_LARGE');
   const c = controler(buf, annonce, p.types);
@@ -132,13 +154,14 @@ function ajouter(user, buf, annonce, origine, channel = 'api') {
   let id;
   try {
     id = getDb().prepare(`INSERT INTO pieces_jointes (entite_id, demande_id, auteur_id, fichier, nom, type, octets, largeur, hauteur, canal)
-      VALUES (?, NULL, ?, ?, ?, ?, ?, ?, ?, ?)`)
-      .run(user.entiteId, user.id, fichier, nom, c.type, c.data.length, c.width || null, c.height || null, CANAUX[channel] || 'api').lastInsertRowid;
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
+      .run(user.entiteId, demandeId || null, user.id, fichier, nom, c.type, c.data.length, c.width || null, c.height || null, CANAUX[channel] || 'api').lastInsertRowid;
   } catch (e) {
     effacerFichier(fichier);
     throw e;
   }
-  logAudit(user.id, 'piece.add', 'piece', id, { type: c.type, octets: c.data.length, brouillon: 1 }, channel, user.entiteId);
+  logAudit(user.id, 'piece.add', 'piece', id, { type: c.type, octets: c.data.length, brouillon: demandeId ? 0 : 1,
+    ...(demandeId ? { demande_id: demandeId, numero: p.demande.numero } : {}) }, channel, user.entiteId);
   return get(user, id);
 }
 
@@ -241,6 +264,6 @@ function purger() {
 }
 
 module.exports = {
-  plafonds, duBrouillon, deDemande, peutAjouter, ajouter, get, fichier, resumeSuppression, supprimer, rattacher,
+  plafonds, duBrouillon, deDemande, peutAjouter, peutAjouterADemande, ajouter, get, fichier, resumeSuppression, supprimer, rattacher,
   effacerBrouillon, purger, nomAffiche, FORMATS,
 };

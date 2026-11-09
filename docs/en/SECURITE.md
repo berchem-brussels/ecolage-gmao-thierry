@@ -2,6 +2,10 @@
 
 The French text (`docs/fr/SECURITE.md`) prevails and holds the full grid per version.
 
+## 0.14.0 (08/11/2026)
+
+Life cycle of requests, migration `012_cycle_de_vie`. Tested: transition, history, addition, cancellation, photo and rating of a request of the other entity 403 (API and MCP); service transitions only with `demandes:traiter`; the requester and the beneficiary may only cancel and reopen, a follower nothing; a status the requester may never reach returns 403, never 409; any missing transition refused; cancellation refused once the request has been "In progress"; reopening only within the period; one rating per closure; suspension only for a ticked reason; no free text in the audit log (`commentaire_donne`, `compte_rendu_donne`). `recette.sh`: password typed visibly, only its length shown. Each protection removed separately: at least one failure. No new dependency.
+
 ## 0.13.0 (08/11/2026)
 
 Photo of the spot on a request record, for the technical department only (`photo_lieu`), "Without photo" filter in Assets (`has_photo`), fixes D1 to D10 and M1 to M5. Tested: the other entity gets 403 on the request and on the photo; never shown to the requester; `has_photo` only 0 or 1 and only in the active entity; a ticket status reason no longer copied to the audit log (`motif_donne`); no raw code left in the log; header fits 320 px. Each fix removed in turn: at least one failure. No migration, no new dependency.

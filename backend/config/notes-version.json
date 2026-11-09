@@ -2,6 +2,37 @@
   "_description": "Notes de version pour les utilisateurs, en FR et en NL, sans terme technique (standard v3.2, sections 13.1 et 17.8 ; écart E-07). Une note par version, de la plus récente à la plus ancienne. Chaque ligne a un public : « tous », « admin » (administrateur de l'application) ou une permission du catalogue des rôles (par exemple « parametres:gerer »), lue dans l'entité active. La note de la version installée s'affiche une fois à la première connexion qui suit la mise à jour ; toutes restent relisibles dans Aide, Nouveautés.",
   "notes": [
     {
+      "version": "0.14.0",
+      "date": "2026-11-08",
+      "lignes": [
+        {
+          "public": "tous",
+          "fr": "Mes demandes : la fiche montre chaque étape de votre demande avec sa date. Vous pouvez la compléter (précision, photo) tant qu'elle est ouverte et l'annuler tant que les travaux n'ont pas commencé.",
+          "nl": "Mijn aanvragen: de fiche toont elke stap van uw aanvraag met de datum. U kunt ze aanvullen (verduidelijking, foto) zolang ze open is en annuleren zolang de werken niet begonnen zijn."
+        },
+        {
+          "public": "tous",
+          "fr": "Une fois la demande clôturée, donnez votre avis en un clic ; si le problème n'est pas réglé, rouvrez-la avant la date indiquée.",
+          "nl": "Zodra de aanvraag afgesloten is, geeft u uw beoordeling met één klik; is het probleem niet opgelost, heropen ze dan vóór de vermelde datum."
+        },
+        {
+          "public": "demandes:traiter",
+          "fr": "Fiche d'une demande : des boutons pour la faire avancer (démarrer, mettre en attente avec un motif, terminer, clôturer avec la cause de la panne, refuser, annuler) et l'historique complet. Une attente pour un motif extérieur au service suspend le délai.",
+          "nl": "Fiche van een aanvraag: knoppen om ze verder te behandelen (starten, in wacht zetten met een reden, beëindigen, afsluiten met de oorzaak van het defect, weigeren, annuleren) en de volledige historiek. Een wachttijd om een reden buiten de dienst schort de termijn op."
+        },
+        {
+          "public": "demandes:entite",
+          "fr": "Tableau de bord : deux compteurs de plus, « En attente depuis plus de N jours ouvrés » et « À clôturer ». Une demande rouverte revient dans « À qualifier ».",
+          "nl": "Dashboard: twee tellers meer, « Langer dan N werkdagen in wacht » en « Af te sluiten ». Een heropende aanvraag komt terug in « Te kwalificeren »."
+        },
+        {
+          "public": "parametres:gerer",
+          "fr": "Réglages de l'entité : les motifs d'attente qui suspendent le délai, la durée d'une attente longue et le délai de réouverture. Catégories et délais, onglet « États des demandes » : le texte que lit le demandeur pour chaque état. Listes de valeurs : motifs d'attente, motifs de refus et causes de panne.",
+          "nl": "Instellingen van de entiteit: de redenen van wachten die de termijn opschorten, de duur van een lange wachttijd en de termijn om te heropenen. Categorieën en termijnen, tabblad « Statussen van de aanvragen »: de tekst die de aanvrager voor elke status leest. Waardelijsten: redenen van wachten, redenen van weigering en oorzaken van defect."
+        }
+      ]
+    },
+    {
       "version": "0.13.0",
       "date": "2026-11-08",
       "lignes": [

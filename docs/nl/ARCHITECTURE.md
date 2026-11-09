@@ -1,6 +1,10 @@
 # Architectuur
 
-Versie van de toepassing: **0.13.0** · De Franse tekst is rechtsgeldig (`docs/fr/ARCHITECTURE.md`); dit bestand vat elke versie samen.
+Versie van de toepassing: **0.14.0** · De Franse tekst is rechtsgeldig (`docs/fr/ARCHITECTURE.md`); dit bestand vat elke versie samen.
+
+## Levenscyclus van de aanvragen (0.14.0)
+
+Catalogus `backend/config/cycle-de-vie.json` (15 statussen, 25 overgangen), bij het opstarten gekopieerd naar `demande_transitions` en, per entiteit, naar `demande_etats` (benamingen voor de aanvrager en het KRM). Migratie `012_cycle_de_vie`: tabellen `demande_transitions`, `demande_etats`, `demande_historique`, `demande_complements`, `demande_avis`, zeven kolommen van `demandes`. Dienst `services/cycle.js`: volgorde van de controles (entiteit, aanvraag 404 of 403, toelating 403, module, overgang 409), nieuwe permissie `demandes:traiter`, opschorting van de termijn tijdens een wachttijd om een aangevinkte reden. Negen routes (`/api/demandes/:id/historique`, `/transitions`, `PUT` en `DELETE /api/demandes/:id`, `/pieces`, `/avis`, `/api/etats-demande`), acht MCP-tools. Interface: `ChangerEtat.tsx`, `HistoriqueDemande.tsx`, `ActionsDemandeur.tsx`, `EtatsTab.tsx`.
 
 ## Hulp per scherm en lokale FAQ (0.12.0)
 

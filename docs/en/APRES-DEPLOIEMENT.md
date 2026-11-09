@@ -2,6 +2,14 @@
 
 The French text prevails. Update procedure: upload the archive, `cd <folder>`, `ls -l` the archive, `sudo bash backup.sh`, `sudo rm -rf backend frontend docs`, `sudo tar xzf … --strip-components=1`, `ls backend frontend`, `sudo docker compose build`, `sudo docker compose up -d`, `sudo docker compose ps`, `curl -sk https://localhost:<https>/api/version`, checklist from the delivery message. `.env` and the volumes are never touched.
 
+## 0.14.0 (08/11/2026)
+
+Update by the procedure of the French text, **with migration**: `sudo docker logs gmao-api --tail 30` shows `[DB] Migration 012_cycle_de_vie appliquée` then `[APP] API 0.14.0`. Then `sudo bash recette.sh`: the demonstration password is typed visibly, the line is erased on Enter and the number of characters received is shown; nine checks OK. Both images are rebuilt; Dockerfile, compose, `nginx.conf`, `backup.sh` and `.env` unchanged. Rollback to 0.13.0: 0.13.0 starts on the migrated database, but preferably restore the backup taken just before the update.
+
+## 0.13.0 (08/11/2026)
+
+Update without migration: `[APP] API 0.13.0` in the log. Then `sudo bash recette.sh`: nine checks OK. Rollback to 0.12.0 without restoring the database.
+
 ## 0.12.0 (06/11/2026)
 
 Update by the procedure of the French text, **with migration**: `sudo docker logs gmao-api --tail 30` shows `[DB] Migration 011_faq appliquée` then `[APP] API 0.12.0`. Then `sudo bash recette.sh` (demonstration password typed without echo): nine checks OK. Both images are rebuilt; Dockerfile, compose, `nginx.conf`, `backup.sh` and `.env` unchanged. Rollback to 0.11.0 without restoring the database.

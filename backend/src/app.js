@@ -52,6 +52,7 @@ function buildApp() {
   app.use('/api/jours-feries', require('./routes/jours-feries'));
   app.use('/api/echeances', require('./routes/echeances'));
   app.use('/api/demandes', require('./routes/demandes'));
+  app.use('/api/etats-demande', require('./routes/etats-demande'));
   app.use('/api/pieces', require('./routes/pieces'));
   app.use('/api/vues-demandes', require('./routes/vues-demandes'));
   app.use('/api/parametres', require('./routes/parametres'));

@@ -96,6 +96,9 @@ async function initDb() {
   require('./services/questions-categorie').seedAll();
   require('./services/priorites').seedAll();
   require('./services/calendrier').seedAll();
+  // 0.14.0 : passages livrés du cycle de vie qui manqueraient, libellés livrés des états de chaque entité.
+  require('./services/cycle').seedTransitions(wrapped);
+  require('./services/cycle').seedAll();
   saveNow();
   return wrapped;
 }
@@ -593,6 +596,97 @@ const MIGRATIONS = [
     CREATE INDEX idx_help_faq_topic ON help_faq(topic_id);
     CREATE UNIQUE INDEX idx_help_faq_ticket ON help_faq(source_ticket_id) WHERE source_ticket_id IS NOT NULL
   `],
+  // 0.14.0 (étape 9, cycle de vie ; CYC-01, CYC-02, CYC-04, CLO-01) : passages permis en données (copiés de
+  // config/cycle-de-vie.json, pour toute l'instance), libellés des états vus par le demandeur et envoyés à la GRC par
+  // entité, historique de chaque fiche (auteur, date, état précédent, motif, canal), état courant daté, cause de la
+  // panne et compte rendu des travaux à la clôture ; attente qui suspend le délai et temps suspendu cumulé, en minutes
+  // ouvrables et calendaires (PRI-03, DV-119) ; passages du demandeur (acteur, condition) et compléments de la
+  // demande (SUI-05, point 5) ; avis à la clôture et début du décompte des délais, remis à la réouverture (SUI-06,
+  // point 6). Étape JavaScript : passages livrés, puis historique des demandes
+  // déjà déposées (réception, et qualification si elle a eu lieu), lu de la fiche.
+  ['012_cycle_de_vie', `
+    CREATE TABLE demande_transitions (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      de_etat TEXT NOT NULL CHECK (length(de_etat) BETWEEN 2 AND 30),
+      vers_etat TEXT NOT NULL CHECK (length(vers_etat) BETWEEN 2 AND 30),
+      permission TEXT NOT NULL CHECK (length(permission) BETWEEN 3 AND 60),
+      acteur TEXT NOT NULL DEFAULT 'service' CHECK (acteur IN ('service', 'demandeur')),
+      condition TEXT CHECK (condition IS NULL OR condition IN ('jamais_en_cours', 'delai_reouverture')),
+      via TEXT CHECK (via IS NULL OR via IN ('qualifier')),
+      motif_liste TEXT CHECK (motif_liste IS NULL OR length(motif_liste) BETWEEN 2 AND 40),
+      commentaire TEXT NOT NULL DEFAULT 'interdit' CHECK (commentaire IN ('interdit', 'facultatif', 'obligatoire')),
+      commentaire_public INTEGER NOT NULL DEFAULT 0 CHECK (commentaire_public IN (0, 1)),
+      compte_rendu INTEGER NOT NULL DEFAULT 0 CHECK (compte_rendu IN (0, 1)),
+      ordre INTEGER NOT NULL DEFAULT 0,
+      is_active INTEGER NOT NULL DEFAULT 1 CHECK (is_active IN (0, 1)),
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      UNIQUE (de_etat, vers_etat, acteur)
+    );
+    CREATE TABLE demande_complements (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      demande_id INTEGER NOT NULL REFERENCES demandes(id) ON DELETE RESTRICT,
+      entite_id INTEGER NOT NULL REFERENCES entites(id) ON DELETE RESTRICT,
+      user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+      texte TEXT NOT NULL CHECK (length(texte) BETWEEN 1 AND 2000),
+      langue TEXT NOT NULL DEFAULT 'fr' CHECK (langue IN ('fr', 'nl')),
+      canal TEXT NOT NULL DEFAULT 'ecran' CHECK (canal IN ('ecran', 'api', 'mcp', 'grc')),
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+    CREATE INDEX idx_demande_complements_demande ON demande_complements(demande_id, id);
+    CREATE TABLE demande_avis (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      demande_id INTEGER NOT NULL REFERENCES demandes(id) ON DELETE RESTRICT,
+      entite_id INTEGER NOT NULL REFERENCES entites(id) ON DELETE RESTRICT,
+      user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+      note INTEGER NOT NULL CHECK (note BETWEEN 1 AND 5),
+      commentaire TEXT CHECK (commentaire IS NULL OR length(commentaire) BETWEEN 1 AND 2000),
+      canal TEXT NOT NULL DEFAULT 'ecran' CHECK (canal IN ('ecran', 'api', 'mcp', 'grc')),
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+    CREATE INDEX idx_demande_avis_demande ON demande_avis(demande_id, id);
+    CREATE INDEX idx_demande_avis_entite ON demande_avis(entite_id, created_at);
+    CREATE TABLE demande_etats (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      entite_id INTEGER NOT NULL REFERENCES entites(id) ON DELETE RESTRICT,
+      code TEXT NOT NULL CHECK (length(code) BETWEEN 2 AND 30),
+      libelle_fr TEXT NOT NULL CHECK (length(libelle_fr) BETWEEN 1 AND 100),
+      libelle_nl TEXT NOT NULL CHECK (length(libelle_nl) BETWEEN 1 AND 100),
+      grc_fr TEXT NOT NULL CHECK (length(grc_fr) BETWEEN 1 AND 100),
+      grc_nl TEXT NOT NULL CHECK (length(grc_nl) BETWEEN 1 AND 100),
+      updated_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+      updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+      UNIQUE (entite_id, code)
+    );
+    CREATE TABLE demande_historique (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      demande_id INTEGER NOT NULL REFERENCES demandes(id) ON DELETE RESTRICT,
+      entite_id INTEGER NOT NULL REFERENCES entites(id) ON DELETE RESTRICT,
+      de_etat TEXT CHECK (de_etat IS NULL OR length(de_etat) BETWEEN 2 AND 30),
+      vers_etat TEXT NOT NULL CHECK (length(vers_etat) BETWEEN 2 AND 30),
+      user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+      motif_id INTEGER REFERENCES listes_valeurs(id) ON DELETE RESTRICT,
+      commentaire TEXT CHECK (commentaire IS NULL OR length(commentaire) BETWEEN 1 AND 2000),
+      commentaire_public INTEGER NOT NULL DEFAULT 0 CHECK (commentaire_public IN (0, 1)),
+      canal TEXT NOT NULL DEFAULT 'ecran' CHECK (canal IN ('ecran', 'api', 'mcp', 'grc', 'systeme')),
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+    CREATE INDEX idx_demande_historique_demande ON demande_historique(demande_id, id);
+    CREATE INDEX idx_demande_historique_entite ON demande_historique(entite_id, vers_etat);
+    ALTER TABLE demandes ADD COLUMN etat_depuis TEXT;
+    ALTER TABLE demandes ADD COLUMN cause_id INTEGER REFERENCES listes_valeurs(id) ON DELETE RESTRICT;
+    ALTER TABLE demandes ADD COLUMN compte_rendu TEXT CHECK (compte_rendu IS NULL OR length(compte_rendu) BETWEEN 1 AND 5000);
+    ALTER TABLE demandes ADD COLUMN attente_suspend INTEGER NOT NULL DEFAULT 0 CHECK (attente_suspend IN (0, 1));
+    ALTER TABLE demandes ADD COLUMN suspendu_ouvrable_min INTEGER NOT NULL DEFAULT 0 CHECK (suspendu_ouvrable_min >= 0);
+    ALTER TABLE demandes ADD COLUMN suspendu_calendaire_min INTEGER NOT NULL DEFAULT 0 CHECK (suspendu_calendaire_min >= 0);
+    ALTER TABLE demandes ADD COLUMN decompte_depuis TEXT
+  `, (db) => {
+    require('./services/cycle').seedTransitions(db);
+    db.prepare(`INSERT INTO demande_historique (demande_id, entite_id, de_etat, vers_etat, user_id, canal, created_at)
+      SELECT id, entite_id, NULL, 'a_qualifier', demandeur_id, CASE WHEN canal = 'mcp' THEN 'mcp' ELSE 'ecran' END, created_at FROM demandes`).run();
+    db.prepare(`INSERT INTO demande_historique (demande_id, entite_id, de_etat, vers_etat, user_id, canal, created_at)
+      SELECT id, entite_id, 'a_qualifier', 'qualifiee', qualifiee_par, 'ecran', qualifiee_le FROM demandes WHERE qualifiee_le IS NOT NULL`).run();
+    db.prepare("UPDATE demandes SET etat_depuis = COALESCE(qualifiee_le, created_at)").run();
+  }],
 ];
 
 function migrate() {

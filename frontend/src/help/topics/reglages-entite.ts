@@ -35,8 +35,21 @@ const topic: HelpTopic = {
       ],
       result: { fr: '{{parametres.reset}} remet la valeur d’origine. Un changement vaut pour les demandes suivantes.', nl: '{{parametres.reset}} zet de oorspronkelijke waarde terug. Een wijziging geldt voor de volgende aanvragen.' },
     },
+    // 0.14.0 (étape 9, point 7 ; PRI-03, GES-01, SUI-06).
+    {
+      title: { fr: 'Régler l’attente, la suspension du délai et la réouverture', nl: 'De wachttijd, de opschorting van de termijn en de heropening instellen' },
+      when: { fr: 'Une fois, avec le service technique, puis à l’usage.', nl: 'Eenmalig, met de technische dienst, daarna naargelang het gebruik.' },
+      steps: [
+        { fr: 'Bloc demandes : cochez les motifs d’attente qui suspendent le délai, ceux qui ne dépendent pas du service (par défaut : réponse du demandeur, accès impossible).', nl: 'Blok aanvragen: vink de redenen van wachten aan die de termijn opschorten, die niet van de dienst afhangen (standaard: antwoord van de aanvrager, toegang onmogelijk).' },
+        { fr: 'Fixez le nombre de jours ouvrables après lequel une attente compte comme longue au tableau de bord (5 par défaut).', nl: 'Bepaal het aantal werkdagen waarna een wachttijd als lang telt op het dashboard (standaard 5).' },
+        { fr: 'Fixez le délai pendant lequel le demandeur peut rouvrir une demande clôturée (7 jours par défaut ; 0 ferme la réouverture).', nl: 'Bepaal de termijn waarin de aanvrager een afgesloten aanvraag kan heropenen (standaard 7 dagen; 0 sluit de heropening).' },
+      ],
+      result: { fr: 'Le réglage vaut pour les attentes et les clôtures qui suivent ; une attente déjà commencée garde la règle de son début.', nl: 'De instelling geldt voor de volgende wachttijden en afsluitingen; een reeds begonnen wachttijd behoudt de regel van zijn begin.' },
+    },
   ],
-  faq: [],
+  faq: [
+    { q: { fr: 'Un motif d’attente manque dans les cases à cocher.', nl: 'Een reden van wachten ontbreekt bij de vinkjes.' }, a: { fr: 'Ajoutez-le d’abord dans {{nav.listes}}, liste {{listes.liste.motif_attente}}.', nl: 'Voeg ze eerst toe in {{nav.listes}}, lijst {{listes.liste.motif_attente}}.' } },
+  ],
   seeAlso: ['referentiel', 'parametres'],
   shots: [{ id: 'reglages-entite-overview', path: '/reglages-entite', marks: [{ sel: '.ant-card' }, { sel: '.ant-form-item-extra' }], caption: { fr: "Réglages de l'entité", nl: 'Instellingen van de entiteit' } }],
 };

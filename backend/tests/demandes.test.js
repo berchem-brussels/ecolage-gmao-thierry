@@ -150,11 +150,11 @@ test('« Demandes de l’entité » : gestionnaire et responsable en lecture, de
   assert.equal((await gestB.get('/api/demandes?perimetre=entite')).body.data.length, 0);
 });
 
-test('aucune modification ni suppression en 0.5.0 (étape 9)', async () => {
+test('0.14.0 (E-21) : la description d’origine ne se modifie pas ; PUT complète, DELETE annule (cycle.test.js)', async () => {
   const d = (await agent.get('/api/demandes')).body.data[0];
-  assert.equal((await agent.put(`/api/demandes/${d.id}`, { description: 'Modifiée après coup' })).status, 404);
-  assert.equal((await agent.del(`/api/demandes/${d.id}`, { motif: 'x' })).status, 404);
-  assert.equal((await gestA.put(`/api/demandes/${d.id}`, { etat: 'cloturee' })).status, 404);
+  assert.equal((await agent.put(`/api/demandes/${d.id}`, { description: 'Modifiée après coup' })).status, 400, 'pas de champ description');
+  assert.equal((await agent.del(`/api/demandes/${d.id}`, {})).status, 400, 'motif obligatoire');
+  assert.equal((await gestA.put(`/api/demandes/${d.id}`, { etat: 'cloturee' })).status, 400);
 });
 
 test('MCP : dépôt au nom de la personne, canal mcp, mêmes contrôles et mêmes droits', async () => {

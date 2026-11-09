@@ -2,6 +2,14 @@
 
 De Franse tekst is rechtsgeldig. Bijwerkingsprocedure: archief plaatsen, `cd <map>`, `ls -l` van het archief, `sudo bash backup.sh`, `sudo rm -rf backend frontend docs`, `sudo tar xzf … --strip-components=1`, `ls backend frontend`, `sudo docker compose build`, `sudo docker compose up -d`, `sudo docker compose ps`, `curl -sk https://localhost:<https>/api/version`, controlelijst van het leveringsbericht. `.env` en de volumes worden nooit aangeraakt.
 
+## 0.14.0 (08/11/2026)
+
+Update volgens de procedure in de Franse tekst, **met migratie**: `sudo docker logs gmao-api --tail 30` toont `[DB] Migration 012_cycle_de_vie appliquée` en daarna `[APP] API 0.14.0`. Daarna `sudo bash recette.sh`: het demonstratiewachtwoord wordt zichtbaar getypt, de regel wordt bij Enter gewist en het aantal ontvangen tekens getoond; negen controles OK. Beide images worden herbouwd; Dockerfile, compose, `nginx.conf`, `backup.sh` en `.env` ongewijzigd. Terug naar 0.13.0: de 0.13.0 start op de gemigreerde databank, maar herstel liefst de back-up van net voor de update.
+
+## 0.13.0 (08/11/2026)
+
+Update zonder migratie: `[APP] API 0.13.0` in het logboek. Daarna `sudo bash recette.sh`: negen controles OK. Terug naar 0.12.0 zonder de databank te herstellen.
+
 ## 0.12.0 (06/11/2026)
 
 Update volgens de procedure in de Franse tekst, **met migratie**: `sudo docker logs gmao-api --tail 30` toont `[DB] Migration 011_faq appliquée` en daarna `[APP] API 0.12.0`. Daarna `sudo bash recette.sh` (wachtwoord van de demonstratie, zonder weergave getypt): negen controles OK. Beide images worden herbouwd; Dockerfile, compose, `nginx.conf`, `backup.sh` en `.env` ongewijzigd. Terug naar 0.11.0 zonder de databank te herstellen.

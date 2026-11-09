@@ -10,6 +10,8 @@
  *   du moment sous un nom ; « Supprimer la vue » la retire.
  * - Fiche latérale (adresse ?demande=id) avec les échéances, la qualification et le bouton « Qualifier » pour qui a la
  *   permission « demandes:qualifier ».
+ * - 0.14.0 (étape 9, point 3) : sur la fiche, un bouton par passage permis (attente, reprise, démarrage, fin, clôture,
+ *   refus, annulation), le formulaire du passage et l'historique de la demande ; liste et compteurs rechargés après.
  * Choix exclusifs en boutons ; listes déroulantes réservées aux choix multiples et à la recherche dans un catalogue
  * (standard, section 12.4). Sur téléphone, une carte par demande ; les filtres s'y replient sous « Filtres et vues ».
  * Colonnes : numéro, priorité, état et échéance d'abord, pour qu'ils restent visibles sans défiler.
@@ -22,6 +24,8 @@ import { useSearchParams } from 'react-router-dom';
 import api, { ApiError, qs } from '../api';
 import TableauBord from '../components/demandes/TableauBord';
 import QualificationForm from '../components/demandes/QualificationForm';
+import { ActionsDemande, ChangerEtatForm } from '../components/demandes/ChangerEtat';
+import HistoriqueDemande from '../components/demandes/HistoriqueDemande';
 import { useAuth } from '../contexts/AuthContext';
 import { useI18n } from '../contexts/I18nContext';
 import { Icone, PRIORITES, type ArbreCategories, type Categorie } from '../referentiel';
@@ -29,8 +33,8 @@ import type { Lieu } from '../lieux';
 import { flatten } from '../lieux';
 import { hasPermission, useRoles } from '../useRoles';
 import {
-  CANAUX, CLES_FILTRES, ETATS, QUALIFIABLES, type Demande, type FiltresGestion, type VueDemandes,
-  cheminTexte, dateDepot, extrait, filtresDepuisUrl, instant,
+  CANAUX, CLES_FILTRES, ETATS, type Demande, type FiltresGestion, type Transition, type VueDemandes,
+  cheminTexte, cleAction, dateDepot, extrait, filtresDepuisUrl, instant, qualifiable,
 } from '../demandes';
 import { DangerTag, EtatTag, FicheDemande } from './DemandesPage';
 
@@ -45,6 +49,8 @@ export function PrioriteTag({ p }: { p: string | null }) {
 /** Échéance qui compte, avec « En retard » en mots et en rouge (PRI-03). */
 export function EcheanceCell({ d }: { d: Demande }) {
   const { t } = useI18n();
+  // 0.14.0 (PRI-03, DV-119) : attente pour un motif extérieur au service, le délai ne court pas.
+  if (d.echeance_type === 'suspendu') return <Tag color="orange" style={{ marginInlineEnd: 0 }}>{t('gest.echeance.suspendu')}</Tag>;
   if (!d.echeance_courante) return <Typography.Text type="secondary">{d.ouverte ? t('gest.echeance.aucune') : '—'}</Typography.Text>;
   return (
     <div>
@@ -70,6 +76,9 @@ export default function GestionDemandesPage() {
   const [loading, setLoading] = useState(false);
   const [fiche, setFiche] = useState<Demande | null>(null);
   const [qualifier, setQualifier] = useState(false);
+  /** Passage en cours de saisie sur la fiche (0.14.0) ; historique rechargé après chaque changement. */
+  const [action, setAction] = useState<Transition | null>(null);
+  const [histo, setHisto] = useState(0);
   const [arbre, setArbre] = useState<Categorie[]>([]);
   const [lieux, setLieux] = useState<Lieu[]>([]);
   const [vues, setVues] = useState<VueDemandes[]>([]);
@@ -108,12 +117,14 @@ export default function GestionDemandesPage() {
 
   const ouverte = params.get('demande');
   const chargerFiche = useCallback(() => {
-    if (!ouverte) { setFiche(null); setQualifier(false); return; }
+    if (!ouverte) { setFiche(null); setQualifier(false); setAction(null); return; }
     api.get<Demande>(`/demandes/${ouverte}`).then(setFiche).catch(() => setFiche(null));
   }, [ouverte]);
   useEffect(() => { chargerFiche(); }, [chargerFiche]);
   const ouvrir = (d: Demande) => changer({ demande: d.id }, true);
-  const fermer = () => { setQualifier(false); changer({ demande: undefined }, true); };
+  const fermer = () => { setQualifier(false); setAction(null); changer({ demande: undefined }, true); };
+  /** Après une qualification ou un passage : fiche à jour, liste, compteurs et historique rechargés. */
+  const apresChangement = (d: Demande) => { setFiche(d); setQualifier(false); setAction(null); charger(); setBordAJour((n) => n + 1); setHisto((n) => n + 1); };
 
   const lbl = (o: { libelle_fr: string; libelle_nl: string }) => (lang === 'nl' ? o.libelle_nl : o.libelle_fr);
   const nom = (o: { nom_fr: string; nom_nl: string }) => (lang === 'nl' ? o.nom_nl : o.nom_fr);
@@ -214,6 +225,8 @@ export default function GestionDemandesPage() {
           <div className="gest-filtres">
             <Radio.Group optionType="button" aria-label={t('gest.filtre.canal')} value={f.canal || ''} onChange={(e) => changer({ canal: e.target.value || undefined })}
               options={[{ value: '', label: t('gest.canal.tous') }, ...CANAUX.map((c) => ({ value: c, label: t(`gest.canal.${c}`) }))]} />
+            <Radio.Group optionType="button" aria-label={t('gest.filtre.attente')} value={f.attente || ''} onChange={(e) => changer({ attente: e.target.value || undefined })}
+              options={[{ value: '', label: t('gest.attente.toutes') }, { value: 'longue', label: t('gest.attente.longue') }]} />
             <Radio.Group optionType="button" aria-label={t('gest.filtre.danger')} value={f.danger === undefined ? '' : String(f.danger)} onChange={(e) => changer({ danger: e.target.value === '' ? undefined : e.target.value })}
               options={[{ value: '', label: t('gest.danger.tous') }, { value: '1', label: t('gest.danger.oui') }, { value: '0', label: t('gest.danger.non') }]} />
           </div>
@@ -285,12 +298,20 @@ export default function GestionDemandesPage() {
       )}
 
       <Drawer open={!!fiche} onClose={fermer} width={mobile ? '100%' : 560}
-        title={fiche ? `${qualifier ? t('qualif.titre') : t('demande.fiche')} ${fiche.numero}` : ''}
-        extra={fiche && !qualifier && peutQualifier && QUALIFIABLES.includes(fiche.etat)
-          ? <Button type="primary" onClick={() => setQualifier(true)}>{fiche.etat === 'a_qualifier' ? t('qualif.bouton') : t('qualif.bouton.modifier')}</Button> : null}>
+        title={fiche ? `${qualifier ? t('qualif.titre') : action ? t(cleAction(fiche.etat, action.vers)) : t('demande.fiche')} ${fiche.numero}` : ''}
+        extra={fiche && !qualifier && !action && peutQualifier && qualifiable(fiche)
+          ? <Button type="primary" onClick={() => setQualifier(true)}>{fiche.etat === 'qualifiee' ? t('qualif.bouton.modifier') : t('qualif.bouton')}</Button> : null}>
         {fiche && (qualifier
-          ? <QualificationForm d={fiche} onCancel={() => setQualifier(false)} onDone={(d) => { setFiche(d); setQualifier(false); charger(); setBordAJour((n) => n + 1); }} />
-          : <FicheDemande d={fiche} avecDemandeur service onChange={chargerFiche} />)}
+          ? <QualificationForm d={fiche} onCancel={() => setQualifier(false)} onDone={apresChangement} />
+          : action
+            ? <ChangerEtatForm key={`${fiche.id}-${action.vers}`} d={fiche} transition={action} onCancel={() => setAction(null)} onDone={apresChangement} />
+            : (
+              <>
+                <ActionsDemande d={fiche} onChoisir={setAction} />
+                <FicheDemande d={fiche} avecDemandeur service onChange={chargerFiche} />
+                <HistoriqueDemande demandeId={fiche.id} service rafraichir={histo} />
+              </>
+            ))}
       </Drawer>
 
       <Modal open={nomVue !== null} title={t('gest.vue.enregistrer')} onCancel={() => setNomVue(null)} onOk={enregistrerVue}

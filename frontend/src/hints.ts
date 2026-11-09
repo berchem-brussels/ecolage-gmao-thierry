@@ -9,6 +9,17 @@
 import type { Lang } from './i18n';
 
 export const hints: Record<string, Record<Lang, string>> = {
+  // 0.14.0 : changement d'état d'une demande par le service technique.
+  'demandeur.complement': { fr: 'Ce que le service technique doit encore savoir : endroit exact, heures où le local est libre, évolution du problème.', nl: 'Wat de technische dienst nog moet weten: juiste plaats, uren waarop het lokaal vrij is, evolutie van het probleem.' },
+  'demandeur.motif': { fr: 'Raison de l’annulation, lue par le service technique (problème réglé, demande en double…).', nl: 'Reden van de annulering, gelezen door de technische dienst (probleem opgelost, dubbele aanvraag…).' },
+  'demandeur.reouvrir.motif': { fr: 'Ce qui n’est pas réglé ou ce qui est revenu ; le service technique le lit avant de reprendre la demande.', nl: 'Wat niet opgelost is of wat teruggekomen is; de technische dienst leest het voor hij de aanvraag hervat.' },
+  'avis.note': { fr: 'Votre satisfaction sur l’intervention, de « Très insatisfait » à « Très satisfait » ; elle compte pour les statistiques du service.', nl: 'Uw tevredenheid over de interventie, van « Zeer ontevreden » tot « Zeer tevreden »; ze telt mee voor de statistieken van de dienst.' },
+  'avis.commentaire': { fr: 'Ce qui vous a plu ou déplu, en quelques mots ; facultatif.', nl: 'Wat u goed of minder goed vond, in enkele woorden; facultatief.' },
+  'ref.etat.libelle': { fr: 'Texte court que le demandeur lit dans « Mes demandes » et sur sa ligne du temps ; 100 caractères au plus.', nl: 'Korte tekst die de aanvrager leest in « Mijn aanvragen » en op zijn tijdlijn; hoogstens 100 tekens.' },
+  'ref.etat.grc': { fr: 'Texte transmis au citoyen par la GRC quand elle sera reliée (étape 38) ; 100 caractères au plus.', nl: 'Tekst die het KRM aan de burger doorgeeft zodra het gekoppeld is (stap 38); hoogstens 100 tekens.' },
+  'cycle.motif': { fr: "Raison choisie dans la liste de l'entité, réglée par le responsable dans Listes de valeurs ; elle compte pour les statistiques.", nl: 'Reden gekozen uit de lijst van de entiteit, ingesteld door de verantwoordelijke bij Waardelijsten; ze telt mee voor de statistieken.' },
+  'cycle.commentaire': { fr: 'Explication libre ; la ligne sous le champ dit si le demandeur la lira.', nl: 'Vrije uitleg; de regel onder het veld zegt of de aanvrager ze zal lezen.' },
+  'cycle.compte_rendu': { fr: 'Travaux faits, pièces posées, remarques pour la suite ; gardé sur la fiche pour le service.', nl: 'Uitgevoerde werken, geplaatste onderdelen, opmerkingen voor later; bewaard op de fiche voor de dienst.' },
   'login.email': { fr: "Adresse professionnelle avec laquelle votre compte a été créé dans l'application.", nl: 'Professioneel adres waarmee uw account in de toepassing werd aangemaakt.' },
   'login.password': { fr: "Mot de passe de votre compte, reçu de l'administrateur ou choisi par vous.", nl: 'Wachtwoord van uw account, ontvangen van de beheerder of door u gekozen.' },
   'install.organisation_fr': { fr: 'Nom officiel du pouvoir local en français, affiché sur la page de connexion.', nl: 'Officiële naam van het lokaal bestuur in het Frans, getoond op de aanmeldpagina.' },
