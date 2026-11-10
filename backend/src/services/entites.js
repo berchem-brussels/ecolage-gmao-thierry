@@ -55,6 +55,7 @@ function create(user, data, channel = 'api') {
   priorites.seedEntite(r.lastInsertRowid); // priorités et délais livrés (PRI-02)
   calendrier.seedEntite(r.lastInsertRowid); // horaire et congés livrés (PRI-02)
   require('./cycle').seedEntite(r.lastInsertRowid); // libellés livrés des états (CYC-04, 0.14.0)
+  require('./modeles-reponse').seedEntite(r.lastInsertRowid); // modèles de réponse livrés (GES-09, 0.15.0)
   return load(r.lastInsertRowid);
 }
 

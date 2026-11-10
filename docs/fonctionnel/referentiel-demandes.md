@@ -1,6 +1,6 @@
 # Référentiel des demandes : catégories, priorités, délais et calendrier
 
-Version 0.14.0 · Fiche fonctionnelle (modèle du standard, section 17.8).
+Version 0.15.0 · Fiche fonctionnelle (modèle du standard, section 17.8).
 
 ## Objet
 
@@ -37,6 +37,7 @@ Préparer ce dont la demande d'intervention aura besoin dès l'étape 5 : les ca
 | 17 | Chaque fiche (catégorie, priorité, jour de l'horaire, congé, fermeture) porte « Modifié le JJ/MM/AAAA à HH:MM par <nom> », « Créé le … » pour une fiche ajoutée et jamais modifiée, « Valeur livrée, rétablie le … » après un retour aux valeurs livrées, ou « Valeur livrée ». Le nom n'est rendu qu'aux personnes de l'entité ; sinon la date seule (0.4.1) | DV-34, recette du 23/10/2026 |
 | 18 | Questions du formulaire (0.7.0) : sur la fiche d'un domaine ou d'une nature, « Oui ou non » ou un choix parmi 2 à 6 réponses, FR et NL, facultatives sauf « Obligatoire », dix actives au plus, rangées par flèches, désactivées avec un motif ; une nature pose d'abord celles de son domaine ; l'aperçu des tuiles les montre ; trois questions livrées (plomberie, prises, chauffage), à adapter en atelier | DEM-05, DV-62, D-11 |
 | 19 | Libellés des états par entité (0.14.0) : le responsable règle, pour chaque état en usage, le texte lu par le demandeur et le texte envoyé à la GRC, en FR et en NL (100 caractères) ; « Revenir aux libellés livrés » ; les états à venir (validation, planification, prestataire, fusion) arrivent avec leur étape | CYC-04 |
+| 20 | Modèles de réponse au demandeur (0.15.0) : par entité, titre (100) et texte (4 000) en FR et en NL, variables `{numero}`, `{lieu}`, `{etat}`, `{prenom}` seulement (une autre est refusée en la nommant) ; réglés par le responsable, lus par le service ; désactivés avec un motif, réactivés ; quatre modèles livrés, jamais recréés | GES-09, D-11 |
 
 ## Écrans
 
@@ -47,6 +48,7 @@ Préparer ce dont la demande d'intervention aura besoin dès l'étape 5 : les ca
 | Onglet Calendrier | Horaire des sept jours ; jours fériés de l'année précédente, en cours et suivante ; congés et fermetures avec leur date en toutes lettres | Interrupteur « Ouvré », heures de début et de fin, « Enregistrer » ; « Créer » un congé ou une fermeture ; désactivation avec motif, réactivation | « Horaire invalide… », « Ce congé existe déjà… » |
 | Onglet Simulateur | Priorité ou catégorie, date et heure de réception | « Calculer » : début du décompte, prise en charge, fin ou date convenue, origine du délai | « Aucun jour ouvré dans le calendrier de l'entité… » |
 | Onglet États des demandes (0.14.0) | Une carte par état en usage (neuf) : libellé vu par le demandeur et libellé envoyé à la GRC, FR et NL ; libellés livrés rappelés ; état fermé, délai suspendu selon le motif ; mention « Modifié le … par … » | « Enregistrer », « Revenir aux libellés livrés » | « Ce champ est obligatoire » |
+| Onglet Modèles de réponse (0.15.0) | Une carte par modèle, actifs d'abord : titre, début du texte, état, « Modifié le … par … » ; variables rappelées | « Nouveau modèle » ; fiche : titres et textes FR et NL, ordre, « Désactiver ce modèle » avec motif, « Réactiver ce modèle » (lecture seule pour le gestionnaire) | « Variable inconnue dans le modèle : {…}. Variables admises : … » |
 | Aide, Mode d'emploi et FAQ | Rubrique « Délais des demandes » pour tous, rubrique « Catégories et délais » pour le responsable ; quatre questions (la quinzième, sur la mention « Modifié le … par … », en 0.4.1) | | |
 
 ## Paramètres et défauts
@@ -57,6 +59,7 @@ Préparer ce dont la demande d'intervention aura besoin dès l'étape 5 : les ca
 | Priorités | P1 Sécurité 1 h et 4 h calendaires ; P2 Urgente 1 et 2 jours ouvrables ; P3 Normale 2 et 10 ; P4 Planifiable 5 et date convenue | `backend/config/priorites.json` |
 | Horaire | AC et CPAS selon la règle 6 ; autre entité : du lundi au vendredi 08:00-16:30 | `backend/config/calendrier.json` |
 | Jours fériés et congés | Règle 8 | idem |
+| Modèles de réponse (0.15.0) | Demande prise en charge, Précision demandée, Accès au local, Travaux terminés ; variables admises | `backend/config/modeles-reponse.json` |
 
 ## Données et conservation
 
@@ -66,7 +69,7 @@ Aucune donnée personnelle nouvelle : catégories, priorités, horaires et jours
 
 | Canal | Contenu |
 | --- | --- |
-| API | `/api/categories` (et `/arbre`, `/:id/questions`), `/api/questions-categorie/:id`, `/api/priorites`, `/api/horaires`, `/api/jours-non-ouvres`, `/api/jours-feries`, `GET /api/echeances/simulation`, `/api/etats-demande` (0.14.0) |
+| API | `/api/categories` (et `/arbre`, `/:id/questions`), `/api/questions-categorie/:id`, `/api/priorites`, `/api/horaires`, `/api/jours-non-ouvres`, `/api/jours-feries`, `GET /api/echeances/simulation`, `/api/etats-demande` (0.14.0), `/api/modeles-reponse` (0.15.0) |
 | MCP | Un outil par route (25 outils exposés en 0.4.0, plus six pour les questions en 0.7.0) ; désactivation et retour aux valeurs livrées en deux appels ; `simuler_echeance` en lecture |
 | Webhooks, imports, exports | Aucun dans cette version ; la GRC lira les catégories à l'étape 38 |
 

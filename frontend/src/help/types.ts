@@ -21,7 +21,8 @@ export interface Acces {
   ou?: Acces[];
 }
 
-export interface ShotAction { click?: string; clickSel?: string; fill?: { sel: string; value: string }; wait?: number }
+/** scrollSel (0.15.0) : fait défiler la page ou le volet jusqu'à l'élément (le fil de messages sous la fiche). */
+export interface ShotAction { click?: string; clickSel?: string; fill?: { sel: string; value: string }; wait?: number; scrollSel?: string }
 
 /** Capture produite par le script help-capture : jamais à la main. */
 export interface Shot {

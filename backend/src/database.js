@@ -99,6 +99,8 @@ async function initDb() {
   // 0.14.0 : passages livrés du cycle de vie qui manqueraient, libellés livrés des états de chaque entité.
   require('./services/cycle').seedTransitions(wrapped);
   require('./services/cycle').seedAll();
+  // 0.15.0 (point 4) : modèles de réponse livrés de chaque entité.
+  require('./services/modeles-reponse').seedAll();
   saveNow();
   return wrapped;
 }
@@ -687,6 +689,68 @@ const MIGRATIONS = [
       SELECT id, entite_id, 'a_qualifier', 'qualifiee', qualifiee_par, 'ecran', qualifiee_le FROM demandes WHERE qualifiee_le IS NOT NULL`).run();
     db.prepare("UPDATE demandes SET etat_depuis = COALESCE(qualifiee_le, created_at)").run();
   }],
+  // 0.15.0 (étape 10, point 1 ; SUI-04, SEC-02) : fil de messages d'une demande entre le demandeur (ou le bénéficiaire)
+  // et le service technique, et commentaires internes du service (interne = 1, jamais rendus au demandeur). Un message
+  // ne se modifie ni ne se supprime. auteur : rôle de l'auteur au moment de l'envoi. texte facultatif quand le message
+  // porte des pièces. Pièces d'un message : pièces jointes de la demande avec message_id ; avant l'envoi, la pièce
+  // attend son message (attente_message = 1), lue et retirée par son seul auteur. Point 2 : dernier message lu par
+  // personne et par demande (demande_messages_lus), pour « non lu » et le compteur « Messages à lire ». Point 3 : collègues
+  // du service mentionnés dans une note interne (demande_mentions) ; une mention est « à voir » tant que la personne n'a
+  // pas lu le fil jusqu'à ce message. Point 4 : modèles de réponse au demandeur par entité (modeles_reponse, GES-09).
+  // Point 5 (SUI-09) : source d'un suivi, « Moi aussi » (personne concernée, avec sa remarque) ou abonnement (suivre une
+  // demande vue, sans remarque) ; les suivis déjà en base sont des « Moi aussi ».
+  ['013_messages', `
+    CREATE TABLE demande_messages (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      demande_id INTEGER NOT NULL REFERENCES demandes(id) ON DELETE RESTRICT,
+      entite_id INTEGER NOT NULL REFERENCES entites(id) ON DELETE RESTRICT,
+      user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+      auteur TEXT NOT NULL CHECK (auteur IN ('demandeur', 'beneficiaire', 'service')),
+      interne INTEGER NOT NULL DEFAULT 0 CHECK (interne IN (0, 1)),
+      texte TEXT CHECK (texte IS NULL OR length(texte) BETWEEN 1 AND 4000),
+      langue TEXT NOT NULL DEFAULT 'fr' CHECK (langue IN ('fr', 'nl')),
+      canal TEXT NOT NULL DEFAULT 'ecran' CHECK (canal IN ('ecran', 'api', 'mcp', 'grc')),
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      CHECK (interne = 0 OR auteur = 'service')
+    );
+    CREATE INDEX idx_demande_messages_demande ON demande_messages(demande_id, id);
+    CREATE INDEX idx_demande_messages_entite ON demande_messages(entite_id, created_at);
+    ALTER TABLE pieces_jointes ADD COLUMN message_id INTEGER REFERENCES demande_messages(id) ON DELETE RESTRICT;
+    ALTER TABLE pieces_jointes ADD COLUMN attente_message INTEGER NOT NULL DEFAULT 0 CHECK (attente_message IN (0, 1));
+    CREATE INDEX idx_pieces_message ON pieces_jointes(message_id);
+    CREATE TABLE demande_messages_lus (
+      demande_id INTEGER NOT NULL REFERENCES demandes(id) ON DELETE RESTRICT,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      dernier_id INTEGER NOT NULL DEFAULT 0 CHECK (dernier_id >= 0),
+      lu_le TEXT NOT NULL DEFAULT (datetime('now')),
+      PRIMARY KEY (demande_id, user_id)
+    );
+    CREATE TABLE demande_mentions (
+      message_id INTEGER NOT NULL REFERENCES demande_messages(id) ON DELETE RESTRICT,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      PRIMARY KEY (message_id, user_id)
+    );
+    CREATE INDEX idx_demande_mentions_user ON demande_mentions(user_id);
+    CREATE TABLE modeles_reponse (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      entite_id INTEGER NOT NULL REFERENCES entites(id) ON DELETE RESTRICT,
+      code TEXT CHECK (code IS NULL OR length(code) BETWEEN 2 AND 40),
+      titre_fr TEXT NOT NULL CHECK (length(titre_fr) BETWEEN 1 AND 100),
+      titre_nl TEXT NOT NULL CHECK (length(titre_nl) BETWEEN 1 AND 100),
+      texte_fr TEXT NOT NULL CHECK (length(texte_fr) BETWEEN 1 AND 4000),
+      texte_nl TEXT NOT NULL CHECK (length(texte_nl) BETWEEN 1 AND 4000),
+      ordre INTEGER NOT NULL DEFAULT 0,
+      is_active INTEGER NOT NULL DEFAULT 1 CHECK (is_active IN (0, 1)),
+      motif_desactivation TEXT,
+      created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+      updated_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+    CREATE UNIQUE INDEX idx_modeles_reponse_code ON modeles_reponse(entite_id, code) WHERE code IS NOT NULL;
+    CREATE INDEX idx_modeles_reponse_entite ON modeles_reponse(entite_id, is_active, ordre);
+    ALTER TABLE demande_suiveurs ADD COLUMN source TEXT NOT NULL DEFAULT 'moi_aussi' CHECK (source IN ('moi_aussi', 'abonnement'))
+  `],
 ];
 
 function migrate() {

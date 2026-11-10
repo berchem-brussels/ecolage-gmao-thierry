@@ -38,6 +38,37 @@ const topic: HelpTopic = {
       errors: [{ problem: { fr: 'L’enregistrement est refusé.', nl: 'Het opslaan wordt geweigerd.' }, solution: { fr: 'Une priorité changée exige son motif ; une priorité P4 exige la date convenue avec le demandeur.', nl: 'Een gewijzigde prioriteit vereist een reden; een prioriteit P4 vereist de met de aanvrager afgesproken datum.' } }],
       shots: ['demandes-entite-qualifier'],
     },
+    // 0.15.0 (point 6 ; SUI-04, GES-08, GES-09, SUI-09) : répondre, notes internes et mentions, suivre.
+    {
+      title: { fr: 'Répondre au demandeur, avec un modèle si besoin', nl: 'De aanvrager antwoorden, zo nodig met een model' },
+      when: { fr: 'Quand le demandeur a écrit ({{bord.messages_a_lire}}) ou qu’il vous manque une précision.', nl: 'Wanneer de aanvrager schreef ({{bord.messages_a_lire}}) of u een verduidelijking mist.' },
+      steps: [
+        { fr: 'Ouvrez la fiche : {{fil.titre}} est sous la fiche ; le fil est marqué lu quand il s’affiche.', nl: 'Open de fiche: {{fil.titre}} staat onder de fiche; de berichten worden als gelezen gemarkeerd wanneer ze verschijnen.' },
+        { fr: 'Laissez {{fil.public}} ; {{fil.modele}} ajoute un texte prêt, dans la langue de la demande, avec le numéro, le lieu et le prénom. Relisez et complétez.', nl: 'Laat {{fil.public}} staan; {{fil.modele}} voegt een klaar tekst toe, in de taal van de aanvraag, met nummer, plaats en voornaam. Lees na en vul aan.' },
+        { fr: 'Joignez au besoin une photo, puis {{fil.envoyer}}.', nl: 'Voeg zo nodig een foto toe en klik op {{fil.envoyer}}.' },
+      ],
+      result: { fr: 'Le demandeur lit la réponse signée « Service technique », sans votre nom ; sa demande porte « 1 nouveau message ».', nl: 'De aanvrager leest het antwoord ondertekend « Technische dienst », zonder uw naam; zijn aanvraag draagt « 1 nieuw bericht ».' },
+    },
+    {
+      title: { fr: 'Écrire une note interne et prévenir un collègue', nl: 'Een interne nota schrijven en een collega verwittigen' },
+      when: { fr: 'Pour une information réservée au service : pièce à commander, accès, consigne entre collègues.', nl: 'Voor informatie enkel voor de dienst: onderdeel te bestellen, toegang, afspraak tussen collega’s.' },
+      steps: [
+        { fr: 'Sous {{fil.destinataire}}, choisissez {{fil.interne.option}}.', nl: 'Onder {{fil.destinataire}} kiest u {{fil.interne.option}}.' },
+        { fr: 'Dans {{fil.mentions}}, choisissez les collègues à prévenir (10 au plus).', nl: 'Kies in {{fil.mentions}} de collega’s om te verwittigen (hoogstens 10).' },
+        { fr: 'Écrivez la note, puis {{fil.envoyer.interne}}.', nl: 'Schrijf de nota en klik op {{fil.envoyer.interne}}.' },
+      ],
+      result: { fr: 'La note, encadrée et marquée {{fil.interne}}, n’est jamais montrée au demandeur. Chaque collègue prévenu retrouve la demande dans {{bord.mentions}} jusqu’à ce qu’il lise la note.', nl: 'De nota, omkaderd en gemarkeerd {{fil.interne}}, wordt nooit aan de aanvrager getoond. Elke verwittigde collega vindt de aanvraag terug in {{bord.mentions}} tot hij de nota leest.' },
+      shots: ['demandes-entite-fil'],
+    },
+    {
+      title: { fr: 'Suivre une demande', nl: 'Een aanvraag volgen' },
+      when: { fr: 'Quand vous voulez garder un œil sur une demande que vous ne traitez pas vous-même.', nl: 'Wanneer u een aanvraag in het oog wilt houden die u niet zelf behandelt.' },
+      steps: [
+        { fr: 'Ouvrez la fiche et cliquez sur {{suivi.suivre}}.', nl: 'Open de fiche en klik op {{suivi.suivre}}.' },
+        { fr: 'Pour arrêter : {{suivi.arreter}}.', nl: 'Om te stoppen: {{suivi.arreter}}.' },
+      ],
+      result: { fr: 'La demande apparaît dans {{nav.demandes}}. La fiche dit, pour chaque personne qui suit, si c’est un « Moi aussi » ou un simple suivi.', nl: 'De aanvraag verschijnt in {{nav.demandes}}. De fiche zegt, voor elke persoon die volgt, of het een « Ik ook » of gewoon volgen is.' },
+    },
     // 0.14.0 (étape 9, point 7) : faire avancer une demande.
     {
       title: { fr: 'Faire avancer une demande jusqu’à la clôture', nl: 'Een aanvraag tot de afsluiting verder behandelen' },
@@ -61,11 +92,16 @@ const topic: HelpTopic = {
     { q: { fr: 'Pourquoi le délai a-t-il changé après la qualification ?', nl: 'Waarom veranderde de termijn na de kwalificatie?' }, a: { fr: 'Le délai suit la priorité : une priorité changée recalcule les échéances, toujours comptées depuis la réception de la demande.', nl: 'De termijn volgt de prioriteit: een gewijzigde prioriteit herberekent de vervaldagen, altijd geteld vanaf de ontvangst van de aanvraag.' } },
     // 0.13.0 (étape 8 ter, DV-101) : photo de l'endroit.
     { q: { fr: 'D’où vient la photo de l’endroit sur la fiche ?', nl: 'Waar komt de foto van de plek op de fiche vandaan?' }, a: { fr: 'C’est la photo du lieu de la demande, prise dans Patrimoine ; si le local n’en a pas, celle de son bâtiment ou de son site, et la légende le dit. Un toucher l’agrandit. Le demandeur ne la voit pas sur sa demande. Pour compléter les photos : Patrimoine, case {{lieux.sans_photo.tag}}.', nl: 'Het is de foto van de plaats van de aanvraag, uit Patrimonium; heeft het lokaal er geen, dan die van zijn gebouw of site, en het onderschrift zegt het. Een tik vergroot ze. De aanvrager ziet ze niet bij zijn aanvraag. Om de foto’s aan te vullen: Patrimonium, vakje {{lieux.sans_photo.tag}}.' } },
+    // 0.15.0 (point 6).
+    { q: { fr: 'Le demandeur peut-il lire une note interne ?', nl: 'Kan de aanvrager een interne nota lezen?' }, a: { fr: 'Non, jamais : ni à l’écran, ni par l’assistant, ni par la GRC. Il ne voit pas non plus le nom des agents du service.', nl: 'Nee, nooit: niet op het scherm, niet via de assistent, niet via het KRM. Hij ziet ook de naam van de medewerkers van de dienst niet.' } },
+    { q: { fr: 'Comment ajouter ou changer un modèle de réponse ?', nl: 'Hoe een antwoordmodel toevoegen of wijzigen?' }, a: { fr: 'Le responsable le fait dans {{nav.referentiel}}, onglet {{ref.tab.modeles}}.', nl: 'De verantwoordelijke doet het in {{nav.referentiel}}, tabblad {{ref.tab.modeles}}.' } },
     { q: { fr: 'Je ne vois pas les demandes du CPAS.', nl: 'Ik zie de aanvragen van het OCMW niet.' }, a: { fr: 'La liste suit l’entité active ; si vous avez un rôle dans l’autre entité, changez d’entité dans l’en-tête.', nl: 'De lijst volgt de actieve entiteit; als u een rol hebt in de andere entiteit, wissel van entiteit in de kop.' } },
   ],
   seeAlso: ['referentiel', 'patrimoine'],
   shots: [
     { id: 'demandes-entite-overview', path: '/demandes-entite', marks: [{ sel: '.bord-compteurs' }, { sel: '.gest-filtres' }, { sel: '.ant-table' }], caption: { fr: "Demandes de l'entité", nl: 'Aanvragen van de entiteit' } },
+    { id: 'demandes-entite-fil', path: '/demandes-entite', actions: [{ clickSel: '.ant-table-row .ant-btn-link' }, { wait: 1000 }, { scrollSel: 'section.fil' }, { clickSel: '.fil-saisie .ant-radio-button-wrapper:nth-child(2)' }, { wait: 600 }, { scrollSel: '.fil-saisie' }],
+      clip: 'drawer', marks: [{ sel: '.fil-bulle-interne' }, { sel: '.fil-saisie .ant-radio-group' }, { sel: '.fil-saisie .ant-select' }], caption: { fr: 'Note interne et collègue prévenu', nl: 'Interne nota en verwittigde collega' } },
     { id: 'demandes-entite-qualifier', path: '/demandes-entite', actions: [{ clickSel: '.ant-table-row .ant-btn-link' }, { wait: 600 }], clip: 'drawer', caption: { fr: 'Fiche d’une demande : passages permis et historique', nl: 'Fiche van een aanvraag: toegestane overgangen en historiek' } },
   ],
 };

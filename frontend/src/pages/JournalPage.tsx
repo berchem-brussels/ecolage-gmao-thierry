@@ -52,7 +52,7 @@ const PAGE = 50;
 // 0.9.0 : qualification d'une demande (première, priorité confirmée, photos visibles ; motif et consignes notés par 1).
 // 0.13.0 : validation d'une catégorie, comptes (mot de passe à changer, accès de secours), motif d'un ticket donné (D8).
 // 0.14.0 : commentaire et compte rendu donnés lors d'un changement d'état d'une demande (le texte reste sur la fiche).
-export const BOOLEENS = new Set(['commentaire_donne', 'compte_rendu_donne', 'suspendu', 'danger', 'beneficiaire_texte', 'is_active', 'obligatoire', 'remarque', 'brouillon', 'premiere', 'priorite_confirmee', 'photos_visibles', 'motif_priorite', 'consignes', 'internal',
+export const BOOLEENS = new Set(['commentaire_donne', 'compte_rendu_donne', 'suspendu', 'danger', 'beneficiaire_texte', 'is_active', 'obligatoire', 'remarque', 'brouillon', 'premiere', 'priorite_confirmee', 'photos_visibles', 'motif_priorite', 'consignes', 'internal', 'interne',
   'validation', 'must_change_password', 'is_admin_local', 'motif_donne']);
 const VIDE_DIT = new Set(['avant', 'apres']);
 /** Champs du détail qui portent un code traduit (R2, 0.9.1) : nom du champ → préfixe de la clé de traduction. */
@@ -69,6 +69,9 @@ export const CODES_ACTION: Record<string, Record<string, string>> = {
   // 0.14.0 : états de départ et d'arrivée d'un changement d'état ; état dont l'entité change les libellés.
   'demande.transition': { de: 'demande.etat_service', vers: 'demande.etat_service' },
   'etat_demande.update': { code: 'demande.etat_service' },
+  // 0.15.0 (point 5) : façon de suivre une demande.
+  'demande.suivre': { source: 'suivi.source' },
+  'demande.ne_plus_suivre': { source: 'suivi.source' },
 };
 /**
  * Codes traduits selon la famille de l'action (0.13.0, D2 et D9) : famille (« lieu » pour lieu.create, lieu.update…) →

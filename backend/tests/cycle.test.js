@@ -293,7 +293,7 @@ test('migration 012 sur une base 0.13.0 : historique repris de la fiche, état d
   assert.equal(up.status, 0, up.stderr);
   assert.match(up.stdout, /\[DB\] Migration 012_cycle_de_vie appliquée/);
   const out = JSON.parse(up.stdout.trim().split('\n').pop());
-  assert.equal(out.migration, '012_cycle_de_vie');
+  assert.equal(out.migration, '013_messages', 'les migrations suivantes passent aussi (0.15.0)');
   assert.deepEqual(out.historique, [
     { demande_id: 1, de_etat: null, vers_etat: 'a_qualifier', canal: 'ecran', created_at: '2026-11-01 08:00:00' },
     { demande_id: 2, de_etat: null, vers_etat: 'a_qualifier', canal: 'mcp', created_at: '2026-11-02 08:00:00' },
@@ -493,4 +493,20 @@ test('réouverture refusée après le délai, ou fermée par l’entité (0 jour
   const etranger = await person(srv.base, admin, 'etranger2.cy@exemple.test', ea.id);
   assert.equal((await passer(etranger, e.id, { etat: 'rouverte', commentaire: 'x' })).status, 403);
   assert.equal((await passer(gest, e.id, { etat: 'rouverte', commentaire: 'x' })).body.code, 'TRANSITION_INTERDITE', 'le service ne rouvre pas à la place du demandeur');
+});
+
+// 0.15.0 (correction notée à la recette de la 0.14.0) : les notes de livraison annonçaient 25 passages, le catalogue en
+// compte 26. Les nombres d'états et de passages cités par les notes et la documentation suivent le catalogue.
+test('documentation : nombres d’états et de passages égaux au catalogue', () => {
+  const fs = require('node:fs');
+  const path = require('node:path');
+  const racine = path.join(__dirname, '..', '..');
+  const fichiers = ['NOTES_LIVRAISON_v0.14.0.md', 'CHANGELOG.md', 'docs/fr/ARCHITECTURE.md', 'docs/en/ARCHITECTURE.md', 'docs/nl/ARCHITECTURE.md'];
+  let vus = 0;
+  for (const f of fichiers) {
+    const texte = fs.readFileSync(path.join(racine, f), 'utf8');
+    for (const m of texte.matchAll(/(\d+) (passages|transitions|overgangen)\b/g)) { vus += 1; assert.equal(Number(m[1]), cycle.CONFIG.transitions.length, `${f} : « ${m[0]} »`); }
+    for (const m of texte.matchAll(/(\d+) (états|statuses|statussen)\b/g)) { vus += 1; assert.equal(Number(m[1]), Object.keys(cycle.CONFIG.etats).length, `${f} : « ${m[0]} »`); }
+  }
+  assert.ok(vus >= 6, `${vus} mentions trouvées`);
 });

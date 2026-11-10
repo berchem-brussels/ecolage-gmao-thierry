@@ -129,6 +129,14 @@ describe('traductions', () => {
 
   it('les intentions du chatbot renvoient à des clés existantes', () => {
     for (const i of intents) expect(translations[i.answer]).toBeTruthy();
+    // 0.15.0 (point 6) : fil de messages, mentions, modèles, suivi ; « précision » reste au cycle, « où en est » au suivi.
+    const cle = (q: string) => intents.find((i) => i.keys.some((k) => q.toLowerCase().includes(k)))?.answer;
+    expect(cle('comment répondre au demandeur ?')).toBe('chat.intent.messages');
+    expect(cle('hoe een collega vermelden')).toBe('chat.intent.mentions');
+    expect(cle('où sont les modèles de réponse ?')).toBe('chat.intent.modeles');
+    expect(cle('je veux ne plus suivre cette demande')).toBe('chat.intent.abonnement');
+    expect(cle('ajouter une précision')).toBe('chat.intent.cycle');
+    expect(cle('où en est ma demande')).toBe('chat.intent.suivi');
     expect(answer('comment changer d’entité').key).toBe('chat.intent.entite');
     expect(answer('wie geeft de rollen').key).toBe('chat.intent.roles');
     expect(answer('wachtwoord wijzigen').key).toBe('chat.intent.password');

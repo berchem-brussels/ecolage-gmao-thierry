@@ -57,6 +57,11 @@ const motifsAttente = [
 // 0.14.0 (CYC-04) : libellés des états d'une demande dans l'entité (la GRC reprend le texte du demandeur).
 const etat = (code: string, fr: string, nl: string, extra: Record<string, unknown> = {}) => ({ id: code.length, entite_id: 1, code, libelle_fr: fr, libelle_nl: nl, grc_fr: fr, grc_nl: nl,
   updated_at: '2026-11-08 10:00:00', livre_fr: fr, livre_nl: nl, ferme: 0, compte_retard: 1, suspend: 'non', trace: { etat: 'livree', le: null, par: null }, ...extra });
+// 0.15.0 (point 4, GES-09) : modèles de réponse de l'entité ; un livré, un désactivé.
+const modelesData = [
+  { id: 1, entite_id: 1, code: 'precision', titre_fr: 'Précision demandée', titre_nl: 'Verduidelijking gevraagd', texte_fr: 'Bonjour {prenom}, pouvez-vous préciser ?', texte_nl: 'Goedendag {prenom}, kunt u verduidelijken?', ordre: 10, is_active: 1, motif_desactivation: null, created_at: '', updated_at: '2026-11-09 10:00:00', trace: { etat: 'livree', le: null, par: null } },
+  { id: 2, entite_id: 1, code: null, titre_fr: 'Ancien modèle', titre_nl: 'Oud model', texte_fr: 'Texte', texte_nl: 'Tekst', ordre: 20, is_active: 0, motif_desactivation: 'Remplacé', created_at: '', updated_at: '2026-11-09 10:00:00', trace: { etat: 'modifiee', le: '2026-11-09T10:00:00Z', par: 'Rita Responsable' } },
+];
 const etatsDemande = [etat('brouillon', 'Brouillon', 'Ontwerp'), etat('a_qualifier', 'Reçue par le service technique', 'Ontvangen door de technische dienst'),
   etat('en_attente', 'En attente d’un élément', 'In wacht', { livre_fr: 'En attente', suspend: 'selon_motif', trace: { etat: 'modifiee', le: '2026-11-08T09:00:00Z', par: 'Rita Responsable' } })];
 const parametresEntite = [
@@ -188,6 +193,7 @@ beforeEach(() => {
       : url.startsWith('/api/categories/arbre') ? { data: arbreCategories, meta: { envelope: 1 } }
       : /^\/api\/categories\/10\/questions/.test(url) ? { data: questionsPlomberie, meta: { envelope: 1, max_actives: 10 } }
       : /^\/api\/categories\/\d+\/questions/.test(url) ? { data: [], meta: { envelope: 1, max_actives: 10 } }
+      : url.startsWith('/api/modeles-reponse') ? { data: init?.method === 'POST' ? modelesData[0] : modelesData, meta: { envelope: 1, variables: ['numero', 'lieu', 'etat', 'prenom'] }, pagination: { total: modelesData.length, limit: 200, offset: 0 } }
       : url.startsWith('/api/etats-demande') ? { data: init?.method === 'PUT' ? etatsDemande[1] : etatsDemande, meta: { envelope: 1 } }
       : url.startsWith('/api/priorites') ? page(priorites)
       : url.startsWith('/api/horaires') ? page(horaires)
@@ -334,6 +340,55 @@ describe('écrans', () => {
     await waitFor(() => expect(appels.some(([u, i]) => u === '/api/etats-demande/a_qualifier' && i?.method === 'PUT')).toBe(true));
     const [, init] = appels.find(([u, i]) => u === '/api/etats-demande/a_qualifier' && i?.method === 'PUT')!;
     expect(JSON.parse(String(init!.body))).toMatchObject({ libelle_fr: 'Bien reçue', libelle_nl: 'Ontvangen door de technische dienst' });
+  });
+
+  it('0.15.0 (GES-09) : onglet « Modèles de réponse » en lecture pour le gestionnaire ; variables rappelées', async () => {
+    render(wrap(ReferentielPage, 'fr', FALLBACK_SETTINGS, ['/referentiel?onglet=modeles']));
+    expect(await screen.findByRole('tab', { name: 'Modèles de réponse' })).toHaveAttribute('aria-selected', 'true');
+    expect(await screen.findByText('Précision demandée')).toBeInTheDocument();
+    expect(screen.getByText('Désactivée')).toBeInTheDocument();
+    expect(screen.getAllByText('{prenom}').length).toBeGreaterThan(0);
+    expect(screen.queryByRole('button', { name: /Nouveau modèle/ })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Précision demandée' }));
+    const champ = await screen.findByLabelText('Texte en néerlandais');
+    expect(champ).toBeDisabled();
+    expect(screen.queryByRole('button', { name: 'Désactiver ce modèle' })).toBeNull();
+  });
+
+  for (const lang of ['fr', 'nl'] as const) {
+    it(`0.15.0 (GES-09) : onglet et fiche d’un modèle (${lang}) sans violation axe-core`, async () => {
+      const { container } = render(wrap(ReferentielPage, lang, FALLBACK_SETTINGS, ['/referentiel?onglet=modeles']));
+      const titre = await screen.findByRole('button', { name: lang === 'nl' ? 'Verduidelijking gevraagd' : 'Précision demandée' });
+      const regles = { rules: { 'color-contrast': { enabled: false }, region: { enabled: false } } };
+      expect((await axe.run(container, regles)).violations.map((v) => v.id)).toEqual([]);
+      fireEvent.click(titre);
+      const fiche = await screen.findByRole('dialog');
+      await within(fiche).findByLabelText(translations['modeles.texte_nl'][lang]);
+      expect((await axe.run(fiche, regles)).violations.map((v) => `${v.id} ${v.nodes.map((n) => n.html.slice(0, 120)).join(' | ')}`)).toEqual([]);
+    }, 30000);
+  }
+
+  it('0.15.0 (GES-09) : le responsable ajoute un modèle en FR et en NL', async () => {
+    const avant = user.entites;
+    (roles[2].permissions as string[]).push('parametres:gerer');
+    user.entites = [{ ...entites[0], roles: ['agent', 'responsable'] }];
+    try {
+      render(wrap(ReferentielPage, 'fr', FALLBACK_SETTINGS, ['/referentiel?onglet=modeles']));
+      fireEvent.click(await screen.findByRole('button', { name: /Nouveau modèle/ }));
+      const d = await screen.findByRole('dialog');
+      fireEvent.change(within(d).getByLabelText('Titre en français'), { target: { value: 'Pièce commandée' } });
+      fireEvent.change(within(d).getByLabelText('Titre en néerlandais'), { target: { value: 'Onderdeel besteld' } });
+      fireEvent.change(within(d).getByLabelText('Texte en français'), { target: { value: 'La pièce pour {numero} est commandée.' } });
+      fireEvent.change(within(d).getByLabelText('Texte en néerlandais'), { target: { value: 'Het onderdeel voor {numero} is besteld.' } });
+      fireEvent.click(within(d).getByRole('button', { name: 'Enregistrer' }));
+      const appels = (fetch as unknown as { mock: { calls: [string, RequestInit?][] } }).mock.calls;
+      await waitFor(() => expect(appels.some(([u, i]) => u === '/api/modeles-reponse' && i?.method === 'POST')).toBe(true));
+      const [, init] = appels.find(([u, i]) => u === '/api/modeles-reponse' && i?.method === 'POST')!;
+      expect(JSON.parse(String(init!.body))).toMatchObject({ titre_fr: 'Pièce commandée', texte_nl: 'Het onderdeel voor {numero} is besteld.' });
+    } finally {
+      user.entites = avant;
+      (roles[2].permissions as string[]).pop();
+    }
   });
 
   it('catégories : arbre avec la priorité en vigueur et aperçu des tuiles du demandeur, domaine puis natures', async () => {
@@ -1326,8 +1381,10 @@ describe('journal d’audit sans code brut (0.13.0, point 2 ; défauts D2, D3, D
     horaires: 'jour debut fin',
     users: 'email first_name last_name user_role entite_id preferred_lang ui_mode theme must_change_password is_active lieu_habituel_id is_admin_local',
     nettoyage: 'valeur value cle',
-    services: 'email role entite_id user_id from to motif module type priority fields internal motif_donne liste code version nom filtres niveau obligatoire octets largeur hauteur demande_id numero brouillon comptes lieux entite langue modules remarque microsoft_code method avant apres ticket reason danger beneficiaire_id beneficiaire_texte date_souhaitee reponses pieces premiere priorite_confirmee etat motif_priorite duree_estimee_minutes consignes photos_visibles date_convenue lieu_id categorie_id de vers motif_id commentaire_donne compte_rendu_donne suspendu echeance_le complement_id longueur note',
+    services: 'email role entite_id user_id from to motif module type priority fields internal motif_donne liste code version nom filtres niveau obligatoire octets largeur hauteur demande_id numero brouillon comptes lieux entite langue modules remarque microsoft_code method avant apres ticket reason danger beneficiaire_id beneficiaire_texte date_souhaitee reponses pieces premiere priorite_confirmee etat motif_priorite duree_estimee_minutes consignes photos_visibles date_convenue lieu_id categorie_id de vers motif_id commentaire_donne compte_rendu_donne suspendu echeance_le complement_id longueur note message_id interne mentions source',
     demande_etats: 'libelle_fr libelle_nl grc_fr grc_nl',
+    // 0.15.0 (point 4) : modèles de réponse.
+    modeles_reponse: 'titre_fr titre_nl texte_fr texte_nl ordre is_active motif_desactivation',
   };
   it('chaque champ écrit au journal a son libellé, en FR et en NL', () => {
     const manquants = [...new Set(Object.values(CHAMPS_ECRITS).join(' ').split(' '))]

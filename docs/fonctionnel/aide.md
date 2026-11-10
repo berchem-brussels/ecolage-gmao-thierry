@@ -1,6 +1,6 @@
 # Aide par écran et FAQ locale
 
-Version 0.14.0 · Fiche fonctionnelle (modèle du standard, section 17.8).
+Version 0.15.0 · Fiche fonctionnelle (modèle du standard, section 17.8).
 
 ## Objectif
 
@@ -31,5 +31,7 @@ Que tout agent trouve seul comment faire, sans formation (standard, section 13.1
 Table `help_faq` : entité (ou commune), écran, question et réponse FR et NL, ticket d'origine, actif, motif du retrait, auteurs et dates. Aucune donnée personnelle attendue dans les textes (consigne à l'écran).
 
 ## Hors périmètre
+
+Depuis la 0.15.0 : fil de messages, notes internes et mentions, modèles de réponse, suivi d'une demande dans les fiches Mes demandes, Demandes de l'entité et Catégories et délais ; trois captures par langue (23 par langue) ; quatre réponses de l'assistant.
 
 Aide contextuelle de l'ouvrier sur téléphone (étape 18) ; invites prêtes à l'emploi de l'assistant (étape 40).

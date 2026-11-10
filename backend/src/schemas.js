@@ -71,6 +71,10 @@ const filtresGestion = {
   echeance: T.en('retard', 'proche', 'sans'), canal: T.en(...CANAUX_DEMANDE), danger: flag,
   // 0.14.0 : en attente depuis plus de N jours ouvrés (réglage de l'entité).
   attente: T.en('longue'),
+  // 0.15.0 (point 3) : demandes où la personne est mentionnée dans une note qu'elle n'a pas encore lue.
+  mentions: T.en('a_voir'),
+  // 0.15.0 (point 2) : demandes dont le fil a des messages que la personne n'a pas encore lus.
+  messages: T.en('non_lus'),
   tri: T.en(...TRIS_DEMANDE), ordre: T.en('asc', 'desc'),
 };
 const vueFiltres = obj({ ...filtresGestion, q: T.str(100), ouvertes: flag });
@@ -115,6 +119,12 @@ module.exports = {
   // Le code et la liste ne changent pas après la création ; is_active ne sert qu'à réactiver.
   valeurUpdate: obj({ libelle_fr: T.reqStr(200), libelle_nl: T.reqStr(200), ordre: T.int(0, 100000), is_active: { type: 'integer', enum: [1] } }),
   valeurDeactivate: obj({ motif }, ['motif']),
+  // 0.15.0 (point 4, GES-09) : modèles de réponse au demandeur, FR et NL.
+  modeleList: listQuery({ is_active: flag }),
+  modeleCreate: obj({ titre_fr: T.reqStr(100), titre_nl: T.reqStr(100), texte_fr: T.reqStr(4000), texte_nl: T.reqStr(4000), ordre: T.int(0, 100000) },
+    ['titre_fr', 'titre_nl', 'texte_fr', 'texte_nl']),
+  modeleUpdate: obj({ titre_fr: T.reqStr(100), titre_nl: T.reqStr(100), texte_fr: T.reqStr(4000), texte_nl: T.reqStr(4000), ordre: T.int(0, 100000), is_active: { type: 'integer', enum: [1] } }),
+  modeleDeactivate: obj({ motif }, ['motif']),
 
   // Référentiel des lieux (REF-01, REF-02). La nature ne change pas après la création.
   // 0.13.0 (étape 8 ter) : has_photo filtre les lieux avec (1) ou sans (0) photo.
@@ -271,7 +281,8 @@ module.exports = {
   // Demandes ouvertes du même bâtiment, avant l'envoi (DEM-04, 0.7.0) : lieu choisi, catégorie choisie pour l'ordre.
   demandeVoisines: obj({ lieu_id: T.int(1), categorie_id: T.int(1), limit: { ...T.int(1, 50), default: 5 } }, ['lieu_id']),
   // « Moi aussi » (DEM-04) : la remarque facultative est lisible du seul service technique.
-  demandeSuivre: obj({ remarque: T.str(5000) }),
+  // 0.15.0 (point 5, SUI-09) : source « abonnement » pour suivre une demande vue, sans remarque.
+  demandeSuivre: obj({ remarque: T.str(5000), source: T.en('moi_aussi', 'abonnement') }),
   // Cycle de vie (0.14.0, CYC-01, CLO-01) : état d'arrivée, motif (valeur de la liste du passage), commentaire, compte rendu.
   demandeTransition: obj({
     etat: T.en(...ETATS_DEMANDE),
@@ -283,6 +294,14 @@ module.exports = {
   demandeAnnulation: obj({ motif: T.reqStr(2000) }, ['motif']),
   // Point 6 (SUI-06) : avis en cinq niveaux, commentaire facultatif.
   demandeAvis: obj({ note: T.int(1, 5), commentaire: T.str(2000) }, ['note']),
+  // 0.15.0 (point 1 ; SUI-04) : message du fil ; texte facultatif si des pièces attendent le message ; interne : service.
+  demandeMessage: obj({
+    texte: T.str(4000), interne: T.bool(), langue: T.en('fr', 'nl'),
+    // Point 3 (GES-08) : collègues du service mentionnés, dans une note interne seulement.
+    mentions: { type: 'array', items: T.int(1), maxItems: 10, uniqueItems: true },
+  }),
+  // 0.15.0 (point 2) : fil lu jusqu'au dernier message visible, ou jusqu'à un message donné.
+  demandeMessagesLus: obj({ jusqu_a: T.int(1) }),
   etatDemandeParams: obj({ code: T.en(...ETATS_DEMANDE) }, ['code']),
   etatDemandeUpdate: obj({ libelle_fr: T.reqStr(100), libelle_nl: T.reqStr(100), grc_fr: T.reqStr(100), grc_nl: T.reqStr(100) }),
   // Lieu de travail habituel choisi par la personne dans « Mon profil » ; null l'efface.

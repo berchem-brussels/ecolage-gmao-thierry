@@ -43,6 +43,8 @@ function buildApp() {
   app.use('/api/roles-utilisateurs', require('./routes/roles-utilisateurs'));
   app.use('/api/users', require('./routes/users'));
   app.use('/api/listes-valeurs', require('./routes/listes-valeurs'));
+  // 0.15.0 (point 4, GES-09) : modèles de réponse au demandeur.
+  app.use('/api/modeles-reponse', require('./routes/modeles-reponse'));
   app.use('/api/lieux', require('./routes/lieux'));
   app.use('/api/categories', require('./routes/categories'));
   app.use('/api/questions-categorie', require('./routes/questions-categorie'));

@@ -1,13 +1,34 @@
 # Journal des versions
 
-Version de l'application : **0.14.0** · Mis à jour le 08/11/2026
+Version de l'application : **0.15.0** · Mis à jour le 09/11/2026
+
+## 0.15.0 (09/11/2026)
+
+Étape 10 : fil de messages, notes internes avec mention, modèles de réponse, abonnement (SUI-04, SUI-09, GES-08, GES-09, SEC-02 ; DV-123 à DV-126), avec les remarques R1 à R3 de la recette de la 0.14.0 (DV-122). Migration `013_messages`. Aucune dépendance nouvelle, aucune permission nouvelle.
+
+- R1 : au retour sur l'onglet (`focus`, `visibilitychange`), `AuthContext` relit le profil ; une autre personne connectée entre-temps ramène à l'accueil, une session finie à la connexion (`session.test.tsx`).
+- R2 : explication du délai de réouverture et « ? » du texte GRC sans numéro d'étape ; aucun « étape N » ni « stap N » dans les réglages, les fiches d'aide, les « ? », les textes et l'assistant (tests).
+- R3 : plus de délai annoncé sur une demande fermée (fiche, carte sur téléphone, « Sans objet » dans le tableau) ; formulaire de réouverture : « Après le {date}, faites une nouvelle demande. ».
+- Nombre de passages du cycle de vie (26) corrigé dans les notes de la 0.14.0 et la documentation ; `cycle.test.js` compare les nombres cités au catalogue.
+- Fil de messages (`demande_messages`, `services/messages.js`) : lu par le demandeur, le bénéficiaire et le service (`demandes:entite`), écrit par le demandeur, le bénéficiaire et `demandes:traiter`, sur une demande ouverte seulement (`DEMANDE_FERMEE`) ; texte de 4 000 caractères au plus, ou photos et PDF seuls ; nom des agents caché au demandeur ; qui suit seulement ne lit pas le fil ; aucun message modifié ni effacé.
+- Pièces d'un message (`pieces_jointes.message_id`, `attente_message`) : déposées avant l'envoi, lues par leur auteur seul jusqu'à l'envoi, rattachées au message, plafond par message (`PIECES_PLAFOND_MESSAGE`), purge après 30 jours si jamais envoyées ; route de dépôt hors MCP (E-17, six routes).
+- Non lu (`demande_messages_lus`) : repère « Nouveaux messages », étiquette « n nouveaux messages » dans « Mes demandes », la liste du service et l'accueil (« n demandes ont un nouveau message ») ; filtre `messages=non_lus` ; compteur « Messages à lire ».
+- Notes internes avec mention (`demande_mentions`) : « Note interne au service », jamais rendue au demandeur ni à son MCP ; « Prévenir un collègue » (1 à 10 collègues du service, `MENTION_INTERNE`, `MENTION_INVALIDE`) ; « Vous êtes mentionné », compteur « Notes où vous êtes mentionné » et filtre `mentions=a_voir`.
+- Modèles de réponse (`modeles_reponse`, `config/modeles-reponse.json`, `/api/modeles-reponse`) : onglet « Modèles de réponse » de Catégories et délais, écrit par le responsable, lu par le gestionnaire ; titre et texte FR et NL ; variables `{numero}`, `{lieu}`, `{etat}`, `{prenom}` (`MODELE_VARIABLE` sinon) ; quatre modèles livrés par entité ; « Insérer un modèle » dans la langue de la demande.
+- Abonnement (`demande_suiveurs.source`) : « Suivre cette demande » sans remarque (`REMARQUE_ABONNEMENT`), « Ne plus suivre » avec confirmation, remarque d'un « Moi aussi » effacée (`PAS_SUIVIE` sinon) ; source dans la liste des personnes qui suivent.
+- Journal d'audit : `demande.message` (numéro, message, `interne`, longueur, pièces, mentions), `demande.suivre` avec la source, `demande.ne_plus_suivre`, `modele_reponse.*` ; jamais de texte libre.
+- MCP : onze outils (`list_messages_demande`, `add_message_demande`, `mark_messages_lus`, `list_mentionnables_demande`, `list_pieces_message`, `list_modeles_reponse`, `get_modele_reponse`, `create_modele_reponse`, `update_modele_reponse`, `deactivate_modele_reponse` et `ne_plus_suivre_demande` en deux appels).
+- Téléphones : étiquettes d'une bulle qui passent à la ligne (une mention longue débordait de 3 px à 360 px) ; `mobile:check` ouvre le fil le plus garni, mesure aussi le volet en « Note interne » et signale un contenu plus large que sa bulle (28 écrans).
+- Aide : fiches Mes demandes, Demandes de l'entité et Catégories et délais complétées ; trois captures nouvelles par langue (23) ; quatre intentions de l'assistant ; note de version (deux lignes pour tous, une pour qui traite les demandes, une pour le responsable).
+- `recette.sh`, contrôle 5 : migration `013_messages`, tables du fil, modèles livrés dans chaque entité.
+- Tests : serveur 513 (473 en 0.14.0 ; `messages.test.js` : 19, `modeles-reponse.test.js` : 4), interface 281 (262) et un contrôle des captures ; preuves d'échec dans `docs/fr/SECURITE.md`.
 
 ## 0.14.0 (08/11/2026)
 
 Étape 9 : cycle de vie des demandes (CYC-01, CYC-02, CYC-04, CYC-05, SUI-02, SUI-05, SUI-06, CLO-01, GES-01, PRI-03 ; DV-117 à DV-120). Migration `012_cycle_de_vie`. Aucune dépendance nouvelle.
 
 - `recette.sh` (DV-117) : mot de passe de démonstration saisi de façon visible (`read -r -p`), ligne effacée à Entrée, « Mot de passe reçu : N caractère(s) » ; un refus du contrôle 7 dit « mot de passe refusé, vérifiez la saisie (N caractère(s) reçu(s)) », « trop d'essais », « connexion par mot de passe fermée » ou « adresse ou mot de passe mal formé » au lieu d'un code HTTP ; le contrôle 5 lit `012_cycle_de_vie`.
-- Passages d'un état à l'autre en données (`backend/config/cycle-de-vie.json` : 15 états, 25 passages ; table `demande_transitions`) ; tout passage absent est refusé ; un passage désactivé n'est jamais réactivé. Permission nouvelle `demandes:traiter` (gestionnaire, responsable). Le gestionnaire démarre, met en attente avec un motif, reprend, termine, clôture avec la cause de la panne et un compte rendu interne, refuse avec un motif, annule ; « Planifiée » et « Confiée à un prestataire » restent fermés (DV-118) ; la qualification reste la seule voie vers « Qualifiée ».
+- Passages d'un état à l'autre en données (`backend/config/cycle-de-vie.json` : 15 états, 26 passages ; table `demande_transitions`) ; tout passage absent est refusé ; un passage désactivé n'est jamais réactivé. Permission nouvelle `demandes:traiter` (gestionnaire, responsable). Le gestionnaire démarre, met en attente avec un motif, reprend, termine, clôture avec la cause de la panne et un compte rendu interne, refuse avec un motif, annule ; « Planifiée » et « Confiée à un prestataire » restent fermés (DV-118) ; la qualification reste la seule voie vers « Qualifiée ».
 - Historique de chaque passage (`demande_historique` : auteur, canal, motif, commentaire public ou interne), rempli par la migration pour les demandes déjà en base ; volet de la fiche du service avec ses boutons d'action, son formulaire et l'historique.
 - Suspension du délai (DV-119) : une attente pour un motif coché dans Réglages de l'entité (par défaut « Réponse du demandeur attendue », « Accès impossible ») suspend le délai, dit « Délai suspendu » ; à la sortie, l'échéance de fin est repoussée du temps suspendu (ouvrable, calendaire pour P1).
 - Tableau de bord : six compteurs, dont « En attente depuis plus de N jours ouvrés » (réglage `demandes.attente_jours`, 5) et « À clôturer (travaux terminés) » ; une demande rouverte compte dans « À qualifier » ; filtre « Durée de l'attente » de la liste du service.

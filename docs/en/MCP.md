@@ -1,6 +1,6 @@
 # MCP server
 
-Application version: **0.14.0** · Updated on 08/11/2026 · The French text prevails (`docs/fr/MCP.md`).
+Application version: **0.15.0** · Updated on 09/11/2026 · The French text prevails (`docs/fr/MCP.md`).
 
 ## Access and rules
 
@@ -9,6 +9,10 @@ Application version: **0.14.0** · Updated on 08/11/2026 · The French text prev
 - Authentication: the session, or the session token in `Authorization: Bearer`. OAuth 2.1 with PKCE arrives at step 44 (deviation E-10).
 - Limit: 60 calls per minute per person.
 - Each tool calls the same service function as the REST route, with the person's identity and rights, in their active entity. A deactivation, withdrawal or erasure takes two calls (`prepare_*`, then `confirm_*`). No free SQL tool.
+
+## 0.15.0
+
+New tools: `list_messages_demande` (thread of a request; the requester and the beneficiary receive neither internal notes nor department agent names; a mere follower does not read the thread), `add_message_demande` (`texte`, `interne`, `mentions` of department colleagues in an internal note, open requests only), `mark_messages_lus`, `list_mentionnables_demande`, `list_pieces_message`, `list_modeles_reponse`, `get_modele_reponse`, `create_modele_reponse`, `update_modele_reponse`, `deactivate_modele_reponse` in two calls (variables `{numero}`, `{lieu}`, `{etat}`, `{prenom}` only), `ne_plus_suivre_demande` in two calls. `suivre_demande` takes `source` `abonnement`; `get_demande`, `list_demandes` (`messages`, `mentions`) and `get_tableau_bord` (`messages_a_lire`, `mentions`) are enriched. Uploading a message attachment stays outside MCP (E-17).
 
 ## 0.14.0
 

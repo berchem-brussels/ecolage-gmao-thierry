@@ -1,5 +1,6 @@
 /**
- * Contrôles automatiques après installation, partie « serveur » (0.12.0, DV-110 ; 0.14.0 : migration 012_cycle_de_vie), lancés par recette.sh dans le
+ * Contrôles automatiques après installation, partie « serveur » (0.12.0, DV-110 ; 0.14.0 : migration 012_cycle_de_vie ; 0.15.0 : migration
+ * 013_messages, tables du fil et modèles de réponse livrés), lancés par recette.sh dans le
  * conteneur de l'API : `docker exec -i <app>-api node src/recette-api.js <version> <adresse>`.
  *
  * Lecture seule pour les données métier : rien n'est créé, modifié ni supprimé. Seules la connexion du compte de
@@ -63,13 +64,15 @@ async function main() {
   const v = await anonyme('GET', '/api/version');
   note(v.body?.data?.version === VERSION_ATTENDUE, 4, `version de l'API ${VERSION_ATTENDUE}`, v.body?.data?.version);
 
-  // 5. Migration de la version appliquée (lecture de schema_migrations et de la table nouvelle).
+  // 5. Migration de la version appliquée (lecture de schema_migrations et des tables nouvelles) ; 0.15.0 : fil de messages,
+  // repère de lecture, mentions, modèles de réponse (au moins les quatre livrés par entité active).
   const db = await lireBase();
   const migr = db.exec("SELECT name FROM schema_migrations ORDER BY id DESC LIMIT 1")[0]?.values?.[0]?.[0];
-  const table = db.exec("SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name = 'demande_historique'")[0]?.values?.[0]?.[0];
-  const passages = db.exec('SELECT COUNT(*) FROM demande_transitions WHERE is_active = 1')[0]?.values?.[0]?.[0];
-  note(migr === '012_cycle_de_vie' && table === 1 && passages > 0, 5, 'migration 012_cycle_de_vie appliquée, historique des demandes et table des passages présents',
-    `${migr}, ${passages ?? 0} passage(s)`);
+  const tables = db.exec("SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name IN ('demande_messages', 'demande_messages_lus', 'demande_mentions', 'modeles_reponse')")[0]?.values?.[0]?.[0];
+  const nbEntites = db.exec('SELECT COUNT(*) FROM entites WHERE is_active = 1')[0]?.values?.[0]?.[0] || 0;
+  const modeles = db.exec("SELECT COUNT(*) FROM modeles_reponse WHERE code IS NOT NULL")[0]?.values?.[0]?.[0] || 0;
+  note(migr === '013_messages' && tables === 4 && modeles >= 4 * nbEntites, 5, 'migration 013_messages appliquée, tables du fil présentes, modèles de réponse livrés dans chaque entité',
+    `${migr}, ${tables ?? 0} table(s) sur 4, ${modeles} modèle(s) pour ${nbEntites} entité(s)`);
 
   // 6. Refus sans session.
   const sans = await Promise.all(['/api/demandes', '/api/faq', '/api/tickets', '/api/audit'].map((u) => anonyme('GET', u)));

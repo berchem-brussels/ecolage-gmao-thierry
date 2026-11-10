@@ -8,6 +8,8 @@
  * 0.14.0 : cycle de vie (CYC-01, CYC-02, CLO-01) : historique de la fiche et passage d'un état à l'autre ; services/cycle.js.
  * 0.14.0, point 5 (SUI-05, E-21) : PUT complète la demande (texte), DELETE l'annule avec un motif (annulation logique,
  * CYC-05) ; POST /:id/pieces ajoute une photo ou un document à une demande envoyée (formulaire multipart, hors MCP, E-17).
+ * 0.15.0, point 1 (SUI-04, SEC-02) : fil de messages et commentaires internes (services/messages.js) ; pièces jointes en
+ * attente du prochain message de la personne (formulaire multipart, hors MCP, E-17).
  */
 const express = require('express');
 const { authMiddleware } = require('../auth');
@@ -17,6 +19,7 @@ const S = require('../schemas');
 const demandes = require('../services/demandes');
 const qualification = require('../services/qualification');
 const cycle = require('../services/cycle');
+const messages = require('../services/messages');
 const brouillons = require('../services/brouillons');
 const pieces = require('../services/pieces');
 const fichiers = require('../fichiers');
@@ -85,6 +88,11 @@ router.post('/:id/suivre', validateParams(idParam), validate(S.demandeSuivre), h
   ok(res, demandes.suivre(req.user, Number(req.params.id), req.body), { resource: 'demandes' });
 }));
 
+// Ne plus suivre (0.15.0, point 5 ; SUI-09) : « Moi aussi » ou abonnement retiré par la personne.
+router.delete('/:id/suivre', validateParams(idParam), handle((req, res) => {
+  ok(res, demandes.nePlusSuivre(req.user, Number(req.params.id)), { resource: 'demandes' });
+}));
+
 // Qualification par le service technique (GES-04, PRI-01, 0.9.0) : « À qualifier » devient « Qualifiée ».
 router.post('/:id/qualifier', validateParams(idParam), validate(S.demandeQualifier), handle((req, res) => {
   ok(res, qualification.qualifier(req.user, Number(req.params.id), req.body), { resource: 'demandes' });
@@ -106,6 +114,31 @@ router.post('/:id/pieces', validateParams(idParam), avantPieceDemande, recevoirP
 // Avis du demandeur ou du bénéficiaire sur une demande clôturée (0.14.0, point 6 ; SUI-06).
 router.post('/:id/avis', validateParams(idParam), validate(S.demandeAvis), handle((req, res) => {
   ok(res, cycle.donnerAvis(req.user, Number(req.params.id), req.body), { resource: 'demandes' }, null, 201);
+}));
+
+// Fil de messages (0.15.0, point 1) : lu par le demandeur, le bénéficiaire et le service ; commentaires internes pour le
+// service seul. Pièces : déposées une à une en attente du message, rattachées à son envoi.
+router.get('/:id/messages', validateParams(idParam), handle((req, res) => {
+  ok(res, messages.list(req.user, Number(req.params.id)), { resource: 'messages' });
+}));
+router.post('/:id/messages', validateParams(idParam), validate(S.demandeMessage), handle((req, res) => {
+  ok(res, messages.create(req.user, Number(req.params.id), req.body), { resource: 'messages' }, null, 201);
+}));
+// Point 2 : fil lu jusqu'au dernier message (ou jusqu'à jusqu_a), pour « non lu » et le compteur « Messages à lire ».
+router.post('/:id/messages/lu', validateParams(idParam), validate(S.demandeMessagesLus), handle((req, res) => {
+  ok(res, messages.marquerLus(req.user, Number(req.params.id), req.body), { resource: 'messages' });
+}));
+// Point 3 (GES-08) : collègues du service que la personne peut mentionner dans une note interne.
+router.get('/:id/messages/mentionnables', validateParams(idParam), handle((req, res) => {
+  ok(res, messages.mentionnables(req.user, Number(req.params.id)), { resource: 'messages' });
+}));
+router.get('/:id/messages/pieces', validateParams(idParam), handle((req, res) => {
+  ok(res, pieces.enAttente(req.user, Number(req.params.id)), { resource: 'pieces' });
+}));
+const avantPieceMessage = handle((req, res, next) => { req.plafondsPieces = pieces.peutAjouterAMessage(req.user, Number(req.params.id)); next(); });
+router.post('/:id/messages/pieces', validateParams(idParam), avantPieceMessage, recevoirPiece, handle((req, res) => {
+  const annonce = fichiers.annonce(req, req.plafondsPieces.types);
+  ok(res, pieces.ajouter(req.user, req.file.buffer, annonce, req.file.originalname, 'api', Number(req.params.id), { message: true }), { resource: 'pieces' }, null, 201);
 }));
 
 // Cycle de vie (0.14.0) : historique lisible par qui lit la demande, passage contrôlé par la table des passages.

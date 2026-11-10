@@ -139,7 +139,7 @@ test('« Moi aussi » : un second appel ne change rien ; journal sans la remarqu
   assert.equal(j.length, 1);
   assert.equal(j[0].entite_id, ea.id);
   assert.doesNotMatch(j[0].details, /guichet/);
-  assert.deepEqual(JSON.parse(j[0].details), { numero: D.pop.numero, remarque: 1 });
+  assert.deepEqual(JSON.parse(j[0].details), { numero: D.pop.numero, remarque: 1, source: 'moi_aussi' });
 });
 
 test('service technique : nom et remarque des personnes qui suivent ; le demandeur voit seulement leur nombre', async () => {
