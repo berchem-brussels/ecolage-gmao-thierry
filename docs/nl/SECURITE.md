@@ -2,6 +2,10 @@
 
 De Franse tekst (`docs/fr/SECURITE.md`) is rechtsgeldig en bevat het volledige rooster per versie.
 
+## 0.15.0 (09/11/2026)
+
+Berichten, interne nota's met vermelding, antwoordmodellen, volgen; migratie `013_messages`. Getest: berichten, gelezen-markering, bijlagen van berichten, te vermelden personen, volgen en modellen van de andere entiteit 403 (API en MCP); de berichten worden enkel gelezen door de aanvrager, de begunstigde en de dienst, nooit door wie alleen volgt; interne nota's en hun bijlagen enkel voor de dienst; namen van de agenten verborgen voor de aanvrager; schrijven enkel bij een open aanvraag; vermelding enkel in een interne nota en enkel van leden van de dienst; geen vrije tekst in het auditlogboek; modellen aanvaarden enkel `{numero}`, `{lieu}`, `{etat}`, `{prenom}`; het profiel wordt herlezen bij terugkeer naar het tabblad (R1). Bijlagen van berichten buiten MCP (E-17, zesde route). Negen beschermingen één voor één weggenomen: telkens minstens één mislukte test. `npm audit`: server 0, interface 3 matig (E-09).
+
 ## 0.14.0 (08/11/2026)
 
 Levenscyclus van de aanvragen, migratie `012_cycle_de_vie`. Getest: overgang, historiek, aanvulling, annulering, foto en beoordeling van een aanvraag van de andere entiteit 403 (API en MCP); overgangen van de dienst enkel met `demandes:traiter`; de aanvrager en de begunstigde enkel annuleren en heropenen, wie alleen volgt niets; een status die de aanvrager nooit mag bereiken geeft 403, nooit 409; elke ontbrekende overgang geweigerd; annuleren geweigerd zodra de aanvraag « Bezig » was; heropenen enkel binnen de termijn; één beoordeling per afsluiting; opschorting enkel voor een aangevinkte reden; geen vrije tekst in het auditlogboek (`commentaire_donne`, `compte_rendu_donne`). `recette.sh`: wachtwoord zichtbaar getypt, enkel de lengte getoond. Elke bescherming apart verwijderd: minstens één fout. Geen nieuwe afhankelijkheid.

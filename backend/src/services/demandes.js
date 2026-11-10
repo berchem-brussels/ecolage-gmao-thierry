@@ -196,7 +196,7 @@ function load(user, id) {
 
 /** Personnes qui suivent la demande, avec leur remarque : pour le gestionnaire et le responsable seulement. */
 function suiveurs(demandeId) {
-  return getDb().prepare(`SELECT s.user_id, u.first_name AS prenom, u.last_name AS nom, s.remarque, s.created_at
+  return getDb().prepare(`SELECT s.user_id, u.first_name AS prenom, u.last_name AS nom, s.remarque, s.source, s.created_at
     FROM demande_suiveurs s JOIN users u ON u.id = s.user_id WHERE s.demande_id = ? ORDER BY s.created_at, s.id`).all(demandeId);
 }
 
@@ -228,6 +228,16 @@ function get(user, id) {
   f.reouvrable_jusqu_au = limite ? limite.toISOString().replace('T', ' ').slice(0, 19) : null;
   f.avis_possible = cycle.avisPossible(user, d) ? 1 : 0;
   f.avis = concerne || peut(user, 'demandes:entite') ? cycle.avisDe(d.id) : [];
+  // Abonnement (0.15.0, point 5 ; SUI-09) : « Suivre cette demande » proposé à qui la voit sans la suivre ni en être
+  // le demandeur ou le bénéficiaire, tant qu'elle est ouverte ; la source du suivi de la personne.
+  const monSuivi = getDb().prepare('SELECT source FROM demande_suiveurs WHERE demande_id = ? AND user_id = ?').get(d.id, user.id);
+  f.suivie = monSuivi ? 1 : 0;
+  f.suivi_source = monSuivi ? monSuivi.source : null;
+  f.suivable = !monSuivi && !concerne && !ETATS_FERMES.includes(d.etat) && peut(user, 'demandes:creer') ? 1 : 0;
+  // Fil de messages (0.15.0, point 2) : droits de la personne et messages non lus ; le fil se lit par sa propre route.
+  const messages = require('./messages');
+  f.fil = messages.droits(user, d);
+  f.messages_non_lus = f.fil.lecture ? messages.nonLus(user, [d.id]).get(d.id) || 0 : 0;
   return f;
 }
 
@@ -295,7 +305,7 @@ function valeurs(texte, admises, champ) {
  * 0.14.0 : attente=longue, demandes « En attente » depuis plus de N jours ouvrés (compteur du tableau de bord).
  */
 function list(user, { limit = 50, offset = 0, q, etat, etats, priorites, categorie_id: categorieId, batiment_id: batimentId,
-  echeance, attente, canal, danger, ouvertes, tri, ordre, perimetre = 'miennes' } = {}) {
+  echeance, attente, messages, mentions, canal, danger, ouvertes, tri, ordre, perimetre = 'miennes' } = {}) {
   const entiteId = entiteActive(user);
   const where = ['d.entite_id = ?'];
   const params = [entiteId];
@@ -333,6 +343,16 @@ function list(user, { limit = 50, offset = 0, q, etat, etats, priorites, categor
     const f = qualification.filtreAttente(entiteId);
     where.push(f.sql); params.push(...f.params);
   }
+  // 0.15.0 (point 2) : demandes dont le fil a un message que la personne n'a pas lu.
+  if (messages === 'non_lus') {
+    const f = require('./messages').filtreNonLus(user);
+    where.push(f.sql); params.push(...f.params);
+  }
+  // 0.15.0 (point 3) : demandes où la personne est mentionnée dans une note qu'elle n'a pas lue.
+  if (mentions === 'a_voir') {
+    const f = require('./messages').filtreMentions(user);
+    where.push(f.sql); params.push(...f.params);
+  }
   if (canal) { where.push('d.canal = ?'); params.push(canal); }
   if (danger === 1) where.push('d.danger = 1');
   if (danger === 0) where.push('d.danger = 0');
@@ -356,6 +376,9 @@ function list(user, { limit = 50, offset = 0, q, etat, etats, priorites, categor
     order = `${FERMEE_SQL}, ${cols}, d.id ${s}`;
   }
   const rows = lire(`WHERE ${where.join(' AND ')} ORDER BY ${order} LIMIT ? OFFSET ?`, [...params, limit, offset]).map((d) => fiche(d, cache, user));
+  // 0.15.0 (point 2) : nombre de messages non lus par la personne, sur chaque demande de la page.
+  const nonLus = require('./messages').nonLus(user, rows.map((d) => d.id));
+  for (const d of rows) d.messages_non_lus = nonLus.get(d.id) || 0;
   return { rows, pagination: { total, limit, offset } };
 }
 
@@ -518,8 +541,12 @@ function voisines(user, { lieu_id: lieuId, categorie_id: categorieId, limit = 5 
  * « Moi aussi » (DEM-04) : la personne suit une demande ouverte de l'entité active au lieu d'en créer une nouvelle.
  * Refus : demande d'une autre entité (403), fermée (409), la sienne (409). Un second appel ne change rien (double clic).
  * La remarque reste sur la fiche, pour le service technique ; le journal ne la garde pas.
+ * 0.15.0 (point 5, SUI-09) : source « abonnement » : suivre une demande que la personne voit (le service technique depuis
+ * sa liste, un agent depuis les demandes du même bâtiment), sans remarque (409 REMARQUE_ABONNEMENT). Même effet : la
+ * demande apparaît dans « Mes demandes » ; les notifications aux personnes qui suivent viendront avec les notifications.
  */
-function suivre(user, id, { remarque } = {}, channel = 'api') {
+function suivre(user, id, { remarque, source = 'moi_aussi' } = {}, channel = 'api') {
+  if (source === 'abonnement' && remarque) throw new AppError(409, 'REMARQUE_ABONNEMENT');
   const entiteId = entiteActive(user);
   if (!peut(user, 'demandes:creer')) throw new AppError(403, 'FORBIDDEN');
   assertActif('demandes');
@@ -531,12 +558,48 @@ function suivre(user, id, { remarque } = {}, channel = 'api') {
   const db = getDb();
   if (!db.prepare(SUIVIE).get(d.id, user.id)) {
     db.transaction(() => {
-      db.prepare('INSERT INTO demande_suiveurs (demande_id, user_id, remarque, canal) VALUES (?, ?, ?, ?)')
-        .run(d.id, user.id, remarque ? remarque : null, CANAUX[channel] || 'api');
-      logAudit(user.id, 'demande.suivre', 'demande', d.id, { numero: d.numero, remarque: remarque ? 1 : 0 }, channel, entiteId);
+      db.prepare('INSERT INTO demande_suiveurs (demande_id, user_id, remarque, canal, source) VALUES (?, ?, ?, ?, ?)')
+        .run(d.id, user.id, remarque ? remarque : null, CANAUX[channel] || 'api', source);
+      logAudit(user.id, 'demande.suivre', 'demande', d.id, { numero: d.numero, remarque: remarque ? 1 : 0, source }, channel, entiteId);
     })();
   }
   return get(user, d.id);
+}
+
+/**
+ * Ne plus suivre (0.15.0, point 5 ; SUI-09) : la personne retire son suivi, « Moi aussi » ou abonnement, à tout moment,
+ * même sur une demande fermée. Suppression réelle (préférence personnelle) : la remarque d'un « Moi aussi » part avec
+ * lui. Sans suivi, rien ne change. La personne qui ne suit plus une demande d'un autre ne la lit plus (SEC-02), sauf le
+ * service technique : la fiche lui est rendue, sinon { suivie: 0 }. Journal : numéro et source, sans la remarque.
+ */
+function nePlusSuivre(user, id, channel = 'api') {
+  const entiteId = entiteActive(user);
+  const d = row(id);
+  if (!d) throw new AppError(404, 'NOT_FOUND');
+  if (d.entite_id !== entiteId) throw new AppError(403, 'FORBIDDEN');
+  const db = getDb();
+  const s = db.prepare('SELECT id, source, remarque FROM demande_suiveurs WHERE demande_id = ? AND user_id = ?').get(d.id, user.id);
+  if (!s) {
+    if (d.demandeur_id !== user.id && d.beneficiaire_id !== user.id && !peut(user, 'demandes:entite')) throw new AppError(403, 'FORBIDDEN');
+  } else {
+    db.transaction(() => {
+      db.prepare('DELETE FROM demande_suiveurs WHERE id = ?').run(s.id);
+      logAudit(user.id, 'demande.ne_plus_suivre', 'demande', d.id, { numero: d.numero, source: s.source, remarque: s.remarque ? 1 : 0 }, channel, entiteId);
+    })();
+  }
+  if (d.demandeur_id === user.id || d.beneficiaire_id === user.id || peut(user, 'demandes:entite')) return get(user, d.id);
+  return { id: d.id, numero: d.numero, suivie: 0 };
+}
+
+/** Effet de « Ne plus suivre », sans l'écrire : première étape par le MCP (la remarque d'un « Moi aussi » serait perdue). */
+function decrireNePlusSuivre(user, id) {
+  const entiteId = entiteActive(user);
+  const d = row(id);
+  if (!d) throw new AppError(404, 'NOT_FOUND');
+  if (d.entite_id !== entiteId) throw new AppError(403, 'FORBIDDEN');
+  const s = getDb().prepare('SELECT source, remarque FROM demande_suiveurs WHERE demande_id = ? AND user_id = ?').get(d.id, user.id);
+  if (!s) throw new AppError(409, 'PAS_SUIVIE');
+  return { action: 'ne_plus_suivre_demande', demande: { id: d.id, numero: d.numero }, source: s.source, remarque_effacee: s.remarque ? 1 : 0 };
 }
 
 /**
@@ -603,4 +666,4 @@ function choisirLieuHabituel(user, lieuId, channel = 'api') {
   logAudit(user.id, 'user.lieu_habituel', 'user', user.id, { avant: avant ?? null, apres: lieuId }, channel, entite);
 }
 
-module.exports = { list, get, load, create, completer, voisines, suivre, beneficiaires, lieuPropose, lieuxRecents, controlerLieuHabituel, choisirLieuHabituel, chemin, lieuDeDemande, categorieDeDemande, descendants };
+module.exports = { list, get, load, create, completer, voisines, suivre, nePlusSuivre, decrireNePlusSuivre, beneficiaires, lieuPropose, lieuxRecents, controlerLieuHabituel, choisirLieuHabituel, chemin, lieuDeDemande, categorieDeDemande, descendants };

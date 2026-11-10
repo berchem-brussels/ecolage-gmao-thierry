@@ -2,6 +2,48 @@
 
 Le français fait foi. Grille de la section 10.2 du standard, rejouée à chaque version. « Non joué » veut dire que le contrôle n'a pas tourné.
 
+## 0.15.0 (09/11/2026)
+
+Étape 10 : fil de messages d'une demande, notes internes avec mention, modèles de réponse, abonnement ; remarques R1 à R3 de la recette de la 0.14.0. Environnement : bac à sable de Claude, Node 22.23.4. Migration `013_messages`. Aucune dépendance nouvelle.
+
+| Famille | Contrôle | Résultat |
+| --- | --- | --- |
+| Autorisation (IDOR) | Fil, messages lus, pièces d'un message, personnes à mentionner, abonnement, modèles de réponse : demande ou modèle d'une autre entité 403, inconnu 404, avant tout autre contrôle ; même réponse par l'API et par le MCP | Conforme (`cloison.test.js` : dix routes de plus, `messages.test.js`, `modeles-reponse.test.js`) |
+| Autorisation | Fil lu par le demandeur, le bénéficiaire et le service (`demandes:entite`) seulement ; qui suit sans être concerné ne lit pas le fil ; note interne et ses pièces réservées au service, jamais rendues au demandeur, au bénéficiaire ni par le MCP d'un demandeur ; nom de l'agent du service caché au demandeur ; écriture par le demandeur, le bénéficiaire et `demandes:traiter`, sur une demande ouverte (`DEMANDE_FERMEE`) ; modèles modifiés par `parametres:gerer` seul | Conforme (`messages.test.js`, `modeles-reponse.test.js`) |
+| Logique | Mention dans une note interne seulement (`MENTION_INTERNE`), d'un membre du service de l'entité active (`MENTION_INVALIDE`) ; message vide refusé (`MESSAGE_VIDE`) ; compteurs « non lus » et « mentionné » calculés pour la personne seule ; « Ne plus suivre » d'un « Moi aussi » efface la remarque, d'une demande non suivie 409 (`PAS_SUIVIE`) ; abonnement sans remarque (`REMARQUE_ABONNEMENT`) | Conforme (`messages.test.js`) |
+| Validation | Schémas `ajv` (`additionalProperties: false`) : texte de 1 à 4 000 caractères, `interne` 0 ou 1, au plus dix mentions distinctes, `jusqu_a` entier ; modèle : titres de 1 à 100 et textes de 1 à 4 000 caractères FR et NL, variables limitées à `{numero}`, `{lieu}`, `{etat}`, `{prenom}` (`MODELE_VARIABLE`, nom de la variable fautive dans le message) | Conforme (`messages.test.js`, `modeles-reponse.test.js`) |
+| Injections | Requêtes paramétrées ; filtres « non lus » et « mentionné » en clauses constantes avec « ? » ; colonnes tirées de listes fermées (`COLUMNS`) ; le contrôle statique a refusé trois premières écritures interpolées, corrigées | Conforme (`securite.test.js`) |
+| Données (RGPD) | Journal d'audit sans texte libre : `demande.message` avec numéro, identifiant du message, `interne`, longueur, nombre de pièces et de mentions, jamais le texte ; messages jamais modifiés ni effacés (CYC-05) ; lectures et mentions effacées avec le compte ; pièce en attente d'un message purgée après 30 jours | Conforme (`messages.test.js`) |
+| Fichiers | Pièce d'un message par le lecteur commun (`multer`, type sur les premiers octets, métadonnées retirées), plafond par message ; pièce en attente lue par son auteur seul, pièce d'une note interne par le service seul ; route hors MCP (E-17, sixième route) | Conforme (`messages.test.js`, `mcp.test.js`) |
+| Session | R1 : au retour sur l'onglet, le profil est relu ; une autre personne connectée entre-temps ramène à l'accueil, une session finie à la connexion | Conforme (`session.test.tsx`) |
+| Interface | Bulles du fil tenues dans 320 px (étiquette de mention qui passe à la ligne ; débord de 3 px détecté par `mobile:check`, règle « bulles » ajoutée) ; choix du destinataire proposé au service seul | Conforme (`npm run mobile:check` : 28 écrans, 4 largeurs, FR et NL, aucun défaut ; `npm run a11y` 0) |
+| Secrets commités | Aucune valeur de NIXUS, aucune adresse électronique réelle ni photo réelle dans l'archive (captures refaites sur une base de démonstration) | Conforme |
+| Infrastructure | Dockerfile, compose, `nginx.conf`, `backup.sh`, `.env`, `ci.yml` inchangés | Conforme |
+| Dépendances | `npm audit --omit=dev` serveur | 0 vulnérabilité |
+| Dépendances | `npm audit --omit=dev` interface | 3 modérées (E-09), inchangées |
+| LLM et MCP | Onze outils nouveaux sous les droits de la personne ; désactivation d'un modèle et « Ne plus suivre » en deux appels (`prepare_*`, `confirm_*`) ; parité route et outil | Conforme (`mcp.test.js`, `messages.test.js`) |
+| Migration | `013_messages` ajoute quatre tables et trois colonnes, sans rien retirer ; une base 0.14.0 passe en 0.15.0 (`messages.test.js`) ; la 0.14.0 démarre sur une base passée en 0.15.0 (essayé le 09/11/2026) mais listerait les pièces des messages, internes comprises, avec celles de la demande : retour arrière toujours avec la sauvegarde du jour (notes de livraison) | Conforme |
+
+Les trois contrôles qui ne restent jamais « non joués » (secrets commités, contrôle d'accès côté serveur, IDOR) ont été joués.
+
+### Preuve d'échec des nouveaux tests (0.15.0)
+
+Chaque protection retirée seule du code de la 0.15.0, les tests nouveaux échouent ; protection remise, tout réussit.
+
+| Protection retirée | Tests en échec |
+| --- | --- |
+| `messages.js` : note interne rendue au demandeur | 2 sur 19 (`messages.test.js`, tests 2 et 12) |
+| `pieces.js` : pièce d'une note interne lisible hors du service | 1 sur 19 (test 8) |
+| `messages.js` : mention hors du service acceptée | 1 sur 19 (test 14) |
+| `messages.js` : qui suit lit le fil | 2 sur 19 (tests 3 et 13) |
+| `messages.js` : cloison du fil retirée | 14 (`cloison.test.js`) |
+| `modeles-reponse.js` : variable inconnue acceptée | 1 sur 4 (`modeles-reponse.test.js`) |
+| `AuthContext.tsx` : profil relu au retour sur l'onglet (R1) | 2 sur 2 (`session.test.tsx`) |
+| `hints.ts` : numéro d'étape dans un texte montré (R2) | 1 (`help.test.ts`) |
+| `index.css` : retour à la ligne des étiquettes dans les bulles | `mobile:check` en défaut (Android 360, iPhone 13, FR et NL) |
+
+Code de la 0.15.0 : tout réussi (serveur et interface, voir `MANIFESTE.md`).
+
 ## 0.14.0 (08/11/2026)
 
 Étape 9 : cycle de vie des demandes (passages en données, historique, complément, annulation, avis et réouverture par le demandeur, suspension du délai, libellés des états par entité) ; `recette.sh` en saisie visible (DV-117). Environnement : bac à sable de Claude, Node 22.23.4. Migration `012_cycle_de_vie`. Aucune dépendance nouvelle.

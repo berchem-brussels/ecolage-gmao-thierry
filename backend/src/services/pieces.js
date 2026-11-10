@@ -19,6 +19,12 @@
  *   7. Complément (0.14.0, point 5 ; SUI-05) : le demandeur ou le bénéficiaire ajoute une photo ou un document à sa
  *      demande tant qu'elle n'est pas fermée, dans le plafond de l'entité (pièces de la demande comptées) ; il peut la
  *      retirer seulement si elle a été déposée tant que la demande était « Reçue » (règle 5 inchangée).
+ *   8. Fil de messages (0.15.0, point 1 ; SUI-04) : une pièce se joint à un message. Avant l'envoi, elle attend son
+ *      message (attente_message = 1) : lue, listée et retirée par son seul auteur ; l'envoi du message la rattache.
+ *      Plafond de l'entité par message (nombre, taille, formats). Une pièce d'un message ne figure pas parmi les pièces
+ *      de la demande : elle se lit dans le fil, par qui lit le message (une pièce d'un commentaire interne : le service
+ *      seul). Une fois envoyée, seul le service (« pieces:supprimer ») la retire. Pièces en attente depuis plus de
+ *      30 jours : effacées avec la purge des brouillons.
  * Le MCP lit les pièces et les supprime (deux appels) ; il ne transporte aucun fichier (écart E-17).
  */
 const crypto = require('crypto');
@@ -37,7 +43,7 @@ const NOM_FICHIER = /^[a-f0-9]{32}\.(jpg|png|pdf)$/;
 const EXTENSION = { 'image/jpeg': 'jpg', 'image/png': 'png', [PDF]: 'pdf' };
 const FORMATS = { photos_pdf: [...IMAGES, PDF], photos: [...IMAGES] };
 const JOURS = 30;
-const COLUMNS = 'id, entite_id, demande_id, auteur_id, nom, type, octets, largeur, hauteur, canal, created_at';
+const COLUMNS = 'id, entite_id, demande_id, message_id, attente_message, auteur_id, nom, type, octets, largeur, hauteur, canal, created_at';
 const CANAUX = { api: 'ecran', mcp: 'mcp' };
 
 const peut = (user, permission) => user.roles.some((r) => rolesWith(permission).includes(r));
@@ -96,7 +102,7 @@ function duBrouillon(user) {
  * confort d'affichage, le serveur contrôle de nouveau à la suppression.
  */
 function deDemande(demandeId, user, d) {
-  return getDb().prepare(`SELECT ${COLUMNS} FROM pieces_jointes WHERE demande_id = ? ORDER BY id`).all(demandeId).map((p) => {
+  return getDb().prepare(`SELECT ${COLUMNS} FROM pieces_jointes WHERE demande_id = ? AND message_id IS NULL AND attente_message = 0 ORDER BY id`).all(demandeId).map((p) => {
     let peutRetirer = 1;
     try { controlerSuppression(user, p, d); } catch (e) { peutRetirer = 0; }
     return { ...fiche(p), peut_retirer: peutRetirer };
@@ -133,14 +139,53 @@ function peutAjouterADemande(user, demandeId) {
   if (require('./cycle').FERMES.includes(d.etat)) throw new AppError(409, 'DEMANDE_FERMEE');
   const p = plafonds(entiteId);
   if (p.nombre === 0) throw new AppError(409, 'PIECES_FERMEES');
-  const n = getDb().prepare('SELECT COUNT(*) AS n FROM pieces_jointes WHERE demande_id = ?').get(d.id).n;
+  const n = getDb().prepare(`SELECT COUNT(*) AS n FROM pieces_jointes WHERE demande_id = ? AND message_id IS NULL AND attente_message = 0`).get(d.id).n;
   if (n >= p.nombre) throw new AppError(409, 'PIECES_PLAFOND', [`${p.nombre}`]);
   return { ...p, demande: d };
 }
 
+/**
+ * Règle 8 : contrôle préalable à l'ajout d'une pièce à un message à venir (avant la lecture du fichier) : la personne
+ * peut écrire dans le fil de la demande (services/messages.js), plafond de l'entité par message. Rend les plafonds et la
+ * demande.
+ */
+function peutAjouterAMessage(user, demandeId) {
+  const d = require('./messages').peutEcrire(user, demandeId);
+  const p = plafonds(d.entite_id);
+  if (p.nombre === 0) throw new AppError(409, 'PIECES_FERMEES');
+  const n = getDb().prepare('SELECT COUNT(*) AS n FROM pieces_jointes WHERE demande_id = ? AND auteur_id = ? AND attente_message = 1').get(d.id, user.id).n;
+  if (n >= p.nombre) throw new AppError(409, 'PIECES_PLAFOND_MESSAGE', [`${p.nombre}`]);
+  return { ...p, demande: d };
+}
+
+/** Règle 8 : pièces de la personne qui attendent son prochain message sur la demande, avec les plafonds en vigueur. */
+function enAttente(user, demandeId) {
+  const d = require('./messages').peutEcrire(user, demandeId, { lecture: true });
+  const rows = getDb().prepare(`SELECT ${COLUMNS} FROM pieces_jointes WHERE demande_id = ? AND auteur_id = ? AND attente_message = 1 ORDER BY id`)
+    .all(d.id, user.id).map((x) => ({ ...fiche(x), peut_retirer: 1 }));
+  const p = plafonds(d.entite_id);
+  return { pieces: rows, plafonds: { nombre: p.nombre, octets: p.octets, types: p.types } };
+}
+
+/** Règle 8 : pièces des messages donnés, groupées par message (sans le nom du fichier sur le disque). */
+function deMessages(ids) {
+  const par = new Map(ids.map((id) => [id, []]));
+  if (!ids.length) return par;
+  const inQ = ids.map(() => '?').join(', ');
+  const rows = getDb().prepare(`SELECT ${COLUMNS} FROM pieces_jointes WHERE message_id IN (${inQ}) ORDER BY id`).all(...ids);
+  for (const r of rows) par.get(r.message_id).push(fiche(r));
+  return par;
+}
+
+/** Règle 8, dans la transaction d'envoi d'un message : les pièces en attente de l'auteur passent au message. */
+function attacher(userId, demandeId, messageId) {
+  return getDb().prepare('UPDATE pieces_jointes SET message_id = ?, attente_message = 0 WHERE demande_id = ? AND auteur_id = ? AND attente_message = 1')
+    .run(messageId, demandeId, userId).changes;
+}
+
 /** Ajoute une pièce au brouillon : contrôle du contenu, fichier écrit sous un nom généré, ligne au journal sans contenu. */
-function ajouter(user, buf, annonce, origine, channel = 'api', demandeId = null) {
-  const p = demandeId ? peutAjouterADemande(user, demandeId) : peutAjouter(user);
+function ajouter(user, buf, annonce, origine, channel = 'api', demandeId = null, { message = false } = {}) {
+  const p = message ? peutAjouterAMessage(user, demandeId) : demandeId ? peutAjouterADemande(user, demandeId) : peutAjouter(user);
   if (!Buffer.isBuffer(buf) || !buf.length) throw new AppError(400, 'FILE_MISSING');
   if (buf.length > p.octets) throw new AppError(413, 'PAYLOAD_TOO_LARGE');
   const c = controler(buf, annonce, p.types);
@@ -153,14 +198,14 @@ function ajouter(user, buf, annonce, origine, channel = 'api', demandeId = null)
   const nom = nomAffiche(origine, c.type);
   let id;
   try {
-    id = getDb().prepare(`INSERT INTO pieces_jointes (entite_id, demande_id, auteur_id, fichier, nom, type, octets, largeur, hauteur, canal)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
-      .run(user.entiteId, demandeId || null, user.id, fichier, nom, c.type, c.data.length, c.width || null, c.height || null, CANAUX[channel] || 'api').lastInsertRowid;
+    id = getDb().prepare(`INSERT INTO pieces_jointes (entite_id, demande_id, auteur_id, fichier, nom, type, octets, largeur, hauteur, canal, attente_message)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
+      .run(user.entiteId, demandeId || null, user.id, fichier, nom, c.type, c.data.length, c.width || null, c.height || null, CANAUX[channel] || 'api', message ? 1 : 0).lastInsertRowid;
   } catch (e) {
     effacerFichier(fichier);
     throw e;
   }
-  logAudit(user.id, 'piece.add', 'piece', id, { type: c.type, octets: c.data.length, brouillon: demandeId ? 0 : 1,
+  logAudit(user.id, 'piece.add', 'piece', id, { type: c.type, octets: c.data.length, brouillon: demandeId && !message ? 0 : 1,
     ...(demandeId ? { demande_id: demandeId, numero: p.demande.numero } : {}) }, channel, user.entiteId);
   return get(user, id);
 }
@@ -179,7 +224,15 @@ function charger(user, id) {
     return { p, d: null };
   }
   const d = getDb().prepare('SELECT id, entite_id, numero, etat, demandeur_id, beneficiaire_id FROM demandes WHERE id = ?').get(p.demande_id);
+  // Règle 8 : une pièce qui attend son message n'est lue que par son auteur.
+  if (p.attente_message === 1) {
+    if (p.auteur_id !== user.id) throw new AppError(403, 'FORBIDDEN');
+    return { p, d };
+  }
   if (d.demandeur_id !== user.id && d.beneficiaire_id !== user.id && !peut(user, 'demandes:entite')) throw new AppError(403, 'FORBIDDEN');
+  // Règle 8 : la pièce d'un commentaire interne n'est lue que par le service technique.
+  if (p.message_id && !peut(user, 'demandes:entite')
+    && getDb().prepare('SELECT interne FROM demande_messages WHERE id = ?').get(p.message_id).interne === 1) throw new AppError(403, 'FORBIDDEN');
   return { p, d };
 }
 
@@ -205,7 +258,10 @@ function fichier(user, id) {
 /** Droit de supprimer (règle 5) ; lève 403 ou 409 PIECE_VERROUILLEE. */
 function controlerSuppression(user, p, d) {
   if (!d) return;
+  // Règle 8 : une pièce en attente de son message se retire par son auteur ; envoyée, par le service seul.
+  if (p.attente_message === 1 && p.auteur_id === user.id) return;
   if (peut(user, 'pieces:supprimer')) return;
+  if (p.message_id) throw new AppError(403, 'FORBIDDEN');
   if (p.auteur_id === user.id && d.demandeur_id === user.id) {
     if (d.etat !== 'a_qualifier') throw new AppError(409, 'PIECE_VERROUILLEE');
     return;
@@ -227,7 +283,7 @@ function supprimer(user, id, channel = 'api') {
   getDb().prepare('DELETE FROM pieces_jointes WHERE id = ?').run(p.id);
   effacerFichier(p.fichier);
   logAudit(user.id, 'piece.delete', 'piece', p.id,
-    { type: p.type, octets: p.octets, demande_id: p.demande_id, numero: d ? d.numero : null, brouillon: d ? 0 : 1 }, channel, p.entite_id);
+    { type: p.type, octets: p.octets, demande_id: p.demande_id, numero: d ? d.numero : null, brouillon: d && p.attente_message !== 1 ? 0 : 1 }, channel, p.entite_id);
   return { id: p.id, supprime: 1 };
 }
 
@@ -260,10 +316,13 @@ function purger() {
   const rows = getDb().prepare(`SELECT p.id, p.entite_id, p.fichier, p.type, p.octets FROM pieces_jointes p
     WHERE p.demande_id IS NULL AND p.created_at < datetime('now', ?)
     AND NOT EXISTS (SELECT 1 FROM brouillons b WHERE b.user_id = p.auteur_id AND b.entite_id = p.entite_id)`).all(`-${JOURS} days`);
-  return effacerLignes(rows, null, 'piece.purge', 'api');
+  // Règle 8 : pièces jamais envoyées avec un message, après le même délai.
+  const attente = getDb().prepare(`SELECT id, entite_id, fichier, type, octets FROM pieces_jointes
+    WHERE attente_message = 1 AND created_at < datetime('now', ?)`).all(`-${JOURS} days`);
+  return effacerLignes([...rows, ...attente], null, 'piece.purge', 'api');
 }
 
 module.exports = {
-  plafonds, duBrouillon, deDemande, peutAjouter, peutAjouterADemande, ajouter, get, fichier, resumeSuppression, supprimer, rattacher,
+  plafonds, duBrouillon, deDemande, peutAjouter, peutAjouterADemande, peutAjouterAMessage, enAttente, deMessages, attacher, ajouter, get, fichier, resumeSuppression, supprimer, rattacher,
   effacerBrouillon, purger, nomAffiche, FORMATS,
 };

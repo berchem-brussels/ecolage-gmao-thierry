@@ -141,7 +141,9 @@ export function ReouvrirForm({ d, onDone, onCancel }: { d: Demande; onDone: (d: 
   };
   return (
     <Form<{ commentaire: string }> layout="vertical" onFinish={envoyer}>
-      <Typography.Paragraph type="secondary">{t('demandeur.reouvrir.aide')}</Typography.Paragraph>
+      <Typography.Paragraph type="secondary">
+        {d.reouvrable_jusqu_au ? t('demandeur.reouvrir.aide').replace('{date}', instant(d.reouvrable_jusqu_au)) : t('demandeur.reouvrir.aide.sans_date')}
+      </Typography.Paragraph>
       {erreur && <Alert type="error" showIcon message={erreur} style={{ marginBottom: 12 }} />}
       <Form.Item name="commentaire" label={t('demandeur.reouvrir.motif')} tooltip={hint('demandeur.reouvrir.motif')} rules={[texteObligatoire(t)]}>
         <Input.TextArea rows={3} maxLength={2000} />

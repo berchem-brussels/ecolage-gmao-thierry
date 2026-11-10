@@ -11,7 +11,7 @@ const topic: HelpTopic = {
   layout: [
     { fr: '[[1]] {{demande.filtre}} : {{demande.filtre.ouvertes}}, {{demande.filtre.closes}} ou {{demande.filtre.toutes}}.', nl: '[[1]] {{demande.filtre}}: {{demande.filtre.ouvertes}}, {{demande.filtre.closes}} of {{demande.filtre.toutes}}.' },
     { fr: '[[2]] {{demande.chercher}} : par numéro, mot de la description ou lieu.', nl: '[[2]] {{demande.chercher}}: op nummer, woord uit de beschrijving of plaats.' },
-    { fr: '[[3]] La liste : numéro, problème, lieu, état en clair et délai annoncé ; sur téléphone, une carte par demande.', nl: '[[3]] De lijst: nummer, probleem, plaats, status in gewone woorden en aangekondigde termijn; op een telefoon een kaart per aanvraag.' },
+    { fr: '[[3]] La liste : numéro, problème, lieu, état en clair et délai annoncé ; sur téléphone, une carte par demande. « 1 nouveau message » signale une réponse du service technique.', nl: '[[3]] De lijst: nummer, probleem, plaats, status in gewone woorden en aangekondigde termijn; op een telefoon een kaart per aanvraag. « 1 nieuw bericht » wijst op een antwoord van de technische dienst.' },
   ],
   overviewShot: 'mes-demandes-overview',
   procedures: [
@@ -26,6 +26,27 @@ const topic: HelpTopic = {
       ],
       result: { fr: 'L’état se lit en clair, par exemple « Reçue par le service technique », avec la date limite annoncée et les explications du service technique.', nl: 'De status staat in gewone woorden, bijvoorbeeld « Ontvangen door de technische dienst », met de aangekondigde uiterste datum en de uitleg van de technische dienst.' },
       shots: ['mes-demandes-fiche'],
+    },
+    // 0.15.0 (point 6 ; SUI-04, SUI-09) : fil de messages, suivre et ne plus suivre.
+    {
+      title: { fr: 'Écrire au service technique', nl: 'Naar de technische dienst schrijven' },
+      when: { fr: 'Quand vous avez une question sur votre demande, ou que le service technique vous en pose une.', nl: 'Wanneer u een vraag hebt over uw aanvraag, of de technische dienst u er een stelt.' },
+      steps: [
+        { fr: 'Ouvrez la fiche : sous elle, {{fil.titre}} réunit vos échanges ; {{fil.nouveaux}} marque ce que vous n’avez pas encore lu.', nl: 'Open de fiche: eronder bevat {{fil.titre}} uw uitwisselingen; {{fil.nouveaux}} duidt aan wat u nog niet gelezen hebt.' },
+        { fr: 'Écrivez dans {{fil.message}} ; ajoutez au besoin une photo ou un document (ils partent aussitôt, une photo seule suffit).', nl: 'Schrijf in {{fil.message}}; voeg zo nodig een foto of een document toe (ze vertrekken meteen, een foto alleen volstaat).' },
+        { fr: 'Cliquez sur {{fil.envoyer}}.', nl: 'Klik op {{fil.envoyer}}.' },
+      ],
+      result: { fr: 'Le service technique lit votre message ; sa réponse arrive dans le même fil, signée « Service technique ». L’accueil vous dit quand une demande a un nouveau message.', nl: 'De technische dienst leest uw bericht; zijn antwoord komt in dezelfde berichten, ondertekend « Technische dienst ». De startpagina zegt u wanneer een aanvraag een nieuw bericht heeft.' },
+      errors: [{ problem: { fr: 'La zone d’écriture n’apparaît pas.', nl: 'Het schrijfvak verschijnt niet.' }, solution: { fr: 'La demande est fermée : les messages restent lisibles. Si le problème revient, rouvrez-la ou faites une nouvelle demande.', nl: 'De aanvraag is gesloten: de berichten blijven leesbaar. Komt het probleem terug, heropen ze dan of dien een nieuwe aanvraag in.' } }],
+      shots: ['mes-demandes-fil'],
+    },
+    {
+      title: { fr: 'Ne plus suivre une demande', nl: 'Een aanvraag niet meer volgen' },
+      when: { fr: 'Quand une demande que vous suivez (« Moi aussi » ou {{suivi.suivre}}) ne vous concerne plus.', nl: 'Wanneer een aanvraag die u volgt (« Ik ook » of {{suivi.suivre}}) u niet meer aanbelangt.' },
+      steps: [
+        { fr: 'Ouvrez la fiche et cliquez sur {{suivi.arreter}}, puis confirmez.', nl: 'Open de fiche, klik op {{suivi.arreter}} en bevestig.' },
+      ],
+      result: { fr: 'La demande quitte votre liste. Pour un « Moi aussi », la remarque que vous aviez laissée est effacée.', nl: 'De aanvraag verdwijnt uit uw lijst. Bij een « Ik ook » wordt de opmerking die u achterliet gewist.' },
     },
     // 0.14.0 (étape 9, point 7) : compléter, annuler, avis, rouvrir.
     {
@@ -75,11 +96,15 @@ const topic: HelpTopic = {
     { q: { fr: 'Je ne vois pas mes demandes de l’autre entité.', nl: 'Ik zie mijn aanvragen van de andere entiteit niet.' }, a: { fr: 'La liste suit l’entité active : changez d’entité dans l’en-tête.', nl: 'De lijst volgt de actieve entiteit: wissel van entiteit in de kop.' } },
     { q: { fr: 'Jusqu’à quand puis-je rouvrir une demande clôturée ?', nl: 'Tot wanneer kan ik een afgesloten aanvraag heropenen?' }, a: { fr: 'Pendant le délai fixé par votre entité (7 jours par défaut) : la fiche dit la date limite. Après, faites une nouvelle demande.', nl: 'Tijdens de termijn die uw entiteit vastlegt (standaard 7 dagen): de fiche vermeldt de uiterste datum. Daarna dient u een nieuwe aanvraag in.' } },
     { q: { fr: 'Ma demande est « En attente » : que dois-je faire ?', nl: 'Mijn aanvraag staat « In wacht »: wat moet ik doen?' }, a: { fr: 'La ligne du temps dit pourquoi. Si le service technique attend une réponse de votre part, utilisez {{demandeur.completer}}.', nl: 'De tijdlijn zegt waarom. Wacht de technische dienst op een antwoord van u, gebruik dan {{demandeur.completer}}.' } },
+    // 0.15.0 (point 6).
+    { q: { fr: 'Qui lit mes messages ?', nl: 'Wie leest mijn berichten?' }, a: { fr: 'Le service technique de votre entité, et la personne pour qui la demande est faite. Un collègue qui suit seulement la demande (« Moi aussi ») voit son état, pas les messages.', nl: 'De technische dienst van uw entiteit, en de persoon voor wie de aanvraag is. Een collega die de aanvraag enkel volgt (« Ik ook ») ziet de status, niet de berichten.' } },
+    { q: { fr: 'Puis-je modifier ou effacer un message envoyé ?', nl: 'Kan ik een verzonden bericht wijzigen of wissen?' }, a: { fr: 'Non : écrivez un nouveau message pour corriger. Une photo envoyée par erreur peut être retirée par le service technique : demandez-le-lui dans le fil.', nl: 'Nee: schrijf een nieuw bericht om te verbeteren. Een per vergissing verzonden foto kan de technische dienst verwijderen: vraag het hem in de berichten.' } },
   ],
   seeAlso: ['nouvelle-demande', 'accueil'],
   shots: [
     { id: 'mes-demandes-overview', path: '/demandes', marks: [{ sel: '.ant-segmented' }, { sel: '.ant-input-search' }, { sel: '.ant-table, .ant-list' }], caption: { fr: 'Mes demandes', nl: 'Mijn aanvragen' } },
     { id: 'mes-demandes-fiche', path: '/demandes', actions: [{ clickSel: '.ant-table-row .ant-btn-link' }, { wait: 800 }], clip: 'drawer', caption: { fr: 'Fiche d’une demande et ses boutons', nl: 'Fiche van een aanvraag en haar knoppen' } },
+    { id: 'mes-demandes-fil', path: '/demandes', actions: [{ clickSel: '.ant-table-row .ant-btn-link' }, { wait: 1000 }, { scrollSel: 'section.fil' }, { wait: 300 }], clip: 'drawer', marks: [{ sel: '.fil-liste' }, { sel: '.fil-saisie textarea' }, { sel: '.fil-saisie .dem-pieces .ant-btn' }], caption: { fr: 'Messages avec le service technique', nl: 'Berichten met de technische dienst' } },
     { id: 'mes-demandes-avis', path: '/demandes', actions: [{ clickSel: '.dem-close .ant-btn-link' }, { wait: 800 }], clip: 'drawer', caption: { fr: 'Avis et réouverture d’une demande clôturée', nl: 'Beoordeling en heropening van een afgesloten aanvraag' } },
   ],
 };

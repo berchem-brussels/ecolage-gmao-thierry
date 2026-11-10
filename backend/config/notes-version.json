@@ -2,6 +2,32 @@
   "_description": "Notes de version pour les utilisateurs, en FR et en NL, sans terme technique (standard v3.2, sections 13.1 et 17.8 ; écart E-07). Une note par version, de la plus récente à la plus ancienne. Chaque ligne a un public : « tous », « admin » (administrateur de l'application) ou une permission du catalogue des rôles (par exemple « parametres:gerer »), lue dans l'entité active. La note de la version installée s'affiche une fois à la première connexion qui suit la mise à jour ; toutes restent relisibles dans Aide, Nouveautés.",
   "notes": [
     {
+      "version": "0.15.0",
+      "date": "2026-11-09",
+      "lignes": [
+        {
+          "public": "tous",
+          "fr": "Messages : sous la fiche de votre demande, écrivez au service technique et lisez ses réponses, photos comprises. « 1 nouveau message » vous signale une réponse, sur l'accueil et dans Mes demandes.",
+          "nl": "Berichten: onder de fiche van uw aanvraag schrijft u naar de technische dienst en leest u zijn antwoorden, foto's inbegrepen. « 1 nieuw bericht » wijst u op een antwoord, op de startpagina en in Mijn aanvragen."
+        },
+        {
+          "public": "tous",
+          "fr": "« Suivre cette demande » met une demande que vous voyez dans Mes demandes ; « Ne plus suivre » l'en retire.",
+          "nl": "« Deze aanvraag volgen » zet een aanvraag die u ziet in Mijn aanvragen; « Niet meer volgen » haalt ze eruit."
+        },
+        {
+          "public": "demandes:traiter",
+          "fr": "Fiche d'une demande : répondez au demandeur, avec un modèle de réponse si besoin, ou écrivez une note interne que le demandeur ne voit jamais et prévenez un collègue. Nouveaux compteurs : « Messages à lire » et « Notes où vous êtes mentionné ».",
+          "nl": "Fiche van een aanvraag: antwoord de aanvrager, zo nodig met een antwoordmodel, of schrijf een interne nota die de aanvrager nooit ziet en verwittig een collega. Nieuwe tellers: « Te lezen berichten » en « Nota's waarin u vermeld wordt »."
+        },
+        {
+          "public": "parametres:gerer",
+          "fr": "Catégories et délais, onglet « Modèles de réponse » : préparez les réponses fréquentes en français et en néerlandais ; quatre modèles sont livrés.",
+          "nl": "Categorieën en termijnen, tabblad « Antwoordmodellen »: bereid de veelgebruikte antwoorden voor in het Frans en het Nederlands; vier modellen worden geleverd."
+        }
+      ]
+    },
+    {
       "version": "0.14.0",
       "date": "2026-11-08",
       "lignes": [

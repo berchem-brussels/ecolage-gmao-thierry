@@ -163,6 +163,8 @@ function tableauBord(user) {
   const retard = filtreEcheance(entiteId, 'retard');
   const proche = filtreEcheance(entiteId, 'proche');
   const attente = filtreAttente(entiteId);
+  const nonLu = require('./messages').filtreNonLus(user);
+  const mention = require('./messages').filtreMentions(user);
   return {
     // 0.14.0 (point 6) : une demande rouverte revient dans la file à qualifier (filtre etats=a_qualifier,rouverte).
     a_qualifier: compter("d.etat IN ('a_qualifier', 'rouverte')"),
@@ -175,6 +177,10 @@ function tableauBord(user) {
     attente_longue: compter(attente.sql, attente.params),
     jours_attente: attente.jours,
     a_cloturer: compter("d.etat = 'terminee'"),
+    // 0.15.0 (point 2) : demandes de l'entité dont le fil a un message que la personne n'a pas lu (filtre messages=non_lus).
+    messages_a_lire: compter(nonLu.sql, nonLu.params),
+    // 0.15.0 (point 3, GES-08) : demandes où la personne est mentionnée dans une note qu'elle n'a pas lue (mentions=a_voir).
+    mentions: compter(mention.sql, mention.params),
   };
 }
 

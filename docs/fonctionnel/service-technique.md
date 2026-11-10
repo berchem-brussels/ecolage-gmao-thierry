@@ -1,6 +1,6 @@
 # Service technique : tableau de bord, liste, qualification et cycle de vie des demandes
 
-Version 0.14.0 · Fiche fonctionnelle (modèle du standard, section 17.8).
+Version 0.15.0 · Fiche fonctionnelle (modèle du standard, section 17.8).
 
 ## Objet
 
@@ -40,6 +40,11 @@ Donner au gestionnaire technique et au responsable du service technique de chaqu
 | 12 | Une attente pour un motif coché dans Réglages de l'entité suspend le délai (« Délai suspendu », jamais « En retard ») ; à la sortie, l'échéance de fin est repoussée du temps suspendu, en temps ouvrable (calendaire pour P1) ; une date convenue ne bouge pas (0.14.0) | PRI-03, DV-119 |
 | 13 | Compteurs « En attente depuis plus de N jours ouvrés » (N réglé par l'entité, 5 livré) et « À clôturer (travaux terminés) », chacun égal au total de la liste filtrée ; « À qualifier » compte aussi les demandes rouvertes (0.14.0) | GES-01, DV-92 |
 | 14 | Une demande rouverte par le demandeur revient « Rouverte », à requalifier ; ses délais repartent de la réouverture et son temps suspendu est remis à zéro ; le service ne rouvre pas à la place du demandeur (0.14.0) | SUI-06 |
+| 15 | Fil de messages (0.15.0) : le service (« demandes:traiter ») répond au demandeur ou écrit une note interne, jamais montrée au demandeur, à la GRC ni par l'assistant au demandeur ; les noms des agents ne sont lus que par le service ; écriture seulement sur une demande ouverte ; une photo envoyée dans le fil ne se retire que par le service | SUI-04, GES-08, SEC-02 |
+| 16 | Mentions (0.15.0) : une note interne prévient de 1 à 10 collègues du service de l'entité ; la mention reste « à voir » jusqu'à la lecture du fil ; compteur « Notes où vous êtes mentionné » et filtre « Mentions » (même total) ; la cloche et le courriel viennent à l'étape 13 | GES-08 |
+| 17 | Compteur « Messages à lire » (demandes dont le fil a un message que la personne n'a pas lu, demandes fermées comprises) et filtre « Messages », même total ; chaque personne a son propre repère de lecture (0.15.0) | SUI-04, GES-01 |
+| 18 | Modèles de réponse (0.15.0) : dans une réponse au demandeur, « Insérer un modèle » met le texte dans la langue de la demande, numéro, lieu, état et prénom remplis ; on le relit avant l'envoi | GES-09 |
+| 19 | « Suivre cette demande » depuis la fiche du service ; la fiche dit, pour chaque personne qui suit, « Moi aussi » ou « suit la demande » (0.15.0) | SUI-09 |
 
 ## Écrans
 
@@ -49,12 +54,13 @@ Donner au gestionnaire technique et au responsable du service technique de chaqu
 | Demandes de l'entité | Tableau de bord ; filtres et vues (repliés sur téléphone) ; colonnes numéro, priorité, état, échéance, quoi, où, demandeur, date de dépôt | Filtrer, trier, enregistrer, remplacer ou supprimer une vue, ouvrir une fiche | « Aucune demande pour ces filtres. » |
 | Fiche d'une demande (service) | État du service, priorité et motif, échéances, lieu et, sous lui, la photo de l'endroit (0.13.0 : celle du lieu ; à défaut, celle du plus proche lieu au-dessus, dite comme telle ; agrandie au toucher), description, pièces jointes, demandeur, durée estimée, consignes, qualifiée le … par … | « Qualifier » ou « Modifier la qualification » | |
 | Qualifier la demande | Photo de l'endroit en tête (0.13.0), catégorie, priorité en boutons avec la proposition, motif, lieu, durée, date convenue, consignes, photos visibles | « Qualifier » ou « Enregistrer », « Annuler » | « Vous changez la priorité proposée : indiquez le motif. », « Demande qualifiée » |
+| Volet d'une demande, fil de messages (0.15.0) | Messages du demandeur et du service, notes internes encadrées, mentions (@Prénom Nom), repère « Nouveaux messages » ; destinataire (réponse au demandeur, note interne), « Prévenir un collègue », « Insérer un modèle », texte, photos et documents | « Envoyer » ou « Enregistrer la note », « Suivre cette demande », « Ne plus suivre » | « Écrivez un message ou joignez une photo ou un document. », « Cette demande est déjà terminée… » |
 | Volet d'une demande, actions et historique (0.14.0) | Boutons des passages permis ; formulaire du passage (motif en liste, commentaire, case « Lu par le demandeur » selon le passage, compte rendu à la clôture) ; compléments et avis du demandeur ; historique | Passer à l'état choisi | Refus du serveur affiché, saisie gardée |
 
 ## Données personnelles
 
-Aucune donnée personnelle nouvelle sur le demandeur. La qualification ajoute le nom de la personne qui qualifie (lu par le service technique), les consignes à l'ouvrier et le motif d'un changement de priorité (consigne : décrire le travail, pas les personnes). Les vues enregistrées ne contiennent que des filtres. La photo de l'endroit (0.13.0) est une photo de lieu déjà en base, sans personne (DV-12), montrée au seul service technique. Depuis la 0.14.0 : auteur et heure de chaque passage, commentaire et compte rendu (textes libres : décrire le travail, pas les personnes), lus par le service ; le demandeur lit les seuls commentaires qui lui sont destinés. Rien n'est envoyé hors de l'application.
+Aucune donnée personnelle nouvelle sur le demandeur. La qualification ajoute le nom de la personne qui qualifie (lu par le service technique), les consignes à l'ouvrier et le motif d'un changement de priorité (consigne : décrire le travail, pas les personnes). Les vues enregistrées ne contiennent que des filtres. La photo de l'endroit (0.13.0) est une photo de lieu déjà en base, sans personne (DV-12), montrée au seul service technique. Depuis la 0.14.0 : auteur et heure de chaque passage, commentaire et compte rendu (textes libres : décrire le travail, pas les personnes), lus par le service ; le demandeur lit les seuls commentaires qui lui sont destinés. Depuis la 0.15.0 : messages et notes internes du fil (textes libres : décrire le problème et le travail, pas les personnes), collègues mentionnés, repère de lecture de chaque personne ; le journal garde le nombre de mentions, jamais leurs noms ni les textes. Rien n'est envoyé hors de l'application.
 
 ## Ce qui vient ensuite
 
-Compteurs « en attente » et « à clôturer », suspension, refus, clôture : faits en 0.14.0 ; commentaires internes et modèles de réponse (étape 10) ; création par le gestionnaire, fusion, vue en colonnes (étape 12) ; alerte de retard par courriel (étape 13) ; corps de métier et équipes, filtres par équipe et par ouvrier (étapes 15 et 16) ; affectation et planning (étapes 16 et 17) ; tâches (étape 21).
+Compteurs « en attente » et « à clôturer », suspension, refus, clôture : faits en 0.14.0 ; commentaires internes, mentions, modèles de réponse et abonnement : faits en 0.15.0 ; création par le gestionnaire, fusion, vue en colonnes (étape 12) ; alerte de retard par courriel (étape 13) ; corps de métier et équipes, filtres par équipe et par ouvrier (étapes 15 et 16) ; affectation et planning (étapes 16 et 17) ; tâches (étape 21).

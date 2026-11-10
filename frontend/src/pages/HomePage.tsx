@@ -9,11 +9,11 @@
  */
 import { useEffect, useState } from 'react';
 import { Alert, Card, List, Space, Table, Tag, Typography } from 'antd';
-import { PlusOutlined, ProfileOutlined, InboxOutlined } from '@ant-design/icons';
+import { PlusOutlined, ProfileOutlined, InboxOutlined, MessageOutlined } from '@ant-design/icons';
 import { Link } from 'react-router-dom';
 import api, { qs } from '../api';
 import { type Demande, dateDepot } from '../demandes';
-import { EtatTag } from './DemandesPage';
+import { EtatTag, NonLusTag } from './DemandesPage';
 import TableauBord from '../components/demandes/TableauBord';
 import { useAuth } from '../contexts/AuthContext';
 import { useI18n } from '../contexts/I18nContext';
@@ -48,6 +48,14 @@ export default function HomePage() {
     api.page<Demande>(`/demandes${qs({ ouvertes: 1, limit: 3 })}`).then((r) => setEnCours(r.data)).catch(() => setEnCours([]));
   }, [entite?.id]);
 
+  // 0.15.0 (point 2) : demandes de la personne dont le fil a un message qu'elle n'a pas lu.
+  const [nouveaux, setNouveaux] = useState<number | null>(null);
+  useEffect(() => {
+    setNouveaux(null);
+    if (!entite) return;
+    api.page<Demande>(`/demandes${qs({ messages: 'non_lus', limit: 1 })}`).then((r) => setNouveaux(r.pagination.total)).catch(() => setNouveaux(null));
+  }, [entite?.id]);
+
   useEffect(() => {
     setAQualifier(null);
     if (!entite || !voitEntite) return;
@@ -72,6 +80,10 @@ export default function HomePage() {
             </div>
           </Card>
         )}
+        {entite && !!nouveaux && (
+          <Alert type="info" showIcon icon={<MessageOutlined aria-hidden />}
+            message={<Link to="/demandes?messages=non_lus">{nouveaux === 1 ? t('home.messages.un') : t('home.messages').replace('{n}', String(nouveaux))}</Link>} />
+        )}
         {entite && voitEntite && <Card><TableauBord /></Card>}
         {entite && (
           <Card title={<Typography.Title level={2} style={{ fontSize: 16, margin: 0, marginInlineEnd: 12, whiteSpace: 'normal' }}>{t('home.encours')}</Typography.Title>}
@@ -82,7 +94,7 @@ export default function HomePage() {
                   <Space direction="vertical" size={2} style={{ width: '100%' }}>
                     <Space wrap style={{ justifyContent: 'space-between', width: '100%' }}>
                       <Link to={`/demandes?demande=${d.id}`}><Typography.Text strong>{d.numero}</Typography.Text></Link>
-                      <EtatTag etat={d.etat} />
+                      <Space size={4} wrap><EtatTag etat={d.etat} /><NonLusTag n={d.messages_non_lus} /></Space>
                     </Space>
                     <Typography.Text type="secondary" style={{ fontSize: 13 }}>
                       {tField(d as unknown as Record<string, unknown>, 'categorie_libelle')} · {tField(d as unknown as Record<string, unknown>, 'lieu_nom')} · {dateDepot(d.created_at)}

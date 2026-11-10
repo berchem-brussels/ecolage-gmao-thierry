@@ -1,10 +1,14 @@
 # Architectuur
 
-Versie van de toepassing: **0.14.0** · De Franse tekst is rechtsgeldig (`docs/fr/ARCHITECTURE.md`); dit bestand vat elke versie samen.
+Versie van de toepassing: **0.15.0** · De Franse tekst is rechtsgeldig (`docs/fr/ARCHITECTURE.md`); dit bestand vat elke versie samen.
+
+## Berichten, vermeldingen, antwoordmodellen en volgen (0.15.0)
+
+Migratie `013_messages`: tabellen `demande_messages` (auteur aanvrager, begunstigde of dienst; interne nota; tekst tot 4 000 tekens; taal; kanaal), `demande_messages_lus` (laatst gelezen bericht per persoon en aanvraag), `demande_mentions`, `modeles_reponse`; kolommen `pieces_jointes.message_id` en `attente_message`, `demande_suiveurs.source`. Diensten `services/messages.js` (gelezen door aanvrager, begunstigde en dienst, interne nota's enkel voor de dienst, schrijven enkel bij open aanvragen, ongelezen, vermeldingen), `services/modeles-reponse.js` (variabelen `{numero}`, `{lieu}`, `{etat}`, `{prenom}`, vier geleverde modellen). Routes `/api/demandes/:id/messages` (en `/lu`, `/pieces`, `/mentionnables`), `DELETE /api/demandes/:id/suivre`, `/api/modeles-reponse`; elf MCP-tools; bijlagen van berichten buiten MCP (E-17, zes routes). Interface: `FilMessages.tsx`, `SuiviDemande.tsx`, `ModelesTab.tsx`, tellers « Te lezen berichten » en « Nota's waarin u vermeld wordt ».
 
 ## Levenscyclus van de aanvragen (0.14.0)
 
-Catalogus `backend/config/cycle-de-vie.json` (15 statussen, 25 overgangen), bij het opstarten gekopieerd naar `demande_transitions` en, per entiteit, naar `demande_etats` (benamingen voor de aanvrager en het KRM). Migratie `012_cycle_de_vie`: tabellen `demande_transitions`, `demande_etats`, `demande_historique`, `demande_complements`, `demande_avis`, zeven kolommen van `demandes`. Dienst `services/cycle.js`: volgorde van de controles (entiteit, aanvraag 404 of 403, toelating 403, module, overgang 409), nieuwe permissie `demandes:traiter`, opschorting van de termijn tijdens een wachttijd om een aangevinkte reden. Negen routes (`/api/demandes/:id/historique`, `/transitions`, `PUT` en `DELETE /api/demandes/:id`, `/pieces`, `/avis`, `/api/etats-demande`), acht MCP-tools. Interface: `ChangerEtat.tsx`, `HistoriqueDemande.tsx`, `ActionsDemandeur.tsx`, `EtatsTab.tsx`.
+Catalogus `backend/config/cycle-de-vie.json` (15 statussen, 26 overgangen), bij het opstarten gekopieerd naar `demande_transitions` en, per entiteit, naar `demande_etats` (benamingen voor de aanvrager en het KRM). Migratie `012_cycle_de_vie`: tabellen `demande_transitions`, `demande_etats`, `demande_historique`, `demande_complements`, `demande_avis`, zeven kolommen van `demandes`. Dienst `services/cycle.js`: volgorde van de controles (entiteit, aanvraag 404 of 403, toelating 403, module, overgang 409), nieuwe permissie `demandes:traiter`, opschorting van de termijn tijdens een wachttijd om een aangevinkte reden. Negen routes (`/api/demandes/:id/historique`, `/transitions`, `PUT` en `DELETE /api/demandes/:id`, `/pieces`, `/avis`, `/api/etats-demande`), acht MCP-tools. Interface: `ChangerEtat.tsx`, `HistoriqueDemande.tsx`, `ActionsDemandeur.tsx`, `EtatsTab.tsx`.
 
 ## Hulp per scherm en lokale FAQ (0.12.0)
 

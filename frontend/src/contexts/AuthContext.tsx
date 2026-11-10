@@ -1,6 +1,6 @@
 /** Session de la personne connectée (patron SAGA AuthContext.tsx, session en cookie côté serveur). */
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import api, { setCsrfToken } from '../api';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
+import api, { ApiError, setCsrfToken } from '../api';
 import { redirection } from '../connexion';
 import type { LieuChoisi } from '../demandes';
 
@@ -69,6 +69,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => { refresh().finally(() => setLoading(false)); }, [refresh]);
+
+  // 0.15.0, R1 de la recette de la 0.14.0 : un autre onglet a pu fermer la session et en ouvrir une autre (changement
+  // de compte). Le cookie est commun aux onglets : cet onglet parlerait au serveur pour la nouvelle personne en
+  // montrant l'écran de l'ancienne (fenêtre « Nouveautés », nom, rôles, fiches ouvertes). Au retour sur l'onglet
+  // (focus, ou page de nouveau visible sur téléphone), le profil est relu ; s'il a changé de personne, la page est
+  // rechargée à l'accueil, ce qui vide tout l'état de l'écran. Une session fermée renvoie à la connexion.
+  const userId = useRef<number | null>(null);
+  userId.current = user?.id ?? null;
+  useEffect(() => {
+    let enCours = false;
+    const verifier = async () => {
+      if (userId.current === null || enCours || document.visibilityState === 'hidden') return;
+      enCours = true;
+      try {
+        const me = await api.get<User>('/auth/me');
+        if (userId.current !== null && me.id !== userId.current) redirection.vers('/');
+      } catch (e) {
+        // Session fermée ailleurs : retour à la connexion. Autre erreur (réseau coupé) : on garde l'écran.
+        if (e instanceof ApiError && e.status === 401) setUser(null);
+      } finally { enCours = false; }
+    };
+    window.addEventListener('focus', verifier);
+    document.addEventListener('visibilitychange', verifier);
+    return () => { window.removeEventListener('focus', verifier); document.removeEventListener('visibilitychange', verifier); };
+  }, []);
   useEffect(() => {
     const h = () => setUser(null);
     window.addEventListener('app-unauthorized', h);

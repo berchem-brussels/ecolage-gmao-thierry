@@ -138,18 +138,23 @@ test('refus d’un réglage de l’entité : réglage et valeur nommés, en FR e
 });
 
 // 0.13.0 (D6 du contrôle DV-113) : aucune explication de réglage n'annonce au futur une étape déjà livrée (1 à 8).
-test('explications des réglages : plus d’annonce d’une étape déjà livrée', () => {
+// 0.15.0 (R2 de la recette de la 0.14.0) : la règle ne visait que « (étape N) » de 1 à 8 et laissait passer « (étape 9,
+// avis et réouverture) ». Un numéro d'étape du planning ne dit rien à l'utilisateur : aucun, quelle que soit sa forme.
+test('explications des réglages : aucun numéro d’étape du planning', () => {
   const fs = require('node:fs');
   const path = require('node:path');
   for (const f of ['parametres-entite.json', 'parametres-instance.json']) {
     const cat = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'config', f), 'utf8'));
     for (const p of cat.parametres) {
       for (const d of [p.description_fr, p.description_nl]) {
-        assert.doesNotMatch(d || '', /\((étape|stap) [1-8]\)/, `${f} ${p.cle}`);
+        assert.doesNotMatch(d || '', /(étape|stap|step) \d+/i, `${f} ${p.cle}`);
       }
     }
   }
   const u = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'config', 'parametres-entite.json'), 'utf8')).parametres.find((p) => p.cle === 'urgence.telephone');
   assert.match(u.description_fr, /coche « Danger pour les personnes ou les biens »/);
   assert.match(u.description_nl, /Gevaar voor personen of goederen/);
+  const r = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'config', 'parametres-entite.json'), 'utf8')).parametres.find((p) => p.cle === 'demandes.delai_reouverture_jours');
+  assert.match(r.description_fr, /0 : la réouverture n'est pas possible/);
+  assert.match(r.description_nl, /0: heropenen is niet mogelijk/);
 });

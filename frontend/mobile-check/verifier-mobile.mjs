@@ -9,6 +9,10 @@
  * MOBILE_CHROMIUM : chemin d'un Chromium déjà installé (facultatif). Code de sortie 1 si un défaut est trouvé.
  * 0.14.0 (point 7) : ouvre aussi la fiche (volet latéral) d'une demande de la personne et d'une demande de l'entité, si
  * elles existent, et signale un volet plus large que l'écran (un tableau qui déborde sans faire défiler la page).
+ * 0.15.0 (point 6) : parmi les demandes lues, ouvre celles dont le fil est le plus garni (messages, note interne avec
+ * mention, pièce jointe) ; le volet du service est mesuré une seconde fois en « Note interne au service », avec les
+ * champs « Prévenir un collègue » et le fil complet (défaut de la 0.15.0 vu à la main : étiquette de mention plus large
+ * que le volet de 3 px à 360 px) ; signale aussi un contenu plus large que sa bulle de message.
  */
 import { chromium, devices } from '@playwright/test';
 
@@ -18,7 +22,7 @@ const PASSWORD = process.env.MOBILE_PASSWORD;
 if (!USER || !PASSWORD) { console.error('MOBILE_USER et MOBILE_PASSWORD sont requis.'); process.exit(2); }
 
 const ROUTES = ['/', '/demandes/nouvelle', '/demandes', '/demandes-entite', '/patrimoine', '/listes',
-  '/referentiel', '/referentiel?onglet=priorites', '/referentiel?onglet=calendrier', '/referentiel?onglet=simulateur', '/referentiel?onglet=etats',
+  '/referentiel', '/referentiel?onglet=priorites', '/referentiel?onglet=calendrier', '/referentiel?onglet=simulateur', '/referentiel?onglet=etats', '/referentiel?onglet=modeles',
   '/patrimoine?photo=sans', '/reglages-entite', '/entites', '/users', '/parametres', '/parametres?onglet=modules', '/parametres?onglet=connexion',
   '/parametres?onglet=tickets', '/journal', '/tickets', '/help', '/help?fiche=journal', '/accessibility'];
 const APPAREILS = [
@@ -40,8 +44,10 @@ const mesurer = () => {
     .filter((i) => i.getBoundingClientRect().width && parseFloat(getComputedStyle(i).fontSize) < 16).length;
   const h = document.querySelector('header');
   const volet = document.querySelector('.ant-drawer-open .ant-drawer-body');
+  // 0.15.0 (point 6) : contenu plus large que sa bulle de message (étiquette de mention, mot long, vignette).
+  const bulles = [...document.querySelectorAll('.fil-bulle')].filter((b) => b.scrollWidth > b.clientWidth + 1).length;
   return { large: document.documentElement.scrollWidth, W, sort, petits, entete: h ? h.scrollWidth - h.clientWidth : 0,
-    volet: volet ? volet.scrollWidth - volet.clientWidth : 0 };
+    volet: volet ? volet.scrollWidth - volet.clientWidth : 0, bulles };
 };
 
 const navigateur = await chromium.launch(process.env.MOBILE_CHROMIUM ? { executablePath: process.env.MOBILE_CHROMIUM } : {});
@@ -67,16 +73,34 @@ for (const [nom, appareil] of APPAREILS) {
       const me = await fetch('/api/auth/me').then((r) => r.json());
       await fetch('/api/auth/preferences', { method: 'PUT', headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': me.data.csrf_token }, body: JSON.stringify({ preferred_lang: lg }) });
     }, lang);
-    // Fiches (volets) : une demande de la personne, une demande de l'entité (service technique), lues par l'API.
+    // Fiches (volets) : une demande de la personne, une demande de l'entité (service technique), lues par l'API ; de
+    // préférence celle dont le fil est le plus garni (0.15.0).
     const fiches = await page.evaluate(async () => {
-      const une = async (u) => { const r = await fetch(u); if (!r.ok) return null; const j = await r.json(); return j.data && j.data[0] ? j.data[0].id : null; };
-      return { mienne: await une('/api/demandes?limit=1'), entite: await une('/api/demandes?perimetre=entite&limit=1') };
+      const score = async (id) => {
+        const r = await fetch(`/api/demandes/${id}/messages`); if (!r.ok) return 0;
+        const m = (await r.json()).data || [];
+        return m.length + 5 * m.some((x) => x.mentions && x.mentions.length) + 3 * m.some((x) => x.pieces && x.pieces.length) + 2 * m.some((x) => x.interne);
+      };
+      const meilleure = async (u) => {
+        const r = await fetch(u); if (!r.ok) return null;
+        const ids = ((await r.json()).data || []).map((d) => d.id);
+        let best = ids[0] ?? null; let max = -1;
+        for (const id of ids) { const s = await score(id); if (s > max) { max = s; best = id; } }
+        return best;
+      };
+      return { mienne: await meilleure('/api/demandes?limit=20'), entite: await meilleure('/api/demandes?perimetre=entite&limit=20') };
     });
-    const routes = [...ROUTES, ...(fiches.mienne ? [`/demandes?demande=${fiches.mienne}`] : []), ...(fiches.entite ? [`/demandes-entite?demande=${fiches.entite}`] : [])];
+    const routes = [...ROUTES, ...(fiches.mienne ? [`/demandes?demande=${fiches.mienne}`] : []),
+      ...(fiches.entite ? [`/demandes-entite?demande=${fiches.entite}`, `/demandes-entite?demande=${fiches.entite}#note-interne`] : [])];
     if (nom === APPAREILS[0][0] && lang === 'fr') nbEcrans = routes.length;
     for (const r of routes) {
       await page.goto(B + r);
       await page.waitForTimeout(1200);
+      // 0.15.0 : « Note interne au service » choisi, pour mesurer les champs propres à la note (mention).
+      if (r.endsWith('#note-interne')) {
+        const choix = page.locator('.fil-saisie .ant-radio-button-wrapper').nth(1);
+        if (await choix.count()) { await choix.click(); await page.waitForTimeout(600); }
+      }
       const m = await page.evaluate(mesurer);
       const pb = [];
       if (m.large > m.W + 1) pb.push(`défilement horizontal (${m.large} px pour ${m.W})`);
@@ -84,6 +108,7 @@ for (const [nom, appareil] of APPAREILS) {
       if (m.petits) pb.push(`${m.petits} champ(s) en moins de 16 px`);
       if (m.entete > 1) pb.push(`en-tête trop large de ${m.entete} px`);
       if (m.volet > 1) pb.push(`volet trop large de ${m.volet} px`);
+      if (m.bulles) pb.push(`${m.bulles} message(s) plus large(s) que leur bulle`);
       if (pb.length) defauts.push(`${nom} · ${lang.toUpperCase()} · ${r} : ${pb.join(' ; ')}`);
     }
     if (erreurs.length) defauts.push(`${nom} · ${lang.toUpperCase()} · erreurs : ${[...new Set(erreurs)].join(' ; ')}`);

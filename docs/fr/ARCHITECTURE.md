@@ -1,6 +1,6 @@
 # Architecture
 
-Version 0.14.0 · Le français fait foi.
+Version 0.15.0 · Le français fait foi.
 
 ## Services
 
@@ -11,7 +11,7 @@ Version 0.14.0 · Le français fait foi.
 
 Base `sql.js` dans le volume `db-data` (`/app/data/app.db`), écrite par le seul processus `api`. Photos des lieux dans le même volume (`/app/data/photos`, variable `PHOTOS_DIR`) et, depuis la 0.8.0, pièces jointes des demandes (`/app/data/pieces`, variable `PIECES_DIR`), hors de la racine web, lues par des routes authentifiées. Certificat dans le volume `ssl-certs`. PostgreSQL 16 arrive au lot L7 (standard, section 5).
 
-## Tables (migrations `001_noyau` à `012_cycle_de_vie`)
+## Tables (migrations `001_noyau` à `013_messages`)
 
 | Table | Rôle | Points clés |
 | --- | --- | --- |
@@ -45,6 +45,12 @@ Base `sql.js` dans le volume `db-data` (`/app/data/app.db`), écrite par le seul
 | `demande_historique` | Historique des passages (0.14.0, CYC-02) | `demande_id`, `de_etat`, `vers_etat`, `user_id`, `motif_id`, `commentaire`, `commentaire_public`, `canal` ; jamais modifié ni effacé |
 | `demande_complements` | Compléments du demandeur (0.14.0, SUI-05) | `demande_id`, `user_id`, `texte` (1 à 2 000 caractères), `langue` ; la description ne change jamais |
 | `demande_avis` | Avis du demandeur à la clôture (0.14.0, SUI-06) | `demande_id`, `user_id`, `note` 1 à 5, `commentaire` facultatif ; un par clôture |
+| `demande_messages` | Fil de messages d'une demande (0.15.0, SUI-04) | `demande_id`, `entite_id`, `user_id`, `auteur` (`demandeur`, `beneficiaire`, `service`), `interne` (note du service ; contrainte « interne ⇒ service »), `texte` (1 à 4 000 ou nul avec des pièces), `langue`, `canal` ; jamais modifié ni effacé |
+| `demande_messages_lus` | Dernier message lu, par demande et par personne (0.15.0) | (`demande_id`, `user_id`) clé ; `dernier_id`, `lu_le` ; effacé avec le compte |
+| `demande_mentions` | Collègues mentionnés dans une note interne (0.15.0, GES-08) | (`message_id`, `user_id`) clé |
+| `modeles_reponse` | Modèles de réponse au demandeur (0.15.0, GES-09) | `entite_id`, `code` (modèles livrés), `titre_fr`, `titre_nl`, `texte_fr`, `texte_nl`, `ordre`, `is_active`, motif, trace |
+| `pieces_jointes` (0.15.0) | Colonnes `message_id` (pièce d'un message) et `attente_message` (pièce qui attend le prochain message de son auteur) | |
+| `demande_suiveurs` (0.15.0) | Colonne `source` : `moi_aussi` (défaut, suivis déjà en base) ou `abonnement` | |
 | `schema_migrations` | Journal des migrations | |
 
 ## Rôles
@@ -136,6 +142,11 @@ Photo : `POST /api/lieux/:id/photo` reçoit le fichier en formulaire multipart, 
 | `PUT /api/demandes/:id` (complément), `DELETE /api/demandes/:id` (annulation avec motif, jamais de suppression), `POST /api/demandes/:id/pieces`, `POST /api/demandes/:id/avis` (0.14.0) | demandeur ou bénéficiaire, demande ouverte (complément, photo), jamais « En cours » (annulation), « Clôturée » (avis) | `services/demandes.js`, `services/cycle.js`, `services/pieces.js` |
 | `GET /api/etats-demande`, `GET /api/etats-demande/transitions` (0.14.0) | rôle dans l'entité active | `services/cycle.js` |
 | `PUT /api/etats-demande/:code` (0.14.0) | `parametres:gerer` | `services/cycle.js` |
+| `GET` et `POST /api/demandes/:id/messages`, `POST /api/demandes/:id/messages/lu` (0.15.0) | lecture : demandeur, bénéficiaire, `demandes:entite` (notes internes au service seul) ; écriture : demandeur, bénéficiaire, `demandes:traiter` (note interne : service), demande ouverte | `services/messages.js` |
+| `GET` et `POST /api/demandes/:id/messages/pieces` (0.15.0) | auteur du prochain message (multipart, hors MCP, E-17) | `services/pieces.js` |
+| `GET /api/demandes/:id/messages/mentionnables` (0.15.0) | `demandes:traiter` | `services/messages.js` |
+| `DELETE /api/demandes/:id/suivre` (0.15.0) ; `POST /api/demandes/:id/suivre` accepte `source` | la personne qui suit | `services/demandes.js` |
+| `/api/modeles-reponse` (0.15.0 : liste, fiche, création, modification, désactivation) | lecture : `demandes:traiter` ou `parametres:gerer` ; écriture : `parametres:gerer` | `services/modeles-reponse.js` |
 | `POST /api/mcp` | session ou jeton porteur | `mcp.js` |
 | `GET /api/openapi.json` | session | `openapi.js` |
 
@@ -320,9 +331,19 @@ Repris du gabarit 1.3.0 (`services/tickets.js`, `routes/tickets.js`, schémas, n
 - Refus d'un réglage nommé (`services/refus-reglage.js`) : `AppError` porte un texte FR et NL propre au refus, rendu à la place du message général du code par l'API et le MCP (`messageOf`).
 - Contrôles après installation : `recette.sh` (racine) et `backend/src/recette-api.js` (dans le conteneur de l'API, lecture seule).
 
+## Fil de messages, mentions, modèles et abonnement (0.15.0)
+
+- Migration `013_messages` : tables `demande_messages`, `demande_messages_lus`, `demande_mentions`, `modeles_reponse` ; colonnes `pieces_jointes.message_id`, `pieces_jointes.attente_message`, `demande_suiveurs.source`. Ajouts seulement.
+- `services/messages.js` : règles 1 à 9 (lecture, notes internes, écriture sur une demande ouverte, contenu, auteur, journal sans texte, ordre des contrôles, non lu, mentions) ; `filtreNonLus` et `filtreMentions` : clauses constantes et « ? » pour la liste (`messages=non_lus`, `mentions=a_voir`) et le tableau de bord (`messages_a_lire`, `mentions`) ; `droits` rend `fil` (lecture, ecriture, interne) sur la fiche.
+- `services/pieces.js`, règle 8 : pièce en attente du message, rattachée à l'envoi (`attacher`), lue selon le message, hors des pièces de la demande, plafond par message, purge après 30 jours.
+- `services/modeles-reponse.js` et `config/modeles-reponse.json` : variables admises, quatre modèles livrés créés à l'installation, au démarrage et à la création d'une entité (`seedEntite`) ; `changements('modeles_reponse')` au journal.
+- `services/demandes.js` : `suivre` (source), `nePlusSuivre`, `decrireNePlusSuivre` ; `suivie`, `suivi_source`, `suivable`, `messages_non_lus` sur la fiche, `messages_non_lus` sur chaque ligne de la liste.
+- Interface : `components/demandes/FilMessages.tsx` (fil, saisie, destinataire, mentions, modèle), `SuiviDemande.tsx`, `components/referentiel/ModelesTab.tsx` ; `texteModele` (`demandes.ts`) ; `NonLusTag` ; compteurs « Messages à lire » et « Notes où vous êtes mentionné » ; `AuthContext` relit le profil au retour sur l'onglet (R1).
+- Contrôles : `mobile:check` ouvre les volets au fil le plus garni et mesure les bulles ; `help:capture` sait faire défiler (`scrollSel`) ; `recette.sh`, contrôle 5 : migration `013_messages`, tables du fil, modèles livrés.
+
 ## Cycle de vie des demandes (0.14.0)
 
-- Catalogue `backend/config/cycle-de-vie.json` : 15 états (fermé ou non, compte ou non pour le retard, suspension `non` ou `selon_motif`, libellés livrés FR et NL) et 25 passages, copiés au démarrage dans `demande_transitions` (un passage désactivé n'est jamais réactivé) et, par entité, dans `demande_etats`. Migration `012_cycle_de_vie` : cinq tables, sept colonnes de `demandes` (`etat_depuis`, `cause_id`, `compte_rendu`, `attente_suspend`, `suspendu_ouvrable_min`, `suspendu_calendaire_min`, `decompte_depuis`) et historique des demandes déjà en base (réception, qualification).
+- Catalogue `backend/config/cycle-de-vie.json` : 15 états (fermé ou non, compte ou non pour le retard, suspension `non` ou `selon_motif`, libellés livrés FR et NL) et 26 passages, copiés au démarrage dans `demande_transitions` (un passage désactivé n'est jamais réactivé) et, par entité, dans `demande_etats`. Migration `012_cycle_de_vie` : cinq tables, sept colonnes de `demandes` (`etat_depuis`, `cause_id`, `compte_rendu`, `attente_suspend`, `suspendu_ouvrable_min`, `suspendu_calendaire_min`, `decompte_depuis`) et historique des demandes déjà en base (réception, qualification).
 - Service `services/cycle.js` : ordre des contrôles entité, demande (404, 403), permission (403 ; un demandeur ne reçoit jamais 409 pour un état qu'il ne peut viser), module, passage (409), motif, commentaire, compte rendu ; écriture du passage, de l'historique et du journal dans une transaction ; annulation, avis, réouverture ; permission nouvelle `demandes:traiter`.
 - Suspension (PRI-03, DV-119) : l'attente pour un motif coché dans `demandes.attente_suspend` (réglage de type `codes_liste`) suspend ; à la sortie, l'échéance de fin est repoussée du temps suspendu par `echeances.repousser` (minutes ouvrables par `minutesOuvrables`, ou calendaires pour une priorité en heures calendaires) ; à la réouverture, échéances recalculées depuis `decompte_depuis`.
 - Routes `GET /api/demandes/:id/historique`, `POST /api/demandes/:id/transitions`, `PUT /api/demandes/:id` (complément), `DELETE /api/demandes/:id` (annulation avec motif), `POST /api/demandes/:id/pieces` (photo ajoutée, hors MCP, E-17), `POST /api/demandes/:id/avis`, `GET /api/etats-demande`, `GET /api/etats-demande/transitions`, `PUT /api/etats-demande/:code` ; huit outils MCP. Tableau de bord : `attente_longue` (`demandes.attente_jours`, jours ouvrés par `joursOuvresAvant`) et `a_cloturer`, filtre `attente=longue`.

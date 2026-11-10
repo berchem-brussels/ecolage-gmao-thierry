@@ -1,6 +1,6 @@
 # MCP-server
 
-Versie van de toepassing: **0.14.0** · Bijgewerkt op 08/11/2026 · De Franse tekst is rechtsgeldig (`docs/fr/MCP.md`).
+Versie van de toepassing: **0.15.0** · Bijgewerkt op 09/11/2026 · De Franse tekst is rechtsgeldig (`docs/fr/MCP.md`).
 
 ## Toegang en regels
 
@@ -9,6 +9,10 @@ Versie van de toepassing: **0.14.0** · Bijgewerkt op 08/11/2026 · De Franse te
 - Authenticatie: de sessie, of het sessietoken in `Authorization: Bearer`. OAuth 2.1 met PKCE komt in stap 44 (afwijking E-10).
 - Limiet: 60 oproepen per minuut en per persoon.
 - Elke tool roept dezelfde dienstfunctie op als de REST-route, met de identiteit en de rechten van de persoon, in haar actieve entiteit. Een deactivering, intrekking of wissing gebeurt in twee oproepen (`prepare_*`, dan `confirm_*`). Geen tool voor vrije SQL.
+
+## 0.15.0
+
+Nieuwe tools: `list_messages_demande` (berichten van een aanvraag; de aanvrager en de begunstigde krijgen geen interne nota's en geen namen van agenten van de dienst; wie alleen volgt, leest de berichten niet), `add_message_demande` (`texte`, `interne`, `mentions` van collega's van de dienst in een interne nota, enkel bij open aanvragen), `mark_messages_lus`, `list_mentionnables_demande`, `list_pieces_message`, `list_modeles_reponse`, `get_modele_reponse`, `create_modele_reponse`, `update_modele_reponse`, `deactivate_modele_reponse` in twee oproepen (enkel variabelen `{numero}`, `{lieu}`, `{etat}`, `{prenom}`), `ne_plus_suivre_demande` in twee oproepen. `suivre_demande` neemt `source` `abonnement`; `get_demande`, `list_demandes` (`messages`, `mentions`) en `get_tableau_bord` (`messages_a_lire`, `mentions`) zijn uitgebreid. Het opladen van een bijlage bij een bericht blijft buiten MCP (E-17).
 
 ## 0.14.0
 

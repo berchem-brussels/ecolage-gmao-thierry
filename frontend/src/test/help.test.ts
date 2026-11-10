@@ -36,6 +36,19 @@ describe('fiches d’aide', () => {
     }
   });
 
+  // 0.15.0 (R2 de la recette de la 0.14.0) : « étape 38 » dans le « ? » du texte GRC. Un numéro d'étape du planning
+  // ne dit rien à l'utilisateur : aucun dans les fiches, les « ? », les textes de l'écran et les réponses de l'assistant.
+  it('aucun numéro d’étape du planning dans un texte montré', () => {
+    const etape = /(étape|stap|step) \d+/i;
+    for (const tp of TOPICS) {
+      const all: L[] = [tp.purpose, ...tp.layout, ...tp.procedures.flatMap((p) => [p.title, p.when, p.result, ...p.steps, ...(p.errors || []).flatMap((e) => [e.problem, e.solution])]), ...tp.faq.flatMap((f) => [f.q, f.a])];
+      for (const l of all) for (const x of texts(l)) expect(x, tp.id).not.toMatch(etape);
+    }
+    for (const [k, v] of Object.entries(hints)) for (const x of texts(v)) expect(x, k).not.toMatch(etape);
+    for (const [k, v] of Object.entries(translations)) for (const x of [v.fr, v.nl]) expect(x, k).not.toMatch(etape);
+    expect(hints['ref.etat.grc'].fr).toMatch(/une fois les deux applications reliées/);
+  });
+
   it('identifiants et adresses uniques ; chaque adresse retrouve sa fiche', () => {
     expect(new Set(TOPICS.map((t) => t.id)).size).toBe(TOPICS.length);
     expect(new Set(TOPICS.map((t) => t.path)).size).toBe(TOPICS.length);

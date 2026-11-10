@@ -44,11 +44,13 @@ export interface Demande {
   is_demo: number; created_at: string; updated_at: string; delai_annonce: DelaiAnnonce | null;
   /** 1 si la personne suit cette demande sans l'avoir déposée (0.7.0). */
   suivie: 0 | 1;
+  /** 0.15.0 (point 5, SUI-09) : source du suivi de la personne et « Suivre cette demande » proposé (fiche seulement). */
+  suivi_source?: 'moi_aussi' | 'abonnement' | null; suivable?: 0 | 1;
   nb_suiveurs: number;
   /** Réponses aux questions de la catégorie (0.7.0, DEM-05), telles qu'au dépôt ; rendues par la fiche seulement. */
   reponses?: ReponseDemande[];
   /** Personnes qui suivent la demande, avec leur remarque : pour le gestionnaire et le responsable seulement. */
-  suiveurs?: { user_id: number; prenom: string; nom: string; remarque: string | null; created_at: string }[];
+  suiveurs?: { user_id: number; prenom: string; nom: string; remarque: string | null; created_at: string; source?: 'moi_aussi' | 'abonnement' }[];
   /** Pièces jointes (0.8.0) : rendues au demandeur, au bénéficiaire et au service technique ; null pour qui suit seulement. */
   pieces?: Piece[] | null;
   /**
@@ -71,6 +73,8 @@ export interface Demande {
   complements?: Complement[]; completable?: 0 | 1; annulable?: 0 | 1;
   /** 0.14.0, point 6 (SUI-06) : avis (du plus récent au plus ancien), avis encore possible, réouverture et sa limite. */
   avis?: Avis[]; avis_possible?: 0 | 1; reouvrable?: 0 | 1; reouvrable_jusqu_au?: string | null;
+  /** Fil de messages (0.15.0, point 2) : droits de la personne (fiche seulement) et messages non lus (liste et fiche). */
+  fil?: DroitsFil; messages_non_lus?: number;
 }
 
 /** Avis du demandeur ou du bénéficiaire à la clôture (0.14.0) : note de 1 à 5. */
@@ -111,6 +115,10 @@ export interface TableauBord {
   a_qualifier: number; en_retard: number; p1_p2: number; echeance_proche: number; limite_proche: string; jours_proches: number;
   /** 0.14.0 (GES-01, DV-119) : en attente depuis plus de N jours ouvrés (N réglé par l'entité), travaux terminés à clôturer. */
   attente_longue: number; jours_attente: number; a_cloturer: number;
+  /** 0.15.0 (point 2) : demandes dont le fil a un message que la personne n'a pas lu. */
+  messages_a_lire: number;
+  /** 0.15.0 (point 3) : demandes où la personne est mentionnée dans une note qu'elle n'a pas lue. */
+  mentions: number;
 }
 
 /** Filtres de la liste du service technique (0.9.0, GES-02) ; les mêmes clés forment une vue enregistrée. */
@@ -119,11 +127,15 @@ export interface FiltresGestion {
   canal?: string; danger?: 0 | 1; q?: string; ouvertes?: 0 | 1; tri?: 'depot' | 'numero' | 'echeance' | 'priorite'; ordre?: 'asc' | 'desc';
   /** 0.14.0 : en attente depuis plus de N jours ouvrés. */
   attente?: 'longue';
+  /** 0.15.0 : demandes dont le fil a un message non lu par la personne. */
+  messages?: 'non_lus';
+  /** 0.15.0 (point 3) : demandes où la personne est mentionnée dans une note qu'elle n'a pas lue. */
+  mentions?: 'a_voir';
 }
 export interface VueDemandes { id: number; nom: string; filtres: FiltresGestion; created_at: string; updated_at: string }
 
 const NOMBRES: (keyof FiltresGestion)[] = ['categorie_id', 'batiment_id', 'danger', 'ouvertes'];
-export const CLES_FILTRES: (keyof FiltresGestion)[] = ['etats', 'priorites', 'categorie_id', 'batiment_id', 'echeance', 'attente', 'canal', 'danger', 'q', 'ouvertes', 'tri', 'ordre'];
+export const CLES_FILTRES: (keyof FiltresGestion)[] = ['etats', 'priorites', 'categorie_id', 'batiment_id', 'echeance', 'attente', 'messages', 'mentions', 'canal', 'danger', 'q', 'ouvertes', 'tri', 'ordre'];
 export const CANAUX = ['ecran', 'telephone', 'courriel', 'grc', 'mcp', 'api', 'preventif'];
 
 /**
@@ -151,7 +163,7 @@ export function urlGestion(f: FiltresGestion, extra: Record<string, string> = {}
 }
 
 /** Filtres de chaque compteur du tableau de bord : un clic ouvre la liste filtrée, avec le même total. */
-export const COMPTEURS: { cle: 'a_qualifier' | 'en_retard' | 'p1_p2' | 'echeance_proche' | 'attente_longue' | 'a_cloturer'; filtres: FiltresGestion }[] = [
+export const COMPTEURS: { cle: 'a_qualifier' | 'en_retard' | 'p1_p2' | 'echeance_proche' | 'attente_longue' | 'a_cloturer' | 'messages_a_lire' | 'mentions'; filtres: FiltresGestion }[] = [
   // 0.14.0 (point 6) : une demande rouverte revient dans la file à qualifier.
   { cle: 'a_qualifier', filtres: { etats: 'a_qualifier,rouverte', tri: 'echeance', ordre: 'asc' } },
   { cle: 'en_retard', filtres: { echeance: 'retard', tri: 'echeance', ordre: 'asc' } },
@@ -160,6 +172,10 @@ export const COMPTEURS: { cle: 'a_qualifier' | 'en_retard' | 'p1_p2' | 'echeance
   // 0.14.0 (GES-01, E-35) : mêmes totaux que les filtres attente=longue et etats=terminee.
   { cle: 'attente_longue', filtres: { attente: 'longue', tri: 'depot', ordre: 'asc' } },
   { cle: 'a_cloturer', filtres: { etats: 'terminee', tri: 'depot', ordre: 'asc' } },
+  // 0.15.0 (point 2) : même total que le filtre messages=non_lus, demandes fermées comprises.
+  { cle: 'messages_a_lire', filtres: { messages: 'non_lus', tri: 'depot', ordre: 'desc' } },
+  // 0.15.0 (point 3, GES-08) : même total que le filtre mentions=a_voir.
+  { cle: 'mentions', filtres: { mentions: 'a_voir', tri: 'depot', ordre: 'desc' } },
 ];
 
 /** Instant de la base (UTC, « 2026-11-05 07:00:00 ») à l'heure du poste : « 05/11/2026 08:00 ». */
@@ -174,6 +190,47 @@ export function duree(minutes: number): string {
 }
 
 /** Pièce jointe d'une demande ou du brouillon (0.8.0, DEM-09) ; le fichier se lit par /api/pieces/:id/fichier. */
+/** Ce que la personne peut faire du fil d'une demande (0.15.0) : lire, écrire, écrire une note interne (service). */
+export interface DroitsFil { lecture: 0 | 1; ecriture: 0 | 1; interne: 0 | 1 }
+
+/**
+ * Message du fil d'une demande (0.15.0, SUI-04) : auteur « demandeur », « beneficiaire » ou « service » ; le nom d'un
+ * agent du service n'est rendu qu'au service (SUI-07) ; interne = 1 : note du service, jamais rendue au demandeur.
+ */
+export interface Message {
+  id: number; demande_id: number; auteur: 'demandeur' | 'beneficiaire' | 'service'; interne: 0 | 1; texte: string | null;
+  langue: 'fr' | 'nl'; created_at: string; auteur_prenom: string | null; auteur_nom: string | null; canal?: string;
+  de_moi: 0 | 1; non_lu: 0 | 1; pieces: Piece[];
+  /** 0.15.0 (point 3, GES-08) : collègues mentionnés dans une note interne ; rendus au service seulement. */
+  mentions: PersonneMentionnee[];
+}
+
+/** Modèle de réponse au demandeur (0.15.0, point 4 ; GES-09) : titre et texte en FR et en NL, réglés par le responsable. */
+export interface ModeleReponse {
+  id: number; entite_id: number; code: string | null; titre_fr: string; titre_nl: string; texte_fr: string; texte_nl: string; ordre: number;
+  is_active: 0 | 1; motif_desactivation: string | null; created_at: string; updated_at: string; trace?: import('./referentiel').Trace;
+}
+
+/**
+ * Texte d'un modèle prêt à insérer (0.15.0, point 4) : dans la langue du demandeur (celle de sa demande), variables
+ * remplacées ({numero}, {lieu}, {etat}, {prenom}) ; un prénom inconnu ne laisse pas « Bonjour , ».
+ * libelleEtat : libellé de l'état vu par le demandeur quand l'entité n'en a pas rendu (traduction de l'écran).
+ */
+export function texteModele(m: ModeleReponse, d: Demande, libelleEtat: (etat: Etat, lang: 'fr' | 'nl') => string): string {
+  const lang = d.langue === 'nl' ? 'nl' : 'fr';
+  const valeurs: Record<string, string> = {
+    numero: d.numero,
+    lieu: (lang === 'nl' ? d.lieu_nom_nl : d.lieu_nom_fr) || d.lieu_code || '',
+    etat: (lang === 'nl' ? d.etat_libelle_nl : d.etat_libelle_fr) || libelleEtat(d.etat, lang),
+    prenom: d.demandeur_prenom || '',
+  };
+  return (lang === 'nl' ? m.texte_nl : m.texte_fr).replace(/\{(numero|lieu|etat|prenom)\}/g, (_, k: string) => valeurs[k])
+    .replace(/ +,/g, ',').replace(/ +\n/g, '\n');
+}
+
+/** Collègue du service mentionnable ou mentionné (0.15.0, point 3). */
+export interface PersonneMentionnee { user_id: number; prenom: string; nom: string }
+
 export interface Piece {
   id: number; entite_id: number; demande_id: number | null; auteur_id: number; nom: string;
   type: 'image/jpeg' | 'image/png' | 'application/pdf'; octets: number; largeur: number | null; hauteur: number | null;

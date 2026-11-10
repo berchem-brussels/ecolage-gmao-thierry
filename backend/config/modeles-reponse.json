@@ -1,0 +1,18 @@
+{
+  "_description": "Modèles de réponse au demandeur (cahier des charges GES-09 ; 0.15.0, étape 10, point 4) : textes livrés en FR et en NL, créés pour chaque entité active au démarrage et à la création d'une entité si leur code manque ; jamais recréés, réactivés ni modifiés ensuite (le responsable les change ou les désactive à l'écran). « variables » : seules variables admises dans un texte, remplacées à l'écran au moment de l'insertion, dans la langue du demandeur : {numero} numéro de la demande, {lieu} nom du lieu, {etat} état vu par le demandeur, {prenom} prénom du demandeur (vide s'il n'est pas connu). Valeurs en attendant l'atelier métier (D-11).",
+  "variables": ["numero", "lieu", "etat", "prenom"],
+  "defauts": [
+    { "code": "prise_en_charge", "titre_fr": "Demande prise en charge", "titre_nl": "Aanvraag in behandeling",
+      "texte_fr": "Bonjour {prenom},\n\nVotre demande {numero} ({lieu}) est prise en charge par le service technique. Nous vous tiendrons au courant ici.\n\nLe service technique",
+      "texte_nl": "Goedendag {prenom},\n\nUw aanvraag {numero} ({lieu}) wordt behandeld door de technische dienst. We houden u hier op de hoogte.\n\nDe technische dienst" },
+    { "code": "precision", "titre_fr": "Précision demandée", "titre_nl": "Verduidelijking gevraagd",
+      "texte_fr": "Bonjour {prenom},\n\nPour traiter votre demande {numero}, pouvez-vous nous en dire un peu plus ? Une photo nous aiderait aussi.\n\nLe service technique",
+      "texte_nl": "Goedendag {prenom},\n\nKunt u ons wat meer vertellen om uw aanvraag {numero} te behandelen? Een foto zou ons ook helpen.\n\nDe technische dienst" },
+    { "code": "acces", "titre_fr": "Accès au local", "titre_nl": "Toegang tot het lokaal",
+      "texte_fr": "Bonjour {prenom},\n\nPour intervenir ({lieu}), nous avons besoin d'un accès. Pouvez-vous nous dire quand le local est ouvert, ou à qui demander la clé ?\n\nLe service technique",
+      "texte_nl": "Goedendag {prenom},\n\nOm tussen te komen ({lieu}) hebben we toegang nodig. Kunt u ons zeggen wanneer het lokaal open is, of aan wie we de sleutel kunnen vragen?\n\nDe technische dienst" },
+    { "code": "termine", "titre_fr": "Travaux terminés", "titre_nl": "Werken beëindigd",
+      "texte_fr": "Bonjour {prenom},\n\nLes travaux de votre demande {numero} sont terminés. Si le problème revient, écrivez-nous ici.\n\nLe service technique",
+      "texte_nl": "Goedendag {prenom},\n\nDe werken voor uw aanvraag {numero} zijn beëindigd. Als het probleem terugkomt, schrijf ons dan hier.\n\nDe technische dienst" }
+  ]
+}

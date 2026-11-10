@@ -197,3 +197,22 @@ body.app-dark .dem-retard { color: #ff8a8a; }
   .help-topic { break-inside: avoid; }
   .ant-collapse-content { display: block !important; }
 }
+
+/* 0.15.0 (point 2) : fil de messages d'une demande ; bulles tenues dans 320 px, mots longs coupés. */
+.fil-liste { list-style: none; margin: 0 0 12px; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.fil-item { display: flex; flex-direction: column; align-items: flex-start; }
+.fil-item.fil-moi { align-items: flex-end; }
+.fil-nouveaux { margin: 4px 0 8px !important; width: 100%; color: var(--app-primary) !important; }
+.fil-bulle { max-width: 85%; min-width: 0; padding: 8px 12px; border-radius: 10px; background: var(--fil-autre, rgba(0, 0, 0, 0.04)); overflow-wrap: anywhere; }
+.fil-bulle-moi { background: var(--fil-moi, rgba(0, 106, 103, 0.10)); }
+.fil-bulle-interne { background: var(--fil-interne, rgba(250, 140, 22, 0.08)); border: 1px dashed #d46b08; }
+.fil-entete { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-bottom: 2px; }
+.fil-texte { white-space: pre-wrap; }
+.fil-saisie { margin-top: 8px; }
+.fil-bulle .dem-pieces-liste { margin-top: 6px; }
+body.app-dark { --fil-autre: rgba(255, 255, 255, 0.06); --fil-moi: rgba(173, 212, 204, 0.16); --fil-interne: rgba(250, 140, 22, 0.12); }
+body.app-dark .fil-bulle-interne { border-color: #ffa940; }
+.fil-mentions { display: flex; flex-wrap: wrap; gap: 4px; margin: 2px 0 4px; }
+.modeles-liste { list-style: none; margin: 0; padding: 0; }
+/* Étiquettes d'une bulle (nom long d'un collègue mentionné) : retour à la ligne, jamais plus larges que la bulle (360 px). */
+.fil-bulle .ant-tag { white-space: normal; max-width: 100%; overflow-wrap: anywhere; }

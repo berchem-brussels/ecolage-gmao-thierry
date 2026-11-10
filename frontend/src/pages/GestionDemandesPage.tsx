@@ -10,6 +10,8 @@
  *   du moment sous un nom ; « Supprimer la vue » la retire.
  * - Fiche latérale (adresse ?demande=id) avec les échéances, la qualification et le bouton « Qualifier » pour qui a la
  *   permission « demandes:qualifier ».
+ * - 0.15.0 (étape 10, point 2) : fil de messages et notes internes sur la fiche (FilMessages) ; « n nouveaux messages »
+ *   sur chaque demande ; compteur et filtre « Messages à lire » (messages=non_lus).
  * - 0.14.0 (étape 9, point 3) : sur la fiche, un bouton par passage permis (attente, reprise, démarrage, fin, clôture,
  *   refus, annulation), le formulaire du passage et l'historique de la demande ; liste et compteurs rechargés après.
  * Choix exclusifs en boutons ; listes déroulantes réservées aux choix multiples et à la recherche dans un catalogue
@@ -26,6 +28,8 @@ import TableauBord from '../components/demandes/TableauBord';
 import QualificationForm from '../components/demandes/QualificationForm';
 import { ActionsDemande, ChangerEtatForm } from '../components/demandes/ChangerEtat';
 import HistoriqueDemande from '../components/demandes/HistoriqueDemande';
+import FilMessages from '../components/demandes/FilMessages';
+import SuiviDemande from '../components/demandes/SuiviDemande';
 import { useAuth } from '../contexts/AuthContext';
 import { useI18n } from '../contexts/I18nContext';
 import { Icone, PRIORITES, type ArbreCategories, type Categorie } from '../referentiel';
@@ -36,7 +40,7 @@ import {
   CANAUX, CLES_FILTRES, ETATS, type Demande, type FiltresGestion, type Transition, type VueDemandes,
   cheminTexte, cleAction, dateDepot, extrait, filtresDepuisUrl, instant, qualifiable,
 } from '../demandes';
-import { DangerTag, EtatTag, FicheDemande } from './DemandesPage';
+import { DangerTag, EtatTag, FicheDemande, NonLusTag } from './DemandesPage';
 
 const TAILLE = 20;
 const COULEUR_PRIO: Record<string, string> = { P1: 'red', P2: 'volcano', P3: 'blue', P4: 'default' };
@@ -124,6 +128,8 @@ export default function GestionDemandesPage() {
   const ouvrir = (d: Demande) => changer({ demande: d.id }, true);
   const fermer = () => { setQualifier(false); setAction(null); changer({ demande: undefined }, true); };
   /** Après une qualification ou un passage : fiche à jour, liste, compteurs et historique rechargés. */
+  /** 0.15.0 (point 2) : fil lu ou message envoyé : liste et compteurs (« Messages à lire ») rechargés. */
+  const apresLecture = () => { charger(); setBordAJour((n) => n + 1); };
   const apresChangement = (d: Demande) => { setFiche(d); setQualifier(false); setAction(null); charger(); setBordAJour((n) => n + 1); setHisto((n) => n + 1); };
 
   const lbl = (o: { libelle_fr: string; libelle_nl: string }) => (lang === 'nl' ? o.libelle_nl : o.libelle_fr);
@@ -227,6 +233,10 @@ export default function GestionDemandesPage() {
               options={[{ value: '', label: t('gest.canal.tous') }, ...CANAUX.map((c) => ({ value: c, label: t(`gest.canal.${c}`) }))]} />
             <Radio.Group optionType="button" aria-label={t('gest.filtre.attente')} value={f.attente || ''} onChange={(e) => changer({ attente: e.target.value || undefined })}
               options={[{ value: '', label: t('gest.attente.toutes') }, { value: 'longue', label: t('gest.attente.longue') }]} />
+            <Radio.Group optionType="button" aria-label={t('gest.filtre.mentions')} value={f.mentions || ''} onChange={(e) => changer({ mentions: e.target.value || undefined })}
+              options={[{ value: '', label: t('gest.mentions.toutes') }, { value: 'a_voir', label: t('gest.mentions.a_voir') }]} />
+            <Radio.Group optionType="button" aria-label={t('gest.filtre.messages')} value={f.messages || ''} onChange={(e) => changer({ messages: e.target.value || undefined })}
+              options={[{ value: '', label: t('gest.messages.tous') }, { value: 'non_lus', label: t('gest.messages.non_lus') }]} />
             <Radio.Group optionType="button" aria-label={t('gest.filtre.danger')} value={f.danger === undefined ? '' : String(f.danger)} onChange={(e) => changer({ danger: e.target.value === '' ? undefined : e.target.value })}
               options={[{ value: '', label: t('gest.danger.tous') }, { value: '1', label: t('gest.danger.oui') }, { value: '0', label: t('gest.danger.non') }]} />
           </div>
@@ -258,7 +268,7 @@ export default function GestionDemandesPage() {
                 <Space direction="vertical" size={4} style={{ width: '100%' }}>
                   <Space style={{ justifyContent: 'space-between', width: '100%' }} wrap>
                     <Button type="link" onClick={() => ouvrir(d)} style={{ paddingInline: 0, fontWeight: 600 }}>{d.numero}</Button>
-                    <Space size={4} wrap>{d.danger === 1 && <DangerTag />}<PrioriteTag p={d.priorite} /><EtatTag etat={d.etat} service /></Space>
+                    <Space size={4} wrap>{d.danger === 1 && <DangerTag />}<PrioriteTag p={d.priorite} /><EtatTag etat={d.etat} service /><NonLusTag n={d.messages_non_lus} /></Space>
                   </Space>
                   <Typography.Text><Icone code={d.categorie_icone} style={{ color: 'var(--app-primary)' }} /> {cat(d)}</Typography.Text>
                   <Typography.Text type="secondary" style={{ fontSize: 13 }}>{lieu(d)} · {dateDepot(d.created_at)}</Typography.Text>
@@ -275,7 +285,12 @@ export default function GestionDemandesPage() {
           rowClassName={(d) => (d.ouverte ? '' : 'dem-close')}
           columns={[
             { title: t('demande.champ.numero'), key: 'numero', sorter: true, sortOrder: ordre('numero'), showSorterTooltip: false,
-              render: (_, d) => <Button type="link" onClick={() => ouvrir(d)} style={{ paddingInline: 0 }}>{d.numero}</Button> },
+              render: (_, d) => (
+                <Space direction="vertical" size={2}>
+                  <Button type="link" onClick={() => ouvrir(d)} style={{ paddingInline: 0 }}>{d.numero}</Button>
+                  <NonLusTag n={d.messages_non_lus} />
+                </Space>
+              ) },
             { title: t('gest.col.priorite'), key: 'priorite', sorter: true, sortOrder: ordre('priorite'), showSorterTooltip: false,
               render: (_, d) => <Space size={4} wrap>{d.danger === 1 && <DangerTag />}<PrioriteTag p={d.priorite} /></Space> },
             { title: t('demande.champ.etat'), key: 'etat', render: (_, d) => <EtatTag etat={d.etat} service /> },
@@ -308,7 +323,9 @@ export default function GestionDemandesPage() {
             : (
               <>
                 <ActionsDemande d={fiche} onChoisir={setAction} />
+                <SuiviDemande d={fiche} onChange={(n) => { if (n) setFiche(n); else chargerFiche(); charger(); }} />
                 <FicheDemande d={fiche} avecDemandeur service onChange={chargerFiche} />
+                <FilMessages key={`f-${fiche.id}`} d={fiche} service onLu={apresLecture} />
                 <HistoriqueDemande demandeId={fiche.id} service rafraichir={histo} />
               </>
             ))}

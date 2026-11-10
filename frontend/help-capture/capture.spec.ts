@@ -102,6 +102,8 @@ test('captures de l’aide', async ({ page }) => {
           if (a.clickSel) await page.locator(a.clickSel).first().click();
           if (a.click) await page.getByRole('button', { name: translations[a.click]?.[lang] || a.click }).first().click();
           if (a.fill) await page.fill(a.fill.sel, a.fill.value);
+          // 0.15.0 : le fil de messages est sous la fiche, hors de la partie visible du volet.
+          if (a.scrollSel) await page.locator(a.scrollSel).first().scrollIntoViewIfNeeded();
         }
         // Fenêtre ou panneau : on attend la fin de son animation d'ouverture avant de poser les repères.
         if (shot.clip === 'modal' || shot.clip === 'drawer') await page.waitForTimeout(600);

@@ -9,7 +9,7 @@ const topic: HelpTopic = {
     nl: 'De regels van de aanvragen van de actieve entiteit: de tegels voorgesteld aan de aanvrager (domeinen en soorten), hun vragen, de prioriteiten en hun termijnen, het uurrooster en de verlofdagen van de dienst. De instellingen gelden enkel voor de actieve entiteit.',
   },
   layout: [
-    { fr: '[[1]] Les onglets : catégories, priorités et délais, calendrier, simulateur, états des demandes.', nl: '[[1]] De tabbladen: categorieën, prioriteiten en termijnen, kalender, simulator, statussen van de aanvragen.' },
+    { fr: '[[1]] Les onglets : catégories, priorités et délais, calendrier, simulateur, états des demandes, modèles de réponse.', nl: '[[1]] De tabbladen: categorieën, prioriteiten en termijnen, kalender, simulator, statussen van de aanvragen, antwoordmodellen.' },
     { fr: '[[2]] Les domaines et leurs natures ; à droite, l’aperçu des tuiles du demandeur.', nl: '[[2]] De domeinen en hun soorten; rechts, het voorbeeld van de tegels van de aanvrager.' },
   ],
   overviewShot: 'referentiel-overview',
@@ -53,12 +53,25 @@ const topic: HelpTopic = {
       result: { fr: 'Le demandeur lit le nouveau texte dans {{nav.demandes}} et sur sa ligne du temps. {{ref.etat.retablir}} remet les textes livrés.', nl: 'De aanvrager leest de nieuwe tekst in {{nav.demandes}} en op zijn tijdlijn. {{ref.etat.retablir}} zet de geleverde teksten terug.' },
       shots: ['referentiel-etats'],
     },
+    // 0.15.0 (point 6 ; GES-09).
+    {
+      title: { fr: 'Préparer les modèles de réponse', nl: 'De antwoordmodellen voorbereiden' },
+      when: { fr: 'Quand le service écrit souvent la même chose aux demandeurs.', nl: 'Wanneer de dienst vaak hetzelfde aan de aanvragers schrijft.' },
+      steps: [
+        { fr: 'Onglet {{ref.tab.modeles}} : {{modeles.nouveau}}, ou cliquez sur un modèle pour le changer.', nl: 'Tabblad {{ref.tab.modeles}}: {{modeles.nouveau}}, of klik op een model om het te wijzigen.' },
+        { fr: 'Écrivez le titre et le texte en français et en néerlandais ; {numero}, {lieu}, {etat} et {prenom} seront remplacés à l’insertion.', nl: 'Schrijf de titel en de tekst in het Frans en het Nederlands; {numero}, {lieu}, {etat} en {prenom} worden bij het invoegen vervangen.' },
+        { fr: '{{common.save}} ; {{modeles.desactiver}} avec un motif pour ne plus le proposer.', nl: '{{common.save}}; {{modeles.desactiver}} met een reden om het niet meer voor te stellen.' },
+      ],
+      result: { fr: 'Le service le trouve dans {{fil.modele}}, dans le fil de chaque demande. Une autre variable entre accolades est refusée, avec son nom.', nl: 'De dienst vindt het in {{fil.modele}}, in de berichten van elke aanvraag. Een andere variabele tussen accolades wordt geweigerd, met haar naam.' },
+      shots: ['referentiel-modeles'],
+    },
   ],
   faq: [
     { q: { fr: 'Le demandeur et le service voient-ils le même nom d’état ?', nl: 'Zien de aanvrager en de dienst dezelfde naam van de status?' }, a: { fr: 'Non : le service garde ses libellés (« Qualifiée », « Terminée ») ; le demandeur lit ceux de l’onglet {{ref.tab.etats}}, en français ou en néerlandais selon sa langue.', nl: 'Nee: de dienst houdt zijn benamingen (« Gekwalificeerd », « Beëindigd »); de aanvrager leest die van het tabblad {{ref.tab.etats}}, in het Frans of het Nederlands volgens zijn taal.' } },
   ],
   seeAlso: ['demandes-entite', 'reglages-entite'],
   shots: [{ id: 'referentiel-overview', path: '/referentiel', marks: [{ sel: '.ant-tabs-nav' }, { sel: '.ref-grille-cat' }], caption: { fr: 'Catégories et délais', nl: 'Categorieën en termijnen' } },
-    { id: 'referentiel-etats', path: '/referentiel?onglet=etats', marks: [{ sel: '.ref-grille .ant-card' }], caption: { fr: 'Textes des états vus par le demandeur', nl: 'Teksten van de statussen voor de aanvrager' } }],
+    { id: 'referentiel-etats', path: '/referentiel?onglet=etats', marks: [{ sel: '.ref-grille .ant-card' }], caption: { fr: 'Textes des états vus par le demandeur', nl: 'Teksten van de statussen voor de aanvrager' } },
+    { id: 'referentiel-modeles', path: '/referentiel?onglet=modeles', marks: [{ sel: '.modeles-liste .ant-card' }], caption: { fr: 'Modèles de réponse au demandeur', nl: 'Antwoordmodellen voor de aanvrager' } }],
 };
 export default topic;

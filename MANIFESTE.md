@@ -1,8 +1,25 @@
 # Manifeste
 
-Version de l'application : **0.14.0** · Mis à jour le 08/11/2026
+Version de l'application : **0.15.0** · Mis à jour le 09/11/2026
 
 Fichiers changés, dépendances et suites par version. Les décomptes sont recopiés de la sortie des commandes.
+
+## 0.15.0 (09/11/2026)
+
+Fichiers comparés à l'archive 0.14.0 (identique à l'étiquette `v0.14.0` du dépôt GitHub hors `dist/`) par `diff -rq` (hors `node_modules` et `dist`). Pour le contrôle du `git status` (`GITHUB.md`, section 5) : aucune ligne `D` attendue ; vingt lignes `A`, les autres `M`.
+
+- Nouveaux (lignes `A`) : `NOTES_LIVRAISON_v0.15.0.md` ; serveur `config/modeles-reponse.json`, `src/routes/modeles-reponse.js`, `src/services/messages.js`, `src/services/modeles-reponse.js`, `tests/messages.test.js`, `tests/modeles-reponse.test.js` ; interface `src/components/demandes/FilMessages.tsx`, `SuiviDemande.tsx`, `src/components/referentiel/ModelesTab.tsx`, `src/test/session.test.tsx` ; captures `public/aide-captures/fr/demandes-entite-fil.jpg`, `mes-demandes-fil.jpg`, `referentiel-modeles.jpg`, `public/aide-captures/nl/demandes-entite-fil.jpg`, `mes-demandes-fil.jpg`, `referentiel-modeles.jpg`.
+- Modifiés, serveur : `config/notes-version.json` (note 0.15.0), `config/parametres-entite.json` (explication du délai de réouverture, R2) ; `src/app.js` (montage de `/api/modeles-reponse`), `src/audit.js` (fiche `modeles_reponse`), `src/database.js` (migration `013_messages`, modèles livrés au démarrage), `src/i18n-server.js` (sept codes), `src/mcp.js` (onze outils, descriptions), `src/recette-api.js` (contrôle 5), `src/routes/demandes.js` (sept routes), `src/routes/public.js` et `src/services/entites.js` (modèles d'une entité nouvelle), `src/schemas.js`, `src/services/demandes.js` (non lus, suivi, « Ne plus suivre »), `src/services/pieces.js` (pièces d'un message), `src/services/qualification.js` (compteurs `messages_a_lire`, `mentions`) ; tests `categories`, `cloison`, `cycle` (passages cités), `mcp`, `notes-version`, `numerotation`, `parametres-entite`, `parametres`, `voisines` ; `package.json` (0.15.0, deux fichiers de test) et `package-lock.json`.
+- Modifiés, interface : `src/contexts/AuthContext.tsx` (R1), `src/components/demandes/ActionsDemandeur.tsx` (R3), `demandes/TableauBord.tsx` (deux compteurs), `src/demandes.ts` (types, `texteModele`, filtres), `src/help/types.ts` (`scrollSel`), `src/help/topics/demandes-entite.ts`, `mes-demandes.ts`, `referentiel.ts`, `src/hints.ts`, `src/i18n.ts`, `src/index.css` (bulles, étiquettes), pages `DemandesPage` (fil, suivi, R3), `GestionDemandesPage` (fil, filtres), `HomePage` (nouveaux messages), `JournalPage` (`interne`, source), `ReferentielPage` (onglet Modèles) ; `help-capture/capture.spec.ts` (`scrollSel`) ; `mobile-check/verifier-mobile.mjs` (fil, note interne, bulles, onglet Modèles) ; tests `demandes.test.tsx`, `help.test.ts`, `i18n.test.ts`, `pages.test.tsx` ; `package.json` et `package-lock.json` (0.15.0) ; `dist/` reconstruit.
+- Modifiés, documentation et racine : `recette.sh` (commentaire du contrôle 5) ; `NOTES_LIVRAISON_v0.14.0.md` (26 passages) ; `README.md`, `README.nl.md`, `README.en.md` ; `docs/fr`, `docs/nl`, `docs/en` (`APRES-DEPLOIEMENT.md`, `ARCHITECTURE.md`, `EXPLOITATION.md`, `MCP.md`, `SECURITE.md`) ; `docs/fonctionnel/aide.md`, `demandes.md`, `referentiel-demandes.md`, `service-technique.md` ; fichiers de suivi (`ETAT.md`, `CHANGELOG.md`, `ECARTS-CDC.md`, `MANIFESTE.md`).
+- Inchangés : les deux Dockerfile, `nginx.conf`, `docker-entrypoint.sh`, `docker-compose.yml`, `.env.example`, `backup.sh`, `verifier-ports.sh`, `ci.yml`, `.gitignore`. La construction n'a pas besoin de `--no-cache`.
+- Retirés : aucun fichier.
+- Dépendances : aucune nouvelle ; verrous inchangés hors numéro de version. Aucun `npm audit fix`.
+- Contrôle DV-09 de la séance, avant toute modification : archive 0.14.0 conforme à `ETAT.md` (8 093 501 octets, 534 entrées, SHA-256 `323348e6…9247a3`) ; serveur 473/473 ; audit du serveur 0 ; interface 262 (+1 ignoré) sur trois lancements ; `help:check` 10/10 ; construction et accessibilité 0 erreur ; `mobile:check` 26 écrans, 4 largeurs, FR et NL, aucun défaut.
+- Suites de la 0.15.0 : serveur 513/513 ; interface 281 (+1 ignoré) sur trois lancements, 7 fichiers ; `help:check` 11/11 ; construction et accessibilité 0 erreur ; `npm audit --omit=dev` serveur 0, interface 3 modérées (E-09) ; `mobile:check` : 28 écrans, 4 largeurs, FR et NL, aucun défaut.
+- Preuves d'échec : `docs/fr/SECURITE.md`, section 0.15.0 (neuf protections).
+- Navigateur réel : Chromium du bac à sable, serveur réel sur une base de démonstration passée de la 0.14.0 à la 0.15.0 ; fil, note interne avec mention, modèle inséré, suivi et arrêt du suivi, à 320 px (iPhone SE) et 360 px (Android), FR et NL ; captures par `npm run help:capture` (`HELP_ONLY`). Retour à la 0.14.0 (archive d'origine) sur cette base : démarre, lit la liste, la fiche, le tableau de bord et l'historique ; mais elle listerait les pièces des messages avec celles de la demande : retour arrière toujours avec la sauvegarde.
+- Images Docker : non reconstruites dans le bac à sable.
 
 ## 0.14.0 (08/11/2026)
 

@@ -93,7 +93,7 @@ const valeursData = [
   valeur(51, 'cause_panne', 'usure', 'Usure normale', 'Normale slijtage'), valeur(61, 'motif_refus', 'doublon', 'Déjà signalé dans une autre demande', 'Al gemeld in een andere aanvraag'),
 ];
 // 0.9.0 : tableau de bord, vues enregistrées et priorités de l'entité.
-const BORD = { a_qualifier: 4, en_retard: 2, p1_p2: 1, echeance_proche: 3, limite_proche: '2026-11-04 16:00:00', jours_proches: 2, attente_longue: 6, jours_attente: 8, a_cloturer: 5 };
+const BORD = { a_qualifier: 4, en_retard: 2, p1_p2: 1, echeance_proche: 3, limite_proche: '2026-11-04 16:00:00', jours_proches: 2, attente_longue: 6, jours_attente: 8, a_cloturer: 5, messages_a_lire: 3, mentions: 1 };
 let bordData: unknown = BORD;
 let vuesData: unknown[] = [];
 const prio = (code: string, fr: string, nl: string, fin: number | null) => ({ id: Number(code[1]), entite_id: 1, code, libelle_fr: fr, libelle_nl: nl, description_fr: null, description_nl: null,
@@ -102,6 +102,9 @@ const prioritesData = [prio('P1', 'Sécurité', 'Veiligheid', 4), prio('P2', 'Ur
 let piecesData: { pieces: unknown[]; plafonds: unknown } = { pieces: [], plafonds: PLAFONDS };
 let uploads: { url: string; fichier: File }[] = [];
 let reponseUpload: (n: number) => { status: number; json: unknown } = (n) => ({ status: 201, json: { data: piece(100 + n, `photo-${n}.jpg`), meta: { envelope: 1 } } });
+// 0.15.0 (point 2) : fil de messages de la fiche et demandes avec un message non lu ; vides par défaut.
+let messagesData: unknown[] = [];
+let nonLusData: unknown[] = [];
 let reponsePost: { status: number; json: unknown } = { status: 201, json: { data: demande(3, 'AA-DI-2026-00003', 'a_qualifier'), meta: { envelope: 1 } } };
 
 beforeEach(() => {
@@ -114,6 +117,8 @@ beforeEach(() => {
   piecesData = { pieces: [], plafonds: PLAFONDS };
   ficheData = null;
   historiqueData = [];
+  messagesData = [];
+  nonLusData = [];
   bordData = BORD;
   vuesData = [];
   uploads = [];
@@ -143,6 +148,12 @@ beforeEach(() => {
       : url.startsWith('/api/lieux/arbre') ? { data: { racines: arbreLieux, total: 2 }, meta: { envelope: 1 } }
       : url.startsWith('/api/lieux') ? page(lieuxTrouves)
       : url.match(/^\/api\/demandes\/\d+\/historique/) ? { data: historiqueData, meta: { envelope: 1 } }
+      : url.startsWith('/api/modeles-reponse') ? page([{ id: 4, entite_id: 1, code: 'precision', titre_fr: 'Précision demandée', titre_nl: 'Verduidelijking gevraagd',
+        texte_fr: 'Bonjour {prenom},\n\nPour {numero} ({lieu}, {etat}), pouvez-vous préciser ?', texte_nl: 'Goedendag {prenom},\n\nKunt u {numero} ({lieu}, {etat}) verduidelijken?', ordre: 10, is_active: 1, motif_desactivation: null, created_at: '', updated_at: '' }])
+      : url.match(/^\/api\/demandes\/\d+\/messages\/mentionnables/) ? { data: [{ user_id: 8, prenom: 'Rémi', nom: 'Responsable' }, { user_id: 9, prenom: 'Gaston', nom: 'Gestion' }], meta: { envelope: 1 } }
+      : url.match(/^\/api\/demandes\/\d+\/messages\/pieces/) ? { data: { pieces: [], plafonds: PLAFONDS }, meta: { envelope: 1 } }
+      : url.match(/^\/api\/demandes\/\d+\/messages/) ? { data: messagesData, meta: { envelope: 1 } }
+      : url.startsWith('/api/demandes?') && url.includes('messages=non_lus') ? page(nonLusData)
       : url.startsWith('/api/listes-valeurs') ? page(valeursData.filter((v) => url.includes(`liste=${v.liste}`)))
       : url.match(/^\/api\/demandes\/\d+/) ? { data: ficheData || demandes[0], meta: { envelope: 1 } }
       : url.startsWith('/api/demandes') ? (url.includes('etat=a_qualifier') ? page([demandes[0]], 4) : page(demandes))
@@ -304,12 +315,14 @@ describe('demandes (0.5.0, 0.5.1)', () => {
     expect(screen.queryByRole('list', { name: 'Gevonden plaatsen' })).toBeNull();
   });
 
-  it('« Mes demandes » : numéro, état simple, délai annoncé ou « À convenir » ; la fiche s’ouvre au clic (SUI-01)', async () => {
+  it('« Mes demandes » : numéro, état simple, délai annoncé des seules demandes ouvertes ; la fiche s’ouvre au clic (SUI-01)', async () => {
     render(wrap(MesDemandes, 'fr'));
     expect(await screen.findByRole('button', { name: 'AA-DI-2026-00002' })).toBeInTheDocument();
     expect(screen.getByText('Clôturée')).toBeInTheDocument();
     expect(screen.getByText(/Délai annoncé : mardi 10 novembre 2026/)).toBeInTheDocument();
-    expect(screen.getByText(/Délai annoncé : À convenir/)).toBeInTheDocument();
+    // 0.15.0 (R3) : la demande clôturée n'a plus de délai annoncé (avant : « À convenir »).
+    expect(screen.queryByText(/Délai annoncé : À convenir/)).toBeNull();
+    expect(screen.getAllByText(/Délai annoncé/)).toHaveLength(1);
     expect(screen.queryByText('Agathe Agent')).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: 'AA-DI-2026-00002' }));
     expect(await screen.findByText('Demande AA-DI-2026-00002')).toBeInTheDocument();
@@ -1369,6 +1382,26 @@ describe('cycle de vie, fiche du demandeur (0.14.0, point 5 ; SUI-02, SUI-05, CY
     await waitFor(() => expect(posts.find((p) => p.url === '/api/demandes/2/transitions')?.body).toEqual({ etat: 'rouverte', commentaire: 'Le bruit est revenu.' }));
   });
 
+  // 0.15.0 (R3 de la recette de la 0.14.0) : délai annoncé encore affiché sur une demande clôturée ; « Après cette date »
+  // dans le formulaire de réouverture, sans la date.
+  it('R3 : demande fermée sans délai annoncé (fiche et liste) ; formulaire de réouverture daté', async () => {
+    ficheData = mienne('cloturee', { completable: 0, annulable: 0, avis_possible: 0, avis: [], reouvrable: 1, reouvrable_jusqu_au: '2026-11-15 09:00:00', delai_annonce: '2026-11-10' });
+    const d = await ouvrir();
+    await within(d).findByText('Rouvrir ma demande');
+    expect(within(d).queryByText('Délai annoncé')).toBeNull();
+    // Liste en cartes (téléphone, voir l'en-tête) : plus de ligne « Délai annoncé » sur la carte d'une demande fermée.
+    const carte = (await screen.findByText('AA-DI-2026-00001')).closest('.ant-card') as HTMLElement;
+    expect(within(carte).queryByText(/Délai annoncé/)).toBeNull();
+    const ouverteCarte = screen.getAllByText('AA-DI-2026-00002').map((e) => e.closest('.ant-card')).find(Boolean) as HTMLElement;
+    expect(within(ouverteCarte).getByText(/Délai annoncé/)).toBeInTheDocument();
+    fireEvent.click(within(d).getByRole('button', { name: 'Rouvrir ma demande' }));
+    expect(await within(d).findByText(/Après le 15\/11\/2026.*, faites une nouvelle demande\./)).toBeInTheDocument();
+    cleanupAll();
+    ficheData = mienne('qualifiee', { annulable: 0 });
+    const d2 = await ouvrir();
+    expect(await within(d2).findByText('Délai annoncé')).toBeInTheDocument();
+  });
+
   for (const lang of ['fr', 'nl'] as const) {
     it(`avis et réouverture (${lang}) sans violation axe-core`, async () => {
       ficheData = mienne('cloturee', { completable: 0, annulable: 0, avis_possible: 1, avis: [], reouvrable: 1, reouvrable_jusqu_au: '2026-11-15 09:00:00' });
@@ -1394,3 +1427,171 @@ describe('avis sur la fiche du service (0.14.0, point 6)', () => {
   });
 });
 
+
+describe('fil de messages (0.15.0, point 2 ; SUI-04, SUI-07)', () => {
+  const msg = (id: number, auteur: string, texte: string, extra: Record<string, unknown> = {}) => ({ id, demande_id: 2, auteur, interne: 0, texte, langue: 'fr',
+    created_at: `2026-11-0${id} 09:00:00`, auteur_prenom: null, auteur_nom: null, de_moi: 0, non_lu: 0, pieces: [], ...extra });
+  const mienne = (etat = 'qualifiee', extra: Record<string, unknown> = {}) => demande(2, 'AA-DI-2026-00002', etat, { fil: { lecture: 1, ecriture: 1, interne: 0 }, pieces: [], complements: [], ...extra });
+  const ouvrirMienne = async (lang: 'fr' | 'nl' = 'fr') => { render(wrap(MesDemandes, lang, ['/demandes?demande=2'])); return screen.findByRole('dialog'); };
+
+  it('demandeur : « Vous » et « Service technique » sans nom d’agent ; repère des nouveaux messages ; fil marqué lu', async () => {
+    ficheData = mienne();
+    messagesData = [msg(1, 'demandeur', 'Elle clignote aussi.', { de_moi: 1 }), msg(2, 'service', 'Nous passons jeudi.', { non_lu: 1 })];
+    const d = await ouvrirMienne();
+    const fil = await within(d).findByRole('region', { name: 'Messages' });
+    expect(await within(fil).findByText('Nous passons jeudi.')).toBeInTheDocument();
+    expect(within(fil).getByText('Vous')).toBeInTheDocument();
+    expect(within(fil).getByText('Service technique')).toBeInTheDocument();
+    expect(within(fil).getByText('Nouveaux messages')).toBeInTheDocument();
+    await waitFor(() => expect(posts.some((p) => p.url === '/api/demandes/2/messages/lu')).toBe(true));
+    expect(within(fil).getByText('Votre message est lu par le service technique.')).toBeInTheDocument();
+    expect(within(fil).queryByRole('radio', { name: 'Note interne au service' })).toBeNull();
+  });
+
+  it('gestionnaire sur sa propre demande (Mes demandes) : il écrit comme demandeur, sans « Note interne »', async () => {
+    ficheData = mienne('qualifiee', { fil: { lecture: 1, ecriture: 1, interne: 1 } });
+    const d = await ouvrirMienne();
+    const fil = await within(d).findByRole('region', { name: 'Messages' });
+    await within(fil).findByLabelText('Votre message');
+    expect(within(fil).queryByText('Note interne au service')).toBeNull();
+    expect(within(fil).queryByLabelText('Insérer un modèle')).toBeNull();
+  });
+
+  it('demandeur : rien à envoyer, message sous le champ ; envoi du texte dans sa langue, jamais en interne', async () => {
+    ficheData = mienne();
+    const d = await ouvrirMienne();
+    const fil = await within(d).findByRole('region', { name: 'Messages' });
+    expect(await within(fil).findByText(/Aucun message pour l’instant/)).toBeInTheDocument();
+    fireEvent.click(within(fil).getByRole('button', { name: /Envoyer/ }));
+    expect(await within(fil).findByText('Écrivez un message ou joignez une photo ou un document.')).toBeInTheDocument();
+    expect(posts.some((p) => p.url === '/api/demandes/2/messages')).toBe(false);
+    fireEvent.change(within(fil).getByLabelText('Votre message'), { target: { value: '  C’est au 2e étage.  ' } });
+    fireEvent.click(within(fil).getByRole('button', { name: /Envoyer/ }));
+    await waitFor(() => expect(posts.find((p) => p.url === '/api/demandes/2/messages')?.body).toEqual({ texte: 'C’est au 2e étage.', interne: false, langue: 'fr' }));
+  });
+
+  it('demande fermée : fil lisible, plus de champ ; qui suit seulement : pas de fil', async () => {
+    ficheData = mienne('cloturee', { fil: { lecture: 1, ecriture: 0, interne: 0 }, completable: 0, annulable: 0 });
+    messagesData = [msg(1, 'service', 'C’est réparé.')];
+    const d = await ouvrirMienne();
+    const fil = await within(d).findByRole('region', { name: 'Messages' });
+    expect(await within(fil).findByText('C’est réparé.')).toBeInTheDocument();
+    expect(within(fil).getByText(/La demande est fermée/)).toBeInTheDocument();
+    expect(within(fil).queryByLabelText('Votre message')).toBeNull();
+    cleanupAll();
+    gets = [];
+    ficheData = mienne('qualifiee', { fil: { lecture: 0, ecriture: 0, interne: 0 }, suivie: 1 });
+    const d2 = await ouvrirMienne();
+    await within(d2).findByText('Demande AA-DI-2026-00002');
+    expect(within(d2).queryByRole('region', { name: 'Messages' })).toBeNull();
+    expect(gets.some((u) => /\/demandes\/\d+\/messages/.test(u))).toBe(false);
+  });
+
+  it('service : noms des agents et du demandeur, note interne marquée ; « Note interne au service » envoie interne', async () => {
+    ficheData = demande(2, 'AA-DI-2026-00002', 'qualifiee', { transitions: [], fil: { lecture: 1, ecriture: 1, interne: 1 }, pieces: [] });
+    messagesData = [msg(1, 'demandeur', 'Elle clignote.', { auteur_prenom: 'Agathe', auteur_nom: 'Agent' }),
+      msg(2, 'service', 'Prévoir l’échelle.', { interne: 1, auteur_prenom: 'Gaston', auteur_nom: 'Gestion' })];
+    render(wrap(DemandesEntite, 'fr', ['/demandes-entite?demande=2']));
+    const d = await screen.findByRole('dialog');
+    const fil = await within(d).findByRole('region', { name: 'Messages' });
+    expect(await within(fil).findByText('Agathe Agent')).toBeInTheDocument();
+    expect(within(fil).getByText('Gaston Gestion')).toBeInTheDocument();
+    expect(within(fil).getByText('Note interne')).toBeInTheDocument();
+    fireEvent.click(within(fil).getByText('Note interne au service'));
+    expect(within(fil).getByText('Lue par le service technique seulement, jamais par le demandeur.')).toBeInTheDocument();
+    fireEvent.change(within(fil).getByLabelText('Votre message'), { target: { value: 'Tube T8 en stock ?' } });
+    fireEvent.click(within(fil).getByRole('button', { name: /Enregistrer la note/ }));
+    await waitFor(() => expect(posts.find((p) => p.url === '/api/demandes/2/messages')?.body).toEqual({ texte: 'Tube T8 en stock ?', interne: true, langue: 'fr' }));
+  });
+
+  it('liste et accueil : « n nouveaux messages » sur la demande ; lien vers les demandes avec un nouveau message ; compteur du service', async () => {
+    nonLusData = [demande(2, 'AA-DI-2026-00002', 'qualifiee', { messages_non_lus: 2 })];
+    render(wrap(HomePage, 'fr'));
+    const lien = await screen.findByRole('link', { name: '1 demande a un nouveau message' });
+    expect(lien.getAttribute('href')).toBe('/demandes?messages=non_lus');
+    const compteur = await screen.findByRole('link', { name: /Messages à lire/ });
+    expect(compteur.getAttribute('href')).toContain('messages=non_lus');
+    cleanupAll();
+    render(wrap(MesDemandes, 'fr', ['/demandes?messages=non_lus']));
+    expect(await screen.findByText('2 nouveaux messages')).toBeInTheDocument();
+    expect(screen.getByText('Seulement les demandes avec un nouveau message')).toBeInTheDocument();
+    expect(gets.some((u) => u.includes('perimetre=miennes') && u.includes('messages=non_lus'))).toBe(true);
+  });
+
+  it('point 3 : « Prévenir un collègue » dans une note interne ; mentions affichées, « Vous êtes mentionné » ; compteur', async () => {
+    ficheData = demande(2, 'AA-DI-2026-00002', 'qualifiee', { transitions: [], fil: { lecture: 1, ecriture: 1, interne: 1 }, pieces: [] });
+    messagesData = [msg(1, 'service', 'Peux-tu passer ?', { interne: 1, auteur_prenom: 'Gaston', auteur_nom: 'Gestion', mentions: [{ user_id: 7, prenom: 'Agathe', nom: 'Agent' }] })];
+    render(wrap(DemandesEntite, 'fr', ['/demandes-entite?demande=2']));
+    const d = await screen.findByRole('dialog');
+    const fil = await within(d).findByRole('region', { name: 'Messages' });
+    expect(await within(fil).findByText('@Agathe Agent')).toBeInTheDocument();
+    expect(within(fil).getByText('Vous êtes mentionné')).toBeInTheDocument();
+    expect(within(fil).queryByLabelText('Prévenir un collègue')).toBeNull();
+    fireEvent.click(within(fil).getByText('Note interne au service'));
+    const choix = await within(fil).findByLabelText('Prévenir un collègue');
+    fireEvent.mouseDown(choix);
+    fireEvent.click(await screen.findByText('Rémi Responsable'));
+    fireEvent.change(within(fil).getByLabelText('Votre message'), { target: { value: 'Commande la pièce.' } });
+    fireEvent.click(within(fil).getByRole('button', { name: /Enregistrer la note/ }));
+    await waitFor(() => expect(posts.find((p) => p.url === '/api/demandes/2/messages')?.body).toEqual({ texte: 'Commande la pièce.', interne: true, langue: 'fr', mentions: [8] }));
+    cleanupAll();
+    render(wrap(HomePage, 'fr'));
+    const compteur = await screen.findByRole('link', { name: /Notes où vous êtes mentionné/ });
+    expect(compteur.getAttribute('href')).toContain('mentions=a_voir');
+  });
+
+  it('point 4 (GES-09) : « Insérer un modèle » dans la langue de la demande, variables remplacées ; pas en note interne', async () => {
+    ficheData = demande(2, 'AA-DI-2026-00002', 'qualifiee', { transitions: [], fil: { lecture: 1, ecriture: 1, interne: 1 }, pieces: [], langue: 'nl',
+      etat_libelle_nl: 'In behandeling', etat_libelle_fr: 'Prise en charge' });
+    render(wrap(DemandesEntite, 'fr', ['/demandes-entite?demande=2']));
+    const d = await screen.findByRole('dialog');
+    const fil = await within(d).findByRole('region', { name: 'Messages' });
+    const choix = await within(fil).findByLabelText('Insérer un modèle');
+    fireEvent.mouseDown(choix);
+    fireEvent.click(await screen.findByText('Précision demandée'));
+    await waitFor(() => expect((within(fil).getByLabelText('Votre message') as HTMLTextAreaElement).value)
+      .toBe('Goedendag Agathe,\n\nKunt u AA-DI-2026-00002 (Bureau 12, In behandeling) verduidelijken?'));
+    fireEvent.click(within(fil).getByText('Note interne au service'));
+    expect(within(fil).queryByLabelText('Insérer un modèle')).toBeNull();
+  });
+
+  it('point 5 (SUI-09) : le service suit une demande vue (abonnement) ; qui suit par « Moi aussi » arrête, prévenu pour sa remarque', async () => {
+    ficheData = demande(2, 'AA-DI-2026-00002', 'qualifiee', { transitions: [], fil: { lecture: 1, ecriture: 1, interne: 1 }, pieces: [], suivable: 1, suivie: 0,
+      suiveurs: [{ user_id: 8, prenom: 'Rémi', nom: 'Responsable', remarque: null, created_at: '2026-11-09 10:00:00', source: 'abonnement' },
+        { user_id: 9, prenom: 'Sam', nom: 'Suiveur', remarque: 'Chez moi aussi.', created_at: '2026-11-09 11:00:00', source: 'moi_aussi' }] });
+    render(wrap(DemandesEntite, 'fr', ['/demandes-entite?demande=2']));
+    const d = await screen.findByRole('dialog');
+    expect(await within(d).findByText(/suit la demande/)).toBeInTheDocument();
+    expect(within(d).getByText(/« Moi aussi »/)).toBeInTheDocument();
+    fireEvent.click(await within(d).findByRole('button', { name: /Suivre cette demande/ }));
+    await waitFor(() => expect(posts.find((p) => p.url === '/api/demandes/2/suivre')?.body).toEqual({ source: 'abonnement' }));
+    cleanupAll();
+    ficheData = mienne('qualifiee', { suivie: 1, suivi_source: 'moi_aussi', suivable: 0, fil: { lecture: 0, ecriture: 0, interne: 0 } });
+    const d2 = await ouvrirMienne();
+    fireEvent.click(await within(d2).findByRole('button', { name: /Ne plus suivre/ }));
+    expect(await screen.findByText('La remarque laissée avec « Moi aussi » sera effacée.')).toBeInTheDocument();
+    fireEvent.click(screen.getAllByRole('button', { name: /Ne plus suivre/ }).slice(-1)[0]);
+    await waitFor(() => expect(puts.some((p) => p.url === '/api/demandes/2/suivre' && p.method === 'DELETE')).toBe(true));
+  });
+
+  for (const lang of ['fr', 'nl'] as const) {
+    it(`fil du demandeur et du service (${lang}) sans violation axe-core`, async () => {
+      ficheData = mienne();
+      messagesData = [msg(1, 'demandeur', 'Elle clignote.', { de_moi: 1 }), msg(2, 'service', 'Nous passons.', { non_lu: 1 })];
+      const d = await ouvrirMienne(lang);
+      await within(d).findByText('Nous passons.');
+      await audit(d);
+      cleanupAll();
+      ficheData = demande(2, 'AA-DI-2026-00002', 'qualifiee', { transitions: [], fil: { lecture: 1, ecriture: 1, interne: 1 }, pieces: [] });
+      messagesData = [msg(1, 'service', 'Note.', { interne: 1, auteur_prenom: 'G', auteur_nom: 'G' })];
+      render(wrap(DemandesEntite, lang, ['/demandes-entite?demande=2']));
+      const d2 = await screen.findByRole('dialog');
+      await within(d2).findByText('Note.');
+      await audit(d2);
+      // Point 3 : note interne choisie, champ « Prévenir un collègue » affiché.
+      fireEvent.click(within(d2).getByText(translations['fil.interne.option'][lang]));
+      await within(d2).findByLabelText(translations['fil.mentions'][lang]);
+      await audit(d2);
+    }, 30000);
+  }
+});

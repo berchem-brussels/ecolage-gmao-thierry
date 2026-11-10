@@ -20,10 +20,16 @@
  * 0.14.0 (étape 9, point 5 ; SUI-02, SUI-05, CYC-04) : l'état vu par le demandeur porte le libellé réglé par l'entité ;
  * la fiche montre les compléments (au demandeur et au service) ; « Mes demandes » ajoute la ligne du temps et les
  * boutons « Compléter ma demande » et « Annuler ma demande » selon les droits rendus par le serveur.
+ * 0.15.0 (étape 10, point 2 ; SUI-04) : fil de messages sur la fiche (FilMessages), entre la fiche et la ligne du temps ;
+ * « n nouveaux messages » sur chaque demande de la liste ; ?messages=non_lus (lien de l'accueil) ne garde que les
+ * demandes avec un message non lu, filtre retiré par la croix de son étiquette. Point 5 (SUI-09) : « Suivre cette
+ * demande » et « Ne plus suivre » (SuiviDemande) ; la fiche du service dit si chaque personne suit par « Moi aussi » ou
+ * par abonnement.
  */
 import { useCallback, useEffect, useState } from 'react';
 import { Alert, Button, Card, Descriptions, Drawer, Grid, Input, List, Segmented, Space, Table, Tag, Typography, message } from 'antd';
 import { useSearchParams } from 'react-router-dom';
+import { MessageOutlined } from '@ant-design/icons';
 import api, { ApiError, qs } from '../api';
 import VignettesPieces from '../components/demandes/VignettesPieces';
 import PhotoLieu from '../components/demandes/PhotoLieu';
@@ -33,6 +39,8 @@ import { Icone } from '../referentiel';
 import { type Demande, type Piece, COULEUR_ETAT, beneficiaireTexte, cheminTexte, dateDepot, dateSouhaitee, duree, extrait, finAnnoncee, instant } from '../demandes';
 import GestionDemandesPage from './GestionDemandesPage';
 import HistoriqueDemande from '../components/demandes/HistoriqueDemande';
+import FilMessages from '../components/demandes/FilMessages';
+import SuiviDemande from '../components/demandes/SuiviDemande';
 import { AnnulerForm, AvisDemandeur, AvisDonne, BoutonsDemandeur, CompleterForm, ReouvrirForm } from '../components/demandes/ActionsDemandeur';
 
 /** Mention « Danger » (0.7.0, DEM-06), à côté de l'état. */
@@ -42,6 +50,13 @@ export function DangerTag() {
 }
 
 type Filtre = 'toutes' | 'ouvertes' | 'closes';
+
+/** Messages non lus d'une demande (0.15.0, point 2) : « 1 nouveau message », « 3 nouveaux messages » ; rien à zéro. */
+export function NonLusTag({ n }: { n?: number }) {
+  const { t } = useI18n();
+  if (!n) return null;
+  return <Tag color="blue" icon={<MessageOutlined aria-hidden />} style={{ marginInlineEnd: 0 }}>{n === 1 ? t('fil.non_lus.un') : t('fil.non_lus').replace('{n}', String(n))}</Tag>;
+}
 
 /**
  * Étiquette d'état : libellé simple vu par le demandeur (cahier des charges, section 8.1) ; libellé du service
@@ -144,9 +159,12 @@ export function FicheDemande({ d, avecDemandeur, service = false, onChange }: { 
       <Descriptions.Item label={t('demande.champ.depot')}>{dateDepot(d.created_at)}</Descriptions.Item>
       {d.date_souhaitee && <Descriptions.Item label={t('demande.champ.date_souhaitee')}>{dateSouhaitee(d.date_souhaitee, lang)}</Descriptions.Item>}
       {d.creneau && <Descriptions.Item label={t('demande.champ.creneau')}>{d.creneau}</Descriptions.Item>}
-      <Descriptions.Item label={t('demande.champ.delai')}>
-        {d.danger === 1 && !d.delai_annonce ? t('demande.danger.envoyee') : fin ? `${t('demande.delai.indicatif')} ${fin}` : t('demande.delai.convenir')}
-      </Descriptions.Item>
+      {/* 0.15.0 (R3 de la recette de la 0.14.0) : plus de délai annoncé sur une demande fermée. */}
+      {d.ouverte !== 0 && (
+        <Descriptions.Item label={t('demande.champ.delai')}>
+          {d.danger === 1 && !d.delai_annonce ? t('demande.danger.envoyee') : fin ? `${t('demande.delai.indicatif')} ${fin}` : t('demande.delai.convenir')}
+        </Descriptions.Item>
+      )}
       {avecDemandeur && <Descriptions.Item label={t('demande.champ.demandeur')}>{d.demandeur_prenom} {d.demandeur_nom}</Descriptions.Item>}
       {service && d.duree_estimee_minutes ? <Descriptions.Item label={t('qualif.duree')}>{duree(d.duree_estimee_minutes)}</Descriptions.Item> : null}
       {service && d.consignes ? <Descriptions.Item label={t('qualif.consignes')}><span style={{ whiteSpace: 'pre-wrap' }}>{d.consignes}</span></Descriptions.Item> : null}
@@ -161,7 +179,7 @@ export function FicheDemande({ d, avecDemandeur, service = false, onChange }: { 
           <Space direction="vertical" size={6}>
             {d.suiveurs.map((s) => (
               <div key={s.user_id}>
-                <div>{s.prenom} {s.nom} <Typography.Text type="secondary" style={{ fontSize: 12 }}>· {dateDepot(s.created_at)}</Typography.Text></div>
+                <div>{s.prenom} {s.nom} <Typography.Text type="secondary" style={{ fontSize: 12 }}>· {s.source === 'abonnement' ? t('suivi.source.abonnement') : t('suivi.source.moi_aussi')} · {dateDepot(s.created_at)}</Typography.Text></div>
                 {s.remarque && <Typography.Text type="secondary" style={{ whiteSpace: 'pre-wrap' }}>{s.remarque}</Typography.Text>}
               </div>
             ))}
@@ -186,6 +204,9 @@ function MesDemandes() {
   const [params, setParams] = useSearchParams();
   const [filtre, setFiltre] = useState<Filtre>('toutes');
   const [q, setQ] = useState('');
+  /** 0.15.0 (point 2) : ?messages=non_lus, lien « n demandes ont un nouveau message » de l'accueil. */
+  const nonLus = params.get('messages') === 'non_lus';
+  const sansFiltreMessages = () => { const p = new URLSearchParams(params); p.delete('messages'); setParams(p); };
   const [rows, setRows] = useState<Demande[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
@@ -200,11 +221,11 @@ function MesDemandes() {
     setLoading(true);
     try {
       const ouvertes = filtre === 'ouvertes' ? 1 : filtre === 'closes' ? 0 : undefined;
-      const r = await api.page<Demande>(`/demandes${qs({ perimetre: 'miennes', ouvertes, q: q.trim() || undefined, limit: taille, offset: (page - 1) * taille })}`);
+      const r = await api.page<Demande>(`/demandes${qs({ perimetre: 'miennes', ouvertes, messages: nonLus ? 'non_lus' : undefined, q: q.trim() || undefined, limit: taille, offset: (page - 1) * taille })}`);
       setRows(r.data);
       setTotal(r.pagination.total);
     } catch { setRows([]); setTotal(0); } finally { setLoading(false); }
-  }, [filtre, q, page]);
+  }, [filtre, q, page, nonLus]);
   useEffect(() => { charger(); }, [charger, user?.entite_active_id]);
 
   const ouverte = params.get('demande');
@@ -219,7 +240,8 @@ function MesDemandes() {
 
   const cat = (d: Demande) => (lang === 'nl' ? d.categorie_libelle_nl : d.categorie_libelle_fr);
   const lieu = (d: Demande) => (lang === 'nl' ? d.lieu_nom_nl : d.lieu_nom_fr);
-  const delai = (d: Demande) => (d.danger === 1 && !d.delai_annonce ? t('demande.danger.court') : finAnnoncee(d.delai_annonce, lang) || t('demande.delai.convenir.court'));
+  const delai = (d: Demande) => (d.ouverte === 0 ? t('demande.delai.sans_objet')
+    : d.danger === 1 && !d.delai_annonce ? t('demande.danger.court') : finAnnoncee(d.delai_annonce, lang) || t('demande.delai.convenir.court'));
   const titre = t('demande.mes.title');
 
   return (
@@ -228,6 +250,11 @@ function MesDemandes() {
         <Typography.Title level={1} style={{ fontSize: 22, margin: 0 }}>{titre}</Typography.Title>
       </div>
       <Typography.Paragraph type="secondary">{t('demande.mes.intro')}</Typography.Paragraph>
+      {nonLus && (
+        <div style={{ marginBottom: 12 }}>
+          <Tag color="blue" closable onClose={sansFiltreMessages} closeIcon={<span aria-label={t('common.close')}>×</span>} style={{ whiteSpace: 'normal' }}>{t('fil.filtre')}</Tag>
+        </div>
+      )}
       <Space wrap style={{ marginBottom: 12 }}>
         <Segmented aria-label={t('demande.filtre')} value={filtre} onChange={(v) => { setFiltre(v as Filtre); setPage(1); }}
           options={[{ value: 'toutes', label: t('demande.filtre.toutes') }, { value: 'ouvertes', label: t('demande.filtre.ouvertes') }, { value: 'closes', label: t('demande.filtre.closes') }]} />
@@ -243,13 +270,13 @@ function MesDemandes() {
                 <Space direction="vertical" size={4} style={{ width: '100%' }}>
                   <Space style={{ justifyContent: 'space-between', width: '100%' }} wrap>
                     <Button type="link" onClick={() => ouvrir(d)} style={{ paddingInline: 0, fontWeight: 600 }}>{d.numero}</Button>
-                    <Space size={4}>{d.danger === 1 && <DangerTag />}<EtatTag etat={d.etat} d={d} /></Space>
+                    <Space size={4} wrap>{d.danger === 1 && <DangerTag />}<EtatTag etat={d.etat} d={d} /><NonLusTag n={d.messages_non_lus} /></Space>
                   </Space>
                   <Typography.Text><Icone code={d.categorie_icone} style={{ color: 'var(--app-primary)' }} /> {cat(d)}</Typography.Text>
                   {d.suivie === 1 && <Tag color="green" style={{ alignSelf: 'flex-start' }}>{t('demande.suivie.tag')}</Tag>}
                   {d.pour_moi === 1 && <Tag color="purple" style={{ alignSelf: 'flex-start' }}>{t('demande.pour_moi.tag')}</Tag>}
                   <Typography.Text type="secondary" style={{ fontSize: 13 }}>{lieu(d)} · {dateDepot(d.created_at)}</Typography.Text>
-                  <Typography.Text type="secondary" style={{ fontSize: 13 }}>{t('demande.champ.delai')} : {delai(d)}</Typography.Text>
+                  {d.ouverte !== 0 && <Typography.Text type="secondary" style={{ fontSize: 13 }}>{t('demande.champ.delai')} : {delai(d)}</Typography.Text>}
                 </Space>
               </Card>
             </List.Item>
@@ -275,7 +302,7 @@ function MesDemandes() {
                 <Typography.Text type="secondary" style={{ fontSize: 12 }}>{cheminTexte(d.lieu_chemin.slice(0, -1), lang)}</Typography.Text>
               </div>
             ) },
-            { title: t('demande.champ.etat'), key: 'etat', render: (_, d) => <Space size={4} wrap>{d.danger === 1 && <DangerTag />}<EtatTag etat={d.etat} d={d} /></Space> },
+            { title: t('demande.champ.etat'), key: 'etat', render: (_, d) => <Space size={4} wrap>{d.danger === 1 && <DangerTag />}<EtatTag etat={d.etat} d={d} /><NonLusTag n={d.messages_non_lus} /></Space> },
             { title: t('demande.champ.depot'), key: 'depot', render: (_, d) => dateDepot(d.created_at) },
             { title: t('demande.champ.delai'), key: 'delai', render: (_, d) => delai(d) },
           ]} />
@@ -292,9 +319,10 @@ function MesDemandes() {
               <>
                 <AvisDemandeur key={`v-${fiche.id}-${fiche.avis?.length || 0}`} d={fiche} onDone={apresAction} />
                 <BoutonsDemandeur d={fiche} onChoisir={setAction} />
+                <SuiviDemande d={fiche} onChange={(n) => { if (n) setFiche(n); else fermer(); charger(); }} />
                 <FicheDemande d={fiche} avecDemandeur={false} onChange={chargerFiche} />
+                <FilMessages key={`f-${fiche.id}`} d={fiche} service={false} onLu={charger} />
                 <HistoriqueDemande demandeId={fiche.id} service={false} rafraichir={histo} />
-                <Typography.Paragraph type="secondary" style={{ marginTop: 12, fontSize: 13 }}>{t('demande.fiche.suite')}</Typography.Paragraph>
               </>
             ))}
       </Drawer>

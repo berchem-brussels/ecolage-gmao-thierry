@@ -6,10 +6,12 @@
  * 0.9.1 (R1, DV-94) : la page qui l'affiche peut demander un nouveau chargement par `rafraichir` (après une
  * qualification) ; les compteurs restent affichés pendant ce chargement, ils ne repassent à « … » qu'au changement
  * d'entité.
+ * 0.15.0 (point 2) : « Messages à lire », demandes dont le fil a un message que la personne n'a pas lu. Point 3 (GES-08) :
+ * « Vous êtes mentionné », demandes où une note interne la mentionne et qu'elle n'a pas lue (en attendant la cloche).
  */
 import { useEffect, useRef, useState } from 'react';
 import { Card, Typography } from 'antd';
-import { CheckCircleOutlined, ClockCircleOutlined, InboxOutlined, PauseCircleOutlined, ThunderboltOutlined, WarningOutlined } from '@ant-design/icons';
+import { CheckCircleOutlined, ClockCircleOutlined, InboxOutlined, MessageOutlined, NotificationOutlined, PauseCircleOutlined, ThunderboltOutlined, WarningOutlined } from '@ant-design/icons';
 import { Link } from 'react-router-dom';
 import api from '../../api';
 import { useAuth } from '../../contexts/AuthContext';
@@ -17,7 +19,7 @@ import { useI18n } from '../../contexts/I18nContext';
 import { COMPTEURS, type TableauBord as Bord, urlGestion } from '../../demandes';
 
 const ICONES = { a_qualifier: InboxOutlined, en_retard: WarningOutlined, p1_p2: ThunderboltOutlined, echeance_proche: ClockCircleOutlined,
-  attente_longue: PauseCircleOutlined, a_cloturer: CheckCircleOutlined };
+  attente_longue: PauseCircleOutlined, a_cloturer: CheckCircleOutlined, messages_a_lire: MessageOutlined, mentions: NotificationOutlined };
 
 export default function TableauBord({ titre = true, rafraichir = 0 }: { titre?: boolean; rafraichir?: number }) {
   const { t } = useI18n();

@@ -44,6 +44,12 @@ const RESSOURCES = [
   { route: 'GET /api/faq/:id', tool: 'get_faq', id: (ent) => objets[ent.code].faq },
   // 0.14.0 : historique d'une demande de l'autre entité.
   { route: 'GET /api/demandes/:id/historique', tool: 'get_historique_demande', id: (ent) => objets[ent.code].demande },
+  // 0.15.0 : fil de messages d'une demande de l'autre entité, et pièces en attente du message.
+  { route: 'GET /api/demandes/:id/messages', tool: 'list_messages_demande', id: (ent) => objets[ent.code].demande },
+  { route: 'GET /api/demandes/:id/messages/pieces', tool: 'list_pieces_message', id: (ent) => objets[ent.code].demande },
+  // 0.15.0 (point 4) : modèle de réponse de l'autre entité.
+  { route: 'GET /api/modeles-reponse/:id', tool: 'get_modele_reponse', id: (ent) => objets[ent.code].modele },
+  { route: 'GET /api/demandes/:id/messages/mentionnables', tool: 'list_mentionnables_demande', id: (ent) => objets[ent.code].demande },
 ];
 
 /** Écritures cloisonnées : même attente, 403 depuis l'autre entité, et l'objet n'a pas bougé. */
@@ -79,6 +85,14 @@ const ECRITURES = [
   { route: 'DELETE /api/demandes/:id', body: { motif: 'Piraté' }, tool: 'prepare_cancel_demande', id: (ent) => objets[ent.code].demande },
   { route: 'POST /api/demandes/:id/pieces', raw: true, tool: null, id: (ent) => objets[ent.code].demande },
   { route: 'POST /api/demandes/:id/avis', body: { note: 1 }, tool: 'give_avis_demande', id: (ent) => objets[ent.code].demande },
+  // 0.15.0 : message, commentaire interne et pièce de message sur une demande de l'autre entité.
+  { route: 'POST /api/demandes/:id/messages', body: { texte: 'Piraté' }, tool: 'add_message_demande', id: (ent) => objets[ent.code].demande },
+  { route: 'POST /api/demandes/:id/messages', body: { texte: 'Piraté', interne: true }, tool: 'add_message_demande', id: (ent) => objets[ent.code].demande },
+  { route: 'POST /api/demandes/:id/messages/pieces', raw: true, tool: null, id: (ent) => objets[ent.code].demande },
+  { route: 'PUT /api/modeles-reponse/:id', body: { titre_fr: 'Piraté' }, tool: 'update_modele_reponse', id: (ent) => objets[ent.code].modele },
+  { route: 'DELETE /api/modeles-reponse/:id', body: { motif: 'Piraté' }, tool: 'prepare_deactivate_modele_reponse', id: (ent) => objets[ent.code].modele },
+  { route: 'DELETE /api/demandes/:id/suivre', body: {}, tool: 'prepare_ne_plus_suivre_demande', id: (ent) => objets[ent.code].demande },
+  { route: 'POST /api/demandes/:id/messages/lu', body: {}, tool: 'mark_messages_lus', id: (ent) => objets[ent.code].demande },
   { route: 'POST /api/tickets/:id/faq', body: { question_fr: 'Piraté', question_nl: 'Piraté', answer_fr: 'Piraté', answer_nl: 'Piraté' }, tool: 'create_faq_from_ticket', id: (ent) => objets[ent.code].ticket },
 ];
 
@@ -118,7 +132,8 @@ before(async () => {
     assert.equal(ticket.status, 201, JSON.stringify(ticket.body));
     const faq = await c.post('/api/faq', { question_fr: `Question ${ent.code}`, question_nl: `Vraag ${ent.code}`, answer_fr: 'Réponse', answer_nl: 'Antwoord' });
     assert.equal(faq.status, 201, JSON.stringify(faq.body));
-    objets[ent.code] = { lieu: lieu.body.data.id, valeur: valeur.id, categorie: categorie.id, jour: jour.id, demande: demande.body.data.id, question: question.id, piece: piece.body.data.id, ticket: ticket.body.data.id, faq: faq.body.data.id };
+    const modele = (await c.get('/api/modeles-reponse')).body.data[0];
+    objets[ent.code] = { lieu: lieu.body.data.id, modele: modele.id, valeur: valeur.id, categorie: categorie.id, jour: jour.id, demande: demande.body.data.id, question: question.id, piece: piece.body.data.id, ticket: ticket.body.data.id, faq: faq.body.data.id };
   }
 });
 after(() => srv.stop());
@@ -183,11 +198,15 @@ for (const w of ECRITURES) {
     const demande = (await gestB.get(`/api/demandes/${objets.BB.demande}`)).body.data;
     assert.equal(demande.etat, 'a_qualifier', 'la demande n’a pas été qualifiée');
     assert.equal(demande.qualifiee_par, null);
+    assert.equal((await gestB.get(`/api/demandes/${objets.BB.demande}/messages`)).body.data.length, 0, 'aucun message ajouté');
     const ticket = (await gestB.get(`/api/tickets/${objets.BB.ticket}`)).body.data;
     assert.equal(ticket.status, 'new', 'le ticket n’a pas été pris en charge');
     assert.equal(ticket.priority, 'P4');
     assert.equal(ticket.messages.filter((m) => m.kind === 'message').length, 0, 'aucun message ajouté');
     assert.equal(ticket.faq_id, null, 'aucune entrée de FAQ née du ticket');
+    const modele = (await gestB.get(`/api/modeles-reponse/${objets.BB.modele}`)).body.data;
+    assert.notEqual(modele.titre_fr, 'Piraté');
+    assert.equal(modele.is_active, 1);
     const faq = (await gestB.get(`/api/faq/${objets.BB.faq}`)).body.data;
     assert.equal(faq.question_fr, 'Question BB');
     assert.equal(faq.is_active, 1);

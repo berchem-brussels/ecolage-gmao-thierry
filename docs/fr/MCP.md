@@ -1,6 +1,6 @@
 # Serveur MCP
 
-Version de l'application : **0.14.0** · Mis à jour le 08/11/2026 · Le français fait foi.
+Version de l'application : **0.15.0** · Mis à jour le 09/11/2026 · Le français fait foi.
 
 ## Accès
 
@@ -12,13 +12,27 @@ Version de l'application : **0.14.0** · Mis à jour le 08/11/2026 · Le frança
 ## Règles
 
 - Chaque outil appelle la même fonction de service que la route REST, sous l'identité et les droits de la personne, dans son entité active.
-- Un test de parité échoue si une route n'a pas son outil ou l'inverse. Cinq routes binaires en sont exclues par une liste fermée : le dépôt et la lecture du fichier d'une photo d'un lieu, depuis la 0.8.0 d'une pièce jointe d'une demande, et depuis la 0.14.0 l'ajout d'un fichier à une demande envoyée (écart E-17).
+- Un test de parité échoue si une route n'a pas son outil ou l'inverse. Six routes binaires en sont exclues par une liste fermée : le dépôt et la lecture du fichier d'une photo d'un lieu, depuis la 0.8.0 d'une pièce jointe d'une demande, depuis la 0.14.0 l'ajout d'un fichier à une demande envoyée et depuis la 0.15.0 le dépôt d'une pièce d'un message (écart E-17).
 - Une désactivation, un retrait ou un effacement se fait en deux appels : `prepare_*` décrit l'effet et rend un jeton de cinq minutes lié à la personne, `confirm_*` exécute. Le droit d'écrire est vérifié dès `prepare_*`.
 - Descriptions en français et en néerlandais. Aucun outil de SQL libre.
 - Un module éteint (Paramètres, Modules) retire ses outils de `tools/list` et refuse leur appel (`MODULE_DISABLED`) ; module Patrimoine éteint : `create_lieu`, `update_lieu`, `deactivate_lieu`, `delete_lieu_photo`.
 - Depuis la 0.4.1, les fiches de catégorie, de priorité, de jour de l'horaire et de jour non ouvré portent `trace` (`etat`, `le`, `par`) : qui les a modifiées en dernier et quand, ou « livrée ». Le nom n'est rendu qu'aux personnes de l'entité. Aucun outil nouveau.
 - Depuis la 0.5.0, le serveur retire les espaces de début et de fin de tout texte reçu, par le MCP comme par l'API, sauf les mots de passe ; un champ obligatoire fait seulement d'espaces est refusé (`VALIDATION`), avant tout jeton de confirmation.
 - Les instructions envoyées au client demandent de commencer par `get_profile` : les données métier sont celles de l'entité active ; `select_entite` la change. Elles disent aussi que le MCP ne transporte aucun fichier, et qu'une demande se dépose par `create_demande`, le lieu proposé d'office étant `lieu_propose` dans `get_profile`, et les derniers lieux de ses demandes `lieux_recents` (0.7.5). Depuis la 0.8.0, elles disent que les pièces du brouillon partent avec la demande suivante, même déposée par `create_demande`, et qu'il faut le dire à la personne.
+
+## 0.15.0
+
+Outils nouveaux du fil de messages, des mentions, des modèles et de l'abonnement (étape 10) :
+
+- `list_messages_demande` (`GET /api/demandes/:id/messages`) : messages de la demande, du plus ancien au plus récent, avec leurs pièces, `de_moi`, `nouveau` et `droits` ; le demandeur et le bénéficiaire ne reçoivent ni les notes internes ni le nom des agents du service ; qui suit sans être concerné ne lit pas le fil.
+- `add_message_demande` (`POST /api/demandes/:id/messages`) : `texte` (4 000 caractères), `interne` 1 pour une note interne (service seul), `mentions` (identifiants de collègues du service, note interne seulement, dix au plus), `langue` ; les pièces déposées par l'interface partent avec le message. Demande ouverte seulement (`DEMANDE_FERMEE`).
+- `mark_messages_lus` (`POST /api/demandes/:id/messages/lu`) : `jusqu_a`, identifiant du dernier message lu.
+- `list_mentionnables_demande` (`GET /api/demandes/:id/messages/mentionnables`, `demandes:traiter`) : collègues du service de l'entité qu'une note interne peut mentionner.
+- `list_pieces_message` (`GET /api/demandes/:id/messages/pieces`) : pièces déposées qui attendent le prochain message de la personne ; leur dépôt reste hors MCP.
+- `list_modeles_reponse`, `get_modele_reponse` (`demandes:traiter` ou `parametres:gerer`), `create_modele_reponse`, `update_modele_reponse` et `deactivate_modele_reponse` en deux appels (`parametres:gerer`) : titres et textes FR et NL ; variables `{numero}`, `{lieu}`, `{etat}`, `{prenom}`, toute autre refusée (`MODELE_VARIABLE`).
+- `ne_plus_suivre_demande` (`DELETE /api/demandes/:id/suivre`) en deux appels : `prepare_ne_plus_suivre_demande` dit si une remarque « Moi aussi » sera effacée.
+
+Outils enrichis : `suivre_demande` prend `source` = `abonnement` (suivre sans remarque) ; `get_demande` rend `fil` (`lecture`, `ecriture`, `interne`), `messages_non_lus`, `suivie`, `suivi_source`, `suivable` ; `list_demandes` prend `messages` = `non_lus` et `mentions` = `a_voir` et rend `messages_non_lus` par ligne ; `get_tableau_bord` rend `messages_a_lire` et `mentions`. Exemple : « Réponds au demandeur de la demande AC-DI-2026-00012 avec le modèle « Accès nécessaire ». » L'assistant lit le modèle par `list_modeles_reponse`, propose le texte, puis appelle `add_message_demande` après accord.
 
 ## 0.14.0
 
@@ -165,7 +179,7 @@ Aucun outil nouveau ni modifié. Le message « Ce champ est obligatoire » de la
 | `list_notes_version`, `get_note_version`, `marquer_nouveautes_lues` | `GET /api/notes-version`, `GET /api/notes-version/:version`, `PUT /api/auth/nouveautes` (nouveau en 0.3.0) |
 | `list_users`, `get_user`, `create_user`, `update_user`, `prepare_deactivate_user`, `confirm_deactivate_user` | `/api/users` |
 
-Hors MCP : `POST /api/lieux/:id/photo` et `GET /api/lieux/:id/photo`, `POST /api/demandes/brouillon/pieces`, `POST /api/demandes/:id/pieces` (0.14.0) et `GET /api/pieces/:id/fichier` (fichiers). La fiche d'un lieu rendue par `get_lieu` dit s'il a une photo (`has_photo`) et depuis quand (`photo_at`).
+Hors MCP : `POST /api/lieux/:id/photo` et `GET /api/lieux/:id/photo`, `POST /api/demandes/brouillon/pieces`, `POST /api/demandes/:id/pieces` (0.14.0), `POST /api/demandes/:id/messages/pieces` (0.15.0) et `GET /api/pieces/:id/fichier` (fichiers). La fiche d'un lieu rendue par `get_lieu` dit s'il a une photo (`has_photo`) et depuis quand (`photo_at`).
 
 ## Exemples de demandes à l'assistant
 

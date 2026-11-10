@@ -2,6 +2,10 @@
 
 The French text (`docs/fr/SECURITE.md`) prevails and holds the full grid per version.
 
+## 0.15.0 (09/11/2026)
+
+Message thread, internal notes with mentions, reply templates, following; migration `013_messages`. Tested: thread, read marks, message attachments, people to mention, following and templates of the other entity 403 (API and MCP); the thread is read by the requester, the beneficiary and the department only, never by a mere follower; internal notes and their attachments for the department only; department agent names hidden from the requester; writing only on an open request; mentions only in an internal note and only of department members; no free text in the audit log; templates accept only `{numero}`, `{lieu}`, `{etat}`, `{prenom}`; the profile is reread when returning to the tab (R1). Message attachments outside MCP (E-17, sixth route). Nine protections removed one by one: at least one failure each. `npm audit`: server 0, interface 3 moderate (E-09).
+
 ## 0.14.0 (08/11/2026)
 
 Life cycle of requests, migration `012_cycle_de_vie`. Tested: transition, history, addition, cancellation, photo and rating of a request of the other entity 403 (API and MCP); service transitions only with `demandes:traiter`; the requester and the beneficiary may only cancel and reopen, a follower nothing; a status the requester may never reach returns 403, never 409; any missing transition refused; cancellation refused once the request has been "In progress"; reopening only within the period; one rating per closure; suspension only for a ticked reason; no free text in the audit log (`commentaire_donne`, `compte_rendu_donne`). `recette.sh`: password typed visibly, only its length shown. Each protection removed separately: at least one failure. No new dependency.
