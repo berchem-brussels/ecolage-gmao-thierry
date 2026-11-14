@@ -293,7 +293,7 @@ test('migration 012 sur une base 0.13.0 : historique repris de la fiche, état d
   assert.equal(up.status, 0, up.stderr);
   assert.match(up.stdout, /\[DB\] Migration 012_cycle_de_vie appliquée/);
   const out = JSON.parse(up.stdout.trim().split('\n').pop());
-  assert.equal(out.migration, '013_messages', 'les migrations suivantes passent aussi (0.15.0)');
+  assert.equal(out.migration, '014_validation', 'les migrations suivantes passent aussi (0.16.0)');
   assert.deepEqual(out.historique, [
     { demande_id: 1, de_etat: null, vers_etat: 'a_qualifier', canal: 'ecran', created_at: '2026-11-01 08:00:00' },
     { demande_id: 2, de_etat: null, vers_etat: 'a_qualifier', canal: 'mcp', created_at: '2026-11-02 08:00:00' },
@@ -501,11 +501,22 @@ test('documentation : nombres d’états et de passages égaux au catalogue', ()
   const fs = require('node:fs');
   const path = require('node:path');
   const racine = path.join(__dirname, '..', '..');
+  // 0.16.0 : un passage ajouté après la 0.14.0 porte « depuis » ; une note ou une section du CHANGELOG cite le nombre de
+  // passages de sa version, la documentation d'architecture celui du catalogue.
+  const num = (v) => v.split('.').map(Number).reduce((a, x) => a * 1000 + x, 0);
+  const passagesEn = (v) => cycle.CONFIG.transitions.filter((t) => !t.depuis || (v && num(t.depuis) <= num(v))).length;
   const fichiers = ['NOTES_LIVRAISON_v0.14.0.md', 'CHANGELOG.md', 'docs/fr/ARCHITECTURE.md', 'docs/en/ARCHITECTURE.md', 'docs/nl/ARCHITECTURE.md'];
   let vus = 0;
   for (const f of fichiers) {
     const texte = fs.readFileSync(path.join(racine, f), 'utf8');
-    for (const m of texte.matchAll(/(\d+) (passages|transitions|overgangen)\b/g)) { vus += 1; assert.equal(Number(m[1]), cycle.CONFIG.transitions.length, `${f} : « ${m[0]} »`); }
+    const versionDe = (index) => {
+      const note = f.match(/^NOTES_LIVRAISON_v(\d+\.\d+\.\d+)\.md$/);
+      if (note) return note[1];
+      if (f !== 'CHANGELOG.md') return '999.0.0';
+      const titres = [...texte.slice(0, index).matchAll(/^## (\d+\.\d+\.\d+)/gm)];
+      return titres.length ? titres[titres.length - 1][1] : '999.0.0';
+    };
+    for (const m of texte.matchAll(/(\d+) (passages|transitions|overgangen)\b/g)) { vus += 1; assert.equal(Number(m[1]), passagesEn(versionDe(m.index)), `${f} : « ${m[0]} »`); }
     for (const m of texte.matchAll(/(\d+) (états|statuses|statussen)\b/g)) { vus += 1; assert.equal(Number(m[1]), Object.keys(cycle.CONFIG.etats).length, `${f} : « ${m[0]} »`); }
   }
   assert.ok(vus >= 6, `${vus} mentions trouvées`);

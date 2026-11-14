@@ -1,6 +1,6 @@
 # Administration : paramètres, modules, réglages de l'entité, journal d'audit et nouveautés
 
-Version 0.14.0 · Fiche fonctionnelle (modèle du standard, section 17.8).
+Version 0.16.0 · Fiche fonctionnelle (modèle du standard, section 17.8).
 
 ## Objet
 
@@ -37,6 +37,8 @@ Régler l'application sans toucher au code et savoir qui a fait quoi (cahier des
 | 17 | Un compte se reconnaît d'abord par son identifiant Microsoft, gardé au premier passage, puis par son adresse ; un compte inconnu ou désactivé est refusé avec « Contactez l'administrateur de l'application » ; un compte désactivé perd sa session tout de suite (0.10.0) | Standard, section 8.6 |
 | 18 | Le mode Microsoft obligatoire est refusé tant qu'aucun administrateur actif ne peut se connecter (accès de secours ou compte rattaché à Microsoft) ; en mode obligatoire, le dernier accès de secours d'un tel administrateur ne se retire pas. Le premier administrateur créé à l'installation reçoit l'accès de secours (0.10.0) | Standard, section 8.6 |
 | 19 | L'annuaire, l'application, le secret et l'adresse publique se saisissent à l'écran, jamais dans le code ; le secret est chiffré, jamais réaffiché ni écrit en clair au journal (`***`) ; une inscription Entra ID propre à l'application, jamais celle de Portal (0.10.0) | Standard, sections 5 et 8.6 |
+| 20 | Services et valideurs (0.16.0) : l'administrateur crée les services de chaque entité (code unique dans l'entité, nom FR et NL) et désigne leur chef, qui doit avoir le rôle « Valideur » dans cette entité ; un suppléant valide aussi pendant la période donnée (jours inclus), le chef garde le droit ; un service se désactive avec un motif et se réactive | ROL-04, DV-128 |
+| 21 | Une personne appartient au plus à un service, de son entité de rattachement, choisi dans Utilisateurs et rôles ; le service noté sur une demande est celui du demandeur au dépôt | ROL-04, DV-128 |
 
 ## Écrans
 
@@ -52,6 +54,8 @@ Régler l'application sans toucher au code et savoir qui a fait quoi (cahier des
 | Fenêtre « Nouveautés de la version » | Lignes de la note pour la personne | « J'ai lu » | |
 | Aide, onglets Nouveautés et Contact | Toutes les notes ; contact du service technique de l'entité active et support informatique | | « Le responsable du service technique n'a pas encore renseigné de contact pour cette entité » |
 | Assistant d'installation | Langue par défaut, modules disponibles cochés par défaut | | |
+| Administration, Services et valideurs (0.16.0) | Choix de l'entité ; services avec chef, suppléant et période, nombre de membres | « Nouveau service », ouvrir un service, « Désactiver » avec motif, « Réactiver » | « Personne n'a encore le rôle « Valideur » dans cette entité… » |
+| Utilisateurs, « Rôles » (0.16.0) | Champ « Service » de la personne (services actifs de son entité de rattachement) | « Enregistrer » | |
 
 ## Paramètres et défauts
 

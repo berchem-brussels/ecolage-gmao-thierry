@@ -30,7 +30,25 @@ const roles = [
   { code: 'agent', portee: 'entite', defaut: true, label_fr: 'Demandeur', label_nl: 'Aanvrager', description_fr: 'd', description_nl: 'd', permissions: ['lieux:lire', 'listes:lire'] },
   { code: 'gestionnaire', portee: 'entite', defaut: false, label_fr: 'Gestionnaire technique', label_nl: 'Technisch beheerder', description_fr: 'd', description_nl: 'd', permissions: ['entites:membres', 'lieux:lire', 'lieux:gerer', 'listes:lire'] },
   { code: 'responsable', portee: 'entite', defaut: false, label_fr: 'Responsable du service technique', label_nl: 'Verantwoordelijke technische dienst', description_fr: 'd', description_nl: 'd', permissions: ['entites:membres', 'lieux:lire', 'lieux:gerer', 'listes:lire', 'listes:gerer'] },
+  { code: 'valideur', portee: 'entite', defaut: false, label_fr: 'Valideur', label_nl: 'Goedkeurder', description_fr: 'd', description_nl: 'd', permissions: ['demandes:creer', 'demandes:valider'] },
   { code: 'admin', portee: 'instance', defaut: false, label_fr: 'Administrateur', label_nl: 'Beheerder', description_fr: 'd', description_nl: 'd', permissions: [] },
+];
+// 0.16.0 : services de l'entité AA et chef de service (rôle « Valideur » dans AA).
+const servicesListe = [
+  { id: 3, entite_id: 1, code: 'SEC', nom_fr: 'Secrétariat', nom_nl: 'Secretariaat', ordre: 10, is_active: 1, motif_desactivation: null, is_demo: 0,
+    valideur_id: 5, valideur_prenom: 'Valérie', valideur_nom: 'Chef', suppleant_id: null, suppleant_prenom: null, suppleant_nom: null, suppleant_du: null, suppleant_au: null,
+    suppleance_en_cours: 0, nb_membres: 1, created_at: '', updated_at: '' },
+  { id: 4, entite_id: 1, code: 'RH', nom_fr: 'Personnel', nom_nl: 'Personeel', ordre: 20, is_active: 0, motif_desactivation: 'Fusionné', is_demo: 0,
+    valideur_id: null, valideur_prenom: null, valideur_nom: null, suppleant_id: null, suppleant_prenom: null, suppleant_nom: null, suppleant_du: null, suppleant_au: null,
+    suppleance_en_cours: 0, nb_membres: 0, created_at: '', updated_at: '' },
+];
+const chefs = [
+  { id: 5, email: 'chef@exemple.test', first_name: 'Valérie', last_name: 'Chef', user_role: 'agent', entite_id: 1, service_id: 3, is_active: 1, is_demo: 0, is_admin_local: 0, microsoft: 0,
+    roles: [{ id: 9, entite_id: 1, role: 'agent', entite_code: 'AA' }, { id: 10, entite_id: 1, role: 'valideur', entite_code: 'AA' }] },
+  { id: 6, email: 'sup@exemple.test', first_name: 'Sam', last_name: 'Suppléant', user_role: 'agent', entite_id: 1, service_id: null, is_active: 1, is_demo: 0, is_admin_local: 0, microsoft: 0,
+    roles: [{ id: 11, entite_id: 1, role: 'valideur', entite_code: 'AA' }] },
+  { id: 8, email: 'autre@exemple.test', first_name: 'Odile', last_name: 'AutreEntite', user_role: 'agent', entite_id: 2, service_id: null, is_active: 1, is_demo: 0, is_admin_local: 0, microsoft: 0,
+    roles: [{ id: 12, entite_id: 2, role: 'valideur', entite_code: 'BB' }] },
 ];
 const users = [{ ...user, is_active: 1, is_demo: 1, is_admin_local: 1, microsoft: 1, roles: [{ id: 1, entite_id: 1, role: 'agent', entite_code: 'AA' }, { id: 2, entite_id: 2, role: 'responsable', entite_code: 'BB' }] }];
 const valeurs = [
@@ -209,6 +227,7 @@ beforeEach(() => {
       : url.startsWith('/api/notes-version') ? page(notesVersion)
       : url.startsWith('/api/audit') ? { ...page(journal), meta: { envelope: 1, actions: ['action.nouvelle', 'lieu.update'] } }
       : url.startsWith('/api/entites') ? page(entites)
+      : url.startsWith('/api/services') ? page(servicesListe)
       : url.startsWith('/api/users') ? page(users)
       : url.startsWith('/api/roles') ? page(roles)
       : { data: {}, meta: { envelope: 1 } }),
@@ -231,12 +250,13 @@ import ReglagesEntitePage from '../pages/ReglagesEntitePage';
 import JournalPage from '../pages/JournalPage';
 import ReferentielPage from '../pages/ReferentielPage';
 import TicketsPage from '../pages/TicketsPage';
+import ServicesPage from '../pages/ServicesPage';
 import { reloadModules } from '../moduleMap';
 
 const PAGES: [string, React.ComponentType][] = [
   ['Home', HomePage], ['Entites', EntitesPage], ['Users', UsersPage], ['Help', HelpPage], ['Accessibility', AccessibilityPage], ['Login', LoginPage],
   ['Patrimoine', PatrimoinePage], ['ListesValeurs', ListesValeursPage], ['Parametres', ParametresPage], ['ReglagesEntite', ReglagesEntitePage], ['Journal', JournalPage], ['Referentiel', ReferentielPage],
-  ['Tickets', TicketsPage],
+  ['Tickets', TicketsPage], ['Services', ServicesPage],
 ];
 
 function wrap(C: React.ComponentType, lang: 'fr' | 'nl', settings = FALLBACK_SETTINGS, entries: string[] = ['/']) {
@@ -1379,12 +1399,20 @@ describe('journal d’audit sans code brut (0.13.0, point 2 ; défauts D2, D3, D
     questions_categorie: 'categorie question_fr question_nl type reponses_json obligatoire ordre is_active motif_desactivation',
     priorites: 'code libelle_fr libelle_nl description_fr description_nl couleur unite prise_en_charge fin',
     horaires: 'jour debut fin',
-    users: 'email first_name last_name user_role entite_id preferred_lang ui_mode theme must_change_password is_active lieu_habituel_id is_admin_local',
+    users: 'email first_name last_name user_role entite_id preferred_lang ui_mode theme must_change_password is_active lieu_habituel_id is_admin_local service_id',
     nettoyage: 'valeur value cle',
     services: 'email role entite_id user_id from to motif module type priority fields internal motif_donne liste code version nom filtres niveau obligatoire octets largeur hauteur demande_id numero brouillon comptes lieux entite langue modules remarque microsoft_code method avant apres ticket reason danger beneficiaire_id beneficiaire_texte date_souhaitee reponses pieces premiere priorite_confirmee etat motif_priorite duree_estimee_minutes consignes photos_visibles date_convenue lieu_id categorie_id de vers motif_id commentaire_donne compte_rendu_donne suspendu echeance_le complement_id longueur note message_id interne mentions source',
     demande_etats: 'libelle_fr libelle_nl grc_fr grc_nl',
     // 0.15.0 (point 4) : modèles de réponse.
     modeles_reponse: 'titre_fr titre_nl texte_fr texte_nl ordre is_active motif_desactivation',
+    // 0.16.0 (point 1) : services des entités et leur valideur ; service d'un compte ; circuit noté au dépôt.
+    services_entite: 'code nom_fr nom_nl valideur_id suppleant_id suppleant_du suppleant_au ordre is_active motif_desactivation',
+    validation: 'service_id validation services',
+    // 0.16.0 (point 3) : demande encodée pour un agent.
+    encodage: 'demandeur_id canal',
+    // 0.16.0 (point 4) : fusion de doublons.
+    fusion: 'principale_id principale_numero personnes_reportees',
+    decoupage: 'issue_de nouvelles',
   };
   it('chaque champ écrit au journal a son libellé, en FR et en NL', () => {
     const manquants = [...new Set(Object.values(CHAMPS_ECRITS).join(' ').split(' '))]
@@ -1593,5 +1621,105 @@ describe('Patrimoine : filtre « Sans photo » (0.13.0, point 6, DV-101)', () =>
     rendre('nl', '/patrimoine?photo=sans');
     expect(await screen.findByRole('checkbox', { name: 'Zonder foto (3)' })).toBeChecked();
     expect((await screen.findAllByText('Zonder foto')).length).toBe(3);
+  });
+});
+
+describe('services et valideurs (0.16.0, point 2 ; ROL-04)', () => {
+  let appels: { url: string; method: string; body: Record<string, unknown> }[] = [];
+  let reponse: { status: number; json: unknown } | null = null;
+  beforeEach(() => {
+    appels = [];
+    reponse = null;
+    const avant = globalThis.fetch as unknown as (u: string, i?: RequestInit) => Promise<unknown>;
+    vi.stubGlobal('fetch', vi.fn(async (url: string, init?: RequestInit) => {
+      if (init?.method && init.method !== 'GET') {
+        appels.push({ url, method: init.method, body: JSON.parse(String(init.body || '{}')) });
+        if (reponse) { const r = reponse; return { ok: r.status < 400, status: r.status, statusText: 'x', json: async () => r.json }; }
+        return { ok: true, status: 200, statusText: 'OK', json: async () => ({ data: servicesListe[0], meta: { envelope: 1 } }) };
+      }
+      if (url.startsWith('/api/users')) return { ok: true, status: 200, statusText: 'OK', json: async () => page([...users.map((u) => ({ ...u, service_id: null })), ...chefs]) };
+      return avant(url, init);
+    }));
+  });
+
+  it('liste par entité : chef, suppléant, membres, service désactivé ; candidats : rôle « Valideur » dans l’entité seulement', async () => {
+    render(wrap(ServicesPage, 'fr'));
+    expect(await screen.findByRole('button', { name: 'Secrétariat' })).toBeInTheDocument();
+    expect(screen.getByText('Valérie Chef')).toBeInTheDocument();
+    expect(screen.getByText('Pas de valideur')).toBeInTheDocument();
+    expect(screen.getByText('Désactivé')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Secrétariat' }));
+    const d = await screen.findByRole('dialog');
+    expect((within(d).getByLabelText('Code') as HTMLInputElement).value).toBe('SEC');
+    expect(within(d).getByText('Membres (1)')).toBeInTheDocument();
+    fireEvent.mouseDown(within(d).getByLabelText('Suppléant'));
+    expect(await screen.findByTitle('Sam Suppléant')).toBeInTheDocument();
+    expect(screen.queryByTitle('Odile AutreEntite'), 'valideur de l’autre entité absent').toBeNull();
+    expect(screen.queryByTitle('Ada Admin'), 'sans le rôle : absent').toBeNull();
+  });
+
+  it('suppléant : les deux dates sont exigées ; enregistrement avec la période au format du serveur', async () => {
+    render(wrap(ServicesPage, 'fr'));
+    fireEvent.click(await screen.findByRole('button', { name: 'Secrétariat' }));
+    const d = await screen.findByRole('dialog');
+    fireEvent.mouseDown(within(d).getByLabelText('Suppléant'));
+    fireEvent.click(await screen.findByTitle('Sam Suppléant'));
+    fireEvent.click(within(d).getByRole('button', { name: 'Enregistrer' }));
+    await waitFor(() => expect(within(d).getAllByText('Ce champ est obligatoire').length).toBe(2));
+    expect(appels.length).toBe(0);
+  });
+
+  it('un refus du serveur s’affiche dans le volet, la saisie reste ; désactivation : motif exigé', async () => {
+    reponse = { status: 409, json: { error: { code: 'VALIDEUR_SANS_ROLE', message: 'Cette personne ne peut pas valider.' }, meta: { envelope: 1 } } };
+    render(wrap(ServicesPage, 'fr'));
+    fireEvent.click(await screen.findByRole('button', { name: 'Secrétariat' }));
+    const d = await screen.findByRole('dialog');
+    fireEvent.change(within(d).getByLabelText('Nom en français'), { target: { value: 'Secrétariat communal' } });
+    fireEvent.click(within(d).getByRole('button', { name: 'Enregistrer' }));
+    await waitFor(() => expect(appels.find((a) => a.url === '/api/services/3')?.body).toEqual({ code: 'SEC', nom_fr: 'Secrétariat communal', nom_nl: 'Secretariaat', valideur_id: 5, suppleant_id: null }));
+    expect(await within(d).findByRole('alert')).toBeInTheDocument();
+    expect((within(d).getByLabelText('Nom en français') as HTMLInputElement).value).toBe('Secrétariat communal');
+    reponse = null;
+    fireEvent.click(within(d).getByRole('button', { name: 'Désactiver' }));
+    const champ = await screen.findByLabelText('Motif de la désactivation');
+    const m = champ.closest('.ant-modal') as HTMLElement;
+    const ok = within(m).getAllByRole('button', { name: 'Désactiver' }).slice(-1)[0];
+    expect(ok).toBeDisabled();
+    fireEvent.change(within(m).getByLabelText('Motif de la désactivation'), { target: { value: 'Service fusionné' } });
+    fireEvent.click(ok);
+    await waitFor(() => expect(appels.find((a) => a.method === 'DELETE')).toEqual({ url: '/api/services/3', method: 'DELETE', body: { motif: 'Service fusionné' } }));
+  });
+
+  it('journal : chef de service nommé, circuit d’une demande dit en clair', async () => {
+    const lignes = [
+      { id: 301, created_at: '2026-11-10 08:00:00', action: 'service.create', entity_type: 'service', entity_id: 3, channel: 'api', entite_id: 1, entite_code: 'AA',
+        user_id: 1, user_email: 'a@exemple.test', user_first_name: 'Ada', user_last_name: 'Admin', details: { code: 'SEC', valideur_id: 5 },
+        noms: { valideur_id: { type: 'personne', id: 5, code: 'chef@exemple.test', nom_fr: 'Valérie Chef', nom_nl: 'Valérie Chef', entite_code: null } } },
+      { id: 302, created_at: '2026-11-10 08:05:00', action: 'demande.create', entity_type: 'demande', entity_id: 9, channel: 'api', entite_id: 1, entite_code: 'AA',
+        user_id: 7, user_email: 'x@exemple.test', user_first_name: 'Xavier', user_last_name: 'X', details: { numero: 'AA-DI-2026-00009', validation: 'sans_valideur' }, noms: {} },
+    ];
+    (journal as unknown as Record<string, unknown>[]).push(...lignes);
+    try {
+      const { container } = render(wrap(JournalPage, 'fr'));
+      await screen.findByText(/Service ajouté/);
+      container.querySelectorAll<HTMLButtonElement>('button.ant-table-row-expand-icon').forEach((b) => fireEvent.click(b));
+      expect(await screen.findByText('Valérie Chef (chef@exemple.test)')).toBeInTheDocument();
+      expect(screen.getByText(/Sans valideur : envoyée au service technique/)).toBeInTheDocument();
+      expect(screen.getByText(/Service ajouté/)).toBeInTheDocument();
+    } finally { (journal as unknown as unknown[]).splice(-2, 2); }
+  });
+
+  it('Utilisateurs et rôles : service de l’entité de rattachement, enregistré avec les rôles', async () => {
+    render(wrap(UsersPage, 'fr'));
+    expect(await screen.findByText('Service : Secrétariat')).toBeInTheDocument();
+    const ligne = screen.getByText(/Sam/).closest('tr') as HTMLElement;
+    fireEvent.click(within(ligne).getByRole('button', { name: /rôles/i }));
+    const d = await screen.findByRole('dialog');
+    fireEvent.mouseDown(within(d).getByRole('combobox', { name: 'Service' }));
+    expect(await screen.findByTitle('Secrétariat (SEC)')).toBeInTheDocument();
+    expect(screen.queryByTitle('Personnel (RH)'), 'service désactivé non proposé').toBeNull();
+    fireEvent.click(screen.getByTitle('Secrétariat (SEC)'));
+    fireEvent.click(within(d).getByRole('button', { name: 'Enregistrer' }));
+    await waitFor(() => expect(appels.find((a) => a.url === '/api/users/6')?.body).toEqual({ service_id: 3 }));
   });
 });

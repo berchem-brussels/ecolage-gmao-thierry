@@ -17,22 +17,28 @@ import { obligatoire, texteObligatoire } from '../../validation';
 
 /** Rôle ARIA du groupe : Form.Item y pose aria-required, permis seulement sur un radiogroup (axe-core). */
 const GROUPE_RADIO = { role: 'radiogroup' } as Record<string, string>;
-const DANGER = new Set(['refusee', 'annulee']);
+const DANGER = new Set(['refusee', 'refusee_validation', 'annulee', 'fusionnee']);
 
 interface Valeur { id: number; code: string; libelle_fr: string; libelle_nl: string; is_active: number }
 interface Saisie { motif_id?: number; commentaire?: string; compte_rendu?: string }
 
-/** Boutons des passages permis (sans la qualification, qui a son bouton). Rien si aucun passage. */
-export function ActionsDemande({ d, onChoisir }: { d: Demande; onChoisir: (t: Transition) => void }) {
+/**
+ * Boutons des passages permis (sans la qualification, qui a son bouton). Rien si aucun passage. 0.16.0 : « passages »
+ * donne ceux du chef de service (transitions_valideur) à la place de ceux du service technique.
+ */
+export function ActionsDemande({ d, onChoisir, passages: donnes, titre = 'cycle.actions' }: { d: Demande; onChoisir: (t: Transition) => void; passages?: Transition[]; titre?: string }) {
   const { t } = useI18n();
-  const passages = (d.transitions || []).filter((x) => !x.via);
+  // La qualification garde son bouton ; la fusion (0.16.0) a son bouton ici et son propre formulaire.
+  const passages = (donnes || d.transitions || []).filter((x) => x.via !== 'qualifier');
   if (!passages.length) return null;
   return (
-    <div role="group" aria-label={t('cycle.actions')} style={{ marginBottom: 16 }}>
-      <Typography.Text type="secondary" style={{ display: 'block', marginBottom: 6 }}>{t('cycle.actions')}</Typography.Text>
-      <Space wrap size={8}>
+    <div role="group" aria-label={t(titre)} style={{ marginBottom: 16 }}>
+      <Typography.Text type="secondary" style={{ display: 'block', marginBottom: 6 }}>{t(titre)}</Typography.Text>
+      {/* 0.16.0 : un libellé long (« Samenvoegen met een andere aanvraag ») passe à la ligne dans 320 px. */}
+      <Space wrap size={8} style={{ maxWidth: '100%' }}>
         {passages.map((x) => (
-          <Button key={x.vers} danger={DANGER.has(x.vers)} type={x.vers === 'cloturee' ? 'primary' : 'default'} onClick={() => onChoisir(x)}>
+          <Button key={x.vers} danger={DANGER.has(x.vers)} type={x.vers === 'cloturee' || (d.etat === 'en_validation' && x.vers === 'a_qualifier') ? 'primary' : 'default'} onClick={() => onChoisir(x)}
+            style={{ whiteSpace: 'normal', height: 'auto', minHeight: 32, maxWidth: '100%', textAlign: 'start' }}>
             {t(cleAction(d.etat, x.vers))}
           </Button>
         ))}
@@ -42,7 +48,11 @@ export function ActionsDemande({ d, onChoisir }: { d: Demande; onChoisir: (t: Tr
 }
 
 /** Formulaire d'un passage : motif, commentaire, compte rendu selon la table des passages. */
-export function ChangerEtatForm({ d, transition, onDone, onCancel }: { d: Demande; transition: Transition; onDone: (d: Demande) => void; onCancel: () => void }) {
+export function ChangerEtatForm({ d, transition, onDone, onCancel, libelles = 'service' }: {
+  d: Demande; transition: Transition; onDone: (d: Demande) => void; onCancel: () => void;
+  /** 0.16.0 : « demandeur » nomme les états comme le demandeur les lit (chef de service). */
+  libelles?: 'service' | 'demandeur';
+}) {
   const { t, lang, hint } = useI18n();
   const [form] = Form.useForm<Saisie>();
   const [valeurs, setValeurs] = useState<Valeur[] | null>(transition.motif_liste ? null : []);
@@ -76,7 +86,8 @@ export function ChangerEtatForm({ d, transition, onDone, onCancel }: { d: Demand
   return (
     <Form<Saisie> form={form} layout="vertical" onFinish={envoyer} requiredMark>
       <Typography.Paragraph type="secondary">
-        {t('cycle.passage').replace('{de}', t(`demande.etat_service.${d.etat}`)).replace('{vers}', t(`demande.etat_service.${transition.vers}`))}
+        {t('cycle.passage').replace('{de}', t(`demande.${libelles === 'service' ? 'etat_service' : 'etat'}.${d.etat}`))
+          .replace('{vers}', t(`demande.${libelles === 'service' ? 'etat_service' : 'etat'}.${transition.vers}`))}
       </Typography.Paragraph>
       {erreur && <Alert type="error" showIcon message={erreur} style={{ marginBottom: 12 }} />}
       {transition.motif_liste && (

@@ -2,9 +2,11 @@
  * Comptes et rôles par entité, réservés à l'administrateur (standard v3.2, section 17.4 ; cahier des charges ROL-01, ROL-02, ROL-06).
  * Création sur le modèle Microsoft 365 avec l'entité de rattachement, où le rôle de demandeur est donné d'office.
  * Les rôles se cochent entité par entité ; un rôle décoché se retire avec un motif. Remplacé à terme par l'application Droits.
+ * 0.16.0 (étape 11, ROL-04) : le service de la personne (un service actif de son entité de rattachement), choisi dans
+ * le même volet ; il décide de son chef de service pour les demandes à valider. Le service s'affiche sous le nom.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Alert, Button, Card, Checkbox, Drawer, Form, Grid, Input, Modal, Popconfirm, Radio, Space, Table, Tag, Typography, message } from 'antd';
+import { Alert, Button, Card, Checkbox, Drawer, Form, Grid, Input, Modal, Popconfirm, Radio, Select, Space, Table, Tag, Typography, message } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
 import type { TextAreaRef } from 'antd/es/input/TextArea';
 import api, { ApiError, qs } from '../api';
@@ -20,7 +22,10 @@ interface U {
   preferred_lang: 'fr' | 'nl'; is_active: number; is_demo: number; roles: RoleRow[];
   /** Accès de secours par mot de passe en mode « sso » ; compte déjà rattaché à Microsoft (section 8.6, 0.10.0). */
   is_admin_local: number; microsoft: number;
+  /** 0.16.0 : service de la personne dans son entité de rattachement. */
+  service_id: number | null;
 }
+interface ServiceCourt { id: number; entite_id: number; code: string; nom_fr: string; nom_nl: string; is_active: number }
 interface Entite { id: number; code: string; nom_fr: string; nom_nl: string; is_active: number }
 
 export default function UsersPage() {
@@ -45,6 +50,8 @@ export default function UsersPage() {
   const [q, setQ] = useState('');
   const [instanceRole, setInstanceRole] = useState<U['user_role']>('agent');
   const [secours, setSecours] = useState(false);
+  const [services, setServices] = useState<ServiceCourt[]>([]);
+  const [serviceSel, setServiceSel] = useState<number | null>(null);
   const [form] = Form.useForm();
   const fail = (e: unknown) => message.error(e instanceof ApiError ? e.message : t('common.error'));
 
@@ -54,6 +61,7 @@ export default function UsersPage() {
       const [u, e] = await Promise.all([api.page<U>(`/users${qs({ limit: 200, q, is_active: simple ? 1 : undefined })}`), api.page<Entite>(`/entites${qs({ limit: 200, is_active: 1 })}`)]);
       setRows(u.data);
       setEntites(e.data);
+      api.page<ServiceCourt>(`/services${qs({ limit: 200 })}`).then((r) => setServices(r.data)).catch(() => setServices([]));
     } catch (e) { fail(e); } finally { setLoading(false); }
   }, [t, q, simple]);
   useEffect(() => { load(); }, [load]);
@@ -84,6 +92,7 @@ export default function UsersPage() {
     setSelection(sel);
     setInstanceRole(u.user_role);
     setSecours(!!u.is_admin_local);
+    setServiceSel(u.service_id ?? null);
     setMotif('');
     setMotifManquant(false);
     setRolesOf(u);
@@ -103,9 +112,10 @@ export default function UsersPage() {
     if (removed.length && !motif.trim()) { setMotifManquant(true); motifRef.current?.focus(); return; }
     setSaving(true);
     try {
-      const fiche: { user_role?: U['user_role']; is_admin_local?: number } = {};
+      const fiche: { user_role?: U['user_role']; is_admin_local?: number; service_id?: number | null } = {};
       if (instanceRole !== rolesOf.user_role) fiche.user_role = instanceRole;
       if (secours !== !!rolesOf.is_admin_local) fiche.is_admin_local = secours ? 1 : 0;
+      if (serviceSel !== (rolesOf.service_id ?? null)) fiche.service_id = serviceSel;
       if (Object.keys(fiche).length) await api.put(`/users/${rolesOf.id}`, fiche);
       for (const a of added) await api.post('/roles-utilisateurs', { user_id: rolesOf.id, ...a });
       for (const r of removed) await api.del(`/roles-utilisateurs/${r.id}`, { motif: motif.trim() });
@@ -116,6 +126,10 @@ export default function UsersPage() {
     } catch (e) { fail(e); await load(); } finally { setSaving(false); }
   };
 
+  const nomService = (id: number | null) => {
+    const sv = id ? services.find((x) => x.id === id) : null;
+    return sv ? tField(sv as unknown as Record<string, unknown>, 'nom') : '';
+  };
   const person = (u: U) => (
     <div style={{ minWidth: 0 }}>
       <div>{u.last_name} {u.first_name}{' '}
@@ -126,6 +140,7 @@ export default function UsersPage() {
         {!u.is_active && <Tag>{t('common.inactive')}</Tag>}
       </div>
       <Typography.Text type="secondary" style={{ fontSize: 12, wordBreak: 'break-all' }}>{u.email}</Typography.Text>
+      {nomService(u.service_id) && <div><Typography.Text type="secondary" style={{ fontSize: 12 }}>{t('users.service')} : {nomService(u.service_id)}</Typography.Text></div>}
     </div>
   );
   const rolesTags = (u: U) => (
@@ -209,6 +224,13 @@ export default function UsersPage() {
                   <Typography.Paragraph type="secondary" style={{ marginTop: 4, marginBottom: 0, fontSize: 12 }}>{t('users.secours.help')}</Typography.Paragraph>
                 </div>
               )}
+            </Card>
+            <Card size="small" title={t('users.service')}>
+              <Select<number> allowClear style={{ width: '100%' }} aria-label={t('users.service')} placeholder={t('users.service.aucun')}
+                value={serviceSel ?? undefined} onChange={(v) => setServiceSel(v ?? null)}
+                options={services.filter((x) => x.entite_id === rolesOf.entite_id && (x.is_active === 1 || x.id === rolesOf.service_id))
+                  .map((x) => ({ value: x.id, label: `${tField(x as unknown as Record<string, unknown>, 'nom')} (${x.code})` }))} />
+              <Typography.Paragraph type="secondary" style={{ marginTop: 8, marginBottom: 0, fontSize: 12 }}>{t('users.service.aide')}</Typography.Paragraph>
             </Card>
             <Typography.Paragraph type="secondary" style={{ marginBottom: 0 }}>{t('users.roles.help')}</Typography.Paragraph>
             {entites.map((e) => (

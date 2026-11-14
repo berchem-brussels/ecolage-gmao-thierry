@@ -18,15 +18,18 @@
  * (standard, section 12.4). Sur téléphone, une carte par demande ; les filtres s'y replient sous « Filtres et vues ».
  * Colonnes : numéro, priorité, état et échéance d'abord, pour qu'ils restent visibles sans défiler.
  */
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Button, Card, Collapse, Drawer, Grid, Input, List, Modal, Popconfirm, Radio, Select, Space, Table, Tag, TreeSelect, Typography, message } from 'antd';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Button, Card, Collapse, Drawer, Grid, Input, List, Modal, Popconfirm, Radio, Segmented, Select, Space, Table, Tag, TreeSelect, Typography, message } from 'antd';
 import type { SorterResult } from 'antd/es/table/interface';
-import { ClearOutlined, DeleteOutlined, EditOutlined, SaveOutlined, WarningOutlined } from '@ant-design/icons';
-import { useSearchParams } from 'react-router-dom';
+import { ClearOutlined, DeleteOutlined, EditOutlined, PhoneOutlined, SaveOutlined, ScissorOutlined, WarningOutlined } from '@ant-design/icons';
+import { Link, useSearchParams } from 'react-router-dom';
 import api, { ApiError, qs } from '../api';
 import TableauBord from '../components/demandes/TableauBord';
 import QualificationForm from '../components/demandes/QualificationForm';
 import { ActionsDemande, ChangerEtatForm } from '../components/demandes/ChangerEtat';
+import FusionForm from '../components/demandes/FusionForm';
+import DecoupageForm from '../components/demandes/DecoupageForm';
+import VueColonnes from '../components/demandes/VueColonnes';
 import HistoriqueDemande from '../components/demandes/HistoriqueDemande';
 import FilMessages from '../components/demandes/FilMessages';
 import SuiviDemande from '../components/demandes/SuiviDemande';
@@ -82,6 +85,12 @@ export default function GestionDemandesPage() {
   const [qualifier, setQualifier] = useState(false);
   /** Passage en cours de saisie sur la fiche (0.14.0) ; historique rechargé après chaque changement. */
   const [action, setAction] = useState<Transition | null>(null);
+  /** 0.16.0 (GES-06) : découpage en cours de saisie. */
+  const [decouper, setDecouper] = useState(false);
+  /** 0.16.0 (GES-03) : vue en colonnes (?affichage=colonnes) ; passage choisi en déplaçant une carte, appliqué à l'ouverture de la fiche. */
+  const colonnes = params.get('affichage') === 'colonnes';
+  const passageVoulu = useRef<string | null>(null);
+  const [colonnesAJour, setColonnesAJour] = useState(0);
   const [histo, setHisto] = useState(0);
   const [arbre, setArbre] = useState<Categorie[]>([]);
   const [lieux, setLieux] = useState<Lieu[]>([]);
@@ -121,16 +130,26 @@ export default function GestionDemandesPage() {
 
   const ouverte = params.get('demande');
   const chargerFiche = useCallback(() => {
-    if (!ouverte) { setFiche(null); setQualifier(false); setAction(null); return; }
-    api.get<Demande>(`/demandes/${ouverte}`).then(setFiche).catch(() => setFiche(null));
+    if (!ouverte) { setFiche(null); setQualifier(false); setAction(null); setDecouper(false); return; }
+    api.get<Demande>(`/demandes/${ouverte}`).then((d) => {
+      setFiche(d);
+      // 0.16.0 (GES-03) : carte déplacée vers un état : la fiche s'ouvre sur le formulaire de ce passage.
+      const vers = passageVoulu.current;
+      passageVoulu.current = null;
+      if (vers) {
+        const t = (d.transitions || []).find((x) => x.vers === vers);
+        if (t?.via === 'qualifier') setQualifier(true);
+        else if (t) setAction(t);
+      }
+    }).catch(() => setFiche(null));
   }, [ouverte]);
   useEffect(() => { chargerFiche(); }, [chargerFiche]);
   const ouvrir = (d: Demande) => changer({ demande: d.id }, true);
-  const fermer = () => { setQualifier(false); setAction(null); changer({ demande: undefined }, true); };
+  const fermer = () => { setQualifier(false); setAction(null); setDecouper(false); changer({ demande: undefined }, true); };
   /** Après une qualification ou un passage : fiche à jour, liste, compteurs et historique rechargés. */
   /** 0.15.0 (point 2) : fil lu ou message envoyé : liste et compteurs (« Messages à lire ») rechargés. */
   const apresLecture = () => { charger(); setBordAJour((n) => n + 1); };
-  const apresChangement = (d: Demande) => { setFiche(d); setQualifier(false); setAction(null); charger(); setBordAJour((n) => n + 1); setHisto((n) => n + 1); };
+  const apresChangement = (d: Demande) => { setFiche(d); setQualifier(false); setAction(null); setDecouper(false); setColonnesAJour((n) => n + 1); charger(); setBordAJour((n) => n + 1); setHisto((n) => n + 1); };
 
   const lbl = (o: { libelle_fr: string; libelle_nl: string }) => (lang === 'nl' ? o.libelle_nl : o.libelle_fr);
   const nom = (o: { nom_fr: string; nom_nl: string }) => (lang === 'nl' ? o.nom_nl : o.nom_fr);
@@ -248,6 +267,10 @@ export default function GestionDemandesPage() {
     <div>
       <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8, gap: 12, flexWrap: 'wrap' }}>
         <Typography.Title level={1} style={{ fontSize: 22, margin: 0 }}>{t('demande.entite.title')}</Typography.Title>
+        {/* 0.16.0 (étape 12, GES-05) : demande reçue par téléphone ou par courriel, encodée pour un agent. */}
+        {hasPermission(catalogue, roles, 'demandes:traiter') && (
+          <Link to="/demandes/encoder"><Button type="primary" icon={<PhoneOutlined />}>{t('encoder.bouton')}</Button></Link>
+        )}
       </div>
       <Typography.Paragraph type="secondary">{t('gest.intro')}</Typography.Paragraph>
       <div style={{ marginBottom: 16 }}><TableauBord titre={false} rafraichir={bordAJour} /></div>
@@ -257,9 +280,18 @@ export default function GestionDemandesPage() {
           <Collapse ghost size="small" items={[{ key: 'filtres', label: `${t('gest.filtres')}${nbFiltres ? ` (${nbFiltres})` : ''}${vue ? ` · ${vue.nom}` : ''}`, children: filtres }]} />
         ) : filtres}
       </Card>
-      <Typography.Paragraph type="secondary" aria-live="polite" style={{ marginBottom: 8 }}>{t(total === 1 ? 'gest.total.un' : 'gest.total').replace('{n}', String(total))}</Typography.Paragraph>
+      <Space wrap style={{ justifyContent: 'space-between', width: '100%', marginBottom: 8 }}>
+        {colonnes ? <span /> : <Typography.Paragraph type="secondary" aria-live="polite" style={{ marginBottom: 0 }}>{t(total === 1 ? 'gest.total.un' : 'gest.total').replace('{n}', String(total))}</Typography.Paragraph>}
+        {/* 0.16.0 (GES-03) : liste ou colonnes par état. */}
+        <Segmented className="gest-affichage" aria-label={t('colonnes.affichage')} value={colonnes ? 'colonnes' : 'liste'}
+          onChange={(v) => { const p = new URLSearchParams(params); if (v === 'colonnes') p.set('affichage', 'colonnes'); else p.delete('affichage'); setParams(p, { replace: true }); }}
+          options={[{ value: 'liste', label: t('colonnes.liste') }, { value: 'colonnes', label: t('colonnes.titre') }]} />
+      </Space>
 
-      {mobile ? (
+      {colonnes ? (
+        <VueColonnes f={f} rafraichir={colonnesAJour} onOuvrir={ouvrir}
+          onDeplacer={(d, vers) => { passageVoulu.current = vers; ouvrir(d); }} />
+      ) : mobile ? (
         <List<Demande> loading={loading} dataSource={rows} locale={{ emptyText: t('gest.vide') }}
           pagination={total > TAILLE ? { current: page, pageSize: TAILLE, total, onChange: (p) => changer({ page: p }, true), size: 'small' } : false}
           renderItem={(d) => (
@@ -313,16 +345,23 @@ export default function GestionDemandesPage() {
       )}
 
       <Drawer open={!!fiche} onClose={fermer} width={mobile ? '100%' : 560}
-        title={fiche ? `${qualifier ? t('qualif.titre') : action ? t(cleAction(fiche.etat, action.vers)) : t('demande.fiche')} ${fiche.numero}` : ''}
-        extra={fiche && !qualifier && !action && peutQualifier && qualifiable(fiche)
+        title={fiche ? `${qualifier ? t('qualif.titre') : decouper ? t('decoupage.titre') : action ? t(cleAction(fiche.etat, action.vers)) : t('demande.fiche')} ${fiche.numero}` : ''}
+        extra={fiche && !qualifier && !action && !decouper && peutQualifier && qualifiable(fiche)
           ? <Button type="primary" onClick={() => setQualifier(true)}>{fiche.etat === 'qualifiee' ? t('qualif.bouton.modifier') : t('qualif.bouton')}</Button> : null}>
         {fiche && (qualifier
           ? <QualificationForm d={fiche} onCancel={() => setQualifier(false)} onDone={apresChangement} />
+          : decouper
+            ? <DecoupageForm key={`dec-${fiche.id}`} d={fiche} arbre={arbre} lieux={lieux} onCancel={() => setDecouper(false)} onDone={apresChangement} />
           : action
-            ? <ChangerEtatForm key={`${fiche.id}-${action.vers}`} d={fiche} transition={action} onCancel={() => setAction(null)} onDone={apresChangement} />
+            ? (action.via === 'fusionner'
+              ? <FusionForm key={`fus-${fiche.id}`} d={fiche} onCancel={() => setAction(null)} onDone={apresChangement} />
+              : <ChangerEtatForm key={`${fiche.id}-${action.vers}`} d={fiche} transition={action} onCancel={() => setAction(null)} onDone={apresChangement} />)
             : (
               <>
                 <ActionsDemande d={fiche} onChoisir={setAction} />
+                {fiche.decoupable === 1 && (
+                  <Button icon={<ScissorOutlined />} onClick={() => setDecouper(true)} style={{ marginBottom: 16, whiteSpace: 'normal', height: 'auto', maxWidth: '100%' }}>{t('decoupage.bouton')}</Button>
+                )}
                 <SuiviDemande d={fiche} onChange={(n) => { if (n) setFiche(n); else chargerFiche(); charger(); }} />
                 <FicheDemande d={fiche} avecDemandeur service onChange={chargerFiche} />
                 <FilMessages key={`f-${fiche.id}`} d={fiche} service onLu={apresLecture} />

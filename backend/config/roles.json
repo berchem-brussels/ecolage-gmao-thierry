@@ -11,7 +11,7 @@
       "label_fr": "Valideur", "label_nl": "Goedkeurder",
       "description_fr": "Valide ou refuse les demandes de son service soumises à validation.",
       "description_nl": "Keurt de aanvragen van zijn dienst die goedkeuring vereisen goed of weigert ze.",
-      "permissions": ["session:lire", "entites:lire", "lieux:lire", "listes:lire", "categories:lire", "delais:lire", "demandes:creer"] },
+      "permissions": ["session:lire", "entites:lire", "lieux:lire", "listes:lire", "categories:lire", "delais:lire", "demandes:creer", "demandes:valider"] },
     { "code": "ouvrier", "portee": "entite",
       "label_fr": "Ouvrier", "label_nl": "Arbeider",
       "description_fr": "Consulte et exécute ses interventions sur smartphone, pointe ses heures, joint photos et commentaires.",
@@ -56,6 +56,6 @@
       "label_fr": "Administrateur", "label_nl": "Beheerder",
       "description_fr": "Paramètres, comptes, rôles, entités et intégrations ; aucun accès métier implicite.",
       "description_nl": "Instellingen, accounts, rollen, entiteiten en integraties; geen impliciete toegang tot de vakgegevens.",
-      "permissions": ["session:lire", "entites:lire", "entites:gerer", "entites:membres", "comptes:gerer", "roles:gerer"] }
+      "permissions": ["session:lire", "entites:lire", "entites:gerer", "entites:membres", "comptes:gerer", "roles:gerer", "services:gerer"] }
   ]
 }

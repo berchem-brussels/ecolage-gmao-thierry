@@ -6,6 +6,9 @@
  * Variables : HELP_BASE_URL, HELP_USER et HELP_PASSWORD (compte de démonstration administrateur, avec le rôle de
  * responsable dans l'entité active, pour voir tous les écrans), HELP_ONLY (identifiants séparés par des virgules),
  * HELP_LANGS (fr, nl ou fr,nl). Le mot de passe se passe par l'environnement, jamais dans un fichier.
+ * 0.16.0 : une capture peut demander un autre compte (shot.compte, code d'un rôle) pour un écran que l'administrateur
+ * ne voit pas (« Demandes à valider » du chef de service) : HELP_USER_<CODE> et, s'il diffère, HELP_PASSWORD_<CODE>
+ * (par défaut HELP_PASSWORD). Sans ce compte, la capture est notée FAIL avec la variable qui manque.
  *
  * GMAO : la fenêtre « Nouveautés » est marquée lue avant les captures ; la langue se règle par le profil ; une
  * capture dont un repère manque est notée FAIL avec le repère, sans arrêter les autres.
@@ -62,23 +65,43 @@ async function mark(page: Page, sel: string, n: number, conteneur: string | null
   }, { sel, n, conteneur });
 }
 
-test('captures de l’aide', async ({ page }) => {
+async function connecter(page: Page, user: string, password: string) {
   await page.goto('/login');
-  await page.fill('#email', process.env.HELP_USER || '');
-  await page.fill('#password', process.env.HELP_PASSWORD || '');
+  await page.fill('#email', user);
+  await page.fill('#password', password);
   await page.click('button[type=submit]');
   await page.waitForURL((u) => !u.pathname.startsWith('/login'));
   await api(page, 'PUT', '/api/auth/nouveautes', {});
+}
+
+test('captures de l’aide', async ({ page, browser }) => {
+  await connecter(page, process.env.HELP_USER || '', process.env.HELP_PASSWORD || '');
+  // Sessions des autres comptes (0.16.0), ouvertes à la première capture qui les demande.
+  const sessions = new Map<string, Page>();
+  const session = async (compte?: string): Promise<Page> => {
+    if (!compte) return page;
+    if (!sessions.has(compte)) {
+      const v = compte.toUpperCase();
+      const user = process.env[`HELP_USER_${v}`];
+      if (!user) throw new Error(`HELP_USER_${v} manque`);
+      const ctx = await browser.newContext({ baseURL: test.info().project.use.baseURL, ignoreHTTPSErrors: true, viewport: { width: 1280, height: 800 } });
+      const p = await ctx.newPage();
+      await connecter(p, user, process.env[`HELP_PASSWORD_${v}`] || process.env.HELP_PASSWORD || '');
+      sessions.set(compte, p);
+    }
+    return sessions.get(compte)!;
+  };
   for (const lang of LANGS) {
     const report: string[] = [];
     await api(page, 'PUT', '/api/auth/preferences', { preferred_lang: lang, ui_mode: 'simple', theme: 'clair' });
     fs.mkdirSync(path.join(OUT, lang), { recursive: true });
     for (const shot of TOPICS.flatMap((t) => t.shots)) {
       if (ONLY && !ONLY.has(shot.id)) continue;
+      let page: Page | null = null;
       try {
         if (shot.path === '/login') {
           // Page de connexion : capturée dans un contexte sans session, dans la langue de la capture.
-          const autre = await page.context().browser()!.newContext({ viewport: { width: 1280, height: 800 }, ignoreHTTPSErrors: true, baseURL: test.info().project.use.baseURL, locale: lang === 'nl' ? 'nl-BE' : 'fr-BE' });
+          const autre = await browser.newContext({ viewport: { width: 1280, height: 800 }, ignoreHTTPSErrors: true, baseURL: test.info().project.use.baseURL, locale: lang === 'nl' ? 'nl-BE' : 'fr-BE' });
           const p2 = await autre.newPage();
           await p2.goto('/login');
           await p2.waitForLoadState('load'); await p2.waitForTimeout(800);
@@ -90,6 +113,9 @@ test('captures de l’aide', async ({ page }) => {
           report.push(`OK ${shot.id}`);
           continue;
         }
+        page = await session(shot.compte);
+        // Langue de l'autre compte, réglée par son profil comme pour le compte principal.
+        if (shot.compte) await api(page, 'PUT', '/api/auth/preferences', { preferred_lang: lang, ui_mode: 'simple', theme: 'clair' });
         await page.goto(shot.path);
         // Pas de « networkidle » : le serveur de développement garde une connexion ouverte. On attend la fin des chargements.
         await page.waitForLoadState('load');
@@ -124,8 +150,10 @@ test('captures de l’aide', async ({ page }) => {
       } catch (e) {
         report.push(`FAIL ${shot.id} ${(e as Error).message.split('\n')[0]}`);
       } finally {
-        await page.evaluate(() => document.querySelectorAll('.help-capture-mark').forEach((n) => n.remove())).catch(() => {});
-        await page.keyboard.press('Escape').catch(() => {});
+        if (page) {
+          await page.evaluate(() => document.querySelectorAll('.help-capture-mark').forEach((n) => n.remove())).catch(() => {});
+          await page.keyboard.press('Escape').catch(() => {});
+        }
       }
     }
     fs.writeFileSync(path.join(ICI, `rapport-${lang}.txt`), report.join('\n') + '\n');

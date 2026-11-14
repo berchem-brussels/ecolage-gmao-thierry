@@ -2,6 +2,10 @@
 
 De Franse tekst (`docs/fr/SECURITE.md`) is rechtsgeldig en bevat het volledige rooster per versie.
 
+## 0.16.0 (10/11/2026)
+
+Goedkeuring door het diensthoofd, diensten en goedkeurders, aanvraag ingevoerd door de technische dienst, samenvoegen, opsplitsen, kolommen per status; migratie `014_validation`. Getest: diensten, goed te keuren aanvragen, samenvoegen en opsplitsen van de andere entiteit 403 (API en MCP); een goedkeurder leest en keurt enkel de aanvragen van zijn diensten goed (de vervanger tijdens zijn periode); de technische dienst keurt niet goed in de plaats van het hoofd; samenvoegen en opsplitsen alles of niets, niets gewist; logboek zonder vrije tekst; « Verplaatsen » stelt enkel toegestane overgangen voor. Bewijs van falen: elf beschermingen één voor één verwijderd, telkens minstens één test in fout (zie de Franse tekst); één leemte gevonden en gedicht (goedkeurder van een andere dienst). `mobile:check`: 41 schermen, drie accounts, geen fout.
+
 ## 0.15.0 (09/11/2026)
 
 Berichten, interne nota's met vermelding, antwoordmodellen, volgen; migratie `013_messages`. Getest: berichten, gelezen-markering, bijlagen van berichten, te vermelden personen, volgen en modellen van de andere entiteit 403 (API en MCP); de berichten worden enkel gelezen door de aanvrager, de begunstigde en de dienst, nooit door wie alleen volgt; interne nota's en hun bijlagen enkel voor de dienst; namen van de agenten verborgen voor de aanvrager; schrijven enkel bij een open aanvraag; vermelding enkel in een interne nota en enkel van leden van de dienst; geen vrije tekst in het auditlogboek; modellen aanvaarden enkel `{numero}`, `{lieu}`, `{etat}`, `{prenom}`; het profiel wordt herlezen bij terugkeer naar het tabblad (R1). Bijlagen van berichten buiten MCP (E-17, zesde route). Negen beschermingen één voor één weggenomen: telkens minstens één mislukte test. `npm audit`: server 0, interface 3 matig (E-09).

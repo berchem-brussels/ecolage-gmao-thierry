@@ -1,4 +1,5 @@
-/** Fiche d'aide « Demandes de l'entité » : tableau de bord, liste du service et qualification (GES-01 à 04, PRI-01, 03 ; 0.12.0). 0.14.0 : cycle de vie (CYC-01, CLO-01, PRI-03, SUI-06). */
+/** Fiche d'aide « Demandes de l'entité » : tableau de bord, liste du service et qualification (GES-01 à 04, PRI-01, 03 ; 0.12.0). 0.14.0 : cycle de vie (CYC-01, CLO-01, PRI-03, SUI-06).
+ * 0.16.0 : encoder, regrouper, découper, colonnes par état (GES-03, GES-05, GES-06). */
 import type { HelpTopic } from '../types';
 
 const topic: HelpTopic = {
@@ -37,6 +38,49 @@ const topic: HelpTopic = {
       result: { fr: 'La demande passe à « Qualifiée » ; le demandeur voit « Prise en charge » et le délai recalculé, jamais vos consignes ni le motif.', nl: 'De aanvraag gaat naar « Gekwalificeerd »; de aanvrager ziet « In behandeling » en de herberekende termijn, nooit uw instructies of de reden.' },
       errors: [{ problem: { fr: 'L’enregistrement est refusé.', nl: 'Het opslaan wordt geweigerd.' }, solution: { fr: 'Une priorité changée exige son motif ; une priorité P4 exige la date convenue avec le demandeur.', nl: 'Een gewijzigde prioriteit vereist een reden; een prioriteit P4 vereist de met de aanvrager afgesproken datum.' } }],
       shots: ['demandes-entite-qualifier'],
+    },
+    // 0.16.0 (étapes 11 et 12 ; GES-03, GES-05, GES-06).
+    {
+      title: { fr: 'Travailler en colonnes par état', nl: 'Werken in kolommen per status' },
+      when: { fr: 'Pour voir d’un coup d’œil où en est chaque demande et la faire avancer.', nl: 'Om in één oogopslag te zien waar elke aanvraag staat en ze verder te helpen.' },
+      steps: [
+        { fr: 'Au-dessus de la liste, choisissez {{colonnes.titre}} ; les filtres restent appliqués.', nl: 'Kies boven de lijst {{colonnes.titre}}; de filters blijven toegepast.' },
+        { fr: 'Glissez une carte vers une autre colonne : seules les colonnes permises s’éclairent. Au doigt ou au clavier, utilisez {{colonnes.deplacer}} sur la carte.', nl: 'Sleep een kaart naar een andere kolom: enkel de toegestane kolommen lichten op. Met de vinger of het toetsenbord gebruikt u {{colonnes.deplacer}} op de kaart.' },
+        { fr: 'La fiche s’ouvre avec le formulaire du passage : complétez-le et confirmez.', nl: 'De fiche opent met het formulier van de overgang: vul het aan en bevestig.' },
+      ],
+      result: { fr: 'Rien ne change sans votre confirmation. Sur téléphone, une colonne à la fois : choisissez-la dans les boutons du haut, avec son nombre de demandes.', nl: 'Niets verandert zonder uw bevestiging. Op de telefoon één kolom tegelijk: kies ze in de knoppen bovenaan, met haar aantal aanvragen.' },
+      shots: ['demandes-entite-colonnes'],
+    },
+    {
+      title: { fr: 'Regrouper des demandes qui signalent le même problème', nl: 'Aanvragen samenvoegen die hetzelfde probleem melden' },
+      when: { fr: 'Quand deux agents signalent la même panne dans deux demandes.', nl: 'Wanneer twee medewerkers dezelfde panne in twee aanvragen melden.' },
+      steps: [
+        { fr: 'Ouvrez la demande à fermer et cliquez sur {{cycle.action.fusionnee}}.', nl: 'Open de aanvraag die afgesloten moet worden en klik op {{cycle.action.fusionnee}}.' },
+        { fr: 'Choisissez la demande principale dans {{fusion.proposees}}, ou cherchez-la par numéro, texte ou lieu.', nl: 'Kies de hoofdaanvraag in {{fusion.proposees}}, of zoek ze op nummer, tekst of plaats.' },
+        { fr: 'Lisez ce qui va se passer, ajoutez au besoin un commentaire pour le demandeur, puis confirmez.', nl: 'Lees wat er zal gebeuren, voeg zo nodig een commentaar voor de aanvrager toe, en bevestig.' },
+      ],
+      result: { fr: 'La demande est fermée et renvoie vers la principale ; son demandeur, son bénéficiaire et les personnes qui la suivaient suivent la principale. La fiche de la principale liste {{fusion.regroupees}}.', nl: 'De aanvraag is afgesloten en verwijst naar de hoofdaanvraag; haar aanvrager, haar begunstigde en wie ze volgde, volgen de hoofdaanvraag. De fiche van de hoofdaanvraag toont {{fusion.regroupees}}.' },
+      errors: [{ problem: { fr: 'La demande principale voulue n’est pas proposée.', nl: 'De gewenste hoofdaanvraag wordt niet voorgesteld.' }, solution: { fr: 'Elle est fermée, en validation chez un chef de service, ou dans l’autre entité : on ne regroupe que dans une demande ouverte de la même entité.', nl: 'Ze is afgesloten, ter goedkeuring bij een diensthoofd, of in de andere entiteit: men voegt enkel samen in een open aanvraag van dezelfde entiteit.' } }],
+      shots: ['demandes-entite-regrouper'],
+    },
+    {
+      title: { fr: 'Découper une demande qui signale plusieurs problèmes', nl: 'Een aanvraag opsplitsen die meerdere problemen meldt' },
+      when: { fr: 'Quand une demande mélange des travaux différents, par exemple une lampe et un robinet.', nl: 'Wanneer een aanvraag verschillende werken mengt, bijvoorbeeld een lamp en een kraan.' },
+      steps: [
+        { fr: 'Ouvrez la demande et cliquez sur {{decoupage.bouton}}.', nl: 'Open de aanvraag en klik op {{decoupage.bouton}}.' },
+        { fr: 'La demande garde son premier problème. Pour chaque autre, décrivez-le ; changez la catégorie ou le lieu s’il le faut. {{decoupage.ajouter}} pour un problème de plus (cinq au plus).', nl: 'De aanvraag behoudt haar eerste probleem. Beschrijf elk ander probleem; wijzig zo nodig de categorie of de plaats. {{decoupage.ajouter}} voor een probleem meer (hoogstens vijf).' },
+        { fr: 'Ajoutez au besoin un commentaire pour le demandeur, puis créez les demandes.', nl: 'Voeg zo nodig een commentaar voor de aanvrager toe en maak de aanvragen aan.' },
+      ],
+      result: { fr: 'Chaque problème reçoit son numéro, au nom du même demandeur, « À qualifier », avec les délais comptés depuis la demande d’origine. La fiche d’origine liste {{decoupage.issues}} ; corrigez au besoin sa description en la qualifiant.', nl: 'Elk probleem krijgt zijn nummer, op naam van dezelfde aanvrager, « Te kwalificeren », met de termijnen geteld vanaf de oorspronkelijke aanvraag. De oorspronkelijke fiche toont {{decoupage.issues}}; pas zo nodig haar beschrijving aan bij de kwalificatie.' },
+      shots: ['demandes-entite-decouper'],
+    },
+    {
+      title: { fr: 'Encoder une demande reçue par téléphone ou par courriel', nl: 'Een aanvraag invoeren die per telefoon of e-mail ontvangen werd' },
+      when: { fr: 'Quand un agent vous signale un problème sans passer par l’application.', nl: 'Wanneer een medewerker u een probleem meldt zonder de toepassing te gebruiken.' },
+      steps: [
+        { fr: 'Cliquez sur {{encoder.bouton}}, puis suivez la fiche d’aide de cet écran.', nl: 'Klik op {{encoder.bouton}} en volg daarna de helpfiche van dat scherm.' },
+      ],
+      result: { fr: 'La demande est au nom de l’agent, qui la suit comme les siennes.', nl: 'De aanvraag staat op naam van de medewerker, die ze volgt zoals de zijne.' },
     },
     // 0.15.0 (point 6 ; SUI-04, GES-08, GES-09, SUI-09) : répondre, notes internes et mentions, suivre.
     {
@@ -95,6 +139,8 @@ const topic: HelpTopic = {
     // 0.15.0 (point 6).
     { q: { fr: 'Le demandeur peut-il lire une note interne ?', nl: 'Kan de aanvrager een interne nota lezen?' }, a: { fr: 'Non, jamais : ni à l’écran, ni par l’assistant, ni par la GRC. Il ne voit pas non plus le nom des agents du service.', nl: 'Nee, nooit: niet op het scherm, niet via de assistent, niet via het KRM. Hij ziet ook de naam van de medewerkers van de dienst niet.' } },
     { q: { fr: 'Comment ajouter ou changer un modèle de réponse ?', nl: 'Hoe een antwoordmodel toevoegen of wijzigen?' }, a: { fr: 'Le responsable le fait dans {{nav.referentiel}}, onglet {{ref.tab.modeles}}.', nl: 'De verantwoordelijke doet het in {{nav.referentiel}}, tabblad {{ref.tab.modeles}}.' } },
+    // 0.16.0.
+    { q: { fr: 'Pourquoi une demande « En validation » ne bouge-t-elle pas ?', nl: 'Waarom beweegt een aanvraag « Ter goedkeuring » niet?' }, a: { fr: 'Elle attend l’accord du chef de service du demandeur ; ses délais ne comptent pas encore. Le service technique ne peut ni la qualifier ni la regrouper avant cet accord.', nl: 'Ze wacht op het akkoord van het diensthoofd van de aanvrager; haar termijnen tellen nog niet. De technische dienst kan ze niet kwalificeren of samenvoegen voor dat akkoord.' } },
     { q: { fr: 'Je ne vois pas les demandes du CPAS.', nl: 'Ik zie de aanvragen van het OCMW niet.' }, a: { fr: 'La liste suit l’entité active ; si vous avez un rôle dans l’autre entité, changez d’entité dans l’en-tête.', nl: 'De lijst volgt de actieve entiteit; als u een rol hebt in de andere entiteit, wissel van entiteit in de kop.' } },
   ],
   seeAlso: ['referentiel', 'patrimoine'],
@@ -103,6 +149,10 @@ const topic: HelpTopic = {
     { id: 'demandes-entite-fil', path: '/demandes-entite', actions: [{ clickSel: '.ant-table-row .ant-btn-link' }, { wait: 1000 }, { scrollSel: 'section.fil' }, { clickSel: '.fil-saisie .ant-radio-button-wrapper:nth-child(2)' }, { wait: 600 }, { scrollSel: '.fil-saisie' }],
       clip: 'drawer', marks: [{ sel: '.fil-bulle-interne' }, { sel: '.fil-saisie .ant-radio-group' }, { sel: '.fil-saisie .ant-select' }], caption: { fr: 'Note interne et collègue prévenu', nl: 'Interne nota en verwittigde collega' } },
     { id: 'demandes-entite-qualifier', path: '/demandes-entite', actions: [{ clickSel: '.ant-table-row .ant-btn-link' }, { wait: 600 }], clip: 'drawer', caption: { fr: 'Fiche d’une demande : passages permis et historique', nl: 'Fiche van een aanvraag: toegestane overgangen en historiek' } },
+    // 0.16.0 : colonnes, regrouper, découper (la première carte de la colonne « À qualifier » est ouverte).
+    { id: 'demandes-entite-colonnes', path: '/demandes-entite?affichage=colonnes', marks: [{ sel: '.gest-affichage' }, { sel: '.col-tableau .col-colonne' }, { sel: '.col-carte .ant-btn-sm' }], caption: { fr: 'Colonnes par état', nl: 'Kolommen per status' } },
+    { id: 'demandes-entite-regrouper', path: '/demandes-entite?affichage=colonnes', actions: [{ clickSel: '.col-colonne .col-carte .ant-btn-link' }, { wait: 800 }, { click: 'cycle.action.fusionnee' }, { wait: 800 }], clip: 'drawer', marks: [{ sel: '.ant-drawer .dem-resultats' }, { sel: '#fusion-q' }], caption: { fr: 'Regrouper avec une autre demande', nl: 'Samenvoegen met een andere aanvraag' } },
+    { id: 'demandes-entite-decouper', path: '/demandes-entite?affichage=colonnes', actions: [{ clickSel: '.col-colonne .col-carte .ant-btn-link' }, { wait: 800 }, { click: 'decoupage.bouton' }, { wait: 500 }], clip: 'drawer', marks: [{ sel: '.ant-drawer .ant-card' }, { sel: '.ant-drawer .ant-btn:has(.anticon-plus)' }], caption: { fr: 'Découper en plusieurs demandes', nl: 'Opsplitsen in meerdere aanvragen' } },
   ],
 };
 export default topic;

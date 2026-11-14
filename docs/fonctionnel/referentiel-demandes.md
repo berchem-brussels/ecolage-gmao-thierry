@@ -1,6 +1,6 @@
 # Référentiel des demandes : catégories, priorités, délais et calendrier
 
-Version 0.15.0 · Fiche fonctionnelle (modèle du standard, section 17.8).
+Version 0.16.0 · Fiche fonctionnelle (modèle du standard, section 17.8).
 
 ## Objet
 
@@ -75,7 +75,7 @@ Aucune donnée personnelle nouvelle : catégories, priorités, horaires et jours
 
 ## Limites
 
-- Le circuit de validation est enregistré ; la validation par le chef de service s'applique à l'étape 11.
+- Le circuit de validation s'applique depuis la 0.16.0 : une demande d'une catégorie « Validation du chef de service » attend l'accord du chef du service du demandeur (services réglés par l'administrateur).
 - L'échéance s'affiche sur les fiches depuis la 0.9.0 ; la suspension du décompte pendant une attente (PRI-03) depuis la 0.14.0 (motifs suspensifs dans Réglages de l'entité).
 - Le corps de métier par défaut (REF-06) vient avec l'étape 15 ; les questions par catégorie (DEM-05) sont livrées en 0.7.0.
 - Les valeurs livrées sont celles du cahier des charges en attendant l'atelier métier (D-11).

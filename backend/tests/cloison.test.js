@@ -80,6 +80,9 @@ const ECRITURES = [
   { route: 'DELETE /api/faq/:id', body: { motif: 'Piraté' }, tool: 'prepare_deactivate_faq', id: (ent) => objets[ent.code].faq },
   // 0.14.0 : changement d'état (annulation) d'une demande de l'autre entité.
   { route: 'POST /api/demandes/:id/transitions', body: { etat: 'annulee', commentaire: 'Piraté' }, tool: 'prepare_change_etat_demande', id: (ent) => objets[ent.code].demande },
+  // 0.16.0 (GES-06) : fusion d'une demande de l'autre entité.
+  { route: 'POST /api/demandes/:id/fusionner', body: { principale_id: 1 }, tool: 'prepare_fusionner_demande', id: (ent) => objets[ent.code].demande },
+  { route: 'POST /api/demandes/:id/decouper', body: { parties: [{ description: 'Piraté, deuxième problème.' }] }, tool: 'prepare_decouper_demande', id: (ent) => objets[ent.code].demande },
   // 0.14.0, point 5 : complément, annulation et pièce ajoutée à une demande de l'autre entité.
   { route: 'PUT /api/demandes/:id', body: { complement: 'Piraté' }, tool: 'complete_demande', id: (ent) => objets[ent.code].demande },
   { route: 'DELETE /api/demandes/:id', body: { motif: 'Piraté' }, tool: 'prepare_cancel_demande', id: (ent) => objets[ent.code].demande },

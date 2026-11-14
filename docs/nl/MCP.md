@@ -1,6 +1,6 @@
 # MCP-server
 
-Versie van de toepassing: **0.15.0** · Bijgewerkt op 09/11/2026 · De Franse tekst is rechtsgeldig (`docs/fr/MCP.md`).
+Versie van de toepassing: **0.16.0** · Bijgewerkt op 10/11/2026 · De Franse tekst is rechtsgeldig (`docs/fr/MCP.md`).
 
 ## Toegang en regels
 
@@ -9,6 +9,10 @@ Versie van de toepassing: **0.15.0** · Bijgewerkt op 09/11/2026 · De Franse te
 - Authenticatie: de sessie, of het sessietoken in `Authorization: Bearer`. OAuth 2.1 met PKCE komt in stap 44 (afwijking E-10).
 - Limiet: 60 oproepen per minuut en per persoon.
 - Elke tool roept dezelfde dienstfunctie op als de REST-route, met de identiteit en de rechten van de persoon, in haar actieve entiteit. Een deactivering, intrekking of wissing gebeurt in twee oproepen (`prepare_*`, dan `confirm_*`). Geen tool voor vrije SQL.
+
+## 0.16.0
+
+Nieuwe tools: `list_demandes_a_valider` (aanvragen « Ter goedkeuring » van de diensten waarvan de persoon hoofd of vervanger tijdens zijn periode is; goedkeuren of weigeren met `change_etat_demande`), `list_services`, `get_service`, `create_service`, `update_service` en `deactivate_service` in twee oproepen (beheerder; hoofd en vervanger met de rol « Goedkeurder »), `fusionner_demande` (`principale_id`, `commentaire`) en `decouper_demande` (`parties`, één tot vijf, `commentaire`), elk in twee oproepen (`demandes:traiter`). Verrijkt: `create_demande` neemt `demandeur_id` en `canal` samen (aanvraag ontvangen door de technische dienst); `get_demande` geeft `service`, `valideur`, `encodee_par`, `fusionnee_dans`, `regroupees`, `issue_de`, `issues`, `decoupable`; `update_user` en `list_users` nemen `service_id`.
 
 ## 0.15.0
 

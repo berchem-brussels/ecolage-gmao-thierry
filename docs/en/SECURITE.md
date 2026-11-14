@@ -2,6 +2,10 @@
 
 The French text (`docs/fr/SECURITE.md`) prevails and holds the full grid per version.
 
+## 0.16.0 (10/11/2026)
+
+Approval by the head of service, services and approvers, request entered by the technical department, merging, splitting, columns by status; migration `014_validation`. Tested: services, requests to approve, merging and splitting of the other entity 403 (API and MCP); an approver reads and approves only the requests of his services (the deputy during the period); the technical department does not approve in place of the head; merging and splitting all or nothing, nothing deleted; audit log without free text; "Move" offers only permitted transitions. Proof of failure: eleven protections removed one at a time, each with at least one failing test (see the French text); one gap found and closed (approver of another service). `mobile:check`: 41 screens, three accounts, no defect.
+
 ## 0.15.0 (09/11/2026)
 
 Message thread, internal notes with mentions, reply templates, following; migration `013_messages`. Tested: thread, read marks, message attachments, people to mention, following and templates of the other entity 403 (API and MCP); the thread is read by the requester, the beneficiary and the department only, never by a mere follower; internal notes and their attachments for the department only; department agent names hidden from the requester; writing only on an open request; mentions only in an internal note and only of department members; no free text in the audit log; templates accept only `{numero}`, `{lieu}`, `{etat}`, `{prenom}`; the profile is reread when returning to the tab (R1). Message attachments outside MCP (E-17, sixth route). Nine protections removed one by one: at least one failure each. `npm audit`: server 0, interface 3 moderate (E-09).

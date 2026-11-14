@@ -52,6 +52,23 @@ const MESSAGES = {
   MODELE_VARIABLE: { fr: 'Variable inconnue dans le modèle. Variables admises : {numero}, {lieu}, {etat}, {prenom}.', nl: 'Onbekende variabele in het model. Toegelaten variabelen: {numero}, {lieu}, {etat}, {prenom}.' },
   REMARQUE_ABONNEMENT: { fr: 'Une remarque accompagne seulement un « Moi aussi », pas un simple suivi.', nl: 'Een opmerking hoort enkel bij een « Ik ook », niet bij het gewoon volgen.' },
   PAS_SUIVIE: { fr: 'Vous ne suivez pas cette demande.', nl: 'U volgt deze aanvraag niet.' },
+  // 0.16.0 (étape 12, GES-06) : fusion de doublons.
+  TRANSITION_PAR_ROUTE: { fr: 'Ce changement se fait par son propre bouton (regrouper, découper).', nl: 'Deze wijziging gebeurt via haar eigen knop (samenvoegen, opsplitsen).' },
+  DECOUPAGE_ETAT: { fr: 'Seule une demande ouverte, reçue par le service technique, peut être découpée.', nl: 'Alleen een open aanvraag, ontvangen door de technische dienst, kan opgesplitst worden.' },
+  FUSION_ELLE_MEME: { fr: 'Une demande ne peut pas être regroupée avec elle-même.', nl: 'Een aanvraag kan niet met zichzelf samengevoegd worden.' },
+  FUSION_PRINCIPALE_FERMEE: { fr: 'La demande principale doit être ouverte et reçue par le service technique.', nl: 'De hoofdaanvraag moet open zijn en ontvangen door de technische dienst.' },
+  // 0.16.0 (étape 12) : demande encodée par le service technique pour un agent.
+  ENCODAGE_INCOMPLET: { fr: 'Pour encoder une demande reçue, donnez le demandeur et le canal (téléphone ou courriel).', nl: 'Om een ontvangen aanvraag in te voeren, geef de aanvrager en het kanaal (telefoon of e-mail).' },
+  DEMANDEUR_HORS_ENTITE: { fr: 'Ce demandeur n’a pas de compte actif dans cette entité.', nl: 'Deze aanvrager heeft geen actieve account in deze entiteit.' },
+  // 0.16.0 (étape 11) : services et valideurs.
+  VALIDEUR_SANS_ROLE: { fr: 'Cette personne ne peut pas valider : elle doit avoir le rôle « Valideur » dans l’entité du service.', nl: 'Deze persoon kan niet goedkeuren: ze moet de rol « Goedkeurder » hebben in de entiteit van de dienst.' },
+  SUPPLEANT_PERIODE: { fr: 'Un suppléant se désigne avec une période : date de début et date de fin, la fin après le début.', nl: 'Een vervanger wordt aangeduid met een periode: begindatum en einddatum, het einde na het begin.' },
+  SUPPLEANT_SANS_VALIDEUR: { fr: 'Désignez d’abord le valideur du service, puis son suppléant.', nl: 'Duid eerst de goedkeurder van de dienst aan, daarna zijn vervanger.' },
+  SUPPLEANT_EGAL_VALIDEUR: { fr: 'Le suppléant doit être une autre personne que le valideur.', nl: 'De vervanger moet een andere persoon zijn dan de goedkeurder.' },
+  SERVICE_CODE_EXISTE: { fr: 'Ce code de service existe déjà dans cette entité.', nl: 'Deze dienstcode bestaat al in deze entiteit.' },
+  SERVICE_INCONNU: { fr: 'Service introuvable.', nl: 'Dienst niet gevonden.' },
+  SERVICE_AUTRE_ENTITE: { fr: 'Ce service appartient à une autre entité que celle du compte.', nl: 'Deze dienst behoort tot een andere entiteit dan die van de account.' },
+  SERVICE_INACTIF: { fr: 'Ce service est désactivé.', nl: 'Deze dienst is gedeactiveerd.' },
   MESSAGE_VIDE: { fr: 'Écrivez un message ou joignez une photo ou un document.', nl: 'Schrijf een bericht of voeg een foto of een document toe.' },
   PIECES_PLAFOND: { fr: 'Nombre maximal de pièces jointes atteint pour cette demande.', nl: 'Maximaal aantal bijlagen voor deze aanvraag bereikt.' },
   PIECE_VERROUILLEE: { fr: "La demande est prise en charge : seul le service technique peut encore retirer cette pièce jointe.", nl: 'De aanvraag is in behandeling: enkel de technische dienst kan deze bijlage nog verwijderen.' },

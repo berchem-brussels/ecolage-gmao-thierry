@@ -9,7 +9,7 @@
  */
 import { useEffect, useState } from 'react';
 import { Alert, Card, List, Space, Table, Tag, Typography } from 'antd';
-import { PlusOutlined, ProfileOutlined, InboxOutlined, MessageOutlined } from '@ant-design/icons';
+import { PlusOutlined, ProfileOutlined, InboxOutlined, MessageOutlined, CheckSquareOutlined } from '@ant-design/icons';
 import { Link } from 'react-router-dom';
 import api, { qs } from '../api';
 import { type Demande, dateDepot } from '../demandes';
@@ -29,6 +29,14 @@ export default function HomePage() {
   const [enCours, setEnCours] = useState<Demande[] | null>(null);
   const [aQualifier, setAQualifier] = useState<number | null>(null);
   const voitEntite = hasPermission(catalogue, roles, 'demandes:entite');
+  // 0.16.0 (étape 11) : chef de service, demandes qui attendent son accord.
+  const valide = hasPermission(catalogue, roles, 'demandes:valider');
+  const [aValider, setAValider] = useState<number | null>(null);
+  useEffect(() => {
+    setAValider(null);
+    if (!entite || !valide) return;
+    api.page<Demande>(`/demandes/a-valider${qs({ limit: 1 })}`).then((r) => setAValider(r.pagination.total)).catch(() => setAValider(null));
+  }, [entite?.id, valide]);
   const label = (code: string) => {
     const r = catalogue.find((x) => x.code === code);
     return r ? tField(r as unknown as Record<string, unknown>, 'label') : code;
@@ -72,6 +80,11 @@ export default function HomePage() {
             <div className="home-actions">
               <Link to="/demandes/nouvelle" className="home-action home-action-primaire"><PlusOutlined aria-hidden /> <span>{t('nav.demande.nouvelle')}</span></Link>
               <Link to="/demandes" className="home-action"><ProfileOutlined aria-hidden /> <span>{t('nav.demandes')}</span></Link>
+              {valide && (
+                <Link to="/a-valider" className="home-action">
+                  <CheckSquareOutlined aria-hidden /> <span>{t('nav.avalider')}{aValider !== null ? ` (${aValider})` : ''}</span>
+                </Link>
+              )}
               {voitEntite && (
                 <Link to="/demandes-entite" className="home-action">
                   <InboxOutlined aria-hidden /> <span>{t('nav.demandes.entite')}{aQualifier !== null ? ` (${aQualifier} ${t('home.aqualifier')})` : ''}</span>
@@ -79,6 +92,10 @@ export default function HomePage() {
               )}
             </div>
           </Card>
+        )}
+        {entite && !!aValider && (
+          <Alert type="warning" showIcon icon={<CheckSquareOutlined aria-hidden />}
+            message={<Link to="/a-valider">{aValider === 1 ? t('home.avalider.un') : t('home.avalider').replace('{n}', String(aValider))}</Link>} />
         )}
         {entite && !!nouveaux && (
           <Alert type="info" showIcon icon={<MessageOutlined aria-hidden />}

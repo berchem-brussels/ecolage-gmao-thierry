@@ -68,6 +68,20 @@ export interface Demande {
    */
   etat_depuis?: string | null; etat_libelle_fr?: string | null; etat_libelle_nl?: string | null;
   transitions?: Transition[];
+  /**
+   * 0.16.0 (étape 11 ; DEM-15, ROL-04) : service du demandeur noté au dépôt ; 1 si la personne valide cette demande
+   * (chef de service ou suppléant en période), avec les passages qu'elle peut faire (valider, refuser).
+   */
+  service_id?: number | null; service_nom_fr?: string | null; service_nom_nl?: string | null;
+  valideur?: 0 | 1; transitions_valideur?: Transition[];
+  /** 0.16.0 (GES-05) : qui a encodé une demande reçue par téléphone ou par courriel (service technique seulement). */
+  encodee_par_prenom?: string | null; encodee_par_nom?: string | null;
+  /** 0.16.0 (GES-06) : demande principale d'une demande regroupée ; demande d'origine d'une demande découpée. */
+  fusionnee_dans?: number | null; fusionnee_dans_numero?: string | null; issue_de?: number | null; issue_de_numero?: string | null;
+  /** Demandes regroupées dans celle-ci (service technique). */
+  regroupees?: { id: number; numero: string; created_at: string; demandeur_prenom: string; demandeur_nom: string }[];
+  /** 0.16.0 (GES-06) : demandes issues de celle-ci par découpage ; 1 si la personne peut la découper. */
+  issues?: { id: number; numero: string; etat: Etat }[]; decoupable?: 0 | 1;
   cause_id?: number | null; cause_code?: string | null; cause_libelle_fr?: string | null; cause_libelle_nl?: string | null; compte_rendu?: string | null;
   /** 0.14.0, point 5 (SUI-05) : compléments datés ; ce que le demandeur ou le bénéficiaire peut encore faire. */
   complements?: Complement[]; completable?: 0 | 1; annulable?: 0 | 1;
@@ -85,7 +99,7 @@ export interface Complement { id: number; texte: string; langue: 'fr' | 'nl'; cr
 
 /** Passage permis d'un état à l'autre (0.14.0, table du serveur) : motif exigé, commentaire, compte rendu. */
 export interface Transition {
-  vers: Etat; via: 'qualifier' | null; motif_liste: 'motif_attente' | 'motif_refus' | 'cause_panne' | null;
+  vers: Etat; via: 'qualifier' | 'fusionner' | 'decouper' | null; motif_liste: 'motif_attente' | 'motif_refus' | 'cause_panne' | null;
   commentaire: 'interdit' | 'facultatif' | 'obligatoire'; commentaire_public: 0 | 1; compte_rendu: 0 | 1;
 }
 
@@ -102,6 +116,8 @@ export interface EtapeHistorique {
  * l'attente ou de « Travaux terminés » vers « En cours ». Rend une clé de traduction.
  */
 export function cleAction(de: Etat, vers: Etat): string {
+  // 0.16.0 : le chef de service valide (vers « À qualifier ») ou refuse.
+  if (de === 'en_validation' && vers === 'a_qualifier') return 'cycle.action.valider';
   if (vers === 'en_cours' && (de === 'en_attente' || de === 'terminee')) return 'cycle.action.reprendre_travaux';
   if (vers === 'qualifiee' && de === 'en_attente') return 'cycle.action.reprendre';
   return `cycle.action.${vers}`;

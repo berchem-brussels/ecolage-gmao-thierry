@@ -216,3 +216,10 @@ body.app-dark .fil-bulle-interne { border-color: #ffa940; }
 .modeles-liste { list-style: none; margin: 0; padding: 0; }
 /* Étiquettes d'une bulle (nom long d'un collègue mentionné) : retour à la ligne, jamais plus larges que la bulle (360 px). */
 .fil-bulle .ant-tag { white-space: normal; max-width: 100%; overflow-wrap: anywhere; }
+
+/* 0.16.0 (GES-03) : vue en colonnes par état ; le tableau défile en largeur, jamais la page. */
+.col-tableau { display: flex; gap: 12px; overflow-x: auto; padding-bottom: 8px; align-items: flex-start; }
+.col-colonne { flex: 0 0 260px; min-width: 0; background: var(--app-bg-page); border: 2px dashed transparent; border-radius: 8px; padding: 8px; }
+.col-permise { border-color: var(--app-primary); }
+.col-refusee { opacity: 0.5; }
+.col-carte[draggable='true'] { cursor: grab; }

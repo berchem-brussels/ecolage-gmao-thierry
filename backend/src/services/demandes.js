@@ -6,9 +6,14 @@
  *   2. Un seul lieu par demande (DV-39), actif, de l'entité active. Une catégorie active de l'entité : une nature, ou
  *      un domaine qui n'a aucune nature active (sinon il faut préciser).
  *   3. Le numéro est attribué dans la transaction d'enregistrement (services/numerotation.js).
- *   4. En 0.5.0, toute demande arrive « À qualifier » (DV-43) : la règle de validation de la catégorie est gardée et
- *      s'appliquera à l'étape 11. La priorité proposée par la catégorie est notée ; le gestionnaire la confirmera à
- *      l'étape 8 (PRI-01).
+ *   4. Circuit (0.16.0, étape 11 ; DEM-15, ROL-04, fin de E-22) : une demande d'une catégorie « à valider » (règle du
+ *      domaine ou de la nature) arrive « En validation » chez le valideur du service du demandeur (services/services.js :
+ *      titulaire, ou suppléant pendant sa période) ; il valide (« À qualifier », délais comptés depuis la validation) ou
+ *      refuse avec un motif. Sans service ou sans valideur, ou si le demandeur est lui-même valideur de son service, elle
+ *      arrive « À qualifier » et le journal dit pourquoi (validation « sans_valideur » ou « auteur_valideur »). Toute
+ *      autre demande arrive « À qualifier ». Le service du demandeur est noté sur la demande. Le valideur lit les
+ *      demandes de ses services (sans les champs internes ni le fil). La priorité proposée par la catégorie est notée ;
+ *      le gestionnaire la confirme à la qualification (PRI-01).
  *   5. Lecture : le demandeur voit ses demandes (SEC-02 ; le filtre « Mon service » attend la lecture du service,
  *      DV-45) ; le gestionnaire et le responsable voient toutes celles de l'entité active, en lecture seule (DV-46,
  *      rôle « demandes:entite »). Une demande d'une autre entité répond 403, par l'API comme par le MCP (SEC-01).
@@ -31,6 +36,12 @@
  *      et enregistrées avec la demande, texte compris. Elles sont lues sur la fiche par le demandeur et par le service.
  *  12. Pièces jointes (DEM-09, 0.8.0, services/pieces.js) : celles du brouillon passent à la demande dans la transaction
  *      d'envoi ; la fiche les rend au demandeur, au bénéficiaire et au service technique, pas à qui suit seulement.
+ *  15. Encodage par le service technique (0.16.0, étape 12 ; GES-05) : le gestionnaire ou le responsable
+ *      (« demandes:traiter ») dépose une demande reçue par téléphone ou par courriel pour un agent de l'entité active
+ *      (compte actif qui y a un rôle) : demandeur_id et canal (« telephone » ou « courriel ») ensemble. La demande est
+ *      celle de l'agent (il la lit dans « Mes demandes », son service décide du circuit de validation) ; le canal la
+ *      marque, l'historique et la fiche du service disent qui l'a encodée. Ni brouillon ni pièce du brouillon de qui
+ *      encode ; langue : celle du texte, sinon celle de l'agent.
  *  14. Cycle de vie (0.14.0, services/cycle.js) : le dépôt s'inscrit dans l'historique de la fiche ; la fiche rend
  *      l'état depuis quand, le libellé de l'état réglé par l'entité (CYC-04) et, pour le service technique, les passages
  *      que la personne peut faire, la cause de la panne et le compte rendu de la clôture (internes).
@@ -68,14 +79,20 @@ const COLUMNS = `d.id, d.entite_id, d.numero, d.annee, d.sequence, d.description
   d.etat_depuis, ee.libelle_fr AS etat_libelle_fr, ee.libelle_nl AS etat_libelle_nl,
   d.cause_id, cp.code AS cause_code, cp.libelle_fr AS cause_libelle_fr, cp.libelle_nl AS cause_libelle_nl, d.compte_rendu,
   d.attente_suspend, d.suspendu_ouvrable_min, d.suspendu_calendaire_min,
+  d.service_id, sv.nom_fr AS service_nom_fr, sv.nom_nl AS service_nom_nl,
+  d.created_by, cb.first_name AS encodee_par_prenom, cb.last_name AS encodee_par_nom,
+  d.fusionnee_dans, fm.numero AS fusionnee_dans_numero, d.issue_de, io.numero AS issue_de_numero,
   d.is_demo, d.created_at, d.updated_at`;
 const FROM = `FROM demandes d JOIN lieux l ON l.id = d.lieu_id JOIN categories c ON c.id = d.categorie_id
   LEFT JOIN categories p ON p.id = c.parent_id JOIN users u ON u.id = d.demandeur_id LEFT JOIN users b ON b.id = d.beneficiaire_id
   LEFT JOIN users qp ON qp.id = d.qualifiee_par LEFT JOIN demande_etats ee ON ee.entite_id = d.entite_id AND ee.code = d.etat
-  LEFT JOIN listes_valeurs cp ON cp.id = d.cause_id`;
+  LEFT JOIN listes_valeurs cp ON cp.id = d.cause_id LEFT JOIN services sv ON sv.id = d.service_id
+  LEFT JOIN users cb ON cb.id = d.created_by AND d.created_by <> d.demandeur_id
+  LEFT JOIN demandes fm ON fm.id = d.fusionnee_dans LEFT JOIN demandes io ON io.id = d.issue_de`;
 /** Champs internes au service technique (0.9.0) : retirés de la fiche rendue au demandeur et à qui suit la demande. */
 const INTERNES = ['priorite_proposee', 'motif_priorite', 'duree_estimee_minutes', 'consignes', 'qualifiee_par', 'qualifiee_par_prenom', 'qualifiee_par_nom', 'qualifiee_le',
-  'cause_id', 'cause_code', 'cause_libelle_fr', 'cause_libelle_nl', 'compte_rendu', 'attente_suspend', 'suspendu_ouvrable_min', 'suspendu_calendaire_min'];
+  'cause_id', 'cause_code', 'cause_libelle_fr', 'cause_libelle_nl', 'compte_rendu', 'attente_suspend', 'suspendu_ouvrable_min', 'suspendu_calendaire_min',
+  'created_by', 'encodee_par_prenom', 'encodee_par_nom'];
 const LIEU = 'SELECT id, entite_id, parent_id, nature, code, nom_fr, nom_nl, is_active FROM lieux WHERE id = ?';
 const ETATS_FERMES = ['cloturee', 'refusee', 'refusee_validation', 'fusionnee', 'annulee'];
 const SUIVIE = 'SELECT 1 FROM demande_suiveurs WHERE demande_id = ? AND user_id = ?';
@@ -88,6 +105,8 @@ function entiteActive(user) {
 }
 
 const peut = (user, permission) => user.roles.some((r) => rolesWith(permission).includes(r));
+/** Règle 4 : la personne valide aujourd'hui les demandes du service de cette demande. */
+const valideurDe = (user, d) => !!d.service_id && peut(user, 'demandes:valider') && require('./services').valideurs(d.service_id).includes(user.id);
 
 /** Instant SQL (UTC) d'une date JavaScript, et l'inverse. */
 const versSql = (date) => date.toISOString().replace('T', ' ').slice(0, 19);
@@ -157,7 +176,7 @@ function fiche(d, cache, user) {
   const pourMoi = !!user && d.beneficiaire_id === user.id;
   // Une personne qui suit seulement la demande (« Moi aussi ») ne reçoit ni le demandeur ni le bénéficiaire ; le
   // bénéficiaire voit qui a déposé la demande pour lui.
-  if (autre && !pourMoi && !peut(user, 'demandes:entite')) {
+  if (autre && !pourMoi && !peut(user, 'demandes:entite') && !valideurDe(user, d)) {
     for (const k of ['demandeur_id', 'demandeur_prenom', 'demandeur_nom', 'beneficiaire_id', 'beneficiaire_prenom', 'beneficiaire_nom', 'beneficiaire_texte']) reste[k] = null;
   }
   // Champs internes du service technique (0.9.0) : ni pour le demandeur, ni pour le bénéficiaire, ni pour qui suit.
@@ -188,7 +207,8 @@ function load(user, id) {
   const d = row(id);
   if (!d) throw new AppError(404, 'NOT_FOUND');
   if (d.entite_id !== entiteActive(user)) throw new AppError(403, 'FORBIDDEN');
-  if (d.demandeur_id !== user.id && d.beneficiaire_id !== user.id && !peut(user, 'demandes:entite') && !getDb().prepare(SUIVIE).get(d.id, user.id)) {
+  if (d.demandeur_id !== user.id && d.beneficiaire_id !== user.id && !peut(user, 'demandes:entite') && !getDb().prepare(SUIVIE).get(d.id, user.id)
+    && !valideurDe(user, d)) {
     throw new AppError(403, 'FORBIDDEN');
   }
   return d;
@@ -209,9 +229,16 @@ function get(user, id) {
     f.photo_lieu = photoDuLieu(f.lieu_chemin);
     // Passages que la personne peut faire depuis l'état courant (0.14.0, CYC-01).
     f.transitions = require('./cycle').permises(user, d);
+    // 0.16.0 (GES-06) : demandes regroupées dans celle-ci (fusion).
+    f.regroupees = getDb().prepare(`SELECT r.id, r.numero, r.created_at, u.first_name AS demandeur_prenom, u.last_name AS demandeur_nom
+      FROM demandes r JOIN users u ON u.id = r.demandeur_id WHERE r.fusionnee_dans = ? ORDER BY r.id`).all(d.id);
   }
-  // Pièces jointes (0.8.0) : demandeur, bénéficiaire et service technique ; null pour qui suit seulement la demande.
-  const litPieces = d.demandeur_id === user.id || d.beneficiaire_id === user.id || peut(user, 'demandes:entite');
+  // 0.16.0 (règle 4) : le valideur du service lit la demande et ses pièces ; passages qu'il peut faire.
+  const valideur = valideurDe(user, d);
+  f.valideur = valideur ? 1 : 0;
+  f.transitions_valideur = valideur ? require('./cycle').permises(user, d, 'valideur') : [];
+  // Pièces jointes (0.8.0) : demandeur, bénéficiaire, valideur et service technique ; null pour qui suit seulement.
+  const litPieces = d.demandeur_id === user.id || d.beneficiaire_id === user.id || peut(user, 'demandes:entite') || valideur;
   f.pieces = litPieces ? require('./pieces').deDemande(d.id, user, d) : null;
   // Cycle de vie (0.14.0, point 5 ; SUI-05) : compléments datés, lus par qui lit la demande ; pour le demandeur et le
   // bénéficiaire, ce qu'ils peuvent encore faire (compléter tant que la demande est ouverte, annuler tant que les
@@ -234,6 +261,9 @@ function get(user, id) {
   f.suivie = monSuivi ? 1 : 0;
   f.suivi_source = monSuivi ? monSuivi.source : null;
   f.suivable = !monSuivi && !concerne && !ETATS_FERMES.includes(d.etat) && peut(user, 'demandes:creer') ? 1 : 0;
+  // 0.16.0 (GES-06) : demandes issues de celle-ci par découpage, lues par qui lit la demande ; découpage possible.
+  f.issues = getDb().prepare('SELECT id, numero, etat FROM demandes WHERE issue_de = ? ORDER BY id').all(d.id);
+  f.decoupable = peut(user, 'demandes:traiter') && require('./decoupage').ETATS_DECOUPABLES.includes(d.etat) ? 1 : 0;
   // Fil de messages (0.15.0, point 2) : droits de la personne et messages non lus ; le fil se lit par sa propre route.
   const messages = require('./messages');
   f.fil = messages.droits(user, d);
@@ -382,6 +412,28 @@ function list(user, { limit = 50, offset = 0, q, etat, etats, priorites, categor
   return { rows, pagination: { total, limit, offset } };
 }
 
+/**
+ * Demandes « En validation » de l'entité active que la personne valide aujourd'hui (règle 4 ; titulaire ou suppléant
+ * en période), les plus anciennes en tête. Personne qui ne valide rien : liste vide (jamais 403, l'écran d'accueil
+ * demande le compteur à tout le monde). q : numéro, description, lieu ou nom du demandeur.
+ */
+function aValider(user, { limit = 50, offset = 0, q } = {}) {
+  const entiteId = entiteActive(user);
+  const ids = peut(user, 'demandes:valider') ? require('./services').validesPar(user.id, entiteId) : [];
+  if (!ids.length) return { rows: [], pagination: { total: 0, limit, offset } };
+  const where = ['d.entite_id = ?', "d.etat = 'en_validation'", `d.service_id IN (${ids.map(() => '?').join(', ')})`];
+  const params = [entiteId, ...ids];
+  if (q) {
+    const champs = ['d.numero', 'd.description', 'l.nom_fr', 'l.nom_nl', 'l.code', "(u.first_name || ' ' || u.last_name)", "(u.last_name || ' ' || u.first_name)"];
+    where.push(`(${champs.map((c) => `${c} LIKE ?`).join(' OR ')})`);
+    params.push(...champs.map(() => `%${q}%`));
+  }
+  const total = compter(`WHERE ${where.join(' AND ')}`, params);
+  const cache = new Map();
+  const rows = lire(`WHERE ${where.join(' AND ')} ORDER BY d.created_at, d.id LIMIT ? OFFSET ?`, [...params, limit, offset]).map((d) => fiche(d, cache, user));
+  return { rows, pagination: { total, limit, offset } };
+}
+
 /** Lieu admis pour une demande : existe, de l'entité, actif. */
 function lieuDeDemande(entiteId, lieuId) {
   const l = getDb().prepare(LIEU).get(lieuId);
@@ -395,7 +447,7 @@ function lieuDeDemande(entiteId, lieuId) {
 function categorieDeDemande(entiteId, categorieId) {
   const db = getDb();
   const c = db.prepare(`SELECT c.id, c.entite_id, c.parent_id, c.code, c.is_active, p.is_active AS parent_actif,
-    COALESCE(c.priorite_defaut, p.priorite_defaut) AS priorite_effective
+    COALESCE(c.priorite_defaut, p.priorite_defaut) AS priorite_effective, COALESCE(c.validation, p.validation) AS validation_effective
     FROM categories c LEFT JOIN categories p ON p.id = c.parent_id WHERE c.id = ?`).get(categorieId);
   if (!c) throw new AppError(404, 'NOT_FOUND');
   if (c.entite_id !== entiteId) throw new AppError(403, 'FORBIDDEN');
@@ -432,40 +484,64 @@ function create(user, data, channel = 'api') {
   const cat = categorieDeDemande(entiteId, data.categorie_id);
   const danger = data.danger === 1 ? 1 : 0;
   const priorite = danger ? 'P1' : cat.priorite_effective || null;
+  // Règle 15 (0.16.0) : encodage pour un agent, par le service technique.
+  const encodage = data.demandeur_id !== undefined || data.canal !== undefined;
+  let demandeurId = user.id;
+  let langueDemandeur = user.lang;
+  if (encodage) {
+    if (!peut(user, 'demandes:traiter')) throw new AppError(403, 'FORBIDDEN');
+    if (!data.demandeur_id || !data.canal) throw new AppError(409, 'ENCODAGE_INCOMPLET');
+    const agent = getDb().prepare('SELECT id, is_active, preferred_lang FROM users WHERE id = ?').get(data.demandeur_id);
+    if (!agent || !agent.is_active || !rolesIn(agent.id, entiteId).length) throw new AppError(409, 'DEMANDEUR_HORS_ENTITE');
+    demandeurId = agent.id;
+    langueDemandeur = agent.preferred_lang;
+  }
   const beneficiaireId = data.beneficiaire_id || null;
   const beneficiaireTexte = data.beneficiaire_texte || null;
   if (beneficiaireId && beneficiaireTexte) throw new AppError(409, 'BENEFICIAIRE_DOUBLE');
-  if (beneficiaireId) controlerBeneficiaire(user, entiteId, beneficiaireId);
+  if (beneficiaireId) controlerBeneficiaire({ id: demandeurId }, entiteId, beneficiaireId);
   const dateSouhaitee = data.date_souhaitee || null;
-  const langue = data.langue || user.lang || 'fr';
+  const langue = data.langue || langueDemandeur || 'fr';
   const maintenant = new Date();
   if (dateSouhaitee) controlerDateSouhaitee(dateSouhaitee, maintenant);
   const reponses = questions.controler(cat, data.reponses || []);
   const db = getDb();
-  // Échéances enregistrées au dépôt (0.9.0, DV-88), depuis l'instant de réception.
+  // Règle 4 (0.16.0) : circuit de la catégorie, service et valideur du demandeur.
+  const svc = require('./services');
+  const serviceId = svc.serviceDe(demandeurId, entiteId);
+  let etat = 'a_qualifier';
+  let validation = null;
+  if (cat.validation_effective === 1) {
+    const vs = svc.valideurs(serviceId, maintenant);
+    if (!vs.length) validation = 'sans_valideur';
+    else if (vs.includes(demandeurId)) validation = 'auteur_valideur';
+    else { etat = 'en_validation'; validation = 'demandee'; }
+  }
+  // Échéances enregistrées au dépôt (0.9.0, DV-88), depuis l'instant de réception ; recalculées à la validation.
   const ech = qualification.calculer(db, { entiteId, recuSql: versSql(maintenant), priorite, categorieId: data.categorie_id });
   const id = db.transaction(() => {
     const n = numerotation.attribuer(entiteId, 'demande', maintenant);
     const r = db.prepare(`INSERT INTO demandes (entite_id, numero, annee, sequence, lieu_id, categorie_id, description, langue, etat,
       priorite, danger, canal, demandeur_id, beneficiaire_id, beneficiaire_texte, date_souhaitee, creneau,
-      priorite_proposee, prise_en_charge_le, echeance_le, created_by, updated_by, created_at, updated_at, etat_depuis)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'a_qualifier', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
-      .run(entiteId, n.numero, n.annee, n.sequence, data.lieu_id, data.categorie_id, data.description, langue,
-        priorite, danger, CANAUX[channel] || 'api', user.id, beneficiaireId, beneficiaireTexte, dateSouhaitee, data.creneau || null,
-        priorite, ech.prise_en_charge_le, ech.echeance_le, user.id, user.id, versSql(maintenant), versSql(maintenant), versSql(maintenant));
+      priorite_proposee, prise_en_charge_le, echeance_le, created_by, updated_by, created_at, updated_at, etat_depuis, service_id)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
+      .run(entiteId, n.numero, n.annee, n.sequence, data.lieu_id, data.categorie_id, data.description, langue, etat,
+        priorite, danger, encodage ? data.canal : CANAUX[channel] || 'api', demandeurId, beneficiaireId, beneficiaireTexte, dateSouhaitee, data.creneau || null,
+        priorite, ech.prise_en_charge_le, ech.echeance_le, user.id, user.id, versSql(maintenant), versSql(maintenant), versSql(maintenant), serviceId);
     questions.enregistrer(r.lastInsertRowid, reponses);
     // Historique de la fiche (0.14.0, CYC-02) : la réception est sa première étape.
-    require('./cycle').ecrire(db, { demandeId: r.lastInsertRowid, entiteId, de: null, vers: 'a_qualifier', userId: user.id, channel, quand: versSql(maintenant) });
+    require('./cycle').ecrire(db, { demandeId: r.lastInsertRowid, entiteId, de: null, vers: etat, userId: user.id, channel, quand: versSql(maintenant) });
     // Les pièces jointes du brouillon passent à la demande (DV-85, 0.8.0), avant l'effacement du brouillon.
-    const nbPieces = require('./pieces').rattacher(user.id, entiteId, r.lastInsertRowid);
+    // Règle 15 : le brouillon et ses pièces restent à qui encode une demande pour un agent.
+    const nbPieces = encodage ? 0 : require('./pieces').rattacher(user.id, entiteId, r.lastInsertRowid);
     // Le brouillon du formulaire n'a plus lieu d'être (DEM-11, 0.7.0).
-    require('./brouillons').effacerApresEnvoi(user.id, entiteId);
+    if (!encodage) require('./brouillons').effacerApresEnvoi(user.id, entiteId);
     // Le journal garde le numéro, le lieu et la catégorie ; la description reste sur la fiche.
     logAudit(user.id, 'demande.create', 'demande', r.lastInsertRowid,
       // Ni le texte du bénéficiaire ni le créneau : textes libres, ils restent sur la fiche.
       { numero: n.numero, lieu_id: data.lieu_id, categorie_id: data.categorie_id, priorite, danger,
         beneficiaire_id: beneficiaireId, beneficiaire_texte: beneficiaireTexte ? 1 : 0, date_souhaitee: dateSouhaitee,
-        reponses: reponses.length, pieces: nbPieces }, channel, entiteId);
+        reponses: reponses.length, pieces: nbPieces, ...(encodage ? { demandeur_id: demandeurId, canal: data.canal } : {}), ...(validation ? { validation, service_id: serviceId } : {}) }, channel, entiteId);
     return r.lastInsertRowid;
   })();
   return get(user, id);
@@ -666,4 +742,4 @@ function choisirLieuHabituel(user, lieuId, channel = 'api') {
   logAudit(user.id, 'user.lieu_habituel', 'user', user.id, { avant: avant ?? null, apres: lieuId }, channel, entite);
 }
 
-module.exports = { list, get, load, create, completer, voisines, suivre, nePlusSuivre, decrireNePlusSuivre, beneficiaires, lieuPropose, lieuxRecents, controlerLieuHabituel, choisirLieuHabituel, chemin, lieuDeDemande, categorieDeDemande, descendants };
+module.exports = { list, aValider, get, load, create, completer, voisines, suivre, nePlusSuivre, decrireNePlusSuivre, beneficiaires, lieuPropose, lieuxRecents, controlerLieuHabituel, choisirLieuHabituel, chemin, lieuDeDemande, categorieDeDemande, descendants };

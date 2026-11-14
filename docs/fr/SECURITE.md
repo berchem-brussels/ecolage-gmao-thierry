@@ -2,6 +2,48 @@
 
 Le français fait foi. Grille de la section 10.2 du standard, rejouée à chaque version. « Non joué » veut dire que le contrôle n'a pas tourné.
 
+## 0.16.0 (10/11/2026)
+
+Étapes 11 et 12 : validation par le chef de service, services et valideurs, demande encodée par le service technique, regroupement, découpage, colonnes par état ; remarques R1 et R2 de la recette de la 0.15.0. Environnement : bac à sable de Claude, Node 22.23.4. Migration `014_validation`. Aucune dépendance nouvelle.
+
+| Famille | Contrôle | Résultat |
+| --- | --- | --- |
+| Autorisation (IDOR) | Demande à valider, regroupée ou découpée d'une autre entité 403, inconnue 404, avant tout autre contrôle ; services réservés à l'administrateur, chef ou suppléant de l'autre entité refusé (`VALIDEUR_SANS_ROLE`) ; valideur de l'autre entité : ni lecture ni validation ; principale ou lieu d'une partie dans l'autre entité 403 ; agent d'une autre entité refusé à l'encodage (`DEMANDEUR_HORS_ENTITE`) ; même réponse par l'API et par le MCP | Conforme (`cloison.test.js`, `validation.test.js`, `encodage.test.js`, `fusion.test.js`, `decoupage.test.js`) |
+| Autorisation | Services réglés par l'administrateur seul ; chef et suppléant avec le rôle « Valideur » dans l'entité du service (`VALIDEUR_SANS_ROLE`) ; un valideur ne lit et ne valide que les demandes de ses services (un valideur d'un autre service de la même entité : 403), le suppléant pendant sa période seulement ; le service technique ne valide pas à la place du chef (409) ; le valideur lit la demande sans champs internes ni fil ; regrouper, découper et encoder par `demandes:traiter` seulement | Conforme (`validation.test.js`, `fusion.test.js`, `decoupage.test.js`, `encodage.test.js`) |
+| Logique | Circuit au dépôt selon la catégorie ; sans service ou sans chef actif : envoi direct, noté au journal ; délais comptés depuis la validation ; regroupement seulement dans une demande principale ouverte, reçue par le service, ni elle-même ni une demande regroupée ; route des passages fermée au regroupement (`TRANSITION_PAR_ROUTE`) ; découpage tout ou rien, numéros sans trou ; vue en colonnes : un déplacement n'écrit rien, le serveur refait tous les contrôles à la confirmation | Conforme (tests ci-dessus, `demandes.test.tsx`) |
+| Validation | Schémas `ajv` (`additionalProperties: false`) : service (code, noms, période du suppléant), `demandeur_id` et `canal` ensemble, `principale_id`, une à cinq parties de 10 à 5 000 caractères, commentaires de 2 000 caractères | Conforme |
+| Injections | Requêtes paramétrées ; listes d'identifiants en « ? » générés (`inQ`) ; le contrôle statique a refusé une première écriture interpolée, corrigée | Conforme (`securite.test.js`) |
+| Données (RGPD) | Journal sans texte libre : `demande.fusion` et `demande.decoupage` avec les numéros et `commentaire_donne`, jamais le commentaire ni les descriptions ; service et personnes nommés à l'affichage ; rien n'est supprimé (CYC-05) | Conforme (`fusion.test.js`, `decoupage.test.js`, `validation.test.js`) |
+| Interface | Formulaires de regroupement et de découpage, colonnes et « Déplacer » tenus dans 320 px (bouton trop large de 3 px en NL détecté par `mobile:check` et corrigé) ; états proposés par « Déplacer » limités aux passages permis à la personne ; demande « En validation » jamais proposée comme principale | Conforme (`npm run mobile:check` : 41 écrans, trois comptes, 4 largeurs, FR et NL, aucun défaut ; `npm run a11y` 0) |
+| Secrets commités | Aucune valeur de NIXUS, aucune adresse électronique réelle ni photo réelle dans l'archive (captures sur une base de démonstration) | Conforme |
+| Infrastructure | Dockerfile, compose, `nginx.conf`, `backup.sh`, `.env`, `ci.yml` inchangés | Conforme |
+| Dépendances | `npm audit --omit=dev` serveur | 0 vulnérabilité |
+| Dépendances | `npm audit --omit=dev` interface | 3 modérées (E-09), inchangées |
+| LLM et MCP | Huit outils nouveaux sous les droits de la personne ; désactivation d'un service, regroupement et découpage en deux appels (`prepare_*`, `confirm_*`) ; parité route et outil | Conforme (`mcp.test.js`) |
+| Migration | `014_validation` ajoute une table et quatre colonnes, refait la table des passages sans en perdre (désactivés compris) ; une base 0.15.0 passe en 0.16.0 (`validation.test.js` et essai du 10/11/2026 : base 0.15.0 garnie, montée, `demo.js`, contrôles du serveur de `recette.sh` 6/6) ; la 0.15.0 démarre sur une base passée en 0.16.0 mais laisse les demandes « En validation » sans bouton : retour arrière toujours avec la sauvegarde du jour | Conforme |
+
+Les trois contrôles qui ne restent jamais « non joués » (secrets commités, contrôle d'accès côté serveur, IDOR) ont été joués.
+
+### Preuve d'échec des nouveaux tests (0.16.0)
+
+Chaque protection retirée seule du code de la 0.16.0, les tests nouveaux échouent ; protection remise, tout réussit.
+
+| Protection retirée | Tests en échec |
+| --- | --- |
+| `cycle.js` : valideur sans contrôle de son service (tout valideur de l'entité) | 1 sur 13 (`validation.test.js` ; test ajouté à la livraison, ce trou n'était couvert par aucun test) |
+| `demandes.js` : circuit de validation ignoré au dépôt | 7 sur 12 (`validation.test.js`) |
+| `demandes.js` : « Demandes à valider » sans filtre du service | 1 sur 12 (`validation.test.js`) |
+| `demandes.js` : agent d'une autre entité accepté à l'encodage | 1 sur 5 (`encodage.test.js`) |
+| `fusion.js` : demande principale fermée acceptée | 1 sur 3 (`fusion.test.js`) |
+| `fusion.js` : demande principale lue hors de l'entité active | 1 sur 3 (`fusion.test.js`) |
+| `decoupage.js` : lieu d'une partie hors de l'entité | 1 sur 3 (`decoupage.test.js`) |
+| `decoupage.js` : permission `demandes:traiter` retirée | 1 sur 3 (`decoupage.test.js`) |
+| `VueColonnes.tsx` : « Déplacer » sans contrôle de la permission | 1 (`demandes.test.tsx` ; cas renforcé à la livraison) |
+| `FusionForm.tsx` : demande « En validation » proposée comme principale | 1 (`demandes.test.tsx` ; cas ajouté à la livraison) |
+| Boutons d'action sans retour à la ligne | `mobile:check` en défaut (iPhone SE, NL : « Samenvoegen… » de 3 px) |
+
+Code de la 0.16.0 : tout réussi (serveur et interface, voir `MANIFESTE.md`).
+
 ## 0.15.0 (09/11/2026)
 
 Étape 10 : fil de messages d'une demande, notes internes avec mention, modèles de réponse, abonnement ; remarques R1 à R3 de la recette de la 0.14.0. Environnement : bac à sable de Claude, Node 22.23.4. Migration `013_messages`. Aucune dépendance nouvelle.

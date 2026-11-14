@@ -34,6 +34,11 @@
  *      pas, dans le délai de réouverture de l'entité compté depuis la clôture (condition « delai_reouverture » ; 0 jour
  *      ferme la réouverture). À la réouverture, les délais repartent de ce moment : prise en charge et fin recalculées
  *      depuis l'instant de réouverture, temps suspendu remis à zéro ; la demande revient dans la file « À qualifier ».
+ *  11. Valideur (0.16.0, étape 11 ; DEM-15, ROL-04) : un passage d'acteur « valideur » est permis au valideur du service
+ *      de la demande ce jour-là (services/services.js : titulaire, ou suppléant pendant sa période, avec la permission
+ *      « demandes:valider » dans l'entité). Valider fait passer « En validation » à « À qualifier » ; les délais
+ *      (prise en charge, fin) repartent de la validation, comme si la demande arrivait au service technique à cet
+ *      instant. Refuser exige un motif, lu par le demandeur. L'historique dit « valideur » pour ces passages.
  * Module « demandes » du noyau : toujours actif ; le contrôle est posé pour l'ordre API-04.
  */
 const fs = require('fs');
@@ -65,8 +70,9 @@ function entiteActive(user) {
 }
 
 /** Passages livrés qui manquent en base (règle 1). db : la base enveloppée, à l'installation comme au démarrage. */
-function seedTransitions(db = getDb()) {
+function seedTransitions(db = getDb(), { initiaux = false } = {}) {
   CONFIG.transitions.forEach((t, i) => {
+    if (initiaux && t.depuis) return;
     const acteur = t.acteur || 'service';
     if (db.prepare('SELECT 1 FROM demande_transitions WHERE de_etat = ? AND vers_etat = ? AND acteur = ?').get(t.de, t.vers, acteur)) return;
     db.prepare(`INSERT INTO demande_transitions (de_etat, vers_etat, permission, acteur, condition, via, motif_liste, commentaire, commentaire_public, compte_rendu, ordre)
@@ -163,9 +169,16 @@ function limiteReouverture(d) {
 const conditionRemplie = (t, d) => (t.condition === 'jamais_en_cours' ? jamaisEnCours(d.id)
   : t.condition === 'delai_reouverture' ? (limiteReouverture(d) || 0) > new Date() : true);
 
-/** Passage qui s'applique à la personne : celui du service s'il le peut, sinon celui du demandeur s'il est concerné. */
+/** Règle 11 : la personne valide aujourd'hui les demandes du service de la demande. */
+const valideurDe = (user, d) => !!d.service_id && peut(user, 'demandes:valider') && require('./services').valideurs(d.service_id).includes(user.id);
+
+/**
+ * Passage qui s'applique à la personne : celui du service s'il le peut, sinon celui du valideur s'il valide la demande,
+ * sinon celui du demandeur s'il est concerné.
+ */
 function choisir(user, d, rows) {
   return rows.find((t) => t.acteur === 'service' && peut(user, t.permission))
+    || rows.find((t) => t.acteur === 'valideur' && peut(user, t.permission) && valideurDe(user, d))
     || rows.find((t) => t.acteur === 'demandeur' && concerne(user, d) && peut(user, t.permission)) || null;
 }
 
@@ -175,7 +188,8 @@ function choisir(user, d, rows) {
  */
 function permises(user, d, acteur = 'service') {
   return getDb().prepare(`SELECT ${COLONNES_TRANSITION} FROM demande_transitions WHERE de_etat = ? AND acteur = ? AND is_active = 1 ORDER BY ordre, id`)
-    .all(d.etat, acteur).filter((t) => peut(user, t.permission) && (acteur === 'service' || concerne(user, d))
+    .all(d.etat, acteur).filter((t) => peut(user, t.permission)
+      && (acteur === 'service' || (acteur === 'valideur' ? valideurDe(user, d) : concerne(user, d)))
       && conditionRemplie(t, d))
     .map(({ vers_etat: vers, via, motif_liste: motifListe, commentaire, commentaire_public: pub, compte_rendu: cr }) => (
       { vers, via, motif_liste: motifListe, commentaire, commentaire_public: pub, compte_rendu: cr }));
@@ -192,7 +206,7 @@ function ecrire(db, { demandeId, entiteId, de, vers, userId, motifId = null, com
 function demandeDeLEntite(user, id) {
   const entiteId = entiteActive(user);
   const d = getDb().prepare(`SELECT id, entite_id, numero, etat, demandeur_id, beneficiaire_id, priorite, categorie_id, prise_en_charge_le,
-    echeance_le, date_convenue, etat_depuis, attente_suspend FROM demandes WHERE id = ?`).get(id);
+    echeance_le, date_convenue, etat_depuis, attente_suspend, service_id FROM demandes WHERE id = ?`).get(id);
   if (!d) throw new AppError(404, 'NOT_FOUND');
   if (d.entite_id !== entiteId) throw new AppError(403, 'FORBIDDEN');
   return d;
@@ -201,16 +215,21 @@ function demandeDeLEntite(user, id) {
 /** Passage demandé, contrôlé (règles 1 à 3) : rend { d, t, motifId, commentaire, compteRendu } sans rien écrire. */
 function controler(user, id, data) {
   const d = demandeDeLEntite(user, id);
-  // Règle 2 et 9 : le service technique et le demandeur ou le bénéficiaire peuvent demander un passage ; personne d'autre.
+  // Règles 2, 9 et 11 : le service technique, le valideur de la demande, le demandeur ou le bénéficiaire peuvent demander
+  // un passage ; personne d'autre.
   const service = PERMISSIONS_SERVICE.some((p) => peut(user, p));
-  if (!service && !concerne(user, d)) throw new AppError(403, 'FORBIDDEN');
+  const valideur = valideurDe(user, d);
+  if (!service && !valideur && !concerne(user, d)) throw new AppError(403, 'FORBIDDEN');
   const rows = getDb().prepare(`SELECT ${COLONNES_TRANSITION} FROM demande_transitions WHERE de_etat = ? AND vers_etat = ? AND is_active = 1 ORDER BY acteur DESC`).all(d.etat, data.etat);
   const t = choisir(user, d, rows);
-  // Un état que le demandeur ne peut jamais viser (« En cours », « Clôturée »…) : 403, jamais 409 (règle 2).
-  if (!t && !service && !CONFIG.transitions.some((x) => x.acteur === 'demandeur' && x.vers === data.etat)) throw new AppError(403, 'FORBIDDEN');
+  // Un état que le demandeur (ou le valideur) ne peut jamais viser (« En cours », « Clôturée »…) : 403, jamais 409 (règle 2).
+  const visable = (acteur) => CONFIG.transitions.some((x) => x.acteur === acteur && x.vers === data.etat);
+  if (!t && !service && !visable('demandeur') && !(valideur && visable('valideur'))) throw new AppError(403, 'FORBIDDEN');
   assertActif('demandes');
   if (!t) throw new AppError(409, 'TRANSITION_INTERDITE', { de: d.etat, vers: data.etat });
   if (t.via === 'qualifier') throw new AppError(409, 'TRANSITION_PAR_QUALIFICATION');
+  // 0.16.0 : fusion et découpage passent par leur route (services/fusion.js).
+  if (t.via) throw new AppError(409, 'TRANSITION_PAR_ROUTE', { via: t.via });
   if (t.condition === 'jamais_en_cours' && !jamaisEnCours(d.id)) throw new AppError(409, 'TRAVAUX_COMMENCES');
   if (t.condition === 'delai_reouverture' && !conditionRemplie(t, d)) throw new AppError(409, 'DELAI_REOUVERTURE');
   const motifId = data.motif_id ?? null;
@@ -275,8 +294,9 @@ function appliquer(user, id, data, channel = 'api') {
   const maintenant = versSql(instant);
   const cloture = t.compte_rendu === 1;
   const s = suspension(db, d, t, motifId, instant);
-  // Règle 10 : réouverture, délais recalculés depuis maintenant ; temps suspendu remis à zéro.
-  const reouverture = t.vers_etat === 'rouverte';
+  // Règle 10 : réouverture, délais recalculés depuis maintenant ; temps suspendu remis à zéro. Règle 11 : de même à la
+  // validation, la demande arrive au service technique à cet instant.
+  const reouverture = t.vers_etat === 'rouverte' || (d.etat === 'en_validation' && t.vers_etat === 'a_qualifier');
   let prise = d.prise_en_charge_le;
   if (reouverture) {
     const e = require('./qualification').calculer(db, { entiteId: d.entite_id, recuSql: maintenant, priorite: d.priorite, categorieId: d.categorie_id, dateConvenue: d.date_convenue });
@@ -365,7 +385,8 @@ function historique(user, id) {
     LEFT JOIN demande_etats e ON e.entite_id = h.entite_id AND e.code = h.vers_etat
     WHERE h.demande_id = ? ORDER BY h.created_at, h.id`).all(d.id);
   return rows.map((h) => {
-    const auteur = h.user_id && h.user_id === d.demandeur_id ? 'demandeur' : h.canal === 'systeme' ? 'systeme' : 'service';
+    const auteur = h.user_id && h.user_id === d.demandeur_id ? 'demandeur' : h.canal === 'systeme' ? 'systeme'
+      : h.de_etat === 'en_validation' && h.vers_etat !== 'annulee' ? 'valideur' : 'service';
     if (service) return { ...h, auteur };
     const { user_id: _u, auteur_prenom: _p, auteur_nom: _n, canal: _c, ...reste } = h;
     return { ...reste, auteur, commentaire: h.commentaire_public ? h.commentaire : null };
@@ -374,5 +395,5 @@ function historique(user, id) {
 
 module.exports = {
   CONFIG, ETATS, FERMES, HORS_DELAI, seedTransitions, seedEntite, seedAll, listEtats, updateEtat, listTransitions, permises,
-  ecrire, decrire, appliquer, annuler, decrireAnnulation, historique, donnerAvis, avisDe, avisPossible, limiteReouverture,
+  ecrire, decrire, appliquer, demandeDeLEntite, peut, annuler, decrireAnnulation, historique, donnerAvis, avisDe, avisPossible, limiteReouverture,
 };
