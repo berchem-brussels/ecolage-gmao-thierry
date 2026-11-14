@@ -2,6 +2,37 @@
   "_description": "Notes de version pour les utilisateurs, en FR et en NL, sans terme technique (standard v3.2, sections 13.1 et 17.8 ; écart E-07). Une note par version, de la plus récente à la plus ancienne. Chaque ligne a un public : « tous », « admin » (administrateur de l'application) ou une permission du catalogue des rôles (par exemple « parametres:gerer »), lue dans l'entité active. La note de la version installée s'affiche une fois à la première connexion qui suit la mise à jour ; toutes restent relisibles dans Aide, Nouveautés.",
   "notes": [
     {
+      "version": "0.16.0",
+      "date": "2026-11-10",
+      "lignes": [
+        {
+          "public": "tous",
+          "fr": "Aménagement d'un local, déménagement ou achat : la demande attend d'abord l'accord de votre chef de service ; vous voyez « En attente de l'accord de votre chef de service », puis sa décision.",
+          "nl": "Inrichting van een lokaal, verhuizing of aankoop: de aanvraag wacht eerst op het akkoord van uw diensthoofd; u ziet « Wacht op akkoord van uw diensthoofd », en daarna zijn beslissing."
+        },
+        {
+          "public": "tous",
+          "fr": "Le service technique peut regrouper deux demandes pour le même problème, ou découper une demande qui en signale plusieurs : la fiche vous dit vers quelle demande suivre.",
+          "nl": "De technische dienst kan twee aanvragen voor hetzelfde probleem samenvoegen, of een aanvraag die er meerdere meldt opsplitsen: de fiche zegt welke aanvraag u verder volgt."
+        },
+        {
+          "public": "demandes:valider",
+          "fr": "Chef de service : « Demandes à valider » liste les demandes de vos agents qui attendent votre accord ; validez-les ou refusez-les avec un motif.",
+          "nl": "Diensthoofd: « Goed te keuren aanvragen » toont de aanvragen van uw medewerkers die op uw akkoord wachten; keur ze goed of weiger ze met een reden."
+        },
+        {
+          "public": "demandes:traiter",
+          "fr": "Demandes de l'entité : « Encoder une demande reçue » (téléphone, courriel), « Regrouper avec une autre demande », « Découper en plusieurs demandes », et l'affichage « Colonnes par état » avec le bouton « Déplacer ».",
+          "nl": "Aanvragen van de entiteit: « Een ontvangen aanvraag invoeren » (telefoon, e-mail), « Samenvoegen met een andere aanvraag », « Opsplitsen in meerdere aanvragen », en de weergave « Kolommen per status » met de knop « Verplaatsen »."
+        },
+        {
+          "public": "admin",
+          "fr": "Services et valideurs : créez les services de chaque entité, désignez leur chef et un suppléant pour une période, et rattachez les agents à leur service dans Utilisateurs et rôles.",
+          "nl": "Diensten en goedkeurders: maak de diensten van elke entiteit aan, duid hun hoofd en een vervanger voor een periode aan, en verbind de medewerkers met hun dienst in Gebruikers en rollen."
+        }
+      ]
+    },
+    {
       "version": "0.15.0",
       "date": "2026-11-09",
       "lignes": [

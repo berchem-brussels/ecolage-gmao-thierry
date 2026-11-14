@@ -1,6 +1,27 @@
 # Journal des versions
 
-Version de l'application : **0.15.0** · Mis à jour le 09/11/2026
+Version de l'application : **0.16.0** · Mis à jour le 10/11/2026
+
+## 0.16.0 (10/11/2026)
+
+Étapes 11 et 12 regroupées (DV-121) : validation par le chef de service, services et valideurs, création par le gestionnaire, regroupement, découpage, vue en colonnes par état (DEM-15, ROL-04, GES-03, GES-05, GES-06 ; DV-128 à DV-132 ; fin de E-22), avec les remarques R1 et R2 de la recette de la 0.15.0 (DV-127). Migration `014_validation`. Aucune dépendance nouvelle ; permissions nouvelles `demandes:valider` (rôle « Valideur ») et `services:gerer` (administrateur).
+
+- R1 : `audit.detail.interne` dit « Note interne » / « Interne nota » comme les écrans.
+- R2 : un message prend la langue de l'écran ; un modèle inséré donne la langue de la demande ; le service voit et corrige « Langue du message » (`FilMessages.tsx`, `services/messages.js`, MCP).
+- Services (`services`, `services/services.js`, `/api/services`, écran « Services et valideurs ») : code unique dans l'entité, noms FR et NL, chef (`valideur_id`) et suppléant pour une période, avec le rôle « Valideur » dans l'entité (`VALIDEUR_SANS_ROLE`, `SUPPLEANT_PERIODE`, `SUPPLEANT_EGAL_VALIDEUR`, `SERVICE_CODE_EXISTE`) ; désactivation avec motif ; `users.service_id` réglé dans Utilisateurs et rôles (`SERVICE_AUTRE_ENTITE`, `SERVICE_INCONNU`).
+- Circuit au dépôt : catégorie « à valider » → « En validation » chez le chef du service du demandeur (`demandes.service_id`) ; sans service ni chef actif, ou demandeur chef de son service : « À qualifier », journal `validation` `sans_valideur` ou `auteur_valideur`. Passages du valideur (`en_validation` → `a_qualifier`, → `refusee_validation` avec motif), délais recalculés depuis la validation ; « En validation » hors retard ; annulation par le demandeur. « Demandes à valider (n) » au menu et à l'accueil, écran `/a-valider` ; `GET /api/demandes/a-valider`.
+- Encodage par le service (`POST /api/demandes` avec `demandeur_id` et `canal`, `ENCODAGE_INCOMPLET`, `DEMANDEUR_HORS_ENTITE`) : écran `/demandes/encoder`, bloc « Demande reçue » ; fiche « Reçue par … », encodée par … (service).
+- Regroupement (`services/fusion.js`, `POST /api/demandes/:id/fusionner`, `demandes.fusionnee_dans`) : quatre passages vers `fusionnee` (`via` `fusionner`), route des passages fermée (`TRANSITION_PAR_ROUTE`) ; personnes qui suivent, demandeur et bénéficiaire reportés sur la principale (`FUSION_ELLE_MEME`, `FUSION_PRINCIPALE_FERMEE`) ; « Demandes regroupées ici ».
+- Découpage (`services/decoupage.js`, `POST /api/demandes/:id/decouper`, `demandes.issue_de`) : une à cinq demandes nouvelles, tout ou rien, numéros sans trou, délais depuis la réception de l'origine (`DECOUPAGE_ETAT`) ; « Demandes issues de celle-ci ».
+- Colonnes par état (`VueColonnes.tsx`, `?affichage=colonnes`) : six colonnes, glisser-déposer natif sur grand écran, « Déplacer » partout, seuls les états permis ; la fiche s'ouvre sur le passage, rien sans confirmation ; une colonne à la fois sur téléphone.
+- Catalogue des passages : champ `depuis` ; 33 passages livrés.
+- Journal d'audit : `service.*`, `demande.fusion`, `demande.decoupage`, `validation` et `encodee_par` au dépôt ; service, personnes et demandes nommés à l'affichage ; jamais de texte libre.
+- MCP : huit outils (`list_demandes_a_valider`, `list_services`, `get_service`, `create_service`, `update_service`, `deactivate_service`, `fusionner_demande` et `decouper_demande` en deux appels) ; `create_demande`, `get_demande`, `update_user`, `list_users` enrichis.
+- Données de démonstration : un service « <ENTITÉ>-DEMO » par entité (chef `valideur.<entité>`, membre `agent.<entité>`).
+- Téléphones : boutons d'action qui passent à la ligne (« Samenvoegen… » débordait de 3 px à 320 px NL) ; `mobile:check` couvre l'encodage, les colonnes, « Déplacer », le regroupement et le découpage, avec deux comptes facultatifs (chef de service, administrateur) et une connexion par compte (41 écrans).
+- Aide : fiches « Demandes à valider », « Services et valideurs », « Encoder une demande reçue » ; procédures colonnes, regrouper, découper, encoder ; trois questions dans Mes demandes ; sept captures nouvelles par langue (30), dont deux avec le compte du chef de service (`HELP_USER_VALIDEUR`) ; six intentions de l'assistant ; texte du circuit de validation à jour dans Catégories et délais ; note de version (deux lignes pour tous, une pour le chef de service, une pour le service technique, une pour l'administrateur).
+- `recette.sh`, contrôle 5 : migration `014_validation`, table des services, passages du valideur.
+- Tests : serveur 541 (513 en 0.15.0 ; `validation.test.js` : 13, `encodage.test.js` : 5, `fusion.test.js` : 3, `decoupage.test.js` : 3), interface 314 (281) et un contrôle des captures ; preuves d'échec dans `docs/fr/SECURITE.md` (un trou trouvé et comblé à la livraison : valideur d'un autre service).
 
 ## 0.15.0 (09/11/2026)
 

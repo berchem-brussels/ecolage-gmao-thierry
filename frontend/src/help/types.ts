@@ -32,6 +32,11 @@ export interface Shot {
   clip?: 'page' | 'modal' | 'drawer';
   marks?: { sel: string }[];
   caption: L;
+  /**
+   * Compte de démonstration à utiliser (0.16.0) : code d'un rôle (« valideur ») pour un écran que le compte
+   * administrateur ne voit pas ; le script lit HELP_USER_<CODE> (par exemple HELP_USER_VALIDEUR). Absent : HELP_USER.
+   */
+  compte?: string;
 }
 
 export interface Procedure {

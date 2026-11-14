@@ -8,7 +8,8 @@
  *   3. Écriture : le demandeur et le bénéficiaire écrivent dans le fil public ; le service technique écrit dans le fil
  *      public et en interne (« demandes:traiter »). Seulement sur une demande ouverte (409 DEMANDE_FERMEE) : après la
  *      clôture, le demandeur rouvre la demande. Un message ne se modifie ni ne se supprime.
- *   4. Contenu : texte de 4 000 caractères au plus, dans la langue de l'auteur ; facultatif si le message porte des
+ *   4. Contenu : texte de 4 000 caractères au plus ; langue = celle du texte, donnée par l'écran (0.16.0, R2), à défaut
+ *      celle de l'auteur ; facultatif si le message porte des
  *      pièces (409 MESSAGE_VIDE sinon). Pièces : celles que l'auteur a jointes en attente sur la demande
  *      (services/pieces.js, règle 8), rattachées à l'envoi.
  *   5. Auteur : « demandeur » ou « beneficiaire » pour la personne concernée, « service » sinon et pour tout commentaire

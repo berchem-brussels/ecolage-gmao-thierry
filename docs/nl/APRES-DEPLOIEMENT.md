@@ -2,6 +2,10 @@
 
 De Franse tekst is rechtsgeldig. Bijwerkingsprocedure: archief plaatsen, `cd <map>`, `ls -l` van het archief, `sudo bash backup.sh`, `sudo rm -rf backend frontend docs`, `sudo tar xzf … --strip-components=1`, `ls backend frontend`, `sudo docker compose build`, `sudo docker compose up -d`, `sudo docker compose ps`, `curl -sk https://localhost:<https>/api/version`, controlelijst van het leveringsbericht. `.env` en de volumes worden nooit aangeraakt.
 
+## 0.16.0 (10/11/2026)
+
+Update volgens de procedure in de Franse tekst, **met migratie**: `sudo docker logs gmao-api --tail 30` toont `[DB] Migration 014_validation appliquée` en daarna `[APP] API 0.16.0`. Daarna de demonstratiegegevens opnieuw laden (`sudo docker compose stop api`, `sudo docker compose run --rm api node src/demo.js`, `sudo docker compose up -d`): ze maken de demonstratiedienst van elke entiteit (hoofd `valideur.<entiteit>`) en geven een nieuw gemeenschappelijk wachtwoord. Daarna `sudo bash recette.sh`: negen controles OK, controle 5 leest `014_validation`, de tabel van de diensten en de overgangen van de goedkeurder. Beide images worden opnieuw gebouwd; geen nieuwe afhankelijkheid. Terug naar 0.15.0: altijd met de back-up van net voor de update (0.15.0 laat een aanvraag « Ter goedkeuring » zonder knop).
+
 ## 0.15.0 (09/11/2026)
 
 Update volgens de procedure in de Franse tekst, **met migratie**: `sudo docker logs gmao-api --tail 30` toont `[DB] Migration 013_messages appliquée` en daarna `[APP] API 0.15.0`. Daarna `sudo bash recette.sh`: negen controles OK, controle 5 leest `013_messages` en de antwoordmodellen. Beide images worden opnieuw gebouwd; Dockerfile, compose, `nginx.conf`, `backup.sh` en `.env` ongewijzigd. Op het scherm: berichten, interne nota met vermelding, antwoordmodellen, volgen en niet meer volgen, op iPhone en Android. Terug naar 0.14.0: altijd de back-up van net voor de update terugzetten (0.14.0 zou bijlagen van interne nota's tonen).

@@ -1,5 +1,5 @@
 #!/bin/bash
-# Contrôles automatiques après installation (0.12.0, DV-110 ; 0.14.0 : saisie visible DV-117 ; 0.15.0 : migration 013_messages), à lancer dans la session SSH du NAS, dans le dossier
+# Contrôles automatiques après installation (0.12.0, DV-110 ; 0.14.0 : saisie visible DV-117 ; 0.15.0 : migration 013_messages ; 0.16.0 : migration 014_validation), à lancer dans la session SSH du NAS, dans le dossier
 # de l'application :   sudo bash recette.sh            (compte de démonstration multi-entites@demo.invalid)
 #                      sudo bash recette.sh <adresse>  (un autre compte de démonstration qui a un rôle dans deux entités)
 # Le mot de passe de démonstration est demandé et reste visible pendant la saisie (0.14.0, DV-117) ; la ligne est effacée

@@ -387,10 +387,27 @@ test('migration 013 sur une base 0.14.0 : table des messages, colonnes des pièc
   assert.equal(up.status, 0, up.stderr);
   assert.match(up.stdout, /\[DB\] Migration 013_messages appliquée/);
   const out = JSON.parse(up.stdout.trim().split('\n').pop());
-  assert.equal(out.migration, '013_messages');
+  assert.equal(out.migration, '014_validation', 'les migrations suivantes passent aussi (0.16.0)');
   assert.deepEqual(out.piece, { demande_id: 1, message_id: null, attente_message: 0 });
   assert.equal(out.messages, 0);
   const again = run("require('./src/database').initDb().then((db) => console.log(db.prepare('SELECT COUNT(*) AS n FROM schema_migrations').get().n))");
   assert.equal(again.status, 0, again.stderr);
   assert.doesNotMatch(again.stdout, /Migration 013_messages appliquée/, 'appliquée une seule fois');
+});
+
+// 0.16.0, point 0 (R2 de la recette de la 0.15.0) : un message garde la langue de son texte, pas celle de l'écran.
+test('R2 : langue donnée gardée même si l’écran de l’auteur est dans l’autre langue ; sans langue, celle de l’auteur', async () => {
+  const d = await deposer('Le store de la salle 3 est bloqué en bas.');
+  assert.equal((await gest.put('/api/auth/preferences', { preferred_lang: 'nl' })).status, 200);
+  try {
+    const fr = await gest.post(`/api/demandes/${d.id}/messages`, { texte: 'Bonjour, nous passons jeudi.', langue: 'fr' });
+    assert.equal(fr.status, 201);
+    assert.equal(fr.body.data.langue, 'fr', 'modèle français inséré par un gestionnaire en NL : reste fr');
+    const sans = await gest.post(`/api/demandes/${d.id}/messages`, { texte: 'Wij komen donderdag.' });
+    assert.equal(sans.body.data.langue, 'nl', 'sans langue : celle de l’auteur');
+    const lus = (await agent.get(`/api/demandes/${d.id}/messages`)).body.data;
+    assert.deepEqual(lus.map((m) => m.langue), ['fr', 'nl']);
+  } finally {
+    await gest.put('/api/auth/preferences', { preferred_lang: 'fr' });
+  }
 });

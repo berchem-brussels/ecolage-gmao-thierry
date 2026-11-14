@@ -38,6 +38,12 @@ router.get('/voisines', validateQuery(S.demandeVoisines), handle((req, res) => {
   ok(res, demandes.voisines(req.user, req.query), { resource: 'demandes' });
 }));
 
+// Avant « /:id » : demandes « En validation » que la personne valide (0.16.0, étape 11 ; DEM-15, ROL-04).
+router.get('/a-valider', validateQuery(S.demandeAValider), handle((req, res) => {
+  const { rows, pagination } = demandes.aValider(req.user, req.query);
+  ok(res, rows, { resource: 'demandes' }, pagination);
+}));
+
 // Avant « /:id » : tableau de bord du service technique de l'entité active (GES-01, 0.9.0).
 router.get('/tableau-bord', handle((req, res) => {
   ok(res, qualification.tableauBord(req.user), { resource: 'demandes' });
@@ -145,6 +151,16 @@ router.post('/:id/messages/pieces', validateParams(idParam), avantPieceMessage, 
 router.get('/:id/historique', validateParams(idParam), handle((req, res) => {
   ok(res, cycle.historique(req.user, Number(req.params.id)), { resource: 'demandes' });
 }));
+// 0.16.0 (étape 12, GES-06) : fusion dans une demande principale.
+router.post('/:id/fusionner', validateParams(idParam), validate(S.demandeFusion), handle((req, res) => {
+  ok(res, require('../services/fusion').fusionner(req.user, Number(req.params.id), req.body), { resource: 'demandes' });
+}));
+
+// 0.16.0 (étape 12, GES-06) : découpage en plusieurs demandes.
+router.post('/:id/decouper', validateParams(idParam), validate(S.demandeDecoupage), handle((req, res) => {
+  ok(res, require('../services/decoupage').decouper(req.user, Number(req.params.id), req.body), { resource: 'demandes' }, null, 201);
+}));
+
 router.post('/:id/transitions', validateParams(idParam), validate(S.demandeTransition), handle((req, res) => {
   ok(res, cycle.appliquer(req.user, Number(req.params.id), req.body), { resource: 'demandes' });
 }));

@@ -22,6 +22,10 @@
  * pièce part au brouillon dès l'ajout et revient à la reprise ; elle passe à la demande à l'envoi. Une pièce ajoutée
  * compte comme une saisie (le brouillon est gardé) ; « Recommencer à zéro » et « Moi aussi » les effacent avec le
  * brouillon, et l'invite de reprise le dit.
+ * 0.16.0, point 3 (GES-05) : mode « encoder » (/demandes/encoder, service technique) : une demande reçue par téléphone
+ * ou par courriel, pour un agent choisi dans l'entité (bloc « Demande reçue », EncodageDemande). Ni brouillon, ni
+ * pièce jointe, ni « Moi aussi », ni mention d'information (la personne n'est pas devant l'écran) ; aucun lieu proposé
+ * d'office. Après l'envoi : liens vers les demandes de l'entité et vers un autre encodage.
  */
 import { useEffect, useRef, useState } from 'react';
 import dayjs from 'dayjs';
@@ -37,6 +41,7 @@ import DemandesVoisines from '../components/demandes/DemandesVoisines';
 import ComplementsDemande, { type Complements, COMPLEMENTS_VIDES, champsComplements } from '../components/demandes/ComplementsDemande';
 import QuestionsCategorie, { obligatoiresManquantes, reponsesValables } from '../components/demandes/QuestionsCategorie';
 import PiecesDemande from '../components/demandes/PiecesDemande';
+import EncodageDemande, { type Encodage, ENCODAGE_VIDE } from '../components/demandes/EncodageDemande';
 import type { ReponseDonnee } from '../referentiel';
 import { type Demande, type LieuChoisi, type Piece, type PlafondsPieces, DESCRIPTION_MIN, beneficiaireTexte, cheminTexte, dateDepot, dateSouhaitee, finAnnoncee, lienTel } from '../demandes';
 
@@ -51,10 +56,11 @@ interface Brouillon { entite_id: number; contenu: ContenuBrouillon; updated_at: 
 import ErreurObligatoire from '../components/ErreurObligatoire';
 import { seulementEspaces } from '../validation';
 
-export default function NouvelleDemandePage() {
+export default function NouvelleDemandePage({ encoder = false }: { encoder?: boolean }) {
   const { t, lang } = useI18n();
   const { user, entite, refresh } = useAuth();
-  const [lieu, setLieu] = useState<LieuChoisi | null>(user?.lieu_propose || null);
+  const [lieu, setLieu] = useState<LieuChoisi | null>(encoder ? null : user?.lieu_propose || null);
+  const [encodage, setEncodage] = useState<Encodage>(ENCODAGE_VIDE);
   const [categorie, setCategorie] = useState<CategorieChoisie | null>(null);
   const [reponses, setReponses] = useState<ReponseDonnee[]>([]);
   const [description, setDescription] = useState('');
@@ -87,6 +93,8 @@ export default function NouvelleDemandePage() {
     setEnregistreA(null);
     setPieces([]);
     setPlafonds(null);
+    // 0.16.0 (encodage) : ni brouillon ni pièce ; rien n'est enregistré en cours de saisie.
+    if (encoder) return () => { actif = false; };
     api.get<Brouillon | null>('/demandes/brouillon')
       .then((b) => { if (!actif) return; if (b && b.contenu && b.updated_at) setBrouillon(b); else setBrouillonPret(true); })
       .catch(() => { if (actif) setBrouillonPret(true); });
@@ -140,7 +148,7 @@ export default function NouvelleDemandePage() {
   };
 
   // Changement d'entité active : le lieu et la catégorie de l'autre entité ne valent plus.
-  useEffect(() => { setLieu(user?.lieu_propose || null); setCategorie(null); setReponses([]); }, [user?.entite_active_id]);
+  useEffect(() => { setLieu(encoder ? null : user?.lieu_propose || null); setCategorie(null); setReponses([]); setEncodage(ENCODAGE_VIDE); }, [user?.entite_active_id]);
 
   /** Choix d'une catégorie : seules restent les réponses d'une question encore posée (même domaine). */
   const choisirCategorie = (c: CategorieChoisie) => {
@@ -152,6 +160,8 @@ export default function NouvelleDemandePage() {
 
   const texte = description.trim();
   const manque = [
+    ...(encoder && !encodage.canal ? [t('encoder.manque.canal')] : []),
+    ...(encoder && !encodage.demandeur ? [t('encoder.manque.demandeur')] : []),
     ...(!lieu ? [t('demande.manque.lieu')] : []),
     ...(!categorie ? [t('demande.manque.quoi')] : []),
     ...(obligatoiresManquantes(questions, valables).length ? [t('demande.manque.questions')] : []),
@@ -164,7 +174,8 @@ export default function NouvelleDemandePage() {
     setErreur(null);
     try {
       const d = await api.post<Demande>('/demandes', { lieu_id: lieu.id, categorie_id: categorie.id, description: texte, langue: lang, ...(danger ? { danger: 1 } : {}), ...champsComplements(complements),
-        ...(valables.length ? { reponses: valables } : {}) });
+        ...(valables.length ? { reponses: valables } : {}),
+        ...(encoder && encodage.demandeur && encodage.canal ? { demandeur_id: encodage.demandeur.id, canal: encodage.canal } : {}) });
       setFaite(d);
       setEnregistreA(null);
       refresh();
@@ -182,14 +193,17 @@ export default function NouvelleDemandePage() {
     setCategorie(null);
     setReponses([]);
     setDescription('');
+    setEncodage((e) => ({ ...e, demandeur: null }));
     setLieu(faite ? { id: faite.lieu_id, code: faite.lieu_code, nom_fr: faite.lieu_nom_fr, nom_nl: faite.lieu_nom_nl, chemin: faite.lieu_chemin } : lieu);
   };
 
   // Boutons de suite communs : l'un sous l'autre sur téléphone, 12 px entre eux (0.5.2).
   const suite = (
     <Space wrap size={[12, 12]} className="dem-suite" style={{ justifyContent: 'center' }}>
-      <Link to="/demandes"><Button type="primary" icon={<UnorderedListOutlined />}>{t('demande.mes.title')}</Button></Link>
-      <Button icon={<PlusOutlined />} onClick={recommencer}>{t('demande.envoyee.autre')}</Button>
+      {encoder
+        ? <Link to="/demandes-entite"><Button type="primary" icon={<UnorderedListOutlined />}>{t('demande.entite.title')}</Button></Link>
+        : <Link to="/demandes"><Button type="primary" icon={<UnorderedListOutlined />}>{t('demande.mes.title')}</Button></Link>}
+      <Button icon={<PlusOutlined />} onClick={recommencer}>{t(encoder ? 'encoder.autre' : 'demande.envoyee.autre')}</Button>
     </Space>
   );
 
@@ -216,12 +230,13 @@ export default function NouvelleDemandePage() {
     const fin = finAnnoncee(faite.delai_annonce, lang);
     return (
       <div>
-        <Typography.Title level={1} style={{ fontSize: 22, marginBottom: 16 }}>{t('demande.nouvelle.title')}</Typography.Title>
+        <Typography.Title level={1} style={{ fontSize: 22, marginBottom: 16 }}>{t(encoder ? 'encoder.title' : 'demande.nouvelle.title')}</Typography.Title>
         <Card>
           <Result status="success" title={<span role="status">{t('demande.envoyee.title')}</span>}
             subTitle={(
               <Space direction="vertical" size={4}>
                 <span>{t('demande.envoyee.numero')}</span>
+                {encoder && faite.demandeur_nom && <span>{t('encoder.pour')} {faite.demandeur_prenom} {faite.demandeur_nom} · {t(`gest.canal.${faite.canal}`)}</span>}
                 <Typography.Text strong copyable style={{ fontSize: 22 }} className="dem-numero">{faite.numero}</Typography.Text>
                 <span>{lang === 'nl' ? faite.categorie_libelle_nl : faite.categorie_libelle_fr} · {cheminTexte(faite.lieu_chemin, lang)}</span>
                 {faite.danger ? (
@@ -238,7 +253,7 @@ export default function NouvelleDemandePage() {
                   <span key={r.question_id}>{lang === 'nl' ? r.question_nl : r.question_fr} {lang === 'nl' ? r.reponse_nl : r.reponse_fr}</span>
                 ))}
                 {(faite.pieces || []).length > 0 && <span>{t('demande.envoyee.pieces').replace('{n}', String((faite.pieces || []).length))}</span>}
-                <Typography.Text type="secondary" style={{ fontSize: 13 }}>{t('demande.envoyee.suite')}</Typography.Text>
+                <Typography.Text type="secondary" style={{ fontSize: 13 }}>{t(encoder ? 'encoder.suite' : 'demande.envoyee.suite')}</Typography.Text>
               </Space>
             )}
             extra={suite} />
@@ -249,9 +264,9 @@ export default function NouvelleDemandePage() {
 
   return (
     <div className="dem-form">
-      <Typography.Title level={1} style={{ fontSize: 22, marginBottom: 4 }}>{t('demande.nouvelle.title')}</Typography.Title>
+      <Typography.Title level={1} style={{ fontSize: 22, marginBottom: 4 }}>{t(encoder ? 'encoder.title' : 'demande.nouvelle.title')}</Typography.Title>
       <Typography.Paragraph type="secondary">
-        {t('demande.nouvelle.intro')} {entite && <Tag>{entite.code}</Tag>}
+        {t(encoder ? 'encoder.intro' : 'demande.nouvelle.intro')} {entite && <Tag>{entite.code}</Tag>}
       </Typography.Paragraph>
       <Space direction="vertical" size={16} style={{ width: '100%' }}>
         {brouillon && (
@@ -271,6 +286,12 @@ export default function NouvelleDemandePage() {
               </>
             )} />
         )}
+        {encoder && (
+          <Card className="dem-encodage">
+            <Typography.Title level={2} style={{ fontSize: 17 }}>{t('encoder.recue.title')}</Typography.Title>
+            <EncodageDemande value={encodage} onChange={setEncodage} />
+          </Card>
+        )}
         {/* 0.7.0 (DEM-06) : en tête du formulaire. */}
         <Card className={danger ? 'dem-danger dem-danger-actif' : 'dem-danger'}>
           <Checkbox checked={danger} onChange={(e) => setDanger(e.target.checked)} className="dem-danger-case" aria-describedby="dem-danger-aide">
@@ -288,8 +309,8 @@ export default function NouvelleDemandePage() {
         <Card>
           <Typography.Title level={2} id="dem-ou" style={{ fontSize: 17 }}>{t('demande.ou.title')}</Typography.Title>
           <LieuPicker value={lieu} onChange={setLieu} labelledBy="dem-ou" />
-          <DemandesVoisines lieuId={lieu?.id ?? null} categorieId={categorie?.id ?? null} remarque={description}
-            onSuivie={(d) => { setSuivie(d); setEnregistreA(null); setPieces([]); api.del('/demandes/brouillon').catch(() => {}); refresh(); }} />
+          {!encoder && <DemandesVoisines lieuId={lieu?.id ?? null} categorieId={categorie?.id ?? null} remarque={description}
+            onSuivie={(d) => { setSuivie(d); setEnregistreA(null); setPieces([]); api.del('/demandes/brouillon').catch(() => {}); refresh(); }} />}
         </Card>
         <Card>
           <Typography.Title level={2} id="dem-quoi" style={{ fontSize: 17 }}>{t('demande.quoi.title')}</Typography.Title>
@@ -311,7 +332,7 @@ export default function NouvelleDemandePage() {
           {/* 0.5.1 : seulement des espaces, message sous le champ (sous le compteur, qui occupe la marge du bas). */}
           {seulementEspaces(description) && <ErreurObligatoire id="dem-description-erreur" />}
         </Card>
-        {plafonds && (plafonds.nombre > 0 || pieces.length > 0) && (
+        {!encoder && plafonds && (plafonds.nombre > 0 || pieces.length > 0) && (
           <Card>
             <Typography.Title level={2} style={{ fontSize: 17 }}>{t('demande.pieces.title')}</Typography.Title>
             <PiecesDemande pieces={pieces} plafonds={plafonds} onChange={setPieces} />
@@ -325,7 +346,7 @@ export default function NouvelleDemandePage() {
           <Typography.Text type="secondary" id="dem-manque">{t('demande.manque')} {manque.join(', ')}</Typography.Text>
         )}
         {/* 0.7.0 (RGPD-10) : mention d'information de l'entité, texte complet sur demande, sans quitter la page. */}
-        {protection && (
+        {!encoder && protection && (
           <div className="dem-rgpd">
             <Typography.Text type="secondary" style={{ fontSize: 13 }}>
               {lang === 'nl' ? protection.mention_courte_nl : protection.mention_courte_fr}{' '}

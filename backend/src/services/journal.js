@@ -10,6 +10,7 @@
  * 0.13.0 (point 2 ; D3 du contrôle DV-113) : le type d'un lieu modifié est nommé comme valeur de liste ; la clé d'un
  * réglage (« app.organisation_fr », « urgence.telephone ») est nommée par son libellé FR et NL du catalogue de
  * l'instance ou de l'entité, sans requête ; une clé sortie du catalogue est rendue avec introuvable: 1.
+ * 0.16.0 (étape 11) : service (au dépôt d'une demande, sur un compte) et personne (valideur et suppléant d'un service).
  */
 const { getDb } = require('../database');
 const { AppError } = require('../envelope');
@@ -54,6 +55,20 @@ const REFERENCES = [
   { chemin: 'apres.type_id', type: 'valeur', entity: 'lieu' },
   // 0.14.0 : motif d'un changement d'état (motif d'attente, de refus, cause de la panne à la clôture).
   { chemin: 'motif_id', type: 'valeur', action: 'demande.transition' },
+  // 0.16.0 (étape 11) : service du demandeur noté au dépôt, service d'un compte ; valideur et suppléant d'un service.
+  { chemin: 'service_id', type: 'service', action: 'demande.create' },
+  // 0.16.0 (étape 12) : agent pour qui le service technique a encodé une demande reçue.
+  { chemin: 'demandeur_id', type: 'personne', action: 'demande.create' },
+  // 0.16.0 (GES-06) : demande d'origine d'une demande découpée, demande principale d'une fusion.
+  { chemin: 'issue_de', type: 'demande', action: 'demande.create' },
+  { chemin: 'principale_id', type: 'demande', action: 'demande.fusion' },
+  { chemin: 'service_id', type: 'service', action: 'user.update' },
+  { chemin: 'valideur_id', type: 'personne', entity: 'service' },
+  { chemin: 'suppleant_id', type: 'personne', entity: 'service' },
+  { chemin: 'avant.valideur_id', type: 'personne', entity: 'service' },
+  { chemin: 'apres.valideur_id', type: 'personne', entity: 'service' },
+  { chemin: 'avant.suppleant_id', type: 'personne', entity: 'service' },
+  { chemin: 'apres.suppleant_id', type: 'personne', entity: 'service' },
 ];
 const NOMS = {
   lieu: `SELECT l.id, l.code, l.nom_fr, l.nom_nl, e.code AS entite_code FROM lieux l LEFT JOIN entites e ON e.id = l.entite_id
@@ -62,6 +77,12 @@ const NOMS = {
     LEFT JOIN entites e ON e.id = c.entite_id WHERE c.id IN (SELECT value FROM json_each(?))`,
   valeur: `SELECT v.id, v.code, v.libelle_fr AS nom_fr, v.libelle_nl AS nom_nl, e.code AS entite_code FROM listes_valeurs v
     LEFT JOIN entites e ON e.id = v.entite_id WHERE v.id IN (SELECT value FROM json_each(?))`,
+  service: `SELECT s.id, s.code, s.nom_fr, s.nom_nl, e.code AS entite_code FROM services s
+    LEFT JOIN entites e ON e.id = s.entite_id WHERE s.id IN (SELECT value FROM json_each(?))`,
+  demande: `SELECT d.id, d.numero AS code, d.numero AS nom_fr, d.numero AS nom_nl, e.code AS entite_code FROM demandes d
+    LEFT JOIN entites e ON e.id = d.entite_id WHERE d.id IN (SELECT value FROM json_each(?))`,
+  personne: `SELECT u.id, u.email AS code, (u.first_name || ' ' || u.last_name) AS nom_fr, (u.first_name || ' ' || u.last_name) AS nom_nl,
+    NULL AS entite_code FROM users u WHERE u.id IN (SELECT value FROM json_each(?))`,
 };
 
 /** Catalogue des réglages qui nomme la clé « cle » d'une ligne (0.13.0, D3), ou null. */

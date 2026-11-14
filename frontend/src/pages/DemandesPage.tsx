@@ -28,7 +28,7 @@
  */
 import { useCallback, useEffect, useState } from 'react';
 import { Alert, Button, Card, Descriptions, Drawer, Grid, Input, List, Segmented, Space, Table, Tag, Typography, message } from 'antd';
-import { useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { MessageOutlined } from '@ant-design/icons';
 import api, { ApiError, qs } from '../api';
 import VignettesPieces from '../components/demandes/VignettesPieces';
@@ -88,6 +88,16 @@ export function FicheDemande({ d, avecDemandeur, service = false, onChange }: { 
   return (
     <>
     {d.suivie === 1 && <Alert type="info" showIcon message={t('demande.suivie.fiche')} style={{ marginBottom: 12 }} />}
+    {/* 0.16.0 (GES-06) : demande issue d'un découpage. */}
+    {d.issue_de && (
+      <Alert type="info" showIcon style={{ marginBottom: 12 }}
+        message={<span>{t('decoupage.issue')} <Link to={`?demande=${d.issue_de}`}>{d.issue_de_numero}</Link></span>} />
+    )}
+    {/* 0.16.0 (GES-06) : demande regroupée avec une autre, la principale. */}
+    {d.fusionnee_dans && (
+      <Alert type="info" showIcon style={{ marginBottom: 12 }}
+        message={<span>{t('fusion.fiche')} <Link to={`?demande=${d.fusionnee_dans}`}>{d.fusionnee_dans_numero}</Link></span>} />
+    )}
     {d.pour_moi === 1 && <Alert type="info" showIcon message={`${t('demande.pour_moi.fiche')} ${d.demandeur_prenom || ''} ${d.demandeur_nom || ''}.`} style={{ marginBottom: 12 }} />}
     <Descriptions column={1} size="small" bordered>
       <Descriptions.Item label={t('demande.champ.numero')}><Typography.Text strong copyable>{d.numero}</Typography.Text></Descriptions.Item>
@@ -157,15 +167,24 @@ export function FicheDemande({ d, avecDemandeur, service = false, onChange }: { 
       )}
       {beneficiaireTexte(d) && d.pour_moi !== 1 && <Descriptions.Item label={t('demande.champ.pour')}>{beneficiaireTexte(d)}</Descriptions.Item>}
       <Descriptions.Item label={t('demande.champ.depot')}>{dateDepot(d.created_at)}</Descriptions.Item>
+      {/* 0.16.0 (étape 12, GES-05) : demande reçue par téléphone ou par courriel ; le service lit qui l'a encodée. */}
+      {(d.canal === 'telephone' || d.canal === 'courriel') && (
+        <Descriptions.Item label={t('demande.champ.recue')}>
+          {t(`gest.canal.${d.canal}`)}{service && d.encodee_par_nom ? ` · ${t('demande.encodee_par')} ${d.encodee_par_prenom || ''} ${d.encodee_par_nom}` : ''}
+        </Descriptions.Item>
+      )}
       {d.date_souhaitee && <Descriptions.Item label={t('demande.champ.date_souhaitee')}>{dateSouhaitee(d.date_souhaitee, lang)}</Descriptions.Item>}
       {d.creneau && <Descriptions.Item label={t('demande.champ.creneau')}>{d.creneau}</Descriptions.Item>}
       {/* 0.15.0 (R3 de la recette de la 0.14.0) : plus de délai annoncé sur une demande fermée. */}
+      {/* 0.16.0 : en attente de l'accord du chef de service, les délais ne courent pas encore. */}
       {d.ouverte !== 0 && (
         <Descriptions.Item label={t('demande.champ.delai')}>
-          {d.danger === 1 && !d.delai_annonce ? t('demande.danger.envoyee') : fin ? `${t('demande.delai.indicatif')} ${fin}` : t('demande.delai.convenir')}
+          {d.etat === 'en_validation' ? t('demande.delai.validation')
+            : d.danger === 1 && !d.delai_annonce ? t('demande.danger.envoyee') : fin ? `${t('demande.delai.indicatif')} ${fin}` : t('demande.delai.convenir')}
         </Descriptions.Item>
       )}
       {avecDemandeur && <Descriptions.Item label={t('demande.champ.demandeur')}>{d.demandeur_prenom} {d.demandeur_nom}</Descriptions.Item>}
+      {avecDemandeur && d.service_nom_fr && <Descriptions.Item label={t('demande.champ.service')}>{lang === 'nl' ? d.service_nom_nl : d.service_nom_fr}</Descriptions.Item>}
       {service && d.duree_estimee_minutes ? <Descriptions.Item label={t('qualif.duree')}>{duree(d.duree_estimee_minutes)}</Descriptions.Item> : null}
       {service && d.consignes ? <Descriptions.Item label={t('qualif.consignes')}><span style={{ whiteSpace: 'pre-wrap' }}>{d.consignes}</span></Descriptions.Item> : null}
       {service && d.qualifiee_le ? (
@@ -174,6 +193,22 @@ export function FicheDemande({ d, avecDemandeur, service = false, onChange }: { 
           {d.photos_visibles === 0 && <div><Typography.Text type="secondary">{t('qualif.photos.masquees')}</Typography.Text></div>}
         </Descriptions.Item>
       ) : null}
+      {(d.issues || []).length > 0 && (
+        <Descriptions.Item label={t('decoupage.issues')}>
+          <Space direction="vertical" size={2}>
+            {(d.issues || []).map((r) => <span key={r.id}><Link to={`?demande=${r.id}`}>{r.numero}</Link> <EtatTag etat={r.etat} service={service} /></span>)}
+          </Space>
+        </Descriptions.Item>
+      )}
+      {service && (d.regroupees || []).length > 0 && (
+        <Descriptions.Item label={t('fusion.regroupees')}>
+          <Space direction="vertical" size={2}>
+            {(d.regroupees || []).map((r) => (
+              <span key={r.id}><Link to={`?demande=${r.id}`}>{r.numero}</Link> · {r.demandeur_prenom} {r.demandeur_nom} · {dateDepot(r.created_at)}</span>
+            ))}
+          </Space>
+        </Descriptions.Item>
+      )}
       {avecDemandeur && d.suiveurs && d.suiveurs.length > 0 && (
         <Descriptions.Item label={t('demande.champ.suiveurs')}>
           <Space direction="vertical" size={6}>
@@ -240,7 +275,7 @@ function MesDemandes() {
 
   const cat = (d: Demande) => (lang === 'nl' ? d.categorie_libelle_nl : d.categorie_libelle_fr);
   const lieu = (d: Demande) => (lang === 'nl' ? d.lieu_nom_nl : d.lieu_nom_fr);
-  const delai = (d: Demande) => (d.ouverte === 0 ? t('demande.delai.sans_objet')
+  const delai = (d: Demande) => (d.ouverte === 0 ? t('demande.delai.sans_objet') : d.etat === 'en_validation' ? t('demande.delai.validation.court')
     : d.danger === 1 && !d.delai_annonce ? t('demande.danger.court') : finAnnoncee(d.delai_annonce, lang) || t('demande.delai.convenir.court'));
   const titre = t('demande.mes.title');
 

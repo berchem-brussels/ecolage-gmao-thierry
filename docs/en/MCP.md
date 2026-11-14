@@ -1,6 +1,6 @@
 # MCP server
 
-Application version: **0.15.0** · Updated on 09/11/2026 · The French text prevails (`docs/fr/MCP.md`).
+Application version: **0.16.0** · Updated on 10/11/2026 · The French text prevails (`docs/fr/MCP.md`).
 
 ## Access and rules
 
@@ -9,6 +9,10 @@ Application version: **0.15.0** · Updated on 09/11/2026 · The French text prev
 - Authentication: the session, or the session token in `Authorization: Bearer`. OAuth 2.1 with PKCE arrives at step 44 (deviation E-10).
 - Limit: 60 calls per minute per person.
 - Each tool calls the same service function as the REST route, with the person's identity and rights, in their active entity. A deactivation, withdrawal or erasure takes two calls (`prepare_*`, then `confirm_*`). No free SQL tool.
+
+## 0.16.0
+
+New tools: `list_demandes_a_valider` (requests awaiting approval for the services where the person is head, or deputy during the period; approve or refuse with `change_etat_demande`), `list_services`, `get_service`, `create_service`, `update_service` and `deactivate_service` in two calls (administrator; head and deputy hold the "Approver" role), `fusionner_demande` (`principale_id`, `commentaire`) and `decouper_demande` (`parties`, one to five, `commentaire`), each in two calls (`demandes:traiter`). Enriched: `create_demande` takes `demandeur_id` and `canal` together (request received by the technical department); `get_demande` returns `service`, `valideur`, `encodee_par`, `fusionnee_dans`, `regroupees`, `issue_de`, `issues`, `decoupable`; `update_user` and `list_users` take `service_id`.
 
 ## 0.15.0
 

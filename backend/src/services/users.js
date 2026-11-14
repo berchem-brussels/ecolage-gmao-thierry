@@ -14,7 +14,7 @@ const parametres = require('./parametres');
 const { VERSION } = require('../config');
 const { getSetting } = require('../settings');
 
-const COLUMNS = 'id, email, first_name, last_name, user_role, entite_id, preferred_lang, lieu_habituel_id, is_active, is_demo, must_change_password, is_admin_local, (oid IS NOT NULL) AS microsoft, created_at, updated_at';
+const COLUMNS = 'id, email, first_name, last_name, user_role, entite_id, service_id, preferred_lang, lieu_habituel_id, is_active, is_demo, must_change_password, is_admin_local, (oid IS NOT NULL) AS microsoft, created_at, updated_at';
 
 /** L'entité de rattachement doit exister et être active (cahier des charges ROL-01). */
 function assertEntite(entiteId) {
@@ -35,10 +35,11 @@ function load(id) {
   return u;
 }
 
-function list(user, { limit = 50, offset = 0, q, is_active, entite_id } = {}) {
+function list(user, { limit = 50, offset = 0, q, is_active, entite_id, service_id } = {}) {
   const where = [];
   const params = [];
   if (entite_id) { where.push('entite_id = ?'); params.push(entite_id); }
+  if (service_id) { where.push('service_id = ?'); params.push(service_id); }
   if (q) { where.push('(email LIKE ? OR first_name LIKE ? OR last_name LIKE ?)'); params.push(`%${q}%`, `%${q}%`, `%${q}%`); }
   if (is_active !== undefined) { where.push('is_active = ?'); params.push(is_active); }
   const clause = where.length ? `WHERE ${where.join(' AND ')}` : '';
@@ -95,6 +96,10 @@ function update(user, id, data, channel = 'api') {
     if (!autres && !lui) throw new AppError(409, 'SSO_NO_ADMIN');
   }
   if (data.entite_id !== undefined) assertEntite(data.entite_id);
+  // Service du compte (0.16.0, ROL-04) : actif et de l'entité de rattachement ; un changement d'entité sans nouveau
+  // service retire le service de l'ancienne entité.
+  if (data.service_id !== undefined) require('./services').controlerMembre(data.entite_id ?? target.entite_id, data.service_id);
+  else if (data.entite_id !== undefined && data.entite_id !== target.entite_id && target.service_id) data = { ...data, service_id: null };
   // Lieu habituel : actif, dans une entité où le compte a un rôle (REF-04, DV-42).
   if (data.lieu_habituel_id !== undefined) require('./demandes').controlerLieuHabituel(id, data.lieu_habituel_id);
   const { sets, params } = safeBuildUpdate(data, ['id', 'email', 'password_hash']);

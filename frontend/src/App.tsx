@@ -36,6 +36,8 @@ const HelpPage = React.lazy(() => import('./pages/HelpPage'));
 const NouvelleDemandePage = React.lazy(() => import('./pages/NouvelleDemandePage'));
 const DemandesPage = React.lazy(() => import('./pages/DemandesPage'));
 const AccessibilityPage = React.lazy(() => import('./pages/AccessibilityPage'));
+const AValiderPage = React.lazy(() => import('./pages/AValiderPage'));
+const ServicesPage = React.lazy(() => import('./pages/ServicesPage'));
 
 dayjs.extend(localizedFormat);
 
@@ -116,14 +118,17 @@ function AppRoutes() {
         <Route path="/" element={user ? <AppLayout /> : <ToLogin />}>
           <Route index element={<HomePage />} />
           <Route path="demandes/nouvelle" element={<ModuleGate module="demandes"><NouvelleDemandePage /></ModuleGate>} />
+          <Route path="demandes/encoder" element={<ModuleGate module="demandes"><PermissionOnly permission="demandes:traiter"><NouvelleDemandePage encoder /></PermissionOnly></ModuleGate>} />
           <Route path="demandes" element={<ModuleGate module="demandes"><DemandesPage perimetre="miennes" /></ModuleGate>} />
           <Route path="demandes-entite" element={<ModuleGate module="demandes"><PermissionOnly permission="demandes:entite"><DemandesPage perimetre="entite" /></PermissionOnly></ModuleGate>} />
+          <Route path="a-valider" element={<ModuleGate module="demandes"><PermissionOnly permission="demandes:valider"><AValiderPage /></PermissionOnly></ModuleGate>} />
           <Route path="patrimoine" element={<ModuleGate module="patrimoine"><PermissionOnly permission="lieux:lire"><PatrimoinePage /></PermissionOnly></ModuleGate>} />
           <Route path="listes" element={<PermissionOnly permission="listes:gerer"><ListesValeursPage /></PermissionOnly>} />
           <Route path="referentiel" element={<PermissionOnly permission="categories:gerer"><ReferentielPage /></PermissionOnly>} />
           <Route path="reglages-entite" element={<PermissionOnly permission="parametres:gerer"><ReglagesEntitePage /></PermissionOnly>} />
           <Route path="entites" element={<AdminOnly><EntitesPage /></AdminOnly>} />
           <Route path="users" element={<AdminOnly><UsersPage /></AdminOnly>} />
+          <Route path="services" element={<AdminOnly><ServicesPage /></AdminOnly>} />
           <Route path="parametres" element={<AdminOnly><ParametresPage /></AdminOnly>} />
           <Route path="journal" element={<AdminOnly><JournalPage /></AdminOnly>} />
           <Route path="tickets" element={<TicketsPage />} />

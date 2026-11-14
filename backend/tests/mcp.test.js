@@ -45,7 +45,7 @@ const HORS_MCP = new Set(['POST /api/lieux/:id/photo', 'GET /api/lieux/:id/photo
 
 test('parité : chaque route de ressource a son outil ; chaque outil a sa route', () => {
   const routes = collectRoutes(srv.app)
-    .filter((r) => /^\/api\/(entites|roles|roles-utilisateurs|users|listes-valeurs|lieux|categories|questions-categorie|priorites|horaires|jours-non-ouvres|jours-feries|echeances|demandes|pieces|vues-demandes|parametres|modules|parametres-entite|audit|notes-version|settings\/auth|tickets|faq|etats-demande|modeles-reponse)(\/|$)/.test(r.path) || ['/api/auth/me', '/api/auth/entite', '/api/auth/nouveautes', '/api/auth/lieu-habituel'].includes(r.path))
+    .filter((r) => /^\/api\/(entites|roles|roles-utilisateurs|users|listes-valeurs|lieux|categories|questions-categorie|priorites|horaires|jours-non-ouvres|jours-feries|echeances|demandes|pieces|vues-demandes|parametres|modules|parametres-entite|audit|notes-version|settings\/auth|tickets|faq|etats-demande|modeles-reponse|services)(\/|$)/.test(r.path) || ['/api/auth/me', '/api/auth/entite', '/api/auth/nouveautes', '/api/auth/lieu-habituel'].includes(r.path))
     .map((r) => `${r.method} ${r.path}`)
     .filter((r) => !HORS_MCP.has(r));
   assert.equal(HORS_MCP.size, 6, 'la liste des exceptions ne grandit pas sans écart consigné (E-17, étendu en 0.14.0 et 0.15.0)');

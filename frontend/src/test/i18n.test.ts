@@ -137,6 +137,17 @@ describe('traductions', () => {
     expect(cle('je veux ne plus suivre cette demande')).toBe('chat.intent.abonnement');
     expect(cle('ajouter une précision')).toBe('chat.intent.cycle');
     expect(cle('où en est ma demande')).toBe('chat.intent.suivi');
+    // 0.16.0 (point 7) : validation, services, encodage, regroupement, découpage, colonnes.
+    expect(cle('ma demande attend l’accord de mon chef')).toBe('chat.intent.validation');
+    expect(cle('hoe een aanvraag goedkeuren')).toBe('chat.intent.validation');
+    expect(cle('désigner un suppléant pendant mes congés')).toBe('chat.intent.services');
+    expect(cle('encoder un appel')).toBe('chat.intent.encodage');
+    expect(cle('een aanvraag per telefoon ontvangen')).toBe('chat.intent.encodage');
+    expect(cle('ma demande est regroupée')).toBe('chat.intent.fusion');
+    expect(cle('twee aanvragen samenvoegen')).toBe('chat.intent.fusion');
+    expect(cle('la demande signale plusieurs problèmes')).toBe('chat.intent.decoupage');
+    expect(cle('vue en colonnes')).toBe('chat.intent.colonnes');
+    expect(cle('kaart slepen naar een andere kolom')).toBe('chat.intent.colonnes');
     expect(answer('comment changer d’entité').key).toBe('chat.intent.entite');
     expect(answer('wie geeft de rollen').key).toBe('chat.intent.roles');
     expect(answer('wachtwoord wijzigen').key).toBe('chat.intent.password');
@@ -225,3 +236,11 @@ describe('traductions', () => {
   });
 });
 
+// 0.16.0, point 0 (R1 de la recette de la 0.15.0) : le journal nomme la note interne comme les écrans.
+describe('libellé de la note interne', () => {
+  it('le détail « interne » du journal dit « Note interne », comme le fil, en FR et en NL', () => {
+    expect(translations['audit.detail.interne']).toEqual(translations['fil.interne']);
+    expect(translations['audit.detail.interne'].fr).toBe('Note interne');
+    expect(translations['audit.detail.interne'].nl).toBe('Interne nota');
+  });
+});

@@ -25,6 +25,8 @@ const user: Record<string, unknown> = {
   lieu_habituel_id: null, lieu_propose: { id: 3, code: 'MC-A-12', nom_fr: 'Bureau 12', nom_nl: 'Bureau 12', chemin, source: 'derniere_demande' },
 };
 const roles = [
+  // 0.16.0 : chef de service (rôle « Valideur »).
+  { code: 'valideur', portee: 'entite', defaut: false, label_fr: 'Valideur', label_nl: 'Goedkeurder', description_fr: 'd', description_nl: 'd', permissions: ['lieux:lire', 'categories:lire', 'demandes:creer', 'demandes:valider'] },
   { code: 'agent', portee: 'entite', defaut: true, label_fr: 'Demandeur', label_nl: 'Aanvrager', description_fr: 'd', description_nl: 'd', permissions: ['lieux:lire', 'categories:lire', 'demandes:creer'] },
   { code: 'gestionnaire', portee: 'entite', defaut: false, label_fr: 'Gestionnaire technique', label_nl: 'Technisch beheerder', description_fr: 'd', description_nl: 'd', permissions: ['lieux:lire', 'entites:membres', 'demandes:creer', 'demandes:entite', 'demandes:qualifier'] },
 ];
@@ -105,6 +107,10 @@ let reponseUpload: (n: number) => { status: number; json: unknown } = (n) => ({ 
 // 0.15.0 (point 2) : fil de messages de la fiche et demandes avec un message non lu ; vides par défaut.
 let messagesData: unknown[] = [];
 let nonLusData: unknown[] = [];
+// 0.16.0 : demandes à valider par le chef de service ; aucune par défaut.
+let aValiderData: unknown[] = [];
+// 0.16.0 (point 6) : table des passages lue par la vue en colonnes ; vide par défaut.
+let passagesData: unknown[] = [];
 let reponsePost: { status: number; json: unknown } = { status: 201, json: { data: demande(3, 'AA-DI-2026-00003', 'a_qualifier'), meta: { envelope: 1 } } };
 
 beforeEach(() => {
@@ -119,6 +125,8 @@ beforeEach(() => {
   historiqueData = [];
   messagesData = [];
   nonLusData = [];
+  aValiderData = [];
+  passagesData = [];
   bordData = BORD;
   vuesData = [];
   uploads = [];
@@ -139,6 +147,8 @@ beforeEach(() => {
     const json = url.startsWith('/api/demandes/brouillon/pieces') ? { data: piecesData, meta: { envelope: 1 } }
       : url.startsWith('/api/pieces/') ? { data: { id: 1, supprime: 1 }, meta: { envelope: 1 } }
       : url.startsWith('/api/demandes/brouillon') ? { data: init?.method && init.method !== 'GET' ? { efface: 1 } : brouillonData, meta: { envelope: 1 } }
+      : url.startsWith('/api/demandes/a-valider') ? page(aValiderData)
+      : url.startsWith('/api/etats-demande/transitions') ? { data: passagesData, meta: { envelope: 1 } }
       : url.startsWith('/api/demandes/tableau-bord') ? { data: bordData, meta: { envelope: 1 } }
       : url.startsWith('/api/vues-demandes') ? page(vuesData)
       : url.startsWith('/api/priorites') ? page(prioritesData)
@@ -174,6 +184,7 @@ import HomePage from '../pages/HomePage';
 import NouvelleDemandePage from '../pages/NouvelleDemandePage';
 import DemandesPage, { FicheDemande } from '../pages/DemandesPage';
 import QualificationForm from '../components/demandes/QualificationForm';
+import AValiderPage from '../pages/AValiderPage';
 
 const MesDemandes = () => <DemandesPage perimetre="miennes" />;
 const DemandesEntite = () => <DemandesPage perimetre="entite" />;
@@ -1555,6 +1566,41 @@ describe('fil de messages (0.15.0, point 2 ; SUI-04, SUI-07)', () => {
     expect(within(fil).queryByLabelText('Insérer un modèle')).toBeNull();
   });
 
+  it('0.16.0, R2 : un message prend la langue de son texte (modèle inséré : langue de la demande), pas celle de l’écran ; le service la corrige', async () => {
+    ficheData = demande(2, 'AA-DI-2026-00002', 'qualifiee', { transitions: [], fil: { lecture: 1, ecriture: 1, interne: 1 }, pieces: [], langue: 'nl',
+      etat_libelle_nl: 'In behandeling', etat_libelle_fr: 'Prise en charge' });
+    render(wrap(DemandesEntite, 'fr', ['/demandes-entite?demande=2']));
+    const d = await screen.findByRole('dialog');
+    const fil = await within(d).findByRole('region', { name: 'Messages' });
+    const langue = (await within(fil).findAllByLabelText('Langue du message')).find((e) => e.classList.contains('ant-radio-group')) as HTMLElement;
+    expect((within(langue).getByRole('radio', { name: 'Français' }) as HTMLInputElement).checked).toBe(true);
+    fireEvent.mouseDown(await within(fil).findByLabelText('Insérer un modèle'));
+    fireEvent.click(await screen.findByText('Précision demandée'));
+    await waitFor(() => expect((within(langue).getByRole('radio', { name: 'Néerlandais' }) as HTMLInputElement).checked).toBe(true));
+    expect(within(fil).getByLabelText('Votre message').getAttribute('lang')).toBe('nl');
+    fireEvent.click(within(fil).getByRole('button', { name: /Envoyer/ }));
+    await waitFor(() => expect(posts.filter((p) => p.url === '/api/demandes/2/messages').slice(-1)[0]?.body)
+      .toMatchObject({ interne: false, langue: 'nl' }));
+    // Après l'envoi, retour à la langue de l'écran ; le choix se corrige à la main.
+    await waitFor(() => expect((within(langue).getByRole('radio', { name: 'Français' }) as HTMLInputElement).checked).toBe(true));
+    fireEvent.click(within(langue).getByText('Néerlandais'));
+    fireEvent.change(within(fil).getByLabelText('Votre message'), { target: { value: 'Wij komen donderdag.' } });
+    fireEvent.click(within(fil).getByRole('button', { name: /Envoyer/ }));
+    await waitFor(() => expect(posts.filter((p) => p.url === '/api/demandes/2/messages').slice(-1)[0]?.body)
+      .toEqual({ texte: 'Wij komen donderdag.', interne: false, langue: 'nl' }));
+  });
+
+  it('0.16.0, R2 : le demandeur n’a pas de choix de langue ; son message prend la langue de son écran', async () => {
+    ficheData = mienne();
+    messagesData = [];
+    const d = await ouvrirMienne('nl');
+    const fil = await within(d).findByRole('region', { name: 'Berichten' });
+    expect(within(fil).queryByText('Taal van het bericht')).toBeNull();
+    fireEvent.change(await within(fil).findByLabelText('Uw bericht'), { target: { value: 'Het lekt nog steeds.' } });
+    fireEvent.click(within(fil).getByRole('button', { name: /Verzenden/ }));
+    await waitFor(() => expect(posts.filter((p) => /\/messages$/.test(p.url)).slice(-1)[0]?.body).toMatchObject({ langue: 'nl' }));
+  });
+
   it('point 5 (SUI-09) : le service suit une demande vue (abonnement) ; qui suit par « Moi aussi » arrête, prévenu pour sa remarque', async () => {
     ficheData = demande(2, 'AA-DI-2026-00002', 'qualifiee', { transitions: [], fil: { lecture: 1, ecriture: 1, interne: 1 }, pieces: [], suivable: 1, suivie: 0,
       suiveurs: [{ user_id: 8, prenom: 'Rémi', nom: 'Responsable', remarque: null, created_at: '2026-11-09 10:00:00', source: 'abonnement' },
@@ -1592,6 +1638,324 @@ describe('fil de messages (0.15.0, point 2 ; SUI-04, SUI-07)', () => {
       fireEvent.click(within(d2).getByText(translations['fil.interne.option'][lang]));
       await within(d2).findByLabelText(translations['fil.mentions'][lang]);
       await audit(d2);
+    }, 30000);
+  }
+});
+
+describe('validation par le chef de service (0.16.0, point 2 ; DEM-15, ROL-04)', () => {
+  const enValidation = (extra: Record<string, unknown> = {}) => demande(5, 'AA-DI-2026-00005', 'en_validation', {
+    demandeur_id: 12, demandeur_prenom: 'Didier', demandeur_nom: 'Demandeur', service_id: 3, service_nom_fr: 'Secrétariat', service_nom_nl: 'Secretariaat',
+    etat_libelle_fr: "En attente de l'accord de votre chef de service", etat_libelle_nl: 'Wacht op akkoord van uw diensthoofd',
+    valideur: 1, pieces: [], complements: [],
+    transitions_valideur: [
+      { vers: 'a_qualifier', via: null, motif_liste: null, commentaire: 'facultatif', commentaire_public: 1, compte_rendu: 0 },
+      { vers: 'refusee_validation', via: null, motif_liste: null, commentaire: 'obligatoire', commentaire_public: 1, compte_rendu: 0 },
+    ], ...extra,
+  });
+  const avecRole = async (fn: () => Promise<void>) => {
+    const avant = [...entite.roles];
+    entite.roles.splice(0, entite.roles.length, 'agent', 'valideur');
+    try { await fn(); } finally { entite.roles.splice(0, entite.roles.length, ...avant); }
+  };
+
+  it('accueil : « Demandes à valider (n) » et l’alerte pour le chef de service ; rien pour un agent', async () => {
+    aValiderData = [enValidation()];
+    await avecRole(async () => {
+      render(wrap(HomePage, 'fr'));
+      expect(await screen.findByRole('link', { name: /Demandes à valider \(1\)/ })).toHaveAttribute('href', '/a-valider');
+      expect(await screen.findByRole('link', { name: '1 demande attend votre accord' })).toBeInTheDocument();
+    });
+    cleanupAll();
+    gets = [];
+    render(wrap(HomePage, 'fr'));
+    await screen.findByText(/Bienvenue|Welkom/);
+    expect(screen.queryByRole('link', { name: /Demandes à valider/ })).toBeNull();
+    expect(gets.some((u) => u.startsWith('/api/demandes/a-valider'))).toBe(false);
+  });
+
+  it('liste, fiche avec le demandeur et son service ; « Valider et transmettre » envoie le passage, commentaire facultatif', async () => {
+    aValiderData = [enValidation()];
+    ficheData = enValidation();
+    reponsePost = { status: 200, json: { data: enValidation({ etat: 'a_qualifier', transitions_valideur: [], valideur: 1 }), meta: { envelope: 1 } } };
+    await avecRole(async () => {
+      render(wrap(AValiderPage, 'fr', ['/a-valider']));
+      fireEvent.click(await screen.findByRole('button', { name: 'AA-DI-2026-00005' }));
+      const d = await screen.findByRole('dialog');
+      expect(await within(d).findByText('Secrétariat')).toBeInTheDocument();
+      expect(within(d).getByText(/Didier Demandeur/)).toBeInTheDocument();
+      expect(within(d).getByText("Délai : compté à partir de l'accord de votre chef de service")).toBeInTheDocument();
+      fireEvent.click(within(d).getByRole('button', { name: 'Valider et transmettre' }));
+      expect(await within(d).findByText(/passe de « En attente de l'accord de votre chef de service » à « Reçue par le service technique »/)).toBeInTheDocument();
+      fireEvent.click(within(d).getAllByRole('button', { name: 'Valider et transmettre' }).slice(-1)[0]);
+      await waitFor(() => expect(posts.find((p) => p.url === '/api/demandes/5/transitions')?.body).toEqual({ etat: 'a_qualifier' }));
+      expect(await within(d).findByText(/n’attend plus votre accord/)).toBeInTheDocument();
+    });
+  });
+
+  it('« Refuser la demande » : motif obligatoire, lu par le demandeur ; rien n’est envoyé sans motif', async () => {
+    ficheData = enValidation();
+    await avecRole(async () => {
+      render(wrap(AValiderPage, 'fr', ['/a-valider?demande=5']));
+      const d = await screen.findByRole('dialog');
+      fireEvent.click(await within(d).findByRole('button', { name: 'Refuser la demande' }));
+      expect(await within(d).findByText('Le demandeur lira ce commentaire dans sa demande.')).toBeInTheDocument();
+      fireEvent.click(within(d).getAllByRole('button', { name: 'Refuser la demande' }).slice(-1)[0]);
+      expect(await within(d).findByText('Ce champ est obligatoire')).toBeInTheDocument();
+      expect(posts.length).toBe(0);
+      fireEvent.change(within(d).getByLabelText(/Commentaire/), { target: { value: 'Budget épuisé.' } });
+      fireEvent.click(within(d).getAllByRole('button', { name: 'Refuser la demande' }).slice(-1)[0]);
+      await waitFor(() => expect(posts.find((p) => p.url === '/api/demandes/5/transitions')?.body).toEqual({ etat: 'refusee_validation', commentaire: 'Budget épuisé.' }));
+    });
+  });
+
+  it('demandeur : état et délai d’une demande en validation ; l’historique nomme le chef de service', async () => {
+    ficheData = enValidation({ demandeur_id: 7, valideur: 0, transitions_valideur: [], annulable: 1 });
+    historiqueData = [{ id: 1, de_etat: null, vers_etat: 'en_validation', auteur: 'demandeur', commentaire: null, created_at: '2026-11-10 08:00:00', etat_libelle_fr: "En attente de l'accord de votre chef de service", etat_libelle_nl: 'x' },
+      { id: 2, de_etat: 'en_validation', vers_etat: 'refusee_validation', auteur: 'valideur', commentaire: 'Budget épuisé.', created_at: '2026-11-10 09:00:00', etat_libelle_fr: 'Refusée par votre chef de service', etat_libelle_nl: 'x' }];
+    render(wrap(MesDemandes, 'fr', ['/demandes?demande=5']));
+    const d = await screen.findByRole('dialog');
+    expect(await within(d).findAllByText("En attente de l'accord de votre chef de service")).not.toHaveLength(0);
+    expect(within(d).getByText("Délai : compté à partir de l'accord de votre chef de service")).toBeInTheDocument();
+    expect(await within(d).findByText(/Le chef de service/)).toBeInTheDocument();
+    expect(within(d).getByText('Budget épuisé.')).toBeInTheDocument();
+    expect(within(d).queryByText('Service du demandeur'), 'le demandeur ne relit pas son service').toBeNull();
+  });
+
+  for (const lang of ['fr', 'nl'] as const) {
+    it(`demandes à valider (${lang}) sans violation axe-core, liste et fiche`, async () => {
+      aValiderData = [enValidation()];
+      ficheData = enValidation();
+      await avecRole(async () => {
+        const { container } = render(wrap(AValiderPage, lang, ['/a-valider']));
+        await screen.findByRole('button', { name: 'AA-DI-2026-00005' });
+        await audit(container);
+        cleanupAll();
+        render(wrap(AValiderPage, lang, ['/a-valider?demande=5']));
+        const d = await screen.findByRole('dialog');
+        await within(d).findByText(lang === 'fr' ? 'Secrétariat' : 'Secretariaat');
+        await audit(d);
+      });
+    }, 30000);
+  }
+});
+
+describe('demande encodée par le service technique (0.16.0, point 3 ; GES-05)', () => {
+  const Encoder = () => <NouvelleDemandePage encoder />;
+  it('canal et demandeur exigés ; ni lieu proposé, ni brouillon, ni « Moi aussi » ; envoi avec demandeur et canal', async () => {
+    render(wrap(Encoder, 'fr', ['/demandes/encoder']));
+    expect(await screen.findByRole('heading', { name: 'Encoder une demande reçue' })).toBeInTheDocument();
+    expect(screen.queryByText('Le lieu de votre dernière demande')).toBeNull();
+    const envoyer = screen.getByRole('button', { name: /Envoyer la demande/ });
+    expect(screen.getByText(/comment la demande est arrivée, qui demande/)).toBeInTheDocument();
+    fireEvent.click(screen.getByText('Téléphone'));
+    fireEvent.change(screen.getByLabelText('Qui demande ? Cherchez par le nom'), { target: { value: 'Hél' } });
+    fireEvent.click(await screen.findByRole('button', { name: 'Hélène Dupré' }));
+    expect(screen.getByText('Hélène Dupré')).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText('Chercher un lieu'), { target: { value: 'salle' } });
+    fireEvent.click(await screen.findByRole('button', { name: /Salle n°21/ }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Divers' }));
+    fireEvent.change(screen.getByLabelText('3. Décrivez le problème'), { target: { value: 'Appel : la porte du local grince fort.' } });
+    expect(envoyer).toBeEnabled();
+    fireEvent.click(envoyer);
+    expect(await screen.findByText('Demande envoyée')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Encoder une demande reçue');
+    expect(posts[0].body).toEqual({ lieu_id: 9, categorie_id: 20, description: 'Appel : la porte du local grince fort.', langue: 'fr', demandeur_id: 9, canal: 'telephone' });
+    expect(screen.getByRole('link', { name: /Demandes de l'entité/ })).toHaveAttribute('href', '/demandes-entite');
+    expect(screen.getByRole('button', { name: /Encoder une autre demande/ })).toBeInTheDocument();
+    expect(gets.some((u) => u.startsWith('/api/demandes/brouillon')), 'aucun brouillon lu').toBe(false);
+    expect(puts.some((p) => p.url.startsWith('/api/demandes/brouillon')), 'aucun brouillon écrit').toBe(false);
+  });
+
+  it('fiche du service : « Reçue par Téléphone · encodée par » ; le demandeur lit le canal sans le nom', async () => {
+    ficheData = demande(2, 'AA-DI-2026-00002', 'a_qualifier', { canal: 'telephone', encodee_par_prenom: 'Gaston', encodee_par_nom: 'Gestion', transitions: [], pieces: [] });
+    render(wrap(DemandesEntite, 'fr', ['/demandes-entite?demande=2']));
+    const d = await screen.findByRole('dialog');
+    expect(await within(d).findByText('Téléphone · encodée par Gaston Gestion')).toBeInTheDocument();
+    cleanupAll();
+    ficheData = demande(2, 'AA-DI-2026-00002', 'a_qualifier', { canal: 'courriel', pieces: [], complements: [] });
+    render(wrap(MesDemandes, 'fr', ['/demandes?demande=2']));
+    const d2 = await screen.findByRole('dialog');
+    expect(await within(d2).findByText('Courriel')).toBeInTheDocument();
+  });
+
+  it('liste du service : bouton « Encoder une demande reçue » pour le gestionnaire', async () => {
+    roles.find((r) => r.code === 'gestionnaire')!.permissions.push('demandes:traiter');
+    try {
+      render(wrap(DemandesEntite, 'fr', ['/demandes-entite']));
+      expect(await screen.findByRole('link', { name: /Encoder une demande reçue/ })).toHaveAttribute('href', '/demandes/encoder');
+    } finally { roles.find((r) => r.code === 'gestionnaire')!.permissions.pop(); }
+  });
+
+  for (const lang of ['fr', 'nl'] as const) {
+    it(`encodage (${lang}) sans violation axe-core`, async () => {
+      const { container } = render(wrap(Encoder, lang, ['/demandes/encoder']));
+      await screen.findByText(lang === 'fr' ? 'Demande reçue' : 'Ontvangen aanvraag');
+      await waitFor(() => expect(container.querySelector('.ant-spin-spinning')).toBeNull());
+      await audit(container);
+    }, 30000);
+  }
+});
+
+describe('fusion de doublons (0.16.0, point 4 ; GES-06)', () => {
+  const doublon = (extra: Record<string, unknown> = {}) => demande(5, 'AA-DI-2026-00005', 'a_qualifier', {
+    pieces: [], complements: [], suiveurs: [],
+    transitions: [{ vers: 'fusionnee', via: 'fusionner', motif_liste: null, commentaire: 'facultatif', commentaire_public: 1, compte_rendu: 0 }], ...extra,
+  });
+
+  it('« Regrouper avec une autre demande » : proposées au même endroit, choix, effet annoncé, envoi avec commentaire', async () => {
+    ficheData = doublon();
+    reponsePost = { status: 200, json: { data: doublon({ etat: 'fusionnee', ouverte: 0, transitions: [], fusionnee_dans: 2, fusionnee_dans_numero: 'AA-DI-2026-00002' }), meta: { envelope: 1 } } };
+    // Une demande « En validation » au même endroit n'est jamais proposée comme principale.
+    demandes.push(demande(8, 'AA-DI-2026-00008', 'en_validation'));
+    render(wrap(DemandesEntite, 'fr', ['/demandes-entite?demande=5']));
+    const d = await screen.findByRole('dialog');
+    fireEvent.click(await within(d).findByRole('button', { name: 'Regrouper avec une autre demande' }));
+    await waitFor(() => expect(gets.some((u) => u.includes('batiment_id=1') && u.includes('ouvertes=1'))).toBe(true));
+    const proposees = await within(d).findByRole('list', { name: 'Demandes ouvertes au même endroit' });
+    expect(within(d).getByText(/Choisissez la demande principale : AA-DI-2026-00005 sera fermée/)).toBeInTheDocument();
+    expect(within(d).queryByText(/\{numero\}/)).toBeNull();
+    expect(within(proposees).queryByText(/AA-DI-2026-00005/), 'pas elle-même').toBeNull();
+    expect(within(proposees).queryByText(/AA-DI-2026-00008/), 'pas une demande en validation').toBeNull();
+    demandes.pop();
+    fireEvent.click(within(proposees).getByText(/AA-DI-2026-00002/));
+    expect(within(d).getByText('AA-DI-2026-00005 sera regroupée dans AA-DI-2026-00002.')).toBeInTheDocument();
+    fireEvent.change(within(d).getByLabelText('Commentaire'), { target: { value: 'Même néon.' } });
+    fireEvent.click(within(d).getByRole('button', { name: 'Regrouper dans AA-DI-2026-00002' }));
+    await waitFor(() => expect(posts.find((p) => p.url === '/api/demandes/5/fusionner')?.body).toEqual({ principale_id: 2, commentaire: 'Même néon.' }));
+    expect(await within(d).findByText('Cette demande a été regroupée avec la demande')).toBeInTheDocument();
+    expect(within(d).getByRole('link', { name: 'AA-DI-2026-00002' })).toHaveAttribute('href', '/demandes-entite?demande=2');
+  });
+
+  it('un refus du serveur s’affiche, le choix reste ; la principale liste ses demandes regroupées', async () => {
+    ficheData = doublon();
+    reponsePost = { status: 409, json: { error: true, code: 'FUSION_PRINCIPALE_FERMEE', message: 'La demande principale doit être ouverte.' } };
+    render(wrap(DemandesEntite, 'fr', ['/demandes-entite?demande=5']));
+    const d = await screen.findByRole('dialog');
+    fireEvent.click(await within(d).findByRole('button', { name: 'Regrouper avec une autre demande' }));
+    fireEvent.click(within(await within(d).findByRole('list', { name: 'Demandes ouvertes au même endroit' })).getByText(/AA-DI-2026-00002/));
+    fireEvent.click(within(d).getByRole('button', { name: 'Regrouper dans AA-DI-2026-00002' }));
+    expect(await within(d).findByText('La demande principale doit être ouverte.')).toBeInTheDocument();
+    expect(await within(d).findByRole('button', { name: /Regrouper dans AA-DI-2026-00002/ })).toBeInTheDocument();
+    cleanupAll();
+    ficheData = demande(2, 'AA-DI-2026-00002', 'a_qualifier', { transitions: [], pieces: [], regroupees: [{ id: 5, numero: 'AA-DI-2026-00005', created_at: '2026-11-10 08:00:00', demandeur_prenom: 'Didier', demandeur_nom: 'D' }] });
+    render(wrap(DemandesEntite, 'fr', ['/demandes-entite?demande=2']));
+    const d2 = await screen.findByRole('dialog');
+    expect(await within(d2).findByText('Demandes regroupées ici')).toBeInTheDocument();
+    expect(within(d2).getByRole('link', { name: 'AA-DI-2026-00005' })).toBeInTheDocument();
+  });
+
+  for (const lang of ['fr', 'nl'] as const) {
+    it(`formulaire de fusion (${lang}) sans violation axe-core`, async () => {
+      ficheData = doublon();
+      render(wrap(DemandesEntite, lang, ['/demandes-entite?demande=5']));
+      const d = await screen.findByRole('dialog');
+      fireEvent.click(await within(d).findByRole('button', { name: translations['cycle.action.fusionnee'][lang] }));
+      await within(d).findByRole('list', { name: translations['fusion.proposees'][lang] });
+      await audit(d);
+      fireEvent.click(within(d).getAllByRole('button', { name: /AA-DI-2026-00002/ })[0]);
+      await audit(d);
+    }, 30000);
+  }
+});
+
+describe('découpage d’une demande (0.16.0, point 5 ; GES-06)', () => {
+  const origine = (extra: Record<string, unknown> = {}) => demande(5, 'AA-DI-2026-00005', 'a_qualifier', { pieces: [], complements: [], suiveurs: [], transitions: [], decoupable: 1, issues: [], ...extra });
+
+  it('« Découper en plusieurs demandes » : deux parties, catégorie et lieu facultatifs, envoi ; la fiche liste les demandes issues', async () => {
+    ficheData = origine();
+    reponsePost = { status: 201, json: { data: { ...origine({ issues: [{ id: 6, numero: 'AA-DI-2026-00006', etat: 'a_qualifier' }, { id: 7, numero: 'AA-DI-2026-00007', etat: 'a_qualifier' }] }),
+      nouvelles: [{ id: 6, numero: 'AA-DI-2026-00006' }, { id: 7, numero: 'AA-DI-2026-00007' }] }, meta: { envelope: 1 } } };
+    render(wrap(DemandesEntite, 'fr', ['/demandes-entite?demande=5']));
+    const d = await screen.findByRole('dialog');
+    fireEvent.click(await within(d).findByRole('button', { name: /Découper en plusieurs demandes/ }));
+    expect(await within(d).findByText(/Elle garde le premier ; décrivez chacun des autres/)).toBeInTheDocument();
+    expect(within(d).queryByText(/\{numero\}/)).toBeNull();
+    const creer = within(d).getByRole('button', { name: 'Créer la demande' });
+    expect(creer).toBeDisabled();
+    fireEvent.change(within(d).getByLabelText('Problème'), { target: { value: 'Le robinet de la cuisine fuit.' } });
+    fireEvent.click(within(d).getByRole('button', { name: /Ajouter une demande nouvelle/ }));
+    const problemes = within(d).getAllByLabelText('Problème');
+    fireEvent.change(problemes[1], { target: { value: 'court' } });
+    expect(within(d).getByRole('button', { name: 'Créer les 2 demandes' })).toBeDisabled();
+    fireEvent.change(problemes[1], { target: { value: 'La prise du bureau 12 est arrachée.' } });
+    fireEvent.change(within(d).getByLabelText('Commentaire'), { target: { value: 'Deux problèmes.' } });
+    fireEvent.click(within(d).getByRole('button', { name: 'Créer les 2 demandes' }));
+    await waitFor(() => expect(posts.find((p) => p.url === '/api/demandes/5/decouper')?.body).toEqual({
+      parties: [{ description: 'Le robinet de la cuisine fuit.' }, { description: 'La prise du bureau 12 est arrachée.' }], langue: 'fr', commentaire: 'Deux problèmes.',
+    }));
+    expect(await within(d).findByText('Demandes issues de celle-ci')).toBeInTheDocument();
+    expect(within(d).getByRole('link', { name: 'AA-DI-2026-00007' })).toHaveAttribute('href', '/demandes-entite?demande=7');
+  });
+
+  it('demande issue d’un découpage : lien vers l’origine, pour le demandeur ; pas de bouton pour lui', async () => {
+    ficheData = demande(6, 'AA-DI-2026-00006', 'a_qualifier', { pieces: [], complements: [], issue_de: 5, issue_de_numero: 'AA-DI-2026-00005', decoupable: 0 });
+    render(wrap(MesDemandes, 'fr', ['/demandes?demande=6']));
+    const d = await screen.findByRole('dialog');
+    expect(await within(d).findByText('Cette demande est issue de la demande')).toBeInTheDocument();
+    expect(within(d).getByRole('link', { name: 'AA-DI-2026-00005' })).toHaveAttribute('href', '/demandes?demande=5');
+    expect(within(d).queryByRole('button', { name: /Découper/ })).toBeNull();
+  });
+
+  for (const lang of ['fr', 'nl'] as const) {
+    it(`formulaire de découpage (${lang}) sans violation axe-core`, async () => {
+      ficheData = origine();
+      render(wrap(DemandesEntite, lang, ['/demandes-entite?demande=5']));
+      const d = await screen.findByRole('dialog');
+      fireEvent.click(await within(d).findByRole('button', { name: new RegExp(translations['decoupage.bouton'][lang]) }));
+      await within(d).findByText(translations['decoupage.partie'][lang].replace('{n}', '1'));
+      await audit(d);
+    }, 30000);
+  }
+});
+
+describe('vue en colonnes par état (0.16.0, point 6 ; GES-03)', () => {
+  const passage = (de: string, vers: string, permission: string, extra: Record<string, unknown> = {}) => ({
+    de_etat: de, vers_etat: vers, permission, acteur: 'service', via: null, motif_liste: null, commentaire: 'interdit', commentaire_public: 0, compte_rendu: 0, is_active: 1, ...extra });
+  const gestionnaire = () => roles.find((r) => r.code === 'gestionnaire')!;
+
+  it('téléphone : une colonne à la fois avec son nombre ; « Déplacer » ne propose que les états permis ; la fiche s’ouvre sur le passage', async () => {
+    gestionnaire().permissions.push('demandes:traiter');
+    passagesData = [passage('qualifiee', 'en_cours', 'demandes:traiter'), passage('qualifiee', 'terminee', 'demandes:traiter', { commentaire: 'facultatif' }),
+      passage('qualifiee', 'refusee', 'demandes:traiter', { motif_liste: 'motif_refus' }), passage('qualifiee', 'cloturee', 'demandes:admin_inconnue'),
+      passage('qualifiee', 'rouverte', 'demandes:admin_inconnue'),
+      passage('qualifiee', 'en_attente', 'demandes:traiter', { is_active: 0 }), passage('qualifiee', 'en_cours', 'demandes:creer', { acteur: 'demandeur' })];
+    const carte = demande(4, 'AA-DI-2026-00004', 'qualifiee');
+    ficheData = demande(4, 'AA-DI-2026-00004', 'qualifiee', { pieces: [], suiveurs: [],
+      transitions: [{ vers: 'en_cours', via: null, motif_liste: null, commentaire: 'interdit', commentaire_public: 0, compte_rendu: 0 }] });
+    const avant = demandes.splice(0, demandes.length, carte, demande(2, 'AA-DI-2026-00002', 'a_qualifier'));
+    try {
+      render(wrap(DemandesEntite, 'fr', ['/demandes-entite?affichage=colonnes']));
+      await waitFor(() => expect(gets.some((u) => u.includes('etats=a_qualifier%2Cqualifiee%2Cen_attente%2Cen_cours%2Cterminee%2Crouverte') || u.includes('etats=a_qualifier,qualifiee'))).toBe(true));
+      const choix = await screen.findByRole('radiogroup', { name: 'Colonne' });
+      expect(within(choix).getByText('À qualifier (1)')).toBeInTheDocument();
+      fireEvent.click(within(choix).getByText('Qualifiée (1)'));
+      fireEvent.click(await screen.findByRole('button', { name: 'Déplacer AA-DI-2026-00004' }));
+      const menu = await screen.findByRole('menu');
+      expect(within(menu).getAllByRole('menuitem').map((m) => m.textContent)).toEqual(['En cours', 'Terminée']);
+      fireEvent.click(within(menu).getByText('En cours'));
+      const d = await screen.findByRole('dialog');
+      expect(await within(d).findByText(/Démarrer les travaux AA-DI-2026-00004/)).toBeInTheDocument();
+      expect(within(d).getByText(/passe de « Qualifiée » à « En cours »/)).toBeInTheDocument();
+      expect(posts.length, 'rien d’envoyé sans confirmation').toBe(0);
+    } finally {
+      demandes.splice(0, demandes.length, ...avant);
+      gestionnaire().permissions.pop();
+    }
+  });
+
+  it('sans passage permis, pas de bouton « Déplacer » ; retour à la liste par le choix d’affichage', async () => {
+    render(wrap(DemandesEntite, 'fr', ['/demandes-entite?affichage=colonnes']));
+    await screen.findByRole('radiogroup', { name: 'Colonne' });
+    expect(screen.queryByRole('button', { name: /Déplacer/ })).toBeNull();
+    fireEvent.click(screen.getByText('Liste'));
+    await waitFor(() => expect(screen.queryByRole('radiogroup', { name: 'Colonne' })).toBeNull());
+  });
+
+  for (const lang of ['fr', 'nl'] as const) {
+    it(`colonnes (${lang}) sans violation axe-core`, async () => {
+      const { container } = render(wrap(DemandesEntite, lang, ['/demandes-entite?affichage=colonnes']));
+      await screen.findByRole('radiogroup', { name: translations['colonnes.choisir'][lang] });
+      await audit(container);
     }, 30000);
   }
 });

@@ -18,6 +18,7 @@ const LIGNE = {
   questions_categorie: 'SELECT * FROM questions_categorie WHERE id = ?',
   help_faq: 'SELECT * FROM help_faq WHERE id = ?',
   modeles_reponse: 'SELECT * FROM modeles_reponse WHERE id = ?',
+  services: 'SELECT * FROM services WHERE id = ?',
 };
 const egal = (a, b) => (a ?? null) === (b ?? null);
 

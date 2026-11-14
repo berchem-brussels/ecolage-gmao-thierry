@@ -1,6 +1,6 @@
 # Serveur MCP
 
-Version de l'application : **0.15.0** · Mis à jour le 09/11/2026 · Le français fait foi.
+Version de l'application : **0.16.0** · Mis à jour le 10/11/2026 · Le français fait foi.
 
 ## Accès
 
@@ -19,6 +19,17 @@ Version de l'application : **0.15.0** · Mis à jour le 09/11/2026 · Le frança
 - Depuis la 0.4.1, les fiches de catégorie, de priorité, de jour de l'horaire et de jour non ouvré portent `trace` (`etat`, `le`, `par`) : qui les a modifiées en dernier et quand, ou « livrée ». Le nom n'est rendu qu'aux personnes de l'entité. Aucun outil nouveau.
 - Depuis la 0.5.0, le serveur retire les espaces de début et de fin de tout texte reçu, par le MCP comme par l'API, sauf les mots de passe ; un champ obligatoire fait seulement d'espaces est refusé (`VALIDATION`), avant tout jeton de confirmation.
 - Les instructions envoyées au client demandent de commencer par `get_profile` : les données métier sont celles de l'entité active ; `select_entite` la change. Elles disent aussi que le MCP ne transporte aucun fichier, et qu'une demande se dépose par `create_demande`, le lieu proposé d'office étant `lieu_propose` dans `get_profile`, et les derniers lieux de ses demandes `lieux_recents` (0.7.5). Depuis la 0.8.0, elles disent que les pièces du brouillon partent avec la demande suivante, même déposée par `create_demande`, et qu'il faut le dire à la personne.
+
+## 0.16.0
+
+Outils nouveaux de la validation par le chef de service, des services, du regroupement et du découpage (étapes 11 et 12) :
+
+- `list_demandes_a_valider` (`GET /api/demandes/a-valider`, `demandes:valider`) : demandes « En validation » des services dont la personne est chef ou suppléant pendant sa période, la plus ancienne d’abord ; recherche `q` (numéro, texte, lieu, demandeur). Le chef valide ou refuse par `change_etat_demande` (`etat` `a_qualifier`, ou `refusee_validation` avec un `commentaire` obligatoire, lu par le demandeur).
+- `list_services`, `get_service`, `create_service`, `update_service` et `deactivate_service` en deux appels (`/api/services`, administrateur) : code, noms FR et NL, chef (`valideur_id`), suppléant et sa période ; le chef et le suppléant doivent avoir le rôle « Valideur » dans l'entité du service (`VALIDEUR_SANS_ROLE`).
+- `fusionner_demande` (`POST /api/demandes/:id/fusionner`, `demandes:traiter`) en deux appels : `principale_id`, `commentaire` facultatif lu par le demandeur ; `prepare_fusionner_demande` dit la demande principale et le nombre de personnes reportées. Refus : `FUSION_ELLE_MEME`, `FUSION_PRINCIPALE_FERMEE`, `TRANSITION_INTERDITE`. La route des passages refuse ce passage (`TRANSITION_PAR_ROUTE`).
+- `decouper_demande` (`POST /api/demandes/:id/decouper`, `demandes:traiter`) en deux appels : `parties` (une à cinq, `description` de 10 caractères au moins, `categorie_id` et `lieu_id` facultatifs), `commentaire` ; `prepare_decouper_demande` dit le nombre de demandes nouvelles. Tout ou rien ; refus `DECOUPAGE_ETAT`.
+
+Outils enrichis : `create_demande` prend `demandeur_id` et `canal` (`telephone`, `courriel`) ensemble pour une demande reçue par le service technique (`ENCODAGE_INCOMPLET`, `DEMANDEUR_HORS_ENTITE`) ; `get_demande` rend `service`, `valideur`, `transitions_valideur`, `encodee_par`, `fusionnee_dans`, `regroupees` (service), `issue_de`, `issues` et `decoupable` ; `update_user` et `list_users` prennent `service_id`. Exemple : « Valide la demande AC-DI-2026-00021 de mon service. » (chef de service) L'assistant appelle `list_demandes_a_valider`, lit la demande par `get_demande`, puis `change_etat_demande` avec `etat` `a_qualifier` après accord.
 
 ## 0.15.0
 

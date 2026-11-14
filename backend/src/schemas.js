@@ -200,7 +200,7 @@ module.exports = {
   noteParams: obj({ version: { type: 'string', pattern: '^\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}$' } }, ['version']),
   nouveautesLues: obj({}),
 
-  userList: listQuery({ is_active: flag, entite_id: T.int(1) }),
+  userList: listQuery({ is_active: flag, entite_id: T.int(1), service_id: T.int(1) }),
   // Modèle Microsoft 365 (standard v3.2, section 8.1) : mot de passe généré ou encodé, changement imposé en option.
   userCreate: {
     ...obj({
@@ -220,7 +220,25 @@ module.exports = {
     lieu_habituel_id: lieuOuNul,
     // Accès de secours par mot de passe en mode « sso » (section 8.6), réglé par l'administrateur.
     is_admin_local: flag,
+    // 0.16.0 (ROL-04) : service du compte dans son entité de rattachement ; null le retire.
+    service_id: { type: ['integer', 'null'], minimum: 1 },
   }),
+
+  // 0.16.0 (étape 11 ; ROL-04) : services des entités, valideur et suppléant pour une période (administrateur).
+  serviceList: listQuery({ entite_id: T.int(1), is_active: flag }),
+  serviceCreate: obj({
+    entite_id: T.int(1), code: { type: 'string', pattern: '^[A-Za-z0-9][A-Za-z0-9._+-]{1,29}$' }, nom_fr: T.reqStr(150), nom_nl: T.reqStr(150),
+    valideur_id: { type: ['integer', 'null'], minimum: 1 }, suppleant_id: { type: ['integer', 'null'], minimum: 1 },
+    suppleant_du: { type: ['string', 'null'], format: 'date' }, suppleant_au: { type: ['string', 'null'], format: 'date' }, ordre: T.int(0, 100000),
+  }, ['entite_id', 'code', 'nom_fr', 'nom_nl']),
+  serviceUpdate: obj({
+    code: { type: 'string', pattern: '^[A-Za-z0-9][A-Za-z0-9._+-]{1,29}$' }, nom_fr: T.reqStr(150), nom_nl: T.reqStr(150),
+    valideur_id: { type: ['integer', 'null'], minimum: 1 }, suppleant_id: { type: ['integer', 'null'], minimum: 1 },
+    suppleant_du: { type: ['string', 'null'], format: 'date' }, suppleant_au: { type: ['string', 'null'], format: 'date' }, ordre: T.int(0, 100000),
+    is_active: { type: 'integer', enum: [1] },
+  }),
+  serviceDeactivate: obj({ motif }, ['motif']),
+  demandeAValider: listQuery({}),
 
   // Réglages de la connexion Microsoft (gabarit 1.3.0, section 8.6) ; le secret est chiffré et jamais renvoyé.
   authSettings: obj({
@@ -253,6 +271,9 @@ module.exports = {
     // 0.7.0 (DEM-07, DEM-08) : pour un collègue (beneficiaire_id) ou pour un service ou une personne sans compte
     // (beneficiaire_texte), l'un ou l'autre ; date souhaitée (AAAA-MM-JJ) et créneau, facultatifs.
     beneficiaire_id: { type: ['integer', 'null'], minimum: 1 }, beneficiaire_texte: T.str(200),
+    // 0.16.0 (étape 12, GES-05) : demande encodée par le service technique pour un agent de l'entité, reçue par
+    // téléphone ou par courriel ; les deux champs vont ensemble.
+    demandeur_id: T.int(1), canal: T.en('telephone', 'courriel'),
     date_souhaitee: { type: ['string', 'null'], format: 'date' }, creneau: T.str(200),
     // 0.7.0 (DEM-05) : réponses aux questions de la catégorie et de son domaine.
     reponses: reponsesDemande,
@@ -292,6 +313,15 @@ module.exports = {
   // Point 5 (SUI-05, E-21) : complément du demandeur (texte, dans sa langue) ; annulation avec un motif.
   demandeComplement: obj({ complement: T.reqStr(2000), langue: T.en('fr', 'nl') }, ['complement']),
   demandeAnnulation: obj({ motif: T.reqStr(2000) }, ['motif']),
+  // 0.16.0 (GES-06) : fusion dans une demande principale de l'entité, commentaire facultatif lu par le demandeur.
+  demandeFusion: obj({ principale_id: T.int(1), commentaire: T.str(2000) }, ['principale_id']),
+  // 0.16.0 (GES-06) : découpage en une à cinq demandes nouvelles ; lieu et catégorie de l'origine si non donnés.
+  demandeDecoupage: obj({
+    parties: { type: 'array', minItems: 1, maxItems: 5, items: obj({
+      description: { type: 'string', minLength: 10, maxLength: 5000 }, categorie_id: T.int(1), lieu_id: T.int(1),
+    }, ['description']) },
+    commentaire: T.str(2000), langue: T.en('fr', 'nl'),
+  }, ['parties']),
   // Point 6 (SUI-06) : avis en cinq niveaux, commentaire facultatif.
   demandeAvis: obj({ note: T.int(1, 5), commentaire: T.str(2000) }, ['note']),
   // 0.15.0 (point 1 ; SUI-04) : message du fil ; texte facultatif si des pièces attendent le message ; interne : service.

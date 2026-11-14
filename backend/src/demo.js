@@ -17,6 +17,11 @@
  * modèle « administration », la deuxième le modèle « action sociale », puis on alterne. Un lieu dont le code existe déjà
  * n'est jamais modifié : relancer la commande garde les photos déposées et les corrections faites à l'écran.
  * Aucune photo n'est livrée : les photos se déposent à l'écran, dans la base de l'installation seulement.
+ *
+ * Service (version 0.16.0, étape 11) : pour chaque entité active, un service fictif « <ENTITE>-DEMO », marqué is_demo = 1,
+ * dont le valideur est le compte « valideur.<entité> » et dont « agent.<entité> » est membre (s'il n'a pas déjà un
+ * service) : une demande d'aménagement de l'agent passe ainsi par la validation. Un service déjà présent n'est jamais
+ * modifié ; --retirer le désactive avec les comptes.
  */
 const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
@@ -122,7 +127,9 @@ async function main() {
     db.prepare('DELETE FROM sessions WHERE user_id IN (SELECT id FROM users WHERE is_demo = 1)').run();
     const l = db.prepare("UPDATE lieux SET is_active = 0, motif_desactivation = ?, updated_at = datetime('now') WHERE is_demo = 1 AND is_active = 1")
       .run(MOTIF_RETRAIT);
-    logAudit(null, 'demo.retrait', 'user', null, { comptes: r.changes, lieux: l.changes }, 'cli');
+    const sv = db.prepare("UPDATE services SET is_active = 0, motif_desactivation = ?, updated_at = datetime('now') WHERE is_demo = 1 AND is_active = 1")
+      .run(MOTIF_RETRAIT);
+    logAudit(null, 'demo.retrait', 'user', null, { comptes: r.changes, lieux: l.changes, services: sv.changes }, 'cli');
     saveNow();
     console.log(`[DEMO] ${r.changes} compte(s) et ${l.changes} lieu(x) de démonstration désactivé(s).`);
     return;
@@ -137,6 +144,7 @@ async function main() {
   const label = (code) => ROLES.find((r) => r.code === code).label_fr;
   const created = [];
   let lieux = 0;
+  let services = 0;
 
   db.transaction(() => {
     for (const e of entites) {
@@ -159,13 +167,29 @@ async function main() {
     db.prepare("UPDATE lieux SET is_active = 1, motif_desactivation = NULL, updated_at = datetime('now') WHERE is_demo = 1 AND is_active = 0 AND motif_desactivation = ?")
       .run(MOTIF_RETRAIT);
     entites.forEach((e, i) => { lieux += seedLieux(db, e, MODELES[i % MODELES.length]); });
-    logAudit(null, 'demo.chargement', 'user', null, { comptes: created.length, lieux }, 'cli');
+    // Service de démonstration (0.16.0) : créé s'il manque, réactivé s'il a été retiré par --retirer.
+    db.prepare("UPDATE services SET is_active = 1, motif_desactivation = NULL, updated_at = datetime('now') WHERE is_demo = 1 AND is_active = 0 AND motif_desactivation = ?")
+      .run(MOTIF_RETRAIT);
+    for (const e of entites) {
+      const code = `${e.code}-DEMO`;
+      const compte = (role) => db.prepare('SELECT id FROM users WHERE email = ?').get(`${role}.${e.code.toLowerCase()}@${DOMAIN}`).id;
+      let sv = db.prepare('SELECT id FROM services WHERE entite_id = ? AND code = ?').get(e.id, code);
+      if (!sv) {
+        const r = db.prepare(`INSERT INTO services (entite_id, code, nom_fr, nom_nl, valideur_id, ordre, is_demo) VALUES (?, ?, ?, ?, ?, 10, 1)`)
+          .run(e.id, code, 'Secrétariat (démo)', 'Secretariaat (demo)', compte('valideur'));
+        sv = { id: r.lastInsertRowid };
+        services += 1;
+      }
+      db.prepare('UPDATE users SET service_id = ? WHERE id = ? AND service_id IS NULL').run(sv.id, compte('agent'));
+    }
+    logAudit(null, 'demo.chargement', 'user', null, { comptes: created.length, lieux, services }, 'cli');
   })();
   saveNow();
 
   console.log(`[DEMO] ${created.length} comptes de démonstration prêts.`);
   for (const email of created) console.log(`  ${email}`);
   console.log(`[DEMO] ${lieux} lieu(x) de démonstration créé(s) ; les lieux déjà présents sont gardés tels quels.`);
+  console.log(`[DEMO] ${services} service(s) de démonstration créé(s) (valideur : valideur.<entité>, membre : agent.<entité>).`);
   console.log(`[DEMO] Mot de passe commun, affiché une seule fois : ${password}`);
   console.log('[DEMO] Relancer la commande donne un nouveau mot de passe ; --retirer désactive ces comptes et ces lieux.');
 }

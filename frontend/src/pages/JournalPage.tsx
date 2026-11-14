@@ -43,7 +43,7 @@ interface Ligne {
   noms?: Record<string, Nom>;
 }
 /** Lieu ou catégorie nommé par le serveur ; introuvable si l'identifiant ne correspond plus à aucune fiche. */
-interface Nom { type: 'lieu' | 'categorie' | 'valeur' | 'reglage'; id?: number; code?: string; nom_fr?: string; nom_nl?: string; entite_code?: string | null; introuvable?: number }
+interface Nom { type: 'lieu' | 'categorie' | 'valeur' | 'reglage' | 'service' | 'personne' | 'demande'; id?: number; code?: string; nom_fr?: string; nom_nl?: string; entite_code?: string | null; introuvable?: number }
 interface Personne { id: number; email: string; first_name: string; last_name: string }
 interface Entite { id: number; code: string; nom_fr: string; nom_nl: string }
 
@@ -72,6 +72,9 @@ export const CODES_ACTION: Record<string, Record<string, string>> = {
   // 0.15.0 (point 5) : façon de suivre une demande.
   'demande.suivre': { source: 'suivi.source' },
   'demande.ne_plus_suivre': { source: 'suivi.source' },
+  // 0.16.0 (étape 11) : circuit d'une demande au dépôt (validation demandée, sans valideur, déposée par le chef).
+  // 0.16.0 (étape 12) : canal d'une demande encodée par le service technique (téléphone, courriel).
+  'demande.create': { validation: 'audit.validation', canal: 'gest.canal' },
 };
 /**
  * Codes traduits selon la famille de l'action (0.13.0, D2 et D9) : famille (« lieu » pour lieu.create, lieu.update…) →
@@ -180,6 +183,10 @@ export default function JournalPage() {
     if (n.type === 'reglage') return n.introuvable ? `${n.code} (${t('audit.introuvable')})` : tField(n as unknown as Record<string, unknown>, 'nom');
     // Un type de lieu (valeur de liste) se nomme par son libellé seul : son code n'apprend rien au lecteur.
     if (n.type === 'valeur' && !n.introuvable) return tField(n as unknown as Record<string, unknown>, 'nom');
+    // 0.16.0 : une personne (valideur, suppléant) se nomme par son nom et son adresse.
+    if (n.type === 'personne' && !n.introuvable) return `${n.nom_fr} (${n.code})`;
+    // Une demande (origine d'un découpage, principale d'une fusion) se nomme par son numéro.
+    if (n.type === 'demande' && !n.introuvable) return n.code || '';
     return n.introuvable
       ? `#${n.id} (${t('audit.introuvable')})`
       : `${n.code} — ${tField(n as unknown as Record<string, unknown>, 'nom')} (#${n.id})`;
@@ -194,6 +201,8 @@ export default function JournalPage() {
     const cle = chemin.split('.').pop() || '';
     if (BOOLEENS.has(cle) && (v === 0 || v === 1 || typeof v === 'boolean')) return t(v ? 'yes' : 'no');
     if (LISTES_CHAMPS.has(cle) && Array.isArray(v)) return v.map((x) => cleDetail(String(x), l.action)).join(', ');
+    // 0.16.0 : liste de numéros (demandes créées par un découpage).
+    if (Array.isArray(v) && v.every((x) => typeof x === 'string')) return v.join(', ');
     if (v === MASQUE) return t('audit.masque');
     const prefixe = CODES_ACTION[l.action]?.[cle] || CODES_FAMILLE[l.action.split('.')[0]]?.[cle] || CODES[cle];
     if (prefixe && (typeof v === 'string' || typeof v === 'number') && translations[`${prefixe}.${v}`]) return t(`${prefixe}.${v}`);

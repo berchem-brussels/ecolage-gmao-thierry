@@ -682,7 +682,9 @@ const MIGRATIONS = [
     ALTER TABLE demandes ADD COLUMN suspendu_calendaire_min INTEGER NOT NULL DEFAULT 0 CHECK (suspendu_calendaire_min >= 0);
     ALTER TABLE demandes ADD COLUMN decompte_depuis TEXT
   `, (db) => {
-    require('./services/cycle').seedTransitions(db);
+    // 0.16.0 : seulement les passages de la 0.14.0 ; ceux des versions suivantes (« depuis ») arrivent au démarrage,
+    // après les migrations qui les admettent (acteur « valideur », 014).
+    require('./services/cycle').seedTransitions(db, { initiaux: true });
     db.prepare(`INSERT INTO demande_historique (demande_id, entite_id, de_etat, vers_etat, user_id, canal, created_at)
       SELECT id, entite_id, NULL, 'a_qualifier', demandeur_id, CASE WHEN canal = 'mcp' THEN 'mcp' ELSE 'ecran' END, created_at FROM demandes`).run();
     db.prepare(`INSERT INTO demande_historique (demande_id, entite_id, de_etat, vers_etat, user_id, canal, created_at)
@@ -750,6 +752,66 @@ const MIGRATIONS = [
     CREATE UNIQUE INDEX idx_modeles_reponse_code ON modeles_reponse(entite_id, code) WHERE code IS NOT NULL;
     CREATE INDEX idx_modeles_reponse_entite ON modeles_reponse(entite_id, is_active, ordre);
     ALTER TABLE demande_suiveurs ADD COLUMN source TEXT NOT NULL DEFAULT 'moi_aussi' CHECK (source IN ('moi_aussi', 'abonnement'))
+  `],
+  // 0.16.0 (étape 11 ; DEM-15, ROL-04) : services de chaque entité, réglés par l'administrateur, avec leur valideur
+  // (chef de service) et un suppléant pour une période ; service de chaque compte (dans son entité) ; service du
+  // demandeur noté sur la demande au dépôt (le valideur de la demande se lit par lui). Passages du valideur : la table
+  // des passages est recréée pour admettre l'acteur « valideur » (une contrainte CHECK ne se modifie pas en SQLite) ;
+  // les passages en base, désactivés compris, sont recopiés tels quels, les nouveaux sont ajoutés au démarrage.
+  // Étape 12 (même version) : passages faits par une route propre (via « fusionner », « decouper »), demande dans
+  // laquelle une demande a été regroupée (GES-06, fusion) et demande d'origine d'une demande découpée.
+  ['014_validation', `
+    CREATE TABLE services (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      entite_id INTEGER NOT NULL REFERENCES entites(id) ON DELETE RESTRICT,
+      code TEXT NOT NULL CHECK (length(code) BETWEEN 2 AND 30),
+      nom_fr TEXT NOT NULL CHECK (length(nom_fr) BETWEEN 1 AND 150),
+      nom_nl TEXT NOT NULL CHECK (length(nom_nl) BETWEEN 1 AND 150),
+      valideur_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+      suppleant_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+      suppleant_du TEXT CHECK (suppleant_du IS NULL OR length(suppleant_du) = 10),
+      suppleant_au TEXT CHECK (suppleant_au IS NULL OR length(suppleant_au) = 10),
+      ordre INTEGER NOT NULL DEFAULT 0,
+      is_active INTEGER NOT NULL DEFAULT 1 CHECK (is_active IN (0, 1)),
+      motif_desactivation TEXT,
+      is_demo INTEGER NOT NULL DEFAULT 0 CHECK (is_demo IN (0, 1)),
+      created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+      updated_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+      UNIQUE (entite_id, code),
+      CHECK ((suppleant_id IS NULL AND suppleant_du IS NULL AND suppleant_au IS NULL)
+        OR (suppleant_id IS NOT NULL AND suppleant_du IS NOT NULL AND suppleant_au IS NOT NULL AND suppleant_du <= suppleant_au))
+    );
+    CREATE INDEX idx_services_entite ON services(entite_id, is_active, ordre);
+    ALTER TABLE users ADD COLUMN service_id INTEGER REFERENCES services(id) ON DELETE SET NULL;
+    ALTER TABLE demandes ADD COLUMN service_id INTEGER REFERENCES services(id) ON DELETE RESTRICT;
+    CREATE INDEX idx_demandes_service ON demandes(service_id, etat);
+    ALTER TABLE demandes ADD COLUMN fusionnee_dans INTEGER REFERENCES demandes(id) ON DELETE RESTRICT;
+    ALTER TABLE demandes ADD COLUMN issue_de INTEGER REFERENCES demandes(id) ON DELETE RESTRICT;
+    CREATE INDEX idx_demandes_fusionnee ON demandes(fusionnee_dans);
+    CREATE INDEX idx_demandes_issue ON demandes(issue_de);
+    CREATE TABLE demande_transitions_014 (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      de_etat TEXT NOT NULL CHECK (length(de_etat) BETWEEN 2 AND 30),
+      vers_etat TEXT NOT NULL CHECK (length(vers_etat) BETWEEN 2 AND 30),
+      permission TEXT NOT NULL CHECK (length(permission) BETWEEN 3 AND 60),
+      acteur TEXT NOT NULL DEFAULT 'service' CHECK (acteur IN ('service', 'demandeur', 'valideur')),
+      condition TEXT CHECK (condition IS NULL OR condition IN ('jamais_en_cours', 'delai_reouverture')),
+      via TEXT CHECK (via IS NULL OR via IN ('qualifier', 'fusionner', 'decouper')),
+      motif_liste TEXT CHECK (motif_liste IS NULL OR length(motif_liste) BETWEEN 2 AND 40),
+      commentaire TEXT NOT NULL DEFAULT 'interdit' CHECK (commentaire IN ('interdit', 'facultatif', 'obligatoire')),
+      commentaire_public INTEGER NOT NULL DEFAULT 0 CHECK (commentaire_public IN (0, 1)),
+      compte_rendu INTEGER NOT NULL DEFAULT 0 CHECK (compte_rendu IN (0, 1)),
+      ordre INTEGER NOT NULL DEFAULT 0,
+      is_active INTEGER NOT NULL DEFAULT 1 CHECK (is_active IN (0, 1)),
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      UNIQUE (de_etat, vers_etat, acteur)
+    );
+    INSERT INTO demande_transitions_014 (id, de_etat, vers_etat, permission, acteur, condition, via, motif_liste, commentaire, commentaire_public, compte_rendu, ordre, is_active, created_at)
+      SELECT id, de_etat, vers_etat, permission, acteur, condition, via, motif_liste, commentaire, commentaire_public, compte_rendu, ordre, is_active, created_at FROM demande_transitions;
+    DROP TABLE demande_transitions;
+    ALTER TABLE demande_transitions_014 RENAME TO demande_transitions
   `],
 ];
 

@@ -1,6 +1,6 @@
 # Aide par écran et FAQ locale
 
-Version 0.15.0 · Fiche fonctionnelle (modèle du standard, section 17.8).
+Version 0.16.0 · Fiche fonctionnelle (modèle du standard, section 17.8).
 
 ## Objectif
 
@@ -33,5 +33,7 @@ Table `help_faq` : entité (ou commune), écran, question et réponse FR et NL, 
 ## Hors périmètre
 
 Depuis la 0.15.0 : fil de messages, notes internes et mentions, modèles de réponse, suivi d'une demande dans les fiches Mes demandes, Demandes de l'entité et Catégories et délais ; trois captures par langue (23 par langue) ; quatre réponses de l'assistant.
+
+Depuis la 0.16.0 : fiches « Demandes à valider » (chef de service), « Services et valideurs » (administrateur) et « Encoder une demande reçue » ; dans « Demandes de l'entité », procédures « Travailler en colonnes par état », « Regrouper », « Découper » et « Encoder » ; trois questions de plus dans Mes demandes ; sept captures par langue (30 par langue), dont deux prises avec le compte de démonstration du chef de service ; six réponses de l'assistant.
 
 Aide contextuelle de l'ouvrier sur téléphone (étape 18) ; invites prêtes à l'emploi de l'assistant (étape 40).

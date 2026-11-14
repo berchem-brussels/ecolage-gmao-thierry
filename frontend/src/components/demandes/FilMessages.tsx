@@ -17,6 +17,9 @@
  *   7. Modèles de réponse (0.15.0, point 4 ; GES-09) : dans une réponse au demandeur, « Insérer un modèle » ajoute au
  *      champ le texte du modèle choisi, dans la langue de la demande, variables remplacées (texteModele) ; le texte se
  *      relit et se modifie avant l'envoi. Liste des modèles actifs chargée à l'ouverture du fil, pour le service seul.
+ *   8. Langue du message (0.16.0, point 0, R2 de la recette de la 0.15.0) : un message porte la langue de son texte,
+ *      pas celle de l'écran de son auteur. Par défaut, la langue de l'écran ; un modèle inséré donne la langue de la
+ *      demande. Le service voit et corrige ce choix (« Langue du message ») ; utile à la GRC et aux courriels.
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Alert, Button, Divider, Form, Input, Radio, Select, Space, Tag, Typography, message } from 'antd';
@@ -44,6 +47,8 @@ export default function FilMessages({ d, service, onLu }: Props) {
   /** Premier message non lu au chargement : le repère reste à sa place pendant la lecture. */
   const [premierNonLu, setPremierNonLu] = useState<number | null>(null);
   const [interne, setInterne] = useState(false);
+  /** Point 8 : langue du texte choisie (null : celle de l'écran). */
+  const [langueTexte, setLangueTexte] = useState<'fr' | 'nl' | null>(null);
   const { user } = useAuth();
   /** Point 3 : collègues mentionnables (chargés au premier choix de « Note interne ») et collègues choisis. */
   const [collegues, setCollegues] = useState<PersonneMentionnee[] | null>(null);
@@ -81,6 +86,7 @@ export default function FilMessages({ d, service, onLu }: Props) {
     const ajout = texteModele(m, d, (etat, l) => translations[`demande.etat.${etat}`]?.[l] || etat);
     const avant = (form.getFieldValue('texte') || '').trimEnd();
     form.setFieldsValue({ texte: avant ? `${avant}\n\n${ajout}` : ajout });
+    setLangueTexte(d.langue === 'nl' ? 'nl' : 'fr');
   };
   useEffect(() => {
     if (!interne || collegues !== null) return;
@@ -93,6 +99,7 @@ export default function FilMessages({ d, service, onLu }: Props) {
   }, [d.id, ecrire]);
 
   if (!droits?.lecture) return null;
+  const langueMessage = langueTexte ?? lang;
 
   const auteur = (m: Message) => {
     if (m.de_moi) return t('fil.auteur.moi');
@@ -106,12 +113,13 @@ export default function FilMessages({ d, service, onLu }: Props) {
     if (!texte && !pieces.length) { setErreur(t('fil.vide.erreur')); return; }
     setEnvoi(true);
     try {
-      await api.post<Message>(`/demandes/${d.id}/messages`, { texte: texte || null, interne: service && interne, langue: lang,
+      await api.post<Message>(`/demandes/${d.id}/messages`, { texte: texte || null, interne: service && interne, langue: langueMessage,
         ...(service && interne && mentions.length ? { mentions } : {}) });
       message.success(t(interne ? 'fil.envoye.interne' : 'fil.envoye'));
       form.resetFields();
       setPieces([]);
       setInterne(false);
+      setLangueTexte(null);
       setMentions([]);
       await charger(false);
       surLu.current?.();
@@ -181,8 +189,14 @@ export default function FilMessages({ d, service, onLu }: Props) {
             </Form.Item>
           )}
           <Form.Item name="texte" label={t('fil.message')} tooltip={hint('fil.message')}>
-            <Input.TextArea autoSize={{ minRows: 2, maxRows: 8 }} maxLength={4000} lang={lang} />
+            <Input.TextArea autoSize={{ minRows: 2, maxRows: 8 }} maxLength={4000} lang={langueMessage} />
           </Form.Item>
+          {service && (
+            <Form.Item label={t('fil.langue')} tooltip={hint('fil.langue')} style={{ marginBottom: 12 }}>
+              <Radio.Group aria-label={t('fil.langue')} optionType="button" size="small" value={langueMessage} onChange={(e) => setLangueTexte(e.target.value)}
+                options={[{ value: 'fr', label: t('fil.langue.fr') }, { value: 'nl', label: t('fil.langue.nl') }]} />
+            </Form.Item>
+          )}
           <Form.Item label={t('demande.champ.pieces')}>
             <PiecesDemande pieces={pieces} plafonds={plafonds} onChange={setPieces} destination={`/demandes/${d.id}/messages/pieces`} />
           </Form.Item>
