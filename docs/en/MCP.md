@@ -1,6 +1,10 @@
 # MCP server
 
-Application version: **0.16.0** · Updated on 10/11/2026 · The French text prevails (`docs/fr/MCP.md`).
+Application version: **0.16.1** · Updated on 16/11/2026 · The French text prevails (`docs/fr/MCP.md`).
+
+## 0.16.1
+
+No new tool. `get_piece` also opens to the head of service the attachments of the requests they must approve. `create_demande`: a request with `danger` in a category that needs approval arrives "To qualify" in P1.
 
 ## Access and rules
 

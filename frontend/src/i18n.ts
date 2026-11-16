@@ -69,6 +69,10 @@ export const translations: Record<string, Record<Lang, string>> = {
   'demande.envoyee.title': { fr: "Demande envoyée", nl: "Aanvraag verzonden" },
   'demande.envoyee.numero': { fr: "Votre numéro de demande :", nl: "Uw aanvraagnummer:" },
   'demande.envoyee.suite': { fr: "Le service technique l'a reçue. Vous suivez son avancement dans « Mes demandes ».", nl: "De technische dienst heeft ze ontvangen. U volgt de voortgang in « Mijn aanvragen »." },
+  // 0.16.1 (R1 de la recette 0.16.0) : demande « En validation » à l'envoi.
+  'demande.envoyee.validation': { fr: "Votre chef de service (Service : {service}) doit d'abord donner son accord. Le délai du service technique comptera à partir de cet accord.", nl: "Uw diensthoofd (Dienst: {service}) moet eerst akkoord gaan. De termijn van de technische dienst telt vanaf dat akkoord." },
+  'demande.envoyee.validation.sans': { fr: "Votre chef de service doit d'abord donner son accord. Le délai du service technique comptera à partir de cet accord.", nl: "Uw diensthoofd moet eerst akkoord gaan. De termijn van de technische dienst telt vanaf dat akkoord." },
+  'demande.envoyee.suite.validation': { fr: "Vous suivez son avancement dans « Mes demandes » ; vous y verrez la décision de votre chef de service.", nl: "U volgt de voortgang in « Mijn aanvragen »; u ziet er de beslissing van uw diensthoofd." },
   'demande.envoyee.autre': { fr: "Faire une autre demande", nl: "Nog een aanvraag indienen" },
   // 0.7.0, point 4 (DEM-11) : brouillon.
   'demande.brouillon.propose': { fr: "Vous aviez commencé une demande le {date} à {heure}.", nl: "U was op {date} om {heure} begonnen met een aanvraag." },
@@ -173,6 +177,8 @@ export const translations: Record<string, Record<Lang, string>> = {
   'fil.titre': { fr: 'Messages', nl: 'Berichten' },
   'fil.vide': { fr: 'Aucun message pour l’instant. Écrivez ici au service technique si vous avez une question ou une précision.', nl: 'Nog geen berichten. Schrijf hier naar de technische dienst als u een vraag of een verduidelijking hebt.' },
   'fil.vide.service': { fr: 'Aucun message pour l’instant.', nl: 'Nog geen berichten.' },
+  // 0.16.1 (R2) : fil vide d'une demande fermée.
+  'fil.vide.ferme': { fr: 'Aucun message.', nl: 'Geen berichten.' },
   'fil.auteur.moi': { fr: 'Vous', nl: 'U' },
   'fil.auteur.service': { fr: 'Service technique', nl: 'Technische dienst' },
   'fil.auteur.demandeur': { fr: 'Demandeur', nl: 'Aanvrager' },
@@ -256,6 +262,11 @@ export const translations: Record<string, Record<Lang, string>> = {
   'encoder.demandeur.changer': { fr: 'Changer', nl: 'Wijzigen' },
   'encoder.manque.canal': { fr: 'comment la demande est arrivée', nl: 'hoe de aanvraag binnenkwam' },
   'encoder.manque.demandeur': { fr: 'qui demande', nl: 'wie vraagt' },
+  // 0.16.1 (R1) : demande encodée qui part chez le chef de service de la personne.
+  'encoder.validation': { fr: "La demande attend l'accord du chef de service de la personne (Service : {service}). Le délai du service technique comptera à partir de cet accord.", nl: "De aanvraag wacht op het akkoord van het diensthoofd van de persoon (Dienst: {service}). De termijn van de technische dienst telt vanaf dat akkoord." },
+  'encoder.validation.sans': { fr: "La demande attend l'accord du chef de service de la personne. Le délai du service technique comptera à partir de cet accord.", nl: "De aanvraag wacht op het akkoord van het diensthoofd van de persoon. De termijn van de technische dienst telt vanaf dat akkoord." },
+  // 0.16.1 (R3) : numéro d'une demande encodée pour un agent.
+  'encoder.numero': { fr: 'Numéro de la demande :', nl: 'Nummer van de aanvraag:' },
   'encoder.autre': { fr: 'Encoder une autre demande', nl: 'Een andere aanvraag invoeren' },
   'encoder.pour': { fr: 'Demande de', nl: 'Aanvraag van' },
   'encoder.suite': { fr: "La personne retrouve la demande dans ses demandes et suit son avancement.", nl: 'De persoon vindt de aanvraag terug in haar aanvragen en volgt de voortgang.' },
@@ -280,7 +291,7 @@ export const translations: Record<string, Record<Lang, string>> = {
   'fusion.fiche': { fr: 'Cette demande a été regroupée avec la demande', nl: 'Deze aanvraag werd samengevoegd met aanvraag' },
   'fusion.regroupees': { fr: 'Demandes regroupées ici', nl: 'Hier samengevoegde aanvragen' },
   'audit.action.demande.fusion': { fr: 'Demande regroupée avec une autre', nl: 'Aanvraag samengevoegd met een andere' },
-  'audit.detail.principale_id': { fr: 'Demande principale (identifiant)', nl: 'Hoofdaanvraag (id)' },
+  'audit.detail.principale_id': { fr: 'Demande principale', nl: 'Hoofdaanvraag' },
   'audit.detail.principale_numero': { fr: 'Demande principale', nl: 'Hoofdaanvraag' },
   'audit.detail.personnes_reportees': { fr: 'Personnes qui suivent désormais la principale', nl: 'Personen die voortaan de hoofdaanvraag volgen' },
   // 0.16.0 (point 5, GES-06) : découpage d'une demande.
@@ -361,6 +372,7 @@ export const translations: Record<string, Record<Lang, string>> = {
   'users.service.aide': { fr: "Un service de l'entité de rattachement. Son chef de service valide les demandes d'aménagement, de déménagement et d'achat de cette personne.", nl: 'Een dienst van de entiteit van aansluiting. Zijn diensthoofd keurt de aanvragen voor inrichting, verhuizing en aankoop van deze persoon goed.' },
   'audit.validation.demandee': { fr: 'Demandée au chef de service', nl: 'Gevraagd aan het diensthoofd' },
   'audit.validation.sans_valideur': { fr: 'Sans valideur : envoyée au service technique', nl: 'Zonder goedkeurder: naar de technische dienst gestuurd' },
+  'audit.validation.danger': { fr: 'Sautée pour danger : envoyée au service technique', nl: 'Overgeslagen wegens gevaar: naar de technische dienst gestuurd' },
   'audit.validation.auteur_valideur': { fr: 'Déposée par le chef de service lui-même', nl: 'Ingediend door het diensthoofd zelf' },
   // 0.16.0 (point 1) : services des entités et validation par le chef de service.
   'audit.action.service.create': { fr: 'Service ajouté', nl: 'Dienst toegevoegd' },

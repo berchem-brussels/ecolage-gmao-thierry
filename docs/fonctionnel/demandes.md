@@ -1,6 +1,6 @@
 # Demandes d'intervention : dépôt et suivi par le demandeur
 
-Version 0.16.0 · Fiche fonctionnelle (modèle du standard, section 17.8).
+Version 0.16.1 · Fiche fonctionnelle (modèle du standard, section 17.8).
 
 ## Objet
 
@@ -80,6 +80,7 @@ Permettre à tout agent de l'administration communale et du CPAS de signaler un 
 | 48 | Demande encodée pour l'agent (0.16.0) : une demande reçue par le service technique par téléphone ou par courriel est au nom de l'agent, dans ses demandes, avec « Reçue par Téléphone » (ou « Courriel ») sur la fiche | GES-05, DV-129 |
 | 49 | Demande regroupée (0.16.0) : quand le service technique regroupe la demande avec une autre qui signale le même problème, elle est fermée (« Regroupée avec une autre demande ») et renvoie vers la demande principale, que le demandeur, le bénéficiaire et les personnes qui suivaient suivent d'office | GES-06, DV-130 |
 | 50 | Demande découpée (0.16.0) : quand une demande signale plusieurs problèmes, le service technique en crée de nouvelles au nom du même demandeur ; chacune dit « Cette demande est issue de la demande … », avec les délais comptés depuis la demande d'origine | GES-06, DV-131 |
+| 51 | Danger et validation (0.16.1) : une demande « Danger pour les personnes ou les biens » d'une catégorie à valider part tout de suite au service technique en P1, sans attendre l'accord du chef de service ; le journal note la validation sautée pour danger. Après l'envoi d'une demande qui attend l'accord du chef, l'écran le dit et n'annonce pas de délai | DEM-06, DEM-15, DV-135 |
 
 ## Données personnelles
 

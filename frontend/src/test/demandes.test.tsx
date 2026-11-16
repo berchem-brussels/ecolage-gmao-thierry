@@ -275,6 +275,7 @@ describe('demandes (0.5.0, 0.5.1)', () => {
     expect(await screen.findByText('Demande envoyée')).toBeInTheDocument();
     expect(posts).toHaveLength(1);
     expect(posts[0].body).toEqual({ lieu_id: 3, categorie_id: 20, description: 'La porte du local grince fort.', langue: 'fr' });
+    expect(screen.getByText('Votre numéro de demande :')).toBeInTheDocument();
     expect(screen.getByText('AA-DI-2026-00003')).toBeInTheDocument();
     expect(screen.getByText(/Délai indicatif : au plus tard le mardi 10 novembre 2026/)).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /Mes demandes/ })).toHaveAttribute('href', '/demandes');
@@ -282,6 +283,25 @@ describe('demandes (0.5.0, 0.5.1)', () => {
     fireEvent.click(screen.getByRole('button', { name: /Faire une autre demande/ }));
     expect(await screen.findByRole('button', { name: /Envoyer la demande/ })).toBeDisabled();
   });
+
+  for (const [lang, divers, envoyer, titre, attente, suite] of [
+    ['fr', 'Divers', /Envoyer la demande/, 'Demande envoyée', 'Votre chef de service (Service : Secrétariat) doit d\'abord donner son accord. Le délai du service technique comptera à partir de cet accord.', 'Vous suivez son avancement dans « Mes demandes » ; vous y verrez la décision de votre chef de service.'],
+    ['nl', 'Diversen', /aanvraag verzenden/i, 'Aanvraag verzonden', 'Uw diensthoofd (Dienst: Secretariaat) moet eerst akkoord gaan. De termijn van de technische dienst telt vanaf dat akkoord.', 'U volgt de voortgang in « Mijn aanvragen »; u ziet er de beslissing van uw diensthoofd.'],
+  ] as const) {
+    it(`nouvelle demande (0.16.1, R1 ; ${lang}) : demande « En validation » : accord du chef de service, ni délai ni « le service technique l’a reçue »`, async () => {
+      reponsePost = { status: 201, json: { data: demande(3, 'AA-DI-2026-00003', 'en_validation', { service_id: 4, service_nom_fr: 'Secrétariat', service_nom_nl: 'Secretariaat' }), meta: { envelope: 1 } } };
+      const { container } = render(wrap(NouvelleDemandePage, lang));
+      fireEvent.click(await screen.findByRole('button', { name: divers }));
+      fireEvent.change(container.querySelector('textarea') as HTMLTextAreaElement, { target: { value: 'Déplacer deux armoires au premier étage.' } });
+      fireEvent.click(screen.getByRole('button', { name: envoyer }));
+      expect(await screen.findByText(titre)).toBeInTheDocument();
+      expect(screen.getByText('AA-DI-2026-00003')).toBeInTheDocument();
+      expect(screen.getByText(attente)).toBeInTheDocument();
+      expect(screen.getByText(suite)).toBeInTheDocument();
+      expect(container.textContent).not.toMatch(/Délai indicatif|Indicatieve termijn|l'a reçue|heeft ze ontvangen/);
+      await audit(container);
+    }, 30000);
+  }
 
   it('nouvelle demande (0.5.2) : après l’envoi, « Mes demandes » et « Faire une autre demande » gardent un espace quand ils passent l’un sous l’autre', async () => {
     render(wrap(NouvelleDemandePage, 'fr'));
@@ -1498,6 +1518,33 @@ describe('fil de messages (0.15.0, point 2 ; SUI-04, SUI-07)', () => {
     expect(gets.some((u) => /\/demandes\/\d+\/messages/.test(u))).toBe(false);
   });
 
+  for (const [lang, invitation, aucun, ferme] of [
+    ['fr', /Écrivez ici/, 'Aucun message.', /La demande est fermée/],
+    ['nl', /Schrijf hier/, 'Geen berichten.', /De aanvraag is afgesloten/],
+  ] as const) {
+    it(`fil vide d’une demande fermée (0.16.1, R2 ; ${lang}) : pas d’invitation à écrire, « aucun message » et demande fermée`, async () => {
+      ficheData = mienne('cloturee', { ouverte: 0, fil: { lecture: 1, ecriture: 0, interne: 0 }, completable: 0, annulable: 0 });
+      const d = await ouvrirMienne(lang);
+      const fil = await within(d).findByRole('region', { name: lang === 'fr' ? 'Messages' : 'Berichten' });
+      expect(await within(fil).findByText(aucun)).toBeInTheDocument();
+      expect(within(fil).getByText(ferme)).toBeInTheDocument();
+      expect(within(fil).queryByText(invitation)).toBeNull();
+    });
+  }
+
+  it('fil vide (0.16.1, R2) : invitation à écrire si la personne peut écrire ; sinon « Aucun message pour l’instant »', async () => {
+    ficheData = mienne();
+    const d = await ouvrirMienne();
+    const fil = await within(d).findByRole('region', { name: 'Messages' });
+    expect(await within(fil).findByText(/Écrivez ici au service technique/)).toBeInTheDocument();
+    cleanupAll();
+    ficheData = mienne('qualifiee', { fil: { lecture: 1, ecriture: 0, interne: 0 } });
+    const d2 = await ouvrirMienne();
+    const fil2 = await within(d2).findByRole('region', { name: 'Messages' });
+    expect(await within(fil2).findByText('Aucun message pour l’instant.')).toBeInTheDocument();
+    expect(within(fil2).queryByText(/Écrivez ici/)).toBeNull();
+  });
+
   it('service : noms des agents et du demandeur, note interne marquée ; « Note interne au service » envoie interne', async () => {
     ficheData = demande(2, 'AA-DI-2026-00002', 'qualifiee', { transitions: [], fil: { lecture: 1, ecriture: 1, interne: 1 }, pieces: [] });
     messagesData = [msg(1, 'demandeur', 'Elle clignote.', { auteur_prenom: 'Agathe', auteur_nom: 'Agent' }),
@@ -1759,11 +1806,31 @@ describe('demande encodée par le service technique (0.16.0, point 3 ; GES-05)',
     fireEvent.click(envoyer);
     expect(await screen.findByText('Demande envoyée')).toBeInTheDocument();
     expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Encoder une demande reçue');
+    // 0.16.1 (R3 de la recette 0.16.0) : l'encodeur n'est pas le demandeur.
+    expect(screen.getByText('Numéro de la demande :')).toBeInTheDocument();
+    expect(screen.queryByText(/Votre numéro de demande/)).toBeNull();
     expect(posts[0].body).toEqual({ lieu_id: 9, categorie_id: 20, description: 'Appel : la porte du local grince fort.', langue: 'fr', demandeur_id: 9, canal: 'telephone' });
     expect(screen.getByRole('link', { name: /Demandes de l'entité/ })).toHaveAttribute('href', '/demandes-entite');
     expect(screen.getByRole('button', { name: /Encoder une autre demande/ })).toBeInTheDocument();
     expect(gets.some((u) => u.startsWith('/api/demandes/brouillon')), 'aucun brouillon lu').toBe(false);
     expect(puts.some((p) => p.url.startsWith('/api/demandes/brouillon')), 'aucun brouillon écrit').toBe(false);
+  });
+
+  it('encodage (0.16.1, R1) : demande qui part en validation : accord du chef de service de la personne, sans délai', async () => {
+    reponsePost = { status: 201, json: { data: demande(3, 'AA-DI-2026-00003', 'en_validation', { canal: 'telephone', demandeur_prenom: 'Hélène', demandeur_nom: 'Dupré', service_id: 4, service_nom_fr: 'Secrétariat', service_nom_nl: 'Secretariaat' }), meta: { envelope: 1 } } };
+    const { container } = render(wrap(Encoder, 'fr', ['/demandes/encoder']));
+    fireEvent.click(await screen.findByText('Téléphone'));
+    fireEvent.change(screen.getByLabelText('Qui demande ? Cherchez par le nom'), { target: { value: 'Hél' } });
+    fireEvent.click(await screen.findByRole('button', { name: 'Hélène Dupré' }));
+    fireEvent.change(screen.getByLabelText('Chercher un lieu'), { target: { value: 'salle' } });
+    fireEvent.click(await screen.findByRole('button', { name: /Salle n°21/ }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Divers' }));
+    fireEvent.change(screen.getByLabelText('3. Décrivez le problème'), { target: { value: 'Appel : déplacer deux armoires.' } });
+    fireEvent.click(screen.getByRole('button', { name: /Envoyer la demande/ }));
+    expect(await screen.findByText('Demande envoyée')).toBeInTheDocument();
+    expect(screen.getByText('La demande attend l\'accord du chef de service de la personne (Service : Secrétariat). Le délai du service technique comptera à partir de cet accord.')).toBeInTheDocument();
+    expect(screen.getByText('La personne retrouve la demande dans ses demandes et suit son avancement.')).toBeInTheDocument();
+    expect(container.textContent).not.toMatch(/Délai indicatif/);
   });
 
   it('fiche du service : « Reçue par Téléphone · encodée par » ; le demandeur lit le canal sans le nom', async () => {

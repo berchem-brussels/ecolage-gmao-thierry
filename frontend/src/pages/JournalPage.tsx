@@ -75,6 +75,15 @@ export const CODES_ACTION: Record<string, Record<string, string>> = {
   // 0.16.0 (étape 11) : circuit d'une demande au dépôt (validation demandée, sans valideur, déposée par le chef).
   // 0.16.0 (étape 12) : canal d'une demande encodée par le service technique (téléphone, courriel).
   'demande.create': { validation: 'audit.validation', canal: 'gest.canal' },
+  // 0.16.1 (R4 de la recette 0.16.0) : état de départ d'une demande regroupée.
+  'demande.fusion': { de: 'demande.etat_service' },
+};
+/**
+ * Champs redondants selon l'action (0.16.1, R4) : champ masqué → champ qui le dit déjà quand le serveur l'a nommé.
+ * Le numéro de la principale d'un regroupement reste affiché si la principale est introuvable.
+ */
+export const REDONDANTS: Record<string, Record<string, string>> = {
+  'demande.fusion': { principale_numero: 'principale_id' },
 };
 /**
  * Codes traduits selon la famille de l'action (0.13.0, D2 et D9) : famille (« lieu » pour lieu.create, lieu.update…) →
@@ -220,8 +229,12 @@ export default function JournalPage() {
     if (vide(v)) return t('audit.aucun');
     return brut(v);
   };
-  /** Champs affichés d'une ligne : les champs vides sont masqués, sauf « Avant » et « Après ». */
-  const champs = (l: Ligne) => Object.entries(l.details || {}).filter(([k, v]) => !vide(v) || VIDE_DIT.has(k));
+  /** Champs affichés d'une ligne : les champs vides sont masqués, sauf « Avant » et « Après » ; les champs redondants aussi (R4). */
+  const champs = (l: Ligne) => Object.entries(l.details || {}).filter(([k, v]) => {
+    const nomme = REDONDANTS[l.action]?.[k];
+    if (nomme && l.noms?.[nomme] && !l.noms[nomme].introuvable) return false;
+    return !vide(v) || VIDE_DIT.has(k);
+  });
 
   return (
     <div>

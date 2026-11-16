@@ -1,6 +1,10 @@
 # MCP-server
 
-Versie van de toepassing: **0.16.0** · Bijgewerkt op 10/11/2026 · De Franse tekst is rechtsgeldig (`docs/fr/MCP.md`).
+Versie van de toepassing: **0.16.1** · Bijgewerkt op 16/11/2026 · De Franse tekst is rechtsgeldig (`docs/fr/MCP.md`).
+
+## 0.16.1
+
+Geen nieuwe tool. `get_piece` opent ook voor het diensthoofd de bijlagen van de aanvragen die het moet goedkeuren. `create_demande`: een aanvraag met `danger` in een categorie met goedkeuring komt « Te kwalificeren » binnen in P1.
 
 ## Toegang en regels
 

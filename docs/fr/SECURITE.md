@@ -2,6 +2,39 @@
 
 Le français fait foi. Grille de la section 10.2 du standard, rejouée à chaque version. « Non joué » veut dire que le contrôle n'a pas tourné.
 
+## 0.16.1 (16/11/2026)
+
+Correctifs de la recette de la 0.16.0 (R1 à R5), danger sans validation (décision du 16/11/2026), contrôle des téléphones sur le moteur WebKit avec des parcours complets. Environnement : bac à sable de Claude, Node 22.23.4, copie locale de la 0.16.1 sur une base de démonstration jetable.
+
+| Famille | Contrôle | Résultat |
+| --- | --- | --- |
+| Autorisation (IDOR) | Pièce jointe d'une demande à valider : lue par le chef du service de la demande et par son suppléant pendant sa période seulement ; refusée au chef d'un autre service de la même entité, au chef de l'autre entité, au suppléant hors période, à un collègue ; pièce d'une note interne refusée au chef (403) | Conforme (`validation.test.js`) |
+| Autorisation | Une seule règle du valideur (`valideurDe` de `services/services.js`) pour la lecture d'une demande, ses passages et ses pièces ; les deux copies de la 0.16.0 retirées | Conforme (`validation.test.js`, `cycle.test.js`, `pieces.test.js`) |
+| Logique | Demande « Danger » d'une catégorie à valider : « À qualifier » en P1, absente des demandes à valider du chef, visible du service technique, journal `validation: danger` ; sans danger, la même catégorie passe toujours par le chef | Conforme (`validation.test.js`) |
+| Validation | Aucun schéma nouveau ; aucun champ nouveau | Conforme |
+| Injections | Aucune requête nouvelle (colonne `service_id` lue par une requête paramétrée existante) | Conforme (`securite.test.js`) |
+| Données (RGPD) | Aucune donnée nouvelle ; le chef de service lit les pièces des demandes qu'il doit déjà lire (destinataire inchangé depuis la 0.16.0) ; journal sans texte libre (`validation: danger`) | Conforme |
+| Interface | Écran de confirmation d'une demande à valider sans délai ; fil vide sans invitation à écrire pour qui ne peut pas écrire ; journal du regroupement sans code brut ; `mobile:check` : 41 écrans, six appareils (Chromium et WebKit), FR et NL, et parcours complets sur les deux moteurs, aucun défaut | Conforme (`demandes.test.tsx`, `pages.test.tsx`, `mobile:check`) |
+| Secrets commités | Aucune valeur de NIXUS, aucune adresse électronique réelle ; mots de passe des contrôles par l'environnement ; parcours refusés hors `localhost` | Conforme |
+| Infrastructure | Dockerfile, compose, `nginx.conf`, `backup.sh`, `.env`, `ci.yml` inchangés | Conforme |
+| Dépendances | `npm audit --omit=dev` serveur | 0 vulnérabilité |
+| Dépendances | `npm audit --omit=dev` interface | 3 modérées (E-09), inchangées ; aucune dépendance nouvelle (WebKit est un navigateur de `@playwright/test`, déjà en développement) |
+| LLM et MCP | Aucun outil nouveau ; `create_demande` suit la règle du danger (même service) | Conforme (`mcp.test.js`) |
+| Migration | Aucune ; une base 0.16.0 sert telle quelle | Conforme |
+
+Preuves d'échec (chaque protection retirée seule, au moins un test échoue ; code de la 0.16.1 : tout réussi) :
+
+| Protection retirée | Échec constaté |
+| --- | --- |
+| `pieces.charger()` : valideur admis (R5) | `validation.test.js` (« le chef lit la pièce » : 403) ; `mobile:check` avec le `pieces.js` de la 0.16.0 : « image(s) qui ne s'affiche(nt) pas » et « 403 /api/pieces/…/fichier » chez le chef de service, WebKit |
+| `services/demandes.js` : danger sans validation | `validation.test.js` (« pas de validation pour un danger » : `en_validation`) |
+| `NouvelleDemandePage.tsx` : confirmation d'une demande en validation (R1) | `demandes.test.tsx` : trois tests (FR, NL, encodage) |
+| `JournalPage.tsx` : état de départ traduit et numéro en double masqué (R4) | `pages.test.tsx` (détail sans code brut, FR et NL) |
+| `FilMessages.tsx` : invitation réservée à qui peut écrire (R2) | `demandes.test.tsx` : trois tests |
+| `NouvelleDemandePage.tsx` : « Numéro de la demande » à l'encodage (R3) | `demandes.test.tsx` (encodage) |
+
+Les trois contrôles qui ne restent jamais « non joués » (secrets commités, contrôle d'accès côté serveur, IDOR) ont été joués.
+
 ## 0.16.0 (10/11/2026)
 
 Étapes 11 et 12 : validation par le chef de service, services et valideurs, demande encodée par le service technique, regroupement, découpage, colonnes par état ; remarques R1 et R2 de la recette de la 0.15.0. Environnement : bac à sable de Claude, Node 22.23.4. Migration `014_validation`. Aucune dépendance nouvelle.

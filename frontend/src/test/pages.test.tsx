@@ -1463,6 +1463,10 @@ describe('journal d’audit sans code brut (0.13.0, point 2 ; défauts D2, D3, D
         { ...ada, id: 202, created_at: '2026-11-08 07:11:00', action: 'demande.transition', entity_type: 'demande',
           details: { numero: 'AA-DI-2026-00009', de: 'qualifiee', vers: 'en_attente', motif_id: 41, commentaire_donne: 1, suspendu: 1, avant: { echeance_le: '2026-11-09 13:05:00' }, apres: { echeance_le: '2026-11-10 09:35:00' } },
           noms: { motif_id: { type: 'valeur', id: 41, code: 'piece', nom_fr: 'Pièce à commander', nom_nl: 'Onderdeel te bestellen', entite_code: 'AA' } } },
+        // 0.16.1 (R4 de la recette 0.16.0) : regroupement ; état de départ traduit, principale nommée une seule fois.
+        { ...ada, id: 203, created_at: '2026-11-08 07:12:00', action: 'demande.fusion', entity_type: 'demande',
+          details: { numero: 'AA-DI-2026-00012', de: 'a_qualifier', principale_id: 77, principale_numero: 'AA-DI-2026-00011', personnes_reportees: 1, commentaire_donne: 0 },
+          noms: { principale_id: { type: 'demande', id: 77, code: 'AA-DI-2026-00011' } } },
       ];
       (journal as unknown as Record<string, unknown>[]).push(...lignes);
       try {
@@ -1473,7 +1477,12 @@ describe('journal d’audit sans code brut (0.13.0, point 2 ; défauts D2, D3, D
         const cellules = [...container.querySelectorAll('.ant-descriptions-item-label, .ant-descriptions-item-content')].map((c) => c.textContent || '');
         const tout = cellules.join(' ¦ ');
         for (const a of attendus) expect(tout, a).toContain(a);
-        for (const brut of ['libelle_fr', 'app.organisation_fr', 'image/jpeg', 'mes-demandes', 'motif_donne', 'type_id', 'mois_jour', '05-08', 'conge', 'batiment', 'icone', 'salle_reunion', 'qualifiee', 'en_attente', 'commentaire_donne', 'motif_id', '41', 'echeance_le', '13:05:00']) {
+        // R4 : la principale d'un regroupement n'apparaît qu'une fois, sous « Demande principale ».
+        expect(cellules.filter((c) => c === 'AA-DI-2026-00011')).toHaveLength(1);
+        expect(cellules).toContain(lang === 'fr' ? 'Demande principale' : 'Hoofdaanvraag');
+        expect(cellules).not.toContain(lang === 'fr' ? 'Demande principale (identifiant)' : 'Hoofdaanvraag (id)');
+        expect(cellules, 'état de départ du regroupement traduit').toContain(lang === 'fr' ? 'À qualifier' : 'Te kwalificeren');
+        for (const brut of ['a_qualifier', 'libelle_fr', 'app.organisation_fr', 'image/jpeg', 'mes-demandes', 'motif_donne', 'type_id', 'mois_jour', '05-08', 'conge', 'batiment', 'icone', 'salle_reunion', 'qualifiee', 'en_attente', 'commentaire_donne', 'motif_id', '41', 'echeance_le', '13:05:00']) {
           expect(cellules.some((c) => c.split(/[\s:·,()]+/).includes(brut)), brut).toBe(false);
         }
       } finally { journal.splice(journal.length - lignes.length, lignes.length); }

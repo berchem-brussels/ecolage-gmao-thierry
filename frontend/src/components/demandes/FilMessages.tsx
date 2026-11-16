@@ -132,7 +132,8 @@ export default function FilMessages({ d, service, onLu }: Props) {
     <section aria-labelledby={`fil-titre-${d.id}`} className="fil">
       <Typography.Title level={2} id={`fil-titre-${d.id}`} style={{ fontSize: 16, margin: '16px 0 12px' }}>{t('fil.titre')}</Typography.Title>
       {messages === null ? null : messages.length === 0 ? (
-        <Typography.Paragraph type="secondary">{t(service ? 'fil.vide.service' : 'fil.vide')}</Typography.Paragraph>
+        // 0.16.1 (R2 de la recette 0.16.0) : l'invitation à écrire seulement à qui peut écrire ; demande fermée : « Aucun message. »
+        <Typography.Paragraph type="secondary">{t(d.ouverte === 0 ? 'fil.vide.ferme' : ecrire && !service ? 'fil.vide' : 'fil.vide.service')}</Typography.Paragraph>
       ) : (
         <ol className="fil-liste" aria-label={t('fil.titre')}>
           {messages.map((m) => (

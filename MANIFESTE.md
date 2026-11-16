@@ -1,8 +1,26 @@
 # Manifeste
 
-Version de l'application : **0.16.0** · Mis à jour le 10/11/2026
+Version de l'application : **0.16.1** · Mis à jour le 16/11/2026
 
 Fichiers changés, dépendances et suites par version. Les décomptes sont recopiés de la sortie des commandes.
+
+## 0.16.1 (16/11/2026)
+
+Fichiers comparés à l'archive 0.16.0 (`gmao-v0_16_0.tar.gz`, SHA-256 `5208a651…8ca508`, identique à l'étiquette `v0.16.0` hors `dist/`) par `diff -rq` (hors `node_modules` et `dist`). Pour le contrôle du `git status` (`GITHUB.md`, section 5) : aucune ligne `D` attendue ; deux lignes `A`, les autres `M`.
+
+- Nouveaux (lignes `A`) : `NOTES_LIVRAISON_v0.16.1.md` ; `frontend/mobile-check/parcours.mjs` (parcours complets au doigt).
+- Modifiés, serveur : `config/notes-version.json` (note 0.16.1) ; `src/services/services.js` (`valideurDe`, règle unique du valideur), `src/services/pieces.js` (R5 : le valideur lit les pièces), `src/services/demandes.js` (règle du valideur commune ; danger sans validation), `src/services/cycle.js` (règle du valideur commune) ; tests `validation.test.js` (R5, danger), `notes-version.test.js` (note 0.16.1, listes décalées) ; `package.json` et `package-lock.json` (numéro seulement).
+- Modifiés, interface : `src/pages/NouvelleDemandePage.tsx` (R1, R3), `src/pages/JournalPage.tsx` (R4 : `CODES_ACTION`, `REDONDANTS`), `src/components/demandes/FilMessages.tsx` (R2), `src/help/topics/mes-demandes.ts` (danger), `src/i18n.ts` (textes FR et NL) ; `mobile-check/verifier-mobile.mjs` (WebKit, images, animations, clics, fenêtre « Nouveautés », parcours) ; tests `demandes.test.tsx` (R1, R2, R3), `pages.test.tsx` (R4) ; `package.json` et `package-lock.json` (numéro seulement) ; `dist/` reconstruit.
+- Modifiés, documentation et racine : `README.md`, `README.nl.md`, `README.en.md` ; `docs/fr`, `docs/nl`, `docs/en` (`APRES-DEPLOIEMENT.md`, `ARCHITECTURE.md`, `EXPLOITATION.md`, `MCP.md`, `SECURITE.md`) ; `docs/fonctionnel/demandes.md` (règle 51) ; fichiers de suivi (`ETAT.md`, `CHANGELOG.md`, `ECARTS-CDC.md`, `MANIFESTE.md`).
+- Inchangés : les deux Dockerfile, `nginx.conf`, `docker-entrypoint.sh`, `docker-compose.yml`, `.env.example`, `backup.sh`, `recette.sh`, `verifier-ports.sh`, `ci.yml`, `.gitignore`, `src/database.js` (aucune migration). La construction n'a pas besoin de `--no-cache`.
+- Retirés : aucun fichier.
+- Dépendances : aucune nouvelle ; verrous inchangés hors numéro de version. Aucun `npm audit fix`.
+- Contrôle DV-09 de la séance, avant toute modification : archive 0.16.0 conforme à `ETAT.md` (10 449 480 octets, 607 entrées, SHA-256 `5208a651…8ca508`) ; serveur 541/541 ; interface 314 (+1 ignoré) sur trois lancements ; `help:check` 11/11 ; construction et accessibilité 0 erreur ; `dist` reconstruit identique au `dist` livré (à la seconde construction) ; `mobile:check` 41 écrans, 4 largeurs, FR et NL, aucun défaut.
+- Suites de la 0.16.1 : serveur 544/544 ; interface 320 (+1 ignoré), 7 fichiers ; `help:check` 11/11 ; construction et accessibilité 0 erreur ; `npm audit --omit=dev` serveur 0, interface 3 modérées (E-09) ; `mobile:check` : voir `ETAT.md`, section 2.
+- Preuves d'échec : `docs/fr/SECURITE.md`, section 0.16.1 (six protections ; `mobile:check` avec l'ancien `pieces.js`).
+- Navigateur réel : Chromium et WebKit du bac à sable (Playwright), serveur réel sur une base de démonstration passée de la 0.16.0 à la 0.16.1 ; parcours complets vérifiés dans la base (dépôt avec photo, validation, regroupement, découpage, passage « Déplacer »).
+- Migration et retour arrière : aucune migration ; la 0.16.1 sert la base de la 0.16.0 (`[APP] API 0.16.1`).
+- Images Docker : non reconstruites dans le bac à sable.
 
 ## 0.16.0 (10/11/2026)
 
@@ -454,4 +472,4 @@ Base : gabarit v3 1.1.0. Fichiers comparés au gabarit par `diff -rq`.
 
 ## Dépendances actuelles de la GMAO
 
-Identiques au gabarit 1.1.0 (aucune ajoutée jusqu'à la 0.5.2) ; depuis, `multer` 2.x (0.8.0) et `@playwright/test` en développement (0.12.0) ; aucune ajoutée en 0.16.0. Dépendances du stack à ajouter plus tard et à citer ici au moment de l'ajout (cahier des charges, TEC-03) : `nodemailer` (étape 13), `exceljs` (étape 14), `pdfkit` (étape 21), `recharts` (étape 31 ou 36), `jsonwebtoken` et `jwks-rsa` (étape 44), `@electric-sql/pglite` et `pg` (étape 43), `dompurify` si un texte riche est retenu. `multer` seulement si Renaud le retient pour l'étape 6 (écart E-16).
+Identiques au gabarit 1.1.0 (aucune ajoutée jusqu'à la 0.5.2) ; depuis, `multer` 2.x (0.8.0) et `@playwright/test` en développement (0.12.0) ; aucune ajoutée en 0.16.0 ni en 0.16.1 (WebKit, utilisé par `mobile:check`, est un navigateur de `@playwright/test`). Dépendances du stack à ajouter plus tard et à citer ici au moment de l'ajout (cahier des charges, TEC-03) : `nodemailer` (étape 13), `exceljs` (étape 14), `pdfkit` (étape 21), `recharts` (étape 31 ou 36), `jsonwebtoken` et `jwks-rsa` (étape 44), `@electric-sql/pglite` et `pg` (étape 43), `dompurify` si un texte riche est retenu. `multer` seulement si Renaud le retient pour l'étape 6 (écart E-16).

@@ -1,6 +1,6 @@
 # Architecture
 
-Version 0.15.0 · Le français fait foi.
+Version 0.16.1 · Le français fait foi.
 
 ## Services
 
@@ -275,6 +275,14 @@ Vues (`services/vues-demandes.js`, DV-93) : d'une personne dans une entité ; vu
 Permission nouvelle `demandes:qualifier` (gestionnaire et responsable) dans `config/roles.json`.
 
 Interface : `pages/GestionDemandesPage.tsx` (liste du service ; filtres dans l'adresse, repliés sous « Filtres et vues » sur téléphone ; vues ; fiche latérale et « Qualifier »), `components/demandes/TableauBord.tsx` (accueil et liste), `components/demandes/QualificationForm.tsx`, `FicheDemande` de `DemandesPage.tsx` (lignes du service : priorité et motif, échéances, durée, consignes, qualifiée le). Libellés des états pour le service : `demande.etat_service.*`. `ReglagesEntitePage.tsx` affiche le groupe `pieces` (contrôle 7 de la 0.8.0) ; un test compare ses groupes au catalogue.
+
+## Valideur, pièces jointes et danger (0.16.1)
+
+- Règle unique « la personne valide aujourd'hui les demandes du service de cette demande » : `valideurDe(user, demande)` de `services/services.js` (demande liée à un service, permission `demandes:valider`, titulaire ou suppléant dans sa période). `services/demandes.js` (lecture), `services/cycle.js` (passages) et `services/pieces.js` (lecture d'une pièce, R5) l'appellent ; il n'y en a plus de copie.
+- `pieces.charger()` admet le valideur de la demande ; une pièce en attente de son message reste à son auteur, la pièce d'une note interne au service seul.
+- Dépôt : une demande avec `danger` d'une catégorie à valider ne passe pas « En validation » ; elle arrive « À qualifier » en P1 et le journal note `validation: danger`.
+- Interface : l'écran de confirmation lit `etat` de la demande créée (« En validation » : accord du chef de service, sans délai) ; le fil vide ne propose d'écrire qu'à qui peut écrire ; le journal traduit l'état de départ d'un regroupement et masque `principale_numero` quand `principale_id` est nommé (`REDONDANTS` de `JournalPage.tsx`).
+- Contrôle des téléphones : `frontend/mobile-check/verifier-mobile.mjs` (écrans, Chromium et WebKit, attente des animations, images) et `parcours.mjs` (parcours au doigt, copie locale seulement).
 
 ## Photos et pièces jointes des demandes (0.8.0)
 

@@ -2,6 +2,10 @@
 
 De Franse tekst (`docs/fr/SECURITE.md`) is rechtsgeldig en bevat het volledige rooster per versie.
 
+## 0.16.1 (16/11/2026)
+
+Het diensthoofd leest de bijlagen van de aanvragen die het moet goedkeuren (een ander diensthoofd, een vervanger buiten zijn periode en een collega niet; een bijlage van een interne nota nooit); een aanvraag met gevaar slaat de goedkeuring over (P1, logboek `danger`). Geen nieuwe gegevens, geen migratie, geen nieuwe afhankelijkheid. Faalbewijs: elke bescherming afzonderlijk weggenomen doet minstens één test falen.
+
 ## 0.16.0 (10/11/2026)
 
 Goedkeuring door het diensthoofd, diensten en goedkeurders, aanvraag ingevoerd door de technische dienst, samenvoegen, opsplitsen, kolommen per status; migratie `014_validation`. Getest: diensten, goed te keuren aanvragen, samenvoegen en opsplitsen van de andere entiteit 403 (API en MCP); een goedkeurder leest en keurt enkel de aanvragen van zijn diensten goed (de vervanger tijdens zijn periode); de technische dienst keurt niet goed in de plaats van het hoofd; samenvoegen en opsplitsen alles of niets, niets gewist; logboek zonder vrije tekst; « Verplaatsen » stelt enkel toegestane overgangen voor. Bewijs van falen: elf beschermingen één voor één verwijderd, telkens minstens één test in fout (zie de Franse tekst); één leemte gevonden en gedicht (goedkeurder van een andere dienst). `mobile:check`: 41 schermen, drie accounts, geen fout.

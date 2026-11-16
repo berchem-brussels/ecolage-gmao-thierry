@@ -179,6 +179,16 @@ function valideurs(serviceId, date = new Date()) {
   return ids.filter((x) => x && peutValiderDans(x, s.entite_id));
 }
 
+/**
+ * La personne valide aujourd'hui les demandes du service de la demande (règle commune à la lecture de la demande, à ses
+ * passages et à ses pièces jointes ; 0.16.1, R5) : demande liée à un service, permission « demandes:valider », et la
+ * personne en est le valideur ou le suppléant dans sa période.
+ */
+function valideurDe(user, d) {
+  if (!d || !d.service_id || !user.roles.some((r) => rolesWith('demandes:valider').includes(r))) return false;
+  return valideurs(d.service_id).includes(user.id);
+}
+
 /** Service d'un compte dans une entité : son service actif s'il est de cette entité, sinon null. */
 function serviceDe(userId, entiteId) {
   const r = getDb().prepare(`SELECT s.id FROM users u JOIN services s ON s.id = u.service_id
@@ -194,4 +204,4 @@ function validesPar(userId, entiteId, date = new Date()) {
   return peutValiderDans(userId, entiteId) ? ids : [];
 }
 
-module.exports = { list, get, create, update, deactivate, resumeDesactivation, controlerMembre, valideurs, serviceDe, validesPar, jourBruxelles };
+module.exports = { list, get, create, update, deactivate, resumeDesactivation, controlerMembre, valideurs, valideurDe, serviceDe, validesPar, jourBruxelles };

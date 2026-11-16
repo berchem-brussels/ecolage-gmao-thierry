@@ -1,6 +1,10 @@
 # Architecture
 
-Application version: **0.15.0** · The French text prevails (`docs/fr/ARCHITECTURE.md`); this file summarises each version.
+Application version: **0.16.1** · The French text prevails (`docs/fr/ARCHITECTURE.md`); this file summarises each version.
+
+## Approver, attachments and danger (0.16.1)
+
+One rule "the person approves today the requests of this request's service": `valideurDe` of `services/services.js`, used by reading, transitions and attachments (R5: the approver opens the attachments). A danger request in a category that needs approval arrives "To qualify" in P1 (`validation: danger` in the log). Phone check on Chromium and WebKit, with complete journeys on a local copy only.
 
 ## Message thread, mentions, reply templates and following (0.15.0)
 
