@@ -2,6 +2,10 @@
 
 The French text (`docs/fr/SECURITE.md`) prevails and holds the full grid per version.
 
+## 0.16.1 (16/11/2026)
+
+The head of service reads the attachments of the requests they must approve (another head of service, a deputy outside their period and a colleague do not; an internal note's attachment never); a danger request skips approval (P1, `danger` in the log). No new data, no migration, no new dependency. Proof of failure: each protection removed on its own makes at least one test fail.
+
 ## 0.16.0 (10/11/2026)
 
 Approval by the head of service, services and approvers, request entered by the technical department, merging, splitting, columns by status; migration `014_validation`. Tested: services, requests to approve, merging and splitting of the other entity 403 (API and MCP); an approver reads and approves only the requests of his services (the deputy during the period); the technical department does not approve in place of the head; merging and splitting all or nothing, nothing deleted; audit log without free text; "Move" offers only permitted transitions. Proof of failure: eleven protections removed one at a time, each with at least one failing test (see the French text); one gap found and closed (approver of another service). `mobile:check`: 41 screens, three accounts, no defect.

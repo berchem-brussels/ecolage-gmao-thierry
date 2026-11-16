@@ -10,7 +10,10 @@
  *      domaine ou de la nature) arrive « En validation » chez le valideur du service du demandeur (services/services.js :
  *      titulaire, ou suppléant pendant sa période) ; il valide (« À qualifier », délais comptés depuis la validation) ou
  *      refuse avec un motif. Sans service ou sans valideur, ou si le demandeur est lui-même valideur de son service, elle
- *      arrive « À qualifier » et le journal dit pourquoi (validation « sans_valideur » ou « auteur_valideur »). Toute
+ *      arrive « À qualifier » et le journal dit pourquoi (validation « sans_valideur » ou « auteur_valideur »). Un danger
+ *      (DEM-06) ne passe jamais par le chef : la demande arrive « À qualifier » en P1 et le journal note la validation
+ *      « danger » (0.16.1, décision A de Thierry du 16/11/2026 : la validation contrôle un budget, elle ne retarde pas
+ *      la mise en sécurité). Toute
  *      autre demande arrive « À qualifier ». Le service du demandeur est noté sur la demande. Le valideur lit les
  *      demandes de ses services (sans les champs internes ni le fil). La priorité proposée par la catégorie est notée ;
  *      le gestionnaire la confirme à la qualification (PRI-01).
@@ -106,7 +109,7 @@ function entiteActive(user) {
 
 const peut = (user, permission) => user.roles.some((r) => rolesWith(permission).includes(r));
 /** Règle 4 : la personne valide aujourd'hui les demandes du service de cette demande. */
-const valideurDe = (user, d) => !!d.service_id && peut(user, 'demandes:valider') && require('./services').valideurs(d.service_id).includes(user.id);
+const valideurDe = (user, d) => require('./services').valideurDe(user, d);
 
 /** Instant SQL (UTC) d'une date JavaScript, et l'inverse. */
 const versSql = (date) => date.toISOString().replace('T', ' ').slice(0, 19);
@@ -511,7 +514,8 @@ function create(user, data, channel = 'api') {
   const serviceId = svc.serviceDe(demandeurId, entiteId);
   let etat = 'a_qualifier';
   let validation = null;
-  if (cat.validation_effective === 1) {
+  if (cat.validation_effective === 1 && danger) validation = 'danger';
+  else if (cat.validation_effective === 1) {
     const vs = svc.valideurs(serviceId, maintenant);
     if (!vs.length) validation = 'sans_valideur';
     else if (vs.includes(demandeurId)) validation = 'auteur_valideur';

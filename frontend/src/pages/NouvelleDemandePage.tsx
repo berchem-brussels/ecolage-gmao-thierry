@@ -228,6 +228,11 @@ export default function NouvelleDemandePage({ encoder = false }: { encoder?: boo
 
   if (faite) {
     const fin = finAnnoncee(faite.delai_annonce, lang);
+    // 0.16.1 (R1 de la recette 0.16.0) : demande qui attend l'accord du chef de service ; ni délai, ni « le service
+    // technique l'a reçue » : le délai compte depuis la validation.
+    const enValidation = faite.etat === 'en_validation';
+    const serviceNom = (lang === 'nl' ? faite.service_nom_nl : faite.service_nom_fr) || '';
+    const avecService = (cle: string) => t(serviceNom ? cle : `${cle}.sans`).replace('{service}', serviceNom);
     return (
       <div>
         <Typography.Title level={1} style={{ fontSize: 22, marginBottom: 16 }}>{t(encoder ? 'encoder.title' : 'demande.nouvelle.title')}</Typography.Title>
@@ -235,7 +240,8 @@ export default function NouvelleDemandePage({ encoder = false }: { encoder?: boo
           <Result status="success" title={<span role="status">{t('demande.envoyee.title')}</span>}
             subTitle={(
               <Space direction="vertical" size={4}>
-                <span>{t('demande.envoyee.numero')}</span>
+                {/* 0.16.1 (R3 de la recette 0.16.0) : à l'encodage, le numéro n'est pas celui de l'encodeur. */}
+                <span>{t(encoder ? 'encoder.numero' : 'demande.envoyee.numero')}</span>
                 {encoder && faite.demandeur_nom && <span>{t('encoder.pour')} {faite.demandeur_prenom} {faite.demandeur_nom} · {t(`gest.canal.${faite.canal}`)}</span>}
                 <Typography.Text strong copyable style={{ fontSize: 22 }} className="dem-numero">{faite.numero}</Typography.Text>
                 <span>{lang === 'nl' ? faite.categorie_libelle_nl : faite.categorie_libelle_fr} · {cheminTexte(faite.lieu_chemin, lang)}</span>
@@ -246,14 +252,16 @@ export default function NouvelleDemandePage({ encoder = false }: { encoder?: boo
                       ? <span>{t('demande.danger.alerte')} <a href={lienTel(telephone)}>{telephone}</a></span>
                       : <span>{t('demande.danger.alerte.sansnumero')}</span>}
                   </>
-                ) : <span>{fin ? `${t('demande.delai.indicatif')} ${fin}` : t('demande.delai.convenir')}</span>}
+                ) : enValidation
+                  ? <span className="dem-en-validation">{avecService(encoder ? 'encoder.validation' : 'demande.envoyee.validation')}</span>
+                  : <span>{fin ? `${t('demande.delai.indicatif')} ${fin}` : t('demande.delai.convenir')}</span>}
                 {beneficiaireTexte(faite) && <span>{t('demande.champ.pour')} : {beneficiaireTexte(faite)}</span>}
                 {faite.date_souhaitee && <span>{t('demande.champ.date_souhaitee')} : {dateSouhaitee(faite.date_souhaitee, lang)}</span>}
                 {(faite.reponses || []).map((r) => (
                   <span key={r.question_id}>{lang === 'nl' ? r.question_nl : r.question_fr} {lang === 'nl' ? r.reponse_nl : r.reponse_fr}</span>
                 ))}
                 {(faite.pieces || []).length > 0 && <span>{t('demande.envoyee.pieces').replace('{n}', String((faite.pieces || []).length))}</span>}
-                <Typography.Text type="secondary" style={{ fontSize: 13 }}>{t(encoder ? 'encoder.suite' : 'demande.envoyee.suite')}</Typography.Text>
+                <Typography.Text type="secondary" style={{ fontSize: 13 }}>{t(encoder ? 'encoder.suite' : enValidation ? 'demande.envoyee.suite.validation' : 'demande.envoyee.suite')}</Typography.Text>
               </Space>
             )}
             extra={suite} />

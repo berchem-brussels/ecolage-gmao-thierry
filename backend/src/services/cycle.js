@@ -170,7 +170,7 @@ const conditionRemplie = (t, d) => (t.condition === 'jamais_en_cours' ? jamaisEn
   : t.condition === 'delai_reouverture' ? (limiteReouverture(d) || 0) > new Date() : true);
 
 /** Règle 11 : la personne valide aujourd'hui les demandes du service de la demande. */
-const valideurDe = (user, d) => !!d.service_id && peut(user, 'demandes:valider') && require('./services').valideurs(d.service_id).includes(user.id);
+const valideurDe = (user, d) => require('./services').valideurDe(user, d);
 
 /**
  * Passage qui s'applique à la personne : celui du service s'il le peut, sinon celui du valideur s'il valide la demande,

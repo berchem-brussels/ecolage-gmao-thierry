@@ -8,6 +8,7 @@ const { test, before, after } = require('node:test');
 const assert = require('node:assert/strict');
 const { startServer, setup, person } = require('./helpers');
 const { getDb } = require('../src/database');
+const { jpeg } = require('./fixtures');
 
 let srv;
 let admin;
@@ -32,6 +33,16 @@ const journal = (action, id) => getDb().prepare('SELECT details_json AS details 
 
 async function deposer(c, categorie = natureValider, description = 'Déplacer deux armoires au premier étage.') {
   const r = await c.post('/api/demandes', { lieu_id: lieu, categorie_id: categorie.id, description });
+  assert.equal(r.status, 201, JSON.stringify(r.body));
+  return r.body.data;
+}
+
+/** Pièce envoyée en formulaire multipart, comme le navigateur : au brouillon, ou en attente d'un message (url). */
+async function joindre(c, url = '/api/demandes/brouillon/pieces') {
+  const body = new FormData();
+  body.append('fichier', new Blob([jpeg()], { type: 'image/jpeg' }), 'photo.jpg');
+  const res = await fetch(`${srv.base}${url}`, { method: 'POST', headers: { Cookie: c.cookie, 'X-CSRF-Token': c.csrf }, body });
+  const r = { status: res.status, body: await res.json() };
   assert.equal(r.status, 201, JSON.stringify(r.body));
   return r.body.data;
 }
@@ -193,6 +204,52 @@ test('suppléant : valide pendant sa période seulement ; le titulaire garde le 
   // Retrait du suppléant : sa période part avec lui.
   const s = (await admin.put(`/api/services/${service.id}`, { suppleant_id: null })).body.data;
   assert.deepEqual([s.suppleant_id, s.suppleant_du, s.suppleant_au], [null, null, null]);
+});
+
+test('pièces (R5 de la recette 0.16.0) : le chef du service ouvre les pièces de la demande ; ni un autre chef, ni le suppléant hors période, ni une note interne', async () => {
+  const p = await joindre(agent);
+  const d = await deposer(agent, natureValider, 'Acheter un meuble à plans, photo de l’emplacement jointe.');
+  assert.deepEqual(d.pieces?.map((x) => x.id) ?? [p.id], [p.id]);
+  const vue = (await chef.get(`/api/demandes/${d.id}`)).body.data;
+  assert.deepEqual(vue.pieces.map((x) => x.id), [p.id], 'la fiche du chef liste la pièce');
+  assert.equal((await chef.get(`/api/pieces/${p.id}`)).status, 200, 'le chef lit la pièce');
+  const f = await chef.get(`/api/pieces/${p.id}/fichier`);
+  assert.equal(f.status, 200, 'le chef ouvre le fichier');
+  // Chef d'un autre service de la même entité, et chef de l'autre entité : refusés.
+  const tec = (await admin.post('/api/services', { entite_id: ea.id, code: 'LOG', nom_fr: 'Logistique', nom_nl: 'Logistiek', valideur_id: suppleant.id })).body.data;
+  assert.equal((await suppleant.get(`/api/pieces/${p.id}`)).status, 403, 'chef d’un autre service');
+  assert.equal((await suppleant.get(`/api/pieces/${p.id}/fichier`)).status, 403);
+  await admin.del(`/api/services/${tec.id}`, { motif: 'Service d’essai.' });
+  assert.equal((await chefB.get(`/api/pieces/${p.id}/fichier`)).status, 403, 'chef de l’autre entité (cloison)');
+  // Suppléant hors de sa période : refusé ; dans sa période : admis.
+  await admin.put(`/api/services/${service.id}`, { suppleant_id: suppleant.id, suppleant_du: jour(-6), suppleant_au: jour(-2) });
+  assert.equal((await suppleant.get(`/api/pieces/${p.id}/fichier`)).status, 403, 'suppléant hors période');
+  await admin.put(`/api/services/${service.id}`, { suppleant_du: jour(-1), suppleant_au: jour(1) });
+  assert.equal((await suppleant.get(`/api/pieces/${p.id}/fichier`)).status, 200, 'suppléant dans sa période');
+  await admin.put(`/api/services/${service.id}`, { suppleant_id: null });
+  // Une collègue qui n'est ni demandeuse ni valideuse : refusée.
+  assert.equal((await collegue.get(`/api/pieces/${p.id}/fichier`)).status, 403);
+  // Pièce d'une note interne du service : le chef ne la lit pas.
+  const q = await joindre(gest, `/api/demandes/${d.id}/messages/pieces`);
+  const n = await gest.post(`/api/demandes/${d.id}/messages`, { texte: 'Vérifier la largeur de la porte.', interne: true });
+  assert.equal(n.status, 201, JSON.stringify(n.body));
+  assert.equal((await gest.get(`/api/pieces/${q.id}/fichier`)).status, 200);
+  assert.equal((await chef.get(`/api/pieces/${q.id}`)).status, 403, 'note interne : le service seul');
+  assert.equal((await chef.get(`/api/pieces/${q.id}/fichier`)).status, 403);
+});
+
+test('danger (0.16.1, décision A du 16/11/2026) : une demande « Danger » d’une catégorie à valider part au service technique en P1, sans attendre le chef', async () => {
+  const r = await agent.post('/api/demandes', { lieu_id: lieu, categorie_id: natureValider.id, description: 'L’armoire à déménager penche et menace de tomber.', danger: 1 });
+  assert.equal(r.status, 201, JSON.stringify(r.body));
+  const d = r.body.data;
+  assert.equal(d.etat, 'a_qualifier', 'pas de validation pour un danger');
+  assert.equal(d.priorite, 'P1');
+  assert.equal(JSON.parse(journal('demande.create', d.id).details).validation, 'danger', 'le journal dit pourquoi la validation est sautée');
+  assert.ok(!(await chef.get('/api/demandes/a-valider')).body.data.some((x) => x.id === d.id), 'le chef ne l’a pas à valider');
+  assert.ok((await gest.get('/api/demandes?perimetre=entite&etats=a_qualifier&limit=100')).body.data.some((x) => x.id === d.id), 'le service technique la voit tout de suite');
+  // Sans danger, la même catégorie passe toujours par le chef.
+  const sans = await deposer(agent, natureValider, 'Déménager l’armoire du couloir.');
+  assert.equal(sans.etat, 'en_validation');
 });
 
 test('le demandeur annule une demande en validation ; un rôle retiré au chef lui retire la validation', async () => {

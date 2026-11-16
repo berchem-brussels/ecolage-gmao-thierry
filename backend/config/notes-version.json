@@ -2,6 +2,22 @@
   "_description": "Notes de version pour les utilisateurs, en FR et en NL, sans terme technique (standard v3.2, sections 13.1 et 17.8 ; écart E-07). Une note par version, de la plus récente à la plus ancienne. Chaque ligne a un public : « tous », « admin » (administrateur de l'application) ou une permission du catalogue des rôles (par exemple « parametres:gerer »), lue dans l'entité active. La note de la version installée s'affiche une fois à la première connexion qui suit la mise à jour ; toutes restent relisibles dans Aide, Nouveautés.",
   "notes": [
     {
+      "version": "0.16.1",
+      "date": "2026-11-16",
+      "lignes": [
+        {
+          "public": "tous",
+          "fr": "Danger pour les personnes ou les biens : même pour un aménagement, un déménagement ou un achat, la demande part tout de suite au service technique, sans attendre l'accord de votre chef de service.",
+          "nl": "Gevaar voor personen of goederen: zelfs voor een inrichting, een verhuizing of een aankoop gaat de aanvraag meteen naar de technische dienst, zonder op het akkoord van uw diensthoofd te wachten."
+        },
+        {
+          "public": "demandes:valider",
+          "fr": "Chef de service : vous ouvrez maintenant les photos et les documents joints aux demandes qui attendent votre accord.",
+          "nl": "Diensthoofd: u opent nu de foto's en documenten die bij de aanvragen horen die op uw akkoord wachten."
+        }
+      ]
+    },
+    {
       "version": "0.16.0",
       "date": "2026-11-10",
       "lignes": [

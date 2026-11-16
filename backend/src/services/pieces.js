@@ -9,8 +9,9 @@
  *   3. Contenu contrôlé par fichiers.js : type sur les premiers octets, photo nettoyée (métadonnées), PDF sans contenu
  *      actif. Nom sur le disque généré par le serveur ; le nom d'origine, nettoyé, sert seulement à l'affichage.
  *   4. Lecture (SEC-01, SEC-02) : une pièce de brouillon par son auteur seul ; une pièce de demande par le demandeur,
- *      le bénéficiaire et le service technique de l'entité (« demandes:entite »). Une personne qui suit seulement la
- *      demande (« Moi aussi ») ne lit pas les pièces : elles peuvent montrer des personnes. Autre entité : 403.
+ *      le bénéficiaire, le service technique de l'entité (« demandes:entite ») et le valideur du service de la demande
+ *      (0.16.1, R5 : la fiche les lui listait, l'ouverture était refusée). Une personne qui suit seulement la demande
+ *      (« Moi aussi ») ne lit pas les pièces : elles peuvent montrer des personnes. Autre entité : 403.
  *   5. Suppression réelle (RGPD-02, DV-84) : fichier effacé du disque, ligne supprimée, journal sans contenu. Pièce de
  *      brouillon : son auteur. Pièce de demande : son auteur, s'il est le demandeur, tant que la demande est « Reçue »
  *      (a_qualifier) ; le gestionnaire et le responsable (« pieces:supprimer ») à tout moment. L'ouvrier : jamais.
@@ -223,13 +224,14 @@ function charger(user, id) {
     if (p.auteur_id !== user.id) throw new AppError(403, 'FORBIDDEN');
     return { p, d: null };
   }
-  const d = getDb().prepare('SELECT id, entite_id, numero, etat, demandeur_id, beneficiaire_id FROM demandes WHERE id = ?').get(p.demande_id);
+  const d = getDb().prepare('SELECT id, entite_id, numero, etat, demandeur_id, beneficiaire_id, service_id FROM demandes WHERE id = ?').get(p.demande_id);
   // Règle 8 : une pièce qui attend son message n'est lue que par son auteur.
   if (p.attente_message === 1) {
     if (p.auteur_id !== user.id) throw new AppError(403, 'FORBIDDEN');
     return { p, d };
   }
-  if (d.demandeur_id !== user.id && d.beneficiaire_id !== user.id && !peut(user, 'demandes:entite')) throw new AppError(403, 'FORBIDDEN');
+  if (d.demandeur_id !== user.id && d.beneficiaire_id !== user.id && !peut(user, 'demandes:entite')
+    && !require('./services').valideurDe(user, d)) throw new AppError(403, 'FORBIDDEN');
   // Règle 8 : la pièce d'un commentaire interne n'est lue que par le service technique.
   if (p.message_id && !peut(user, 'demandes:entite')
     && getDb().prepare('SELECT interne FROM demande_messages WHERE id = ?').get(p.message_id).interne === 1) throw new AppError(403, 'FORBIDDEN');

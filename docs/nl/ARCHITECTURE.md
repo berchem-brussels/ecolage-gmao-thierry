@@ -1,6 +1,10 @@
 # Architectuur
 
-Versie van de toepassing: **0.15.0** · De Franse tekst is rechtsgeldig (`docs/fr/ARCHITECTURE.md`); dit bestand vat elke versie samen.
+Versie van de toepassing: **0.16.1** · De Franse tekst is rechtsgeldig (`docs/fr/ARCHITECTURE.md`); dit bestand vat elke versie samen.
+
+## Goedkeurder, bijlagen en gevaar (0.16.1)
+
+Eén regel « de persoon keurt vandaag de aanvragen van de dienst van deze aanvraag goed »: `valideurDe` van `services/services.js`, gebruikt bij het lezen, de overgangen en de bijlagen (R5: de goedkeurder opent de bijlagen). Een aanvraag met gevaar in een categorie met goedkeuring komt « Te kwalificeren » binnen in P1 (`validation: danger` in het logboek). Controle van de telefoons op Chromium en WebKit, met volledige parcours enkel op een lokale kopie.
 
 ## Berichten, vermeldingen, antwoordmodellen en volgen (0.15.0)
 

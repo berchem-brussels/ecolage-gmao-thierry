@@ -1,6 +1,20 @@
 # Journal des versions
 
-Version de l'application : **0.16.0** · Mis à jour le 10/11/2026
+Version de l'application : **0.16.1** · Mis à jour le 16/11/2026
+
+## 0.16.1 (16/11/2026)
+
+Correctif de la recette de la 0.16.0 (DV-134) : remarques R1 à R5, avec un défaut bloquant pour le chef de service (R5) ; un danger ne passe pas par le chef de service (DV-135) ; contrôle des téléphones sur le moteur WebKit, avec des parcours complets (DV-136). Aucune migration, aucune dépendance nouvelle, aucune permission nouvelle.
+
+- R5 : le chef de service ouvre les photos et documents joints aux demandes qu'il valide (`pieces.charger()` admet le valideur ; règle unique `valideurDe` dans `services/services.js`, appelée par `services/demandes.js`, `services/cycle.js` et `services/pieces.js`). Refusés : chef d'un autre service, chef de l'autre entité, suppléant hors période, pièce d'une note interne.
+- R1 : écran de confirmation d'une demande « En validation » : accord du chef de service annoncé (avec le service), sans délai indicatif ni « Le service technique l'a reçue » ; à l'encodage, accord du chef de la personne.
+- R4 : journal, « Demande regroupée avec une autre » : état de départ traduit (`CODES_ACTION`), numéro de la principale masqué quand la principale est nommée (`REDONDANTS`), libellé « Demande principale ».
+- R2 : fil vide d'une demande fermée : « Aucun message. » ; l'invitation à écrire seulement à qui peut écrire.
+- R3 : « Numéro de la demande : » à l'encodage par le service technique.
+- Danger : une demande « Danger pour les personnes ou les biens » d'une catégorie à valider arrive « À qualifier » en P1, journal `validation: danger` (« Sautée pour danger ») ; FAQ de « Mes demandes » à jour.
+- `mobile:check` : WebKit (Safari et Edge sur iPhone) à 320 et 390 px en plus de Chromium (`MOBILE_MOTEURS`), images qui ne s'affichent pas, attente de la fin des animations, clic impossible signalé au lieu d'arrêter le contrôle, fenêtre « Nouveautés » retirée dans le navigateur du contrôle sans rien marquer lu ; parcours complets au doigt (`MOBILE_PARCOURS=1`, `mobile-check/parcours.mjs`, compte `MOBILE_AGENT_USER`), refusés hors d'une copie locale ; `MOBILE_ECRANS=0`.
+- Note de version : une ligne pour tous (danger), une pour le chef de service (pièces jointes).
+- Tests : serveur 544 (541), interface 320 (314) et un contrôle des captures ; preuves d'échec dans `docs/fr/SECURITE.md`.
 
 ## 0.16.0 (10/11/2026)
 

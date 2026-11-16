@@ -1,6 +1,6 @@
 # Serveur MCP
 
-Version de l'application : **0.16.0** · Mis à jour le 10/11/2026 · Le français fait foi.
+Version de l'application : **0.16.1** · Mis à jour le 16/11/2026 · Le français fait foi.
 
 ## Accès
 
@@ -19,6 +19,10 @@ Version de l'application : **0.16.0** · Mis à jour le 10/11/2026 · Le frança
 - Depuis la 0.4.1, les fiches de catégorie, de priorité, de jour de l'horaire et de jour non ouvré portent `trace` (`etat`, `le`, `par`) : qui les a modifiées en dernier et quand, ou « livrée ». Le nom n'est rendu qu'aux personnes de l'entité. Aucun outil nouveau.
 - Depuis la 0.5.0, le serveur retire les espaces de début et de fin de tout texte reçu, par le MCP comme par l'API, sauf les mots de passe ; un champ obligatoire fait seulement d'espaces est refusé (`VALIDATION`), avant tout jeton de confirmation.
 - Les instructions envoyées au client demandent de commencer par `get_profile` : les données métier sont celles de l'entité active ; `select_entite` la change. Elles disent aussi que le MCP ne transporte aucun fichier, et qu'une demande se dépose par `create_demande`, le lieu proposé d'office étant `lieu_propose` dans `get_profile`, et les derniers lieux de ses demandes `lieux_recents` (0.7.5). Depuis la 0.8.0, elles disent que les pièces du brouillon partent avec la demande suivante, même déposée par `create_demande`, et qu'il faut le dire à la personne.
+
+## 0.16.1
+
+Aucun outil nouveau. `get_piece` ouvre aussi au chef de service les pièces des demandes qu'il doit valider (même règle que l'écran). `create_demande` : une demande avec `danger` d'une catégorie à valider arrive « À qualifier » en P1, sans passer par le chef.
 
 ## 0.16.0
 

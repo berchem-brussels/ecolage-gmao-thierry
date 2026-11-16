@@ -2,6 +2,10 @@
 
 The French text prevails. Update procedure: upload the archive, `cd <folder>`, `ls -l` the archive, `sudo bash backup.sh`, `sudo rm -rf backend frontend docs`, `sudo tar xzf … --strip-components=1`, `ls backend frontend`, `sudo docker compose build`, `sudo docker compose up -d`, `sudo docker compose ps`, `curl -sk https://localhost:<https>/api/version`, checklist from the delivery message. `.env` and the volumes are never touched.
 
+## 0.16.1 (16/11/2026)
+
+Usual update, no migration and no new run of `demo.js`; `[APP] API 0.16.1`. Rollback to 0.16.0 without restoring the database.
+
 ## 0.16.0 (10/11/2026)
 
 Update with the procedure in the French text, **with migration**: `sudo docker logs gmao-api --tail 30` shows `[DB] Migration 014_validation appliquée` then `[APP] API 0.16.0`. Then reload the demo data (`sudo docker compose stop api`, `sudo docker compose run --rm api node src/demo.js`, `sudo docker compose up -d`): it creates each entity's demo service (head `valideur.<entity>`) and gives a new shared password. Then `sudo bash recette.sh`: nine checks OK, check 5 reads `014_validation`, the services table and the approver transitions. Both images are rebuilt; no new dependency. Rollback to 0.15.0: always with the backup taken just before the update (0.15.0 leaves a request awaiting approval without any button).

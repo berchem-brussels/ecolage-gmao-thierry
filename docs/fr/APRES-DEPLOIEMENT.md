@@ -1,6 +1,6 @@
 # Après déploiement : installer et mettre à jour la GMAO sur NIXUS
 
-Version de l'application : **0.16.0** · Mis à jour le 10/11/2026 · Le français fait foi.
+Version de l'application : **0.16.1** · Mis à jour le 16/11/2026 · Le français fait foi.
 
 Procédure pas à pas depuis un PC Windows, sans passer par DSM. Une commande à la fois ; on attend son résultat avant la suivante. Si un résultat diffère de l'attendu, on s'arrête et on colle la sortie dans la conversation.
 
@@ -188,6 +188,10 @@ Attendu : `[gmao] … : sauvegarde terminée (photos copiées, aucune pièce joi
 Suivie une seule fois, avec la 0.1.0. Elle reste décrite dans `docs/fr/INSTALLATION.md` et `NOTES_LIVRAISON_v0.1.0.md` de l'archive. Ordre : dossier `/volume1/docker/monapp` créé, archive copiée, extraction, `sudo sh verifier-ports.sh 18443 18080` (attendu : deux fois `LIBRE` ; le 18444 est occupé par la GRC), création du `.env` (une seule fois, `DEMO_ALLOWED=1` en acceptance, `chmod 600`), `build`, `up -d`, assistant d'installation dans le navigateur (nom du pouvoir local, entité AC, premier administrateur), création de l'entité CPAS dans Administration, Entités, comptes de démonstration.
 
 ## 8. Notes par version
+
+### 0.16.1 (16/11/2026)
+
+Correctifs de la recette de la 0.16.0 (R1 à R5) et danger sans validation (DV-134, DV-135). Mise à jour par la section 3, sans migration : `sudo docker logs gmao-api --tail 30` montre seulement `[APP] API 0.16.1 sur le port 3001`. Pas de relance de `demo.js` : le mot de passe de démonstration du 14/11/2026 reste valable pour `recette.sh`. Contrôle : bas du menu `v0.16.1` ; `agent.ac` voit une note d'une ligne (danger), `valideur.ac` deux lignes. Retour arrière vers la 0.16.0 sans restaurer la base. `mobile:check` couvre aussi le moteur WebKit (`npx playwright install webkit` une fois) ; ses parcours complets (`MOBILE_PARCOURS=1`) écrivent dans la base et sont refusés hors d'une copie locale : jamais sur cette installation.
 
 ### 0.16.0 (10/11/2026)
 
