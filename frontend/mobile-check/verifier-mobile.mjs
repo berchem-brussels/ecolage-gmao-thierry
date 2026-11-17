@@ -28,6 +28,8 @@
  *   - MOBILE_PARCOURS=1 : parcours complets au doigt sur chaque moteur (mobile-check/parcours.mjs), qui ÉCRIVENT dans la
  *     base : refusés hors d'une copie locale (localhost) ; compte de plus MOBILE_AGENT_USER (agent du service du chef).
  *     MOBILE_ECRANS=0 : parcours seuls, sans le tour des écrans.
+ * 0.17.0 (point 7) : volet de la cloche ouvert (service technique et chef de service), onglet Courriel de Paramètres et
+ *   fiche d'un modèle de courriel avec son aperçu (administrateur) : 45 écrans avec les trois comptes.
  */
 
 import { chromium, webkit, devices } from '@playwright/test';
@@ -64,14 +66,15 @@ if (PARCOURS && !hoteLocal(B)) { console.error('MOBILE_PARCOURS=1 écrit dans la
  * faite avant la mesure (voir agir()).
  */
 const COMPTES = [
-  { nom: 'service technique', user: USER, password: PASSWORD, routes: (f) => [...ROUTES,
+  { nom: 'service technique', user: USER, password: PASSWORD, routes: (f) => [...ROUTES, '/#cloche',
     ...(f.mienne ? [`/demandes?demande=${f.mienne}`] : []),
     ...(f.entite ? [`/demandes-entite?demande=${f.entite}`, `/demandes-entite?demande=${f.entite}#note-interne`] : []),
     ...(f.aQualifier ? [`/demandes-entite?demande=${f.aQualifier}#regrouper`, `/demandes-entite?demande=${f.aQualifier}#decouper`] : [])] },
   { nom: 'chef de service', user: process.env.MOBILE_VALIDEUR_USER, password: process.env.MOBILE_VALIDEUR_PASSWORD || PASSWORD,
-    routes: (f) => ['/', '/a-valider', '/demandes', ...(f.aValider ? [`/a-valider?demande=${f.aValider}`, `/a-valider?demande=${f.aValider}#refuser`] : [])] },
+    routes: (f) => ['/', '/#cloche', '/a-valider', '/demandes', ...(f.aValider ? [`/a-valider?demande=${f.aValider}`, `/a-valider?demande=${f.aValider}#refuser`] : [])] },
   { nom: 'administrateur', user: process.env.MOBILE_ADMIN_USER, password: process.env.MOBILE_ADMIN_PASSWORD || PASSWORD,
-    routes: () => ['/services', '/services#ouvrir', '/users#ouvrir'] },
+    // 0.17.0 (point 2) : onglet Courriel de Paramètres (réglages, essai, journal des courriels retenus).
+    routes: () => ['/services', '/services#ouvrir', '/users#ouvrir', '/parametres?onglet=courriel', '/parametres?onglet=courriel#modele'] },
 ];
 
 const mesurer = () => {
@@ -114,6 +117,12 @@ async function agir(page, action) {
       return pb || cliquer(page.locator('.ant-dropdown:not(.ant-dropdown-hidden) .ant-dropdown-menu-item'), 'état permis');
     }
     case 'ouvrir': return cliquer(page.locator('.ant-table-row .ant-btn-link, .ant-table-row .ant-btn:not(.ant-btn-dangerous)'), 'ligne à ouvrir');
+    // 0.17.0 (point 7) : volet de la cloche (en-tête) ; fiche d'un modèle de courriel et son aperçu (Paramètres › Courriel).
+    case 'cloche': return cliquer(page.locator('header button[aria-label^="Notifications"], header button[aria-label^="Meldingen"]'), 'cloche');
+    case 'modele': {
+      const pb = await cliquer(page.locator('.ant-card').filter({ hasText: /Modèles de courriel|E-mailmodellen/ }).locator('.ant-list-item .ant-btn-link'), 'modèle de courriel');
+      return pb || cliquer(page.locator('.ant-drawer-open button').filter({ hasText: /Aperçu en français|Voorbeeld in het Frans/ }), '« Aperçu »');
+    }
     default: return null;
   }
 }

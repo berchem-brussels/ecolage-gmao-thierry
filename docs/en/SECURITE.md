@@ -2,6 +2,10 @@
 
 The French text (`docs/fr/SECURITE.md`) prevails and holds the full grid per version.
 
+## 0.17.0 (17/11/2026)
+
+Notifications (bell), e-mail (test mode or SMTP, send queue), e-mail templates, notices for requests, the thread and tickets, deadline alerts. A notification of another entity 403, of another person 404, also through MCP; e-mail and templates for the administrator only; no notice of one's own action, except the e-mail acknowledgement (DEM-12); no free text in a notification or e-mail (NOT-06); SMTP password encrypted; `nodemailer` with no access to files or web addresses. Migration `015_notifications`; new dependency `nodemailer` 10.6.0 (deviation E-48). Proof of failure: sixteen protections, each removed on its own, make at least one test fail.
+
 ## 0.16.1 (16/11/2026)
 
 The head of service reads the attachments of the requests they must approve (another head of service, a deputy outside their period and a colleague do not; an internal note's attachment never); a danger request skips approval (P1, `danger` in the log). No new data, no migration, no new dependency. Proof of failure: each protection removed on its own makes at least one test fail.

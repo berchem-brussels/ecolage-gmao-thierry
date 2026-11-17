@@ -1,6 +1,6 @@
 # Architecture
 
-Version 0.16.1 · Le français fait foi.
+Version 0.17.0 · Le français fait foi.
 
 ## Services
 
@@ -275,6 +275,17 @@ Vues (`services/vues-demandes.js`, DV-93) : d'une personne dans une entité ; vu
 Permission nouvelle `demandes:qualifier` (gestionnaire et responsable) dans `config/roles.json`.
 
 Interface : `pages/GestionDemandesPage.tsx` (liste du service ; filtres dans l'adresse, repliés sous « Filtres et vues » sur téléphone ; vues ; fiche latérale et « Qualifier »), `components/demandes/TableauBord.tsx` (accueil et liste), `components/demandes/QualificationForm.tsx`, `FicheDemande` de `DemandesPage.tsx` (lignes du service : priorité et motif, échéances, durée, consignes, qualifiée le). Libellés des états pour le service : `demande.etat_service.*`. `ReglagesEntitePage.tsx` affiche le groupe `pieces` (contrôle 7 de la 0.8.0) ; un test compare ses groupes au catalogue.
+
+## Notifications, courriel et alertes (0.17.0)
+
+- Migration `015_notifications` : `notifications` (personne, entité, événement, variante, objet, numéro, lien, `lue_le`), `courriels` (file et journal des envois : destinataire, langue, événement, objet, sujet, corps, mode, état `test`, `en_attente`, `envoye` ou `echec`, essais, prochain essai, code d'erreur), `modeles_courriel` (code, sujet et texte FR et NL, trace), `demande_alertes` (demande, type `proche` ou `retard`, échéance) ; étape JavaScript `avis.rattraper()` (retards déjà là notés sans avis).
+- Catalogues : `config/notifications.json` (NOT-01 : 16 événements, module, variantes du texte de la cloche FR et NL ; ceux des modules à venir non émis), `config/modeles-courriel.json` (15 modèles, variables, pied, valeurs d'exemple).
+- `services/notifications.js` : `notifier(db, …)` dans la transaction de l'action (destinataires dédoublonnés, compte inactif ou sans rôle sauté, notification de sa propre action née lue, module éteint : rien) ; lecture par la personne seule (403 autre entité, 404 autre personne) ; texte composé à la lecture.
+- `services/courriel.js` : réglages `mail.*` (`settings.js`, mot de passe dans `SECRETS`), `mettreEnFile(db, …)`, `traiter()` (lot de 20, `nodemailer` avec `disableFileAccess`, `disableUrlAccess`, `rejectUnauthorized`, délais bornés, texte brut), `demarrer()` (minute), `essai()`.
+- `services/modeles-courriel.js` : `composer(code, langue, valeurs)` (repli sur le modèle de l'événement, lien complet ou phrase de repli, retours à la ligne retirés du sujet, pied ajouté), contrôle des variables et de `{numero}`, aperçu.
+- `services/avis.js` : qui est averti de quoi. `depot()` (appelé par `demandes.create`), `changement()` (par `cycle.ecrire`, où passe tout changement d'état), `message()` et `filLu()` (par `services/messages.js`), `ticketCree()` et `ticketReponse()` (par `services/tickets.js`), `verifierEcheances()` et `demarrerAlertes()` (quart d'heure, `index.js`).
+- Routes : `/api/notifications`, `/api/settings/courriel`, `/api/settings/courriel/essai`, `/api/courriels`, `/api/modeles-courriel` ; le MCP accepte un outil qui rend une promesse (`send_test_mail`).
+- Interface : `components/NotificationsCloche.tsx` (en-tête ; évènement `app-notifications` pour relire le compteur), `components/CourrielPanel.tsx` et `ModelesCourriel.tsx` (Paramètres, onglet « Courriel ») ; sur téléphone, le choix de l'entité d'une personne de plusieurs entités passe en tête du menu (`AppLayout.tsx`).
 
 ## Valideur, pièces jointes et danger (0.16.1)
 

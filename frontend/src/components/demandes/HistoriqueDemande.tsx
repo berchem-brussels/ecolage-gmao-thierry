@@ -3,14 +3,15 @@
  * réception à l'état courant, avec le motif et le commentaire. Le service technique lit l'auteur, le canal et les
  * commentaires internes (marqués « Interne ») ; le demandeur lit le libellé de l'état réglé par l'entité, sans nom
  * d'agent ni commentaire interne (le serveur ne les lui rend pas). Rechargé quand « rafraichir » change.
+ * valideur (0.17.0, DV-137) : le chef de service lit « du chef de service » au lieu de « votre chef de service ».
  */
 import { useEffect, useState } from 'react';
 import { Tag, Timeline, Typography } from 'antd';
 import api from '../../api';
 import { useI18n } from '../../contexts/I18nContext';
-import { COULEUR_ETAT, instant, type EtapeHistorique } from '../../demandes';
+import { COULEUR_ETAT, ETATS_TIERS, instant, type EtapeHistorique } from '../../demandes';
 
-export default function HistoriqueDemande({ demandeId, service, rafraichir = 0 }: { demandeId: number; service: boolean; rafraichir?: number }) {
+export default function HistoriqueDemande({ demandeId, service, valideur = false, rafraichir = 0 }: { demandeId: number; service: boolean; valideur?: boolean; rafraichir?: number }) {
   const { t, lang } = useI18n();
   const [etapes, setEtapes] = useState<EtapeHistorique[] | null>(null);
   useEffect(() => {
@@ -20,6 +21,7 @@ export default function HistoriqueDemande({ demandeId, service, rafraichir = 0 }
   if (!etapes.length) return <Typography.Text type="secondary">{t('cycle.historique.vide')}</Typography.Text>;
 
   const libelle = (e: EtapeHistorique) => (service ? t(`demande.etat_service.${e.vers_etat}`)
+    : valideur && ETATS_TIERS.has(e.vers_etat) ? t(`demande.etat_tiers.${e.vers_etat}`)
     : (lang === 'nl' ? e.etat_libelle_nl : e.etat_libelle_fr) || t(`demande.etat.${e.vers_etat}`));
   const auteur = (e: EtapeHistorique) => (service && e.auteur_nom ? `${e.auteur_prenom || ''} ${e.auteur_nom}`.trim() : t(`cycle.auteur.${e.auteur}`));
   return (

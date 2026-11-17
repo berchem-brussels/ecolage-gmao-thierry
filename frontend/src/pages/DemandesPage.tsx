@@ -36,7 +36,7 @@ import PhotoLieu from '../components/demandes/PhotoLieu';
 import { useI18n } from '../contexts/I18nContext';
 import { useAuth } from '../contexts/AuthContext';
 import { Icone } from '../referentiel';
-import { type Demande, type Piece, COULEUR_ETAT, beneficiaireTexte, cheminTexte, dateDepot, dateSouhaitee, duree, extrait, finAnnoncee, instant } from '../demandes';
+import { type Demande, type Piece, COULEUR_ETAT, ETATS_TIERS, beneficiaireTexte, cheminTexte, dateDepot, dateSouhaitee, duree, extrait, finAnnoncee, instant } from '../demandes';
 import GestionDemandesPage from './GestionDemandesPage';
 import HistoriqueDemande from '../components/demandes/HistoriqueDemande';
 import FilMessages from '../components/demandes/FilMessages';
@@ -60,10 +60,14 @@ export function NonLusTag({ n }: { n?: number }) {
 
 /**
  * Étiquette d'état : libellé simple vu par le demandeur (cahier des charges, section 8.1) ; libellé du service
- * technique (« À qualifier », « Qualifiée »…) avec service (0.9.0).
+ * technique (« À qualifier », « Qualifiée »…) avec service (0.9.0). valideur (0.17.0, DV-137) : vu par le chef de service,
+ * « En attente de l'accord du chef de service » et « Refusée par le chef de service » au lieu de « votre chef de service ».
  */
-export function EtatTag({ etat, service = false, d }: { etat: Demande['etat']; service?: boolean; d?: Pick<Demande, 'etat_libelle_fr' | 'etat_libelle_nl'> }) {
+export function EtatTag({ etat, service = false, valideur = false, d }: { etat: Demande['etat']; service?: boolean; valideur?: boolean; d?: Pick<Demande, 'etat_libelle_fr' | 'etat_libelle_nl'> }) {
   const { t, lang } = useI18n();
+  if (valideur && !service && ETATS_TIERS.has(etat)) {
+    return <Tag color={COULEUR_ETAT[etat]} style={{ marginInlineEnd: 0, whiteSpace: 'normal' }}>{t(`demande.etat_tiers.${etat}`)}</Tag>;
+  }
   // 0.14.0 (CYC-04) : le demandeur lit le libellé réglé par l'entité quand le serveur le rend.
   const entite = !service && d ? (lang === 'nl' ? d.etat_libelle_nl : d.etat_libelle_fr) : null;
   // Libellé long (« Reçue par le service technique ») : retour à la ligne permis, la fiche tient dans 320 px (0.14.0).
@@ -102,7 +106,8 @@ export function FicheDemande({ d, avecDemandeur, service = false, onChange }: { 
     <Descriptions column={1} size="small" bordered>
       <Descriptions.Item label={t('demande.champ.numero')}><Typography.Text strong copyable>{d.numero}</Typography.Text></Descriptions.Item>
       <Descriptions.Item label={t('demande.champ.etat')}>
-        <EtatTag etat={d.etat} service={service} d={d} />
+        {/* 0.17.0 (DV-137) : avec le demandeur sans être du service, c'est le chef de service qui lit la fiche. */}
+        <EtatTag etat={d.etat} service={service} valideur={avecDemandeur} d={d} />
         {service && d.etat_depuis && <Typography.Text type="secondary" style={{ fontSize: 13 }}> {t('cycle.depuis')} {instant(d.etat_depuis)}</Typography.Text>}
       </Descriptions.Item>
       {service && d.cause_code && <Descriptions.Item label={t('cycle.motif.cause_panne')}>{lang === 'nl' ? d.cause_libelle_nl : d.cause_libelle_fr}</Descriptions.Item>}
@@ -179,7 +184,7 @@ export function FicheDemande({ d, avecDemandeur, service = false, onChange }: { 
       {/* 0.16.0 : en attente de l'accord du chef de service, les délais ne courent pas encore. */}
       {d.ouverte !== 0 && (
         <Descriptions.Item label={t('demande.champ.delai')}>
-          {d.etat === 'en_validation' ? t('demande.delai.validation')
+          {d.etat === 'en_validation' ? t(service || avecDemandeur ? 'demande.delai.validation.tiers' : 'demande.delai.validation')
             : d.danger === 1 && !d.delai_annonce ? t('demande.danger.envoyee') : fin ? `${t('demande.delai.indicatif')} ${fin}` : t('demande.delai.convenir')}
         </Descriptions.Item>
       )}

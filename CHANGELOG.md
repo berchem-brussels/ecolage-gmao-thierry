@@ -1,6 +1,22 @@
 # Journal des versions
 
-Version de l'application : **0.16.1** · Mis à jour le 16/11/2026
+Version de l'application : **0.17.0** · Mis à jour le 17/11/2026
+
+## 0.17.0 (17/11/2026)
+
+Étape 13 : notifications (NOT-01 à NOT-06, DEM-12), avec les remarques de la recette de la 0.16.1 (DV-137) ; DV-138 à DV-144. Migration `015_notifications`. Dépendance nouvelle : `nodemailer` 10.6.0 (écart E-48). Aucune permission nouvelle.
+
+- Point 0 (DV-137) : la croix du volet pendant « Regrouper », « Découper », « Qualifier », un passage, « Valider et transmettre » ou « Refuser » ramène à la fiche (« Revenir à la fiche ») ; la fiche que lit le chef de service parle « du chef de service » (`ETATS_TIERS`, `demande.etat_tiers.*`, `demande.delai.validation.tiers`), le demandeur garde « votre chef de service ».
+- Cloche (`notifications`, `config/notifications.json`, `services/notifications.js`, `/api/notifications`, `NotificationsCloche.tsx`) : seize événements en données, textes FR et NL composés à la lecture, aucun texte libre en base ; liste de l'entité active, compteur des autres entités ; marquer lue, tout marquer lu ; autre entité 403, autre personne 404 ; événement d'un module éteint caché ; conservation 90 jours (lues) et 365 jours (non lues). Sur téléphone, le choix de l'entité d'une personne de deux entités passe en tête du menu.
+- Courriel (`courriels`, `services/courriel.js`, `/api/settings/courriel`, `/api/courriels`, Paramètres › Courriel) : mode test livré (rien ne part, courriels lisibles par l'administrateur, DV-140) ou SMTP (`SMTP_INCOMPLET`, mot de passe chiffré) ; courriel d'essai ; file traitée par l'API, trois essais espacés, échec gardé ; conservation 90 jours ; `nodemailer` sans accès aux fichiers ni aux adresses web.
+- Modèles de courriel (`modeles_courriel`, `config/modeles-courriel.json`, `services/modeles-courriel.js`, `/api/modeles-courriel`, `ModelesCourriel.tsx`) : quinze modèles FR et NL, variables contrôlées (`MODELE_VARIABLE`), `{numero}` exigé (`MODELE_SANS_NUMERO`), aperçu, retour au texte livré ; langue du destinataire (LNG-05).
+- Avis (`services/avis.js`, appelé par `demandes`, `cycle`, `messages` et `tickets`) : accusé de dépôt (lu dans la cloche, envoyé par courriel, DEM-12), demande à valider, danger parti sans le chef, validée, refusée, changements d'état, demande pour un bénéficiaire, message du fil, note interne aux seuls collègues mentionnés, ticket créé et réponse ; jamais d'avis de sa propre action (sauf l'accusé) ; adresse `.invalid` jamais envoyée en SMTP (DV-142).
+- Alertes d'échéance (`demande_alertes`) : toutes les 15 minutes, échéance proche et retard, à la personne qui a qualifié, sinon au service technique de l'entité (DV-143) ; une alerte par échéance ; retards déjà là notés sans avis au passage en 0.17.0 (`rattraper`).
+- MCP : seize outils (six notifications, cinq courriel, cinq modèles) ; `handleRpc` accepte un outil asynchrone.
+- `mobile:check` : cloche ouverte (service technique, chef de service), fiche d'un modèle de courriel (administrateur) : 45 écrans ; parcours : le chef puis l'agent ouvrent la demande depuis la cloche.
+- Aide : Paramètres (courriel, modèles), Accueil (« À quoi sert la cloche ? »), Mes demandes (avancement) ; documentation : `docs/fonctionnel/notifications.md`, sections 0.17.0 d'EXPLOITATION, ARCHITECTURE, MCP, SECURITE et APRES-DEPLOIEMENT ; `recette.sh` contrôle 5 : `015_notifications` et ses quatre tables.
+- Note de version : deux lignes pour tous, une pour le chef de service, une pour le service technique, une pour l'administrateur.
+- Tests : serveur 594 (544), interface 331 (320) et un contrôle des captures ; preuves d'échec dans `docs/fr/SECURITE.md`.
 
 ## 0.16.1 (16/11/2026)
 

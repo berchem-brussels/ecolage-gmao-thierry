@@ -9,6 +9,12 @@ import dayjs from 'dayjs';
 export type Etat = 'brouillon' | 'en_validation' | 'refusee_validation' | 'a_qualifier' | 'qualifiee' | 'planifiee' | 'en_cours'
   | 'en_attente' | 'externe' | 'terminee' | 'cloturee' | 'rouverte' | 'refusee' | 'fusionnee' | 'annulee';
 
+/**
+ * 0.17.0 (point 0, DV-137) : états dont le libellé du demandeur dit « votre chef de service ». Le chef de service
+ * (« Demandes à valider ») lit à la place le libellé neutre « demande.etat_tiers.* ».
+ */
+export const ETATS_TIERS: ReadonlySet<Etat> = new Set<Etat>(['en_validation', 'refusee_validation']);
+
 export const ETATS: Etat[] = ['brouillon', 'en_validation', 'refusee_validation', 'a_qualifier', 'qualifiee', 'planifiee', 'en_cours',
   'en_attente', 'externe', 'terminee', 'cloturee', 'rouverte', 'refusee', 'fusionnee', 'annulee'];
 

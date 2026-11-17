@@ -12,7 +12,7 @@ import { useEffect, useState } from 'react';
 import { Alert, Button, Form, Input, Radio, Space, Spin, Typography, message } from 'antd';
 import api, { ApiError, qs } from '../../api';
 import { useI18n } from '../../contexts/I18nContext';
-import { cleAction, type Demande, type Transition } from '../../demandes';
+import { ETATS_TIERS, cleAction, type Demande, type Etat, type Transition } from '../../demandes';
 import { obligatoire, texteObligatoire } from '../../validation';
 
 /** Rôle ARIA du groupe : Form.Item y pose aria-required, permis seulement sur un radiogroup (axe-core). */
@@ -50,10 +50,15 @@ export function ActionsDemande({ d, onChoisir, passages: donnes, titre = 'cycle.
 /** Formulaire d'un passage : motif, commentaire, compte rendu selon la table des passages. */
 export function ChangerEtatForm({ d, transition, onDone, onCancel, libelles = 'service' }: {
   d: Demande; transition: Transition; onDone: (d: Demande) => void; onCancel: () => void;
-  /** 0.16.0 : « demandeur » nomme les états comme le demandeur les lit (chef de service). */
-  libelles?: 'service' | 'demandeur';
+  /**
+   * 0.16.0 : « demandeur » nomme les états comme le demandeur les lit. 0.17.0 (DV-137) : « valideur », pour le chef de
+   * service : comme le demandeur, sauf « du chef de service » au lieu de « votre chef de service ».
+   */
+  libelles?: 'service' | 'demandeur' | 'valideur';
 }) {
   const { t, lang, hint } = useI18n();
+  const cleEtat = (e: Etat) => (libelles === 'service' ? `demande.etat_service.${e}`
+    : libelles === 'valideur' && ETATS_TIERS.has(e) ? `demande.etat_tiers.${e}` : `demande.etat.${e}`);
   const [form] = Form.useForm<Saisie>();
   const [valeurs, setValeurs] = useState<Valeur[] | null>(transition.motif_liste ? null : []);
   const [envoi, setEnvoi] = useState(false);
@@ -86,8 +91,8 @@ export function ChangerEtatForm({ d, transition, onDone, onCancel, libelles = 's
   return (
     <Form<Saisie> form={form} layout="vertical" onFinish={envoyer} requiredMark>
       <Typography.Paragraph type="secondary">
-        {t('cycle.passage').replace('{de}', t(`demande.${libelles === 'service' ? 'etat_service' : 'etat'}.${d.etat}`))
-          .replace('{vers}', t(`demande.${libelles === 'service' ? 'etat_service' : 'etat'}.${transition.vers}`))}
+        {t('cycle.passage').replace('{de}', t(cleEtat(d.etat)))
+          .replace('{vers}', t(cleEtat(transition.vers)))}
       </Typography.Paragraph>
       {erreur && <Alert type="error" showIcon message={erreur} style={{ marginBottom: 12 }} />}
       {transition.motif_liste && (

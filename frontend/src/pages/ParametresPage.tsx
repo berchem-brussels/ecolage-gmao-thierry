@@ -13,6 +13,7 @@ import { useSearchParams } from 'react-router-dom';
 import api, { ApiError } from '../api';
 import ReglagesForm from '../components/ReglagesForm';
 import ConnexionPanel from '../components/ConnexionPanel';
+import CourrielPanel from '../components/CourrielPanel';
 import { useI18n } from '../contexts/I18nContext';
 import { useSettings } from '../contexts/SettingsContext';
 import { type Module, reloadModules, useModules } from '../moduleMap';
@@ -75,7 +76,7 @@ export default function ParametresPage() {
   const { reload } = useSettings();
   const [search, setSearch] = useSearchParams();
   const demande = search.get('onglet');
-  const onglet = demande === 'modules' || demande === 'connexion' || demande === 'tickets' ? demande : 'general';
+  const onglet = demande === 'modules' || demande === 'connexion' || demande === 'tickets' || demande === 'courriel' ? demande : 'general';
   return (
     <div>
       <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, gap: 12, flexWrap: 'wrap' }}>
@@ -88,6 +89,8 @@ export default function ParametresPage() {
         { key: 'connexion', label: t('parametres.tab.connexion'), children: <ConnexionPanel /> },
         // Tickets (0.11.0) : rôles des deux files, délai de réouverture, délais par priorité (standard, section 13.5).
         { key: 'tickets', label: t('parametres.tab.tickets'), children: <ReglagesForm endpoint="/parametres" groupes={['tickets']} prefixe="parametres" /> },
+        // 0.17.0 (étape 13, point 2) : courriel, mode test, essai et journal des envois.
+        { key: 'courriel', label: t('parametres.tab.courriel'), children: <CourrielPanel /> },
       ]} />
     </div>
   );

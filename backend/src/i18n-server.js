@@ -52,6 +52,10 @@ const MESSAGES = {
   MODELE_VARIABLE: { fr: 'Variable inconnue dans le modèle. Variables admises : {numero}, {lieu}, {etat}, {prenom}.', nl: 'Onbekende variabele in het model. Toegelaten variabelen: {numero}, {lieu}, {etat}, {prenom}.' },
   REMARQUE_ABONNEMENT: { fr: 'Une remarque accompagne seulement un « Moi aussi », pas un simple suivi.', nl: 'Een opmerking hoort enkel bij een « Ik ook », niet bij het gewoon volgen.' },
   PAS_SUIVIE: { fr: 'Vous ne suivez pas cette demande.', nl: 'U volgt deze aanvraag niet.' },
+  // 0.17.0 (étape 13, points 2 et 3) : courriel et modèles de courriel.
+  SMTP_INCOMPLET: { fr: "L'envoi réel demande le serveur SMTP et l'adresse de l'expéditeur.", nl: 'Echte verzending vereist de SMTP-server en het adres van de afzender.' },
+  COURRIEL_SANS_DESTINATAIRE: { fr: "Aucune adresse à qui envoyer l'essai : donnez-en une.", nl: 'Geen adres om de test naar te sturen: geef er een op.' },
+  MODELE_SANS_NUMERO: { fr: 'Le sujet ou le texte doit citer {numero}, en français et en néerlandais : la personne retrouve ainsi la demande.', nl: 'Het onderwerp of de tekst moet {numero} vermelden, in het Frans en in het Nederlands: zo vindt de persoon de aanvraag terug.' },
   // 0.16.0 (étape 12, GES-06) : fusion de doublons.
   TRANSITION_PAR_ROUTE: { fr: 'Ce changement se fait par son propre bouton (regrouper, découper).', nl: 'Deze wijziging gebeurt via haar eigen knop (samenvoegen, opsplitsen).' },
   DECOUPAGE_ETAT: { fr: 'Seule une demande ouverte, reçue par le service technique, peut être découpée.', nl: 'Alleen een open aanvraag, ontvangen door de technische dienst, kan opgesplitst worden.' },

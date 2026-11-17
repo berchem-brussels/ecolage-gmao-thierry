@@ -51,6 +51,8 @@ export default function AValiderPage() {
   }, [ouverte]);
   const ouvrir = (d: Demande) => { const p = new URLSearchParams(params); p.set('demande', String(d.id)); setParams(p); };
   const fermer = () => { setPassage(null); const p = new URLSearchParams(params); p.delete('demande'); setParams(p); };
+  /** 0.17.0 (point 0, DV-137) : la croix, Échap ou un clic à côté pendant une décision ramène à la fiche, sans la fermer. */
+  const fermerVolet = () => { if (passage) setPassage(null); else fermer(); };
   const apres = (d: Demande) => { setFiche(d); setPassage(null); setHisto((n) => n + 1); charger(); };
 
   const cat = (d: Demande) => (lang === 'nl' ? d.categorie_libelle_nl : d.categorie_libelle_fr);
@@ -99,17 +101,18 @@ export default function AValiderPage() {
             { title: t('demande.champ.depot'), key: 'depot', render: (_, d) => dateDepot(d.created_at) },
           ]} />
       )}
-      <Drawer open={!!fiche} onClose={fermer} width={mobile ? '100%' : 520}
+      <Drawer open={!!fiche} onClose={fermerVolet} width={mobile ? '100%' : 520}
+        closable={{ 'aria-label': t(passage ? 'common.retour_fiche' : 'common.close') }}
         title={fiche ? `${passage ? t(passage.vers === 'a_qualifier' ? 'cycle.action.valider' : 'cycle.action.refusee_validation') : t('avalider.fiche')} ${fiche.numero}` : ''}>
         {fiche && (passage
-          ? <ChangerEtatForm key={`p-${fiche.id}-${passage.vers}`} d={fiche} transition={passage} libelles="demandeur" onCancel={() => setPassage(null)} onDone={apres} />
+          ? <ChangerEtatForm key={`p-${fiche.id}-${passage.vers}`} d={fiche} transition={passage} libelles="valideur" onCancel={() => setPassage(null)} onDone={apres} />
           : (
             <>
               {passages.length > 0
                 ? <ActionsDemande d={fiche} passages={passages} titre="avalider.decision" onChoisir={setPassage} />
-                : <Alert type="info" showIcon style={{ marginBottom: 12 }} message={<span>{t('avalider.plus')} <EtatTag etat={fiche.etat} d={fiche} /></span>} />}
+                : <Alert type="info" showIcon style={{ marginBottom: 12 }} message={<span>{t('avalider.plus')} <EtatTag etat={fiche.etat} valideur d={fiche} /></span>} />}
               <FicheDemande d={fiche} avecDemandeur />
-              <HistoriqueDemande demandeId={fiche.id} service={false} rafraichir={histo} />
+              <HistoriqueDemande demandeId={fiche.id} service={false} valideur rafraichir={histo} />
             </>
           ))}
       </Drawer>

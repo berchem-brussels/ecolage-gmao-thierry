@@ -813,6 +813,77 @@ const MIGRATIONS = [
     DROP TABLE demande_transitions;
     ALTER TABLE demande_transitions_014 RENAME TO demande_transitions
   `],
+  // 0.17.0 (étape 13 ; NOT-01, NOT-02, NOT-06) : notifications de la cloche. Une ligne par personne et par événement,
+  // dans l'entité de l'objet ; seulement des codes, un numéro et l'adresse de l'écran (aucun texte libre, aucun nom) ;
+  // le texte se compose à la lecture depuis config/notifications.json. lue_le : NULL tant que la personne ne l'a pas lue.
+  // Point 2 (NOT-02, NOT-04) : courriels, file d'envoi et journal de chaque envoi avec son résultat (standard, section 7,
+  // « Règles communes ») ; en mode test, rien ne part : le courriel est retenu ici, lisible par l'administrateur.
+  // Point 3 (NOT-04, LNG-05) : modèles de courriel de l'instance, un par événement ou variante, FR et NL ; les modèles
+  // livrés (config/modeles-courriel.json) sont créés s'ils manquent, jamais remplacés.
+  // Point 6 (PRI-03, E-35) : alertes d'échéance déjà envoyées, une par demande, type et échéance (une échéance qui
+  // change refait une alerte).
+  ['015_notifications', `
+    CREATE TABLE notifications (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      entite_id INTEGER NOT NULL REFERENCES entites(id) ON DELETE RESTRICT,
+      evenement TEXT NOT NULL CHECK (length(evenement) BETWEEN 3 AND 60),
+      variante TEXT NOT NULL DEFAULT 'defaut' CHECK (length(variante) BETWEEN 2 AND 30),
+      objet TEXT NOT NULL CHECK (objet IN ('demande', 'ticket', 'reservation', 'pret', 'controle')),
+      objet_id INTEGER NOT NULL CHECK (objet_id >= 1),
+      numero TEXT NOT NULL CHECK (length(numero) BETWEEN 1 AND 40),
+      lien TEXT NOT NULL CHECK (substr(lien, 1, 1) = '/' AND length(lien) BETWEEN 1 AND 200),
+      lue_le TEXT,
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+    CREATE INDEX idx_notifications_user ON notifications(user_id, entite_id, lue_le, id);
+    CREATE INDEX idx_notifications_created ON notifications(created_at);
+    CREATE TABLE courriels (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      entite_id INTEGER REFERENCES entites(id) ON DELETE RESTRICT,
+      user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+      destinataire TEXT NOT NULL CHECK (length(destinataire) BETWEEN 3 AND 254),
+      langue TEXT NOT NULL DEFAULT 'fr' CHECK (langue IN ('fr', 'nl')),
+      evenement TEXT NOT NULL CHECK (length(evenement) BETWEEN 3 AND 60),
+      objet TEXT CHECK (objet IS NULL OR objet IN ('demande', 'ticket', 'reservation', 'pret', 'controle')),
+      objet_id INTEGER,
+      numero TEXT CHECK (numero IS NULL OR length(numero) BETWEEN 1 AND 40),
+      sujet TEXT NOT NULL CHECK (length(sujet) BETWEEN 1 AND 200),
+      corps TEXT NOT NULL CHECK (length(corps) BETWEEN 1 AND 10000),
+      mode TEXT NOT NULL CHECK (mode IN ('test', 'smtp')),
+      etat TEXT NOT NULL CHECK (etat IN ('test', 'en_attente', 'envoye', 'echec')),
+      essais INTEGER NOT NULL DEFAULT 0 CHECK (essais >= 0),
+      prochain_essai TEXT,
+      erreur TEXT CHECK (erreur IS NULL OR length(erreur) BETWEEN 1 AND 60),
+      envoye_le TEXT,
+      created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      CHECK ((mode = 'test') = (etat = 'test'))
+    );
+    CREATE INDEX idx_courriels_etat ON courriels(etat, prochain_essai);
+    CREATE INDEX idx_courriels_created ON courriels(created_at);
+    CREATE TABLE modeles_courriel (
+      code TEXT PRIMARY KEY CHECK (length(code) BETWEEN 3 AND 60),
+      sujet_fr TEXT NOT NULL CHECK (length(sujet_fr) BETWEEN 1 AND 150),
+      sujet_nl TEXT NOT NULL CHECK (length(sujet_nl) BETWEEN 1 AND 150),
+      corps_fr TEXT NOT NULL CHECK (length(corps_fr) BETWEEN 1 AND 4000),
+      corps_nl TEXT NOT NULL CHECK (length(corps_nl) BETWEEN 1 AND 4000),
+      retabli INTEGER NOT NULL DEFAULT 0 CHECK (retabli IN (0, 1)),
+      updated_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+      updated_at TEXT
+    );
+    CREATE TABLE demande_alertes (
+      demande_id INTEGER NOT NULL REFERENCES demandes(id) ON DELETE RESTRICT,
+      type TEXT NOT NULL CHECK (type IN ('proche', 'retard')),
+      echeance_le TEXT NOT NULL CHECK (length(echeance_le) = 19),
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      PRIMARY KEY (demande_id, type, echeance_le)
+    )
+  `, (db) => {
+    // Retards déjà là au passage en 0.17.0 : notés comme signalés, sans avis (le tableau de bord les compte) ; seuls les
+    // nouveaux retards font une alerte (services/avis.js, règle 8).
+    require('./services/avis').rattraper(db);
+  }],
 ];
 
 function migrate() {

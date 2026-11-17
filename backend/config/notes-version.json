@@ -2,6 +2,37 @@
   "_description": "Notes de version pour les utilisateurs, en FR et en NL, sans terme technique (standard v3.2, sections 13.1 et 17.8 ; écart E-07). Une note par version, de la plus récente à la plus ancienne. Chaque ligne a un public : « tous », « admin » (administrateur de l'application) ou une permission du catalogue des rôles (par exemple « parametres:gerer »), lue dans l'entité active. La note de la version installée s'affiche une fois à la première connexion qui suit la mise à jour ; toutes restent relisibles dans Aide, Nouveautés.",
   "notes": [
     {
+      "version": "0.17.0",
+      "date": "2026-11-17",
+      "lignes": [
+        {
+          "public": "tous",
+          "fr": "Une cloche en haut de l'écran vous prévient : demande reçue, validée, prise en charge, terminée, nouveau message… Touchez-la, puis touchez un avis pour ouvrir la demande. Les mêmes avis partent par courriel, dans votre langue, dès que l'administrateur active l'envoi.",
+          "nl": "Een bel bovenaan het scherm houdt u op de hoogte: aanvraag ontvangen, goedgekeurd, in behandeling, beëindigd, nieuw bericht… Tik erop en tik dan op een melding om de aanvraag te openen. Dezelfde meldingen vertrekken per e-mail, in uw taal, zodra de beheerder de verzending inschakelt."
+        },
+        {
+          "public": "tous",
+          "fr": "Sur téléphone, si vous travaillez pour deux entités, le choix de l'entité est en tête du menu.",
+          "nl": "Op een telefoon staat de keuze van de entiteit bovenaan het menu als u voor twee entiteiten werkt."
+        },
+        {
+          "public": "demandes:valider",
+          "fr": "Chef de service : la cloche vous signale chaque demande qui attend votre accord, et une demande partie sans vous parce qu'elle signale un danger.",
+          "nl": "Diensthoofd: de bel meldt u elke aanvraag die op uw akkoord wacht, en een aanvraag die zonder u vertrokken is omdat ze een gevaar meldt."
+        },
+        {
+          "public": "demandes:traiter",
+          "fr": "Service technique : la cloche vous signale les messages des demandeurs, les notes internes où l'on vous mentionne, et l'échéance proche ou le retard des demandes que vous avez qualifiées.",
+          "nl": "Technische dienst: de bel meldt u de berichten van aanvragers, de interne notities waarin u vermeld wordt, en de nabije vervaldag of de vertraging van de aanvragen die u gekwalificeerd hebt."
+        },
+        {
+          "public": "admin",
+          "fr": "Administrateur : Paramètres, onglet « Courriel » : réglage de l'envoi (en mode test, rien ne part et chaque courriel se lit dans le journal), courriel d'essai et textes des courriels en français et en néerlandais.",
+          "nl": "Beheerder: Parameters, tabblad « E-mail »: instelling van de verzending (in testmodus vertrekt er niets en is elke e-mail leesbaar in het logboek), testmail en teksten van de e-mails in het Frans en het Nederlands."
+        }
+      ]
+    },
+    {
       "version": "0.16.1",
       "date": "2026-11-16",
       "lignes": [

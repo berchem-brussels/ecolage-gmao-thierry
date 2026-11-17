@@ -2,6 +2,10 @@
 
 De Franse tekst (`docs/fr/SECURITE.md`) is rechtsgeldig en bevat het volledige rooster per versie.
 
+## 0.17.0 (17/11/2026)
+
+Meldingen (bel), e-mail (testmodus of SMTP, verzendwachtrij), e-mailmodellen, berichten over aanvragen, de draad en tickets, termijnwaarschuwingen. Melding van een andere entiteit 403, van een andere persoon 404, ook via MCP; e-mail en modellen alleen voor de beheerder; geen bericht over de eigen handeling, behalve de ontvangstbevestiging per e-mail (DEM-12); geen vrije tekst in een melding of e-mail (NOT-06); SMTP-wachtwoord versleuteld; `nodemailer` zonder toegang tot bestanden of webadressen. Migratie `015_notifications`; nieuwe afhankelijkheid `nodemailer` 10.6.0 (afwijking E-48). Faalbewijs: zestien beschermingen, elk afzonderlijk weggenomen, doen minstens één test falen.
+
 ## 0.16.1 (16/11/2026)
 
 Het diensthoofd leest de bijlagen van de aanvragen die het moet goedkeuren (een ander diensthoofd, een vervanger buiten zijn periode en een collega niet; een bijlage van een interne nota nooit); een aanvraag met gevaar slaat de goedkeuring over (P1, logboek `danger`). Geen nieuwe gegevens, geen migratie, geen nieuwe afhankelijkheid. Faalbewijs: elke bescherming afzonderlijk weggenomen doet minstens één test falen.

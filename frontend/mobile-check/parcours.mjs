@@ -7,6 +7,8 @@
  *   3. le service technique regroupe une demande en double dans la demande validée ;
  *   4. il découpe la demande validée en deux ;
  *   5. il déplace une demande d'une colonne à l'autre (« Déplacer », puis le passage confirmé dans la fiche).
+ * 0.17.0 (point 7) : à l'étape 2, le chef ouvre la demande depuis la cloche ; étape 2 bis, l'agent apprend la validation
+ * par la cloche et arrive sur sa demande.
  * À chaque étape : défilement horizontal, texte hors de l'écran, image qui ne s'affiche pas, erreur de la console, appel
  * refusé de l'API ; le résultat est relu par l'API.
  * Ces parcours ÉCRIVENT dans la base : ils ne tournent que sur une copie locale jetable (adresse localhost ou 127.0.0.1),
@@ -64,6 +66,23 @@ export async function parcours(navigateur, moteur, appareil, comptes, outils) {
     await loc.first().scrollIntoViewIfNeeded();
     await loc.first().tap();
   };
+  /**
+   * 0.17.0 (point 7) : cloche de l'en-tête au doigt ; la notification de la demande (texte attendu facultatif) mène à son
+   * écran (lien attendu) et n'est plus comptée non lue.
+   */
+  const ouvrirDepuisCloche = async (n, page, erreurs, numero, lien, texte = null) => {
+    const cloche = page.locator('header button[aria-label^="Notifications"]');
+    const avant = (await cloche.getAttribute('aria-label')) || '';
+    if (!/non lue/.test(avant)) defauts.push(etape(n, `cloche sans notification non lue (« ${avant} »)`));
+    await tap(cloche, 'cloche');
+    await attendre(page, 1200);
+    await verifier(n, 'volet de la cloche', page, erreurs);
+    const ligne = page.locator('.ant-drawer-open .notif-item').filter({ hasText: numero || '' }).filter(texte ? { hasText: texte } : {});
+    await tap(ligne, `notification de ${numero}`);
+    await attendre(page, 1500);
+    const ici = new URL(page.url());
+    if (`${ici.pathname}${ici.search}` !== lien) defauts.push(etape(n, `la notification mène à ${ici.pathname}${ici.search} au lieu de ${lien}`));
+  };
   const verifier = async (n, txt, page, erreurs) => {
     const pb = await controler(page);
     if (erreurs.length) pb.push(`erreurs : ${[...new Set(erreurs)].join(' ; ')}`);
@@ -74,6 +93,7 @@ export async function parcours(navigateur, moteur, appareil, comptes, outils) {
   // 1. Dépôt par l'agent, avec photo, dans une catégorie à valider.
   let demandeId = null;
   let lieuId = null;
+  let numeroDemande = null;
   {
     const { ctx, page, erreurs, suivi } = await connecter(navigateur, appareil, comptes.agent.user, comptes.agent.password);
     const rendre = await enFrancais(page);
@@ -105,6 +125,7 @@ export async function parcours(navigateur, moteur, appareil, comptes, outils) {
       const d = (liste.body?.data || []).find((x) => x.numero === numero);
       demandeId = d?.id ?? null;
       lieuId = d?.lieu_id ?? null;
+      numeroDemande = numero;
       if (!d || d.etat !== 'en_validation') defauts.push(etape(1, `demande ${numero} pas « En validation » (${d?.etat})`));
     } catch (e) { defauts.push(etape(1, `dépôt interrompu : ${e.message.split('\n')[0]}`)); } finally { await rendre().catch(() => {}); await ctx.close(); }
   }
@@ -117,7 +138,11 @@ export async function parcours(navigateur, moteur, appareil, comptes, outils) {
     suivi.connecte = true;
     suivi.sansNouveautes = true;
     try {
-      await page.goto(`${B}/a-valider?demande=${demandeId}`);
+      // 0.17.0 (point 7) : le chef ouvre la demande depuis la cloche (« La demande … attend votre accord »).
+      await page.goto(`${B}/`);
+      await attendre(page, 1500);
+      await ouvrirDepuisCloche(2, page, erreurs, numeroDemande, `/a-valider?demande=${demandeId}`);
+      if (!(await page.locator('.ant-drawer-open').filter({ hasText: /Valider et transmettre/ }).count())) await page.goto(`${B}/a-valider?demande=${demandeId}`);
       await page.locator('.ant-drawer-open').waitFor({ timeout: 10000 });
       await attendre(page, 2500);
       const photos = await page.evaluate(() => [...document.querySelectorAll('.ant-drawer-open img')].map((i) => ({ ok: i.complete && i.naturalWidth > 0, src: i.getAttribute('src') || '' })));
@@ -129,6 +154,22 @@ export async function parcours(navigateur, moteur, appareil, comptes, outils) {
       await attendre(page, 1500);
       await verifier(2, 'validation', page, erreurs);
     } catch (e) { defauts.push(etape(2, `validation interrompue : ${e.message.split('\n')[0]}`)); } finally { await rendre().catch(() => {}); await ctx.close(); }
+  }
+
+  // 2 bis (0.17.0, point 7) : l'agent apprend la validation par la cloche et arrive sur sa demande.
+  {
+    const { ctx, page, erreurs, suivi } = await connecter(navigateur, appareil, comptes.agent.user, comptes.agent.password);
+    const rendre = await enFrancais(page);
+    suivi.connecte = true;
+    suivi.sansNouveautes = true;
+    try {
+      await page.goto(`${B}/`);
+      await attendre(page, 1500);
+      await ouvrirDepuisCloche('2 bis', page, erreurs, numeroDemande, `/demandes?demande=${demandeId}`, /a validé la demande/);
+      await page.locator('.ant-drawer-open').waitFor({ timeout: 10000 });
+      await attendre(page, 1200);
+      await verifier('2 bis', 'fiche ouverte depuis la cloche', page, erreurs);
+    } catch (e) { defauts.push(etape('2 bis', `cloche de l'agent : ${e.message.split('\n')[0]}`)); } finally { await rendre().catch(() => {}); await ctx.close(); }
   }
 
   // 3 à 5. Service technique : regrouper un doublon, découper, déplacer.

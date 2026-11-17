@@ -200,6 +200,9 @@ function ecrire(db, { demandeId, entiteId, de, vers, userId, motifId = null, com
   db.prepare(`INSERT INTO demande_historique (demande_id, entite_id, de_etat, vers_etat, user_id, motif_id, commentaire, commentaire_public, canal, created_at)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
     .run(demandeId, entiteId, de, vers, userId || null, motifId, commentaire, commentairePublic ? 1 : 0, canalDe(channel), quand);
+  // 0.17.0 (étape 13, point 4) : chaque changement d'état d'une demande existante passe par ici ; avis aux personnes
+  // concernées (services/avis.js), dans la même transaction, après la mise à jour de la demande.
+  if (de) require('./avis').changement(db, { demandeId, de, vers, auteurId: userId || null });
 }
 
 /** Demande de l'entité active, pour un passage : 404 inconnue, 403 autre entité. */

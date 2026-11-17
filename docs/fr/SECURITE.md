@@ -2,6 +2,49 @@
 
 Le français fait foi. Grille de la section 10.2 du standard, rejouée à chaque version. « Non joué » veut dire que le contrôle n'a pas tourné.
 
+## 0.17.0 (17/11/2026)
+
+Étape 13 : notifications dans l'application (cloche), courriel (mode test ou SMTP, file d'envoi), modèles de courriel, avis d'une demande, du fil et des tickets, alertes d'échéance ; remarques de la recette de la 0.16.1. Environnement : bac à sable de Claude, Node 22.23.4, copie locale de la 0.17.0 sur une base de démonstration jetable passée de 0.16.1 à 0.17.0. Migration `015_notifications`. Dépendance nouvelle : `nodemailer` 10.6.0 (écart E-48).
+
+| Famille | Contrôle | Résultat |
+| --- | --- | --- |
+| Autorisation (IDOR) | Notification d'une autre entité 403, d'une autre personne de la même entité 404 (existence non révélée), inconnue 404 ; même réponse par l'API et par le MCP ; routes `/api/notifications/:id` et `/:id/lue` dans `cloison.test.js` ; une personne de deux entités ne voit que l'entité active (le compteur donne les autres) | Conforme (`notifications.test.js`, `cloison.test.js`) |
+| Autorisation | Réglages du courriel, envoi d'essai, journal des courriels et modèles de courriel réservés à l'administrateur (403), par l'API et par le MCP ; chaque personne ne lit que ses propres notifications | Conforme (`courriel.test.js`, `modeles-courriel.test.js`) |
+| Logique | Pas d'avis de sa propre action, sauf l'accusé de dépôt par courriel (DEM-12) ; destinataire choisi par le serveur (demandeur, bénéficiaire, personnes qui suivent, chef et suppléant en période, personne qui a qualifié, service technique), jamais par la requête ; note interne : seuls les collègues mentionnés, jamais le demandeur ; une alerte d'échéance par échéance, rattrapage des retards déjà là sans avis au passage en 0.17.0 ; événement d'un module éteint ni émis, ni listé, ni lisible | Conforme (`avis.test.js`, `notifications.test.js`) |
+| Validation | Schémas `notificationList`, `notificationLue`, `courrielSettings`, `courrielEssai`, `courrielList` ; modèles : variables admises seulement (`MODELE_VARIABLE`), `{numero}` exigé dans chaque langue (`MODELE_SANS_NUMERO`), sujet sur une ligne ; mode SMTP sans serveur ni expéditeur refusé (`SMTP_INCOMPLET`) | Conforme (`courriel.test.js`, `modeles-courriel.test.js`) |
+| Injections | Requêtes paramétrées, noms seuls interpolés (règle statique de `securite.test.js`) ; `nodemailer` sans accès aux fichiers ni aux adresses web depuis un message (`disableFileAccess`, `disableUrlAccess`), certificat du serveur vérifié, délais bornés ; expéditeur et destinataire en objets ; texte du courriel en texte brut | Conforme (`securite.test.js`, `courriel.test.js`) |
+| Données (RGPD) | Notification sans texte libre : événement, numéro, lien, texte composé à la lecture (NOT-06) ; courriel sans description, commentaire, motif ni nom ; conservation : notifications lues 90 jours, non lues 365 jours, courriels 90 jours (sauf en attente) ; mode test : rien ne part, courriels lisibles par l'administrateur seul ; adresse d'un domaine réservé (`.invalid`) jamais envoyée en SMTP ; destinataire nouveau : aucun (les personnes averties lisaient déjà la demande) | Conforme (`notifications.test.js`, `avis.test.js`, `courriel.test.js`) |
+| Interface | Cloche dans l'en-tête, volet sur téléphone ; onglet Courriel et modèles dans Paramètres ; croix d'un formulaire de la fiche qui ramène à la fiche ; fiche du chef de service à la troisième personne ; `mobile:check` : 45 écrans, six appareils (Chromium et WebKit), FR et NL, parcours complets sur les deux moteurs (chef et agent ouvrent la demande depuis la cloche), aucun défaut | Conforme (`demandes.test.tsx`, `pages.test.tsx`, `mobile:check`) |
+| Secrets commités | Mot de passe SMTP chiffré en base (`SECRETS` de `settings.js`), jamais rendu, masqué au journal ; aucune valeur de NIXUS, aucune adresse électronique réelle ; serveur SMTP des tests factice et local | Conforme |
+| Infrastructure | Dockerfile, compose, `nginx.conf`, `backup.sh`, `.env`, `ci.yml` inchangés ; la sauvegarde existante couvre les tables nouvelles | Conforme |
+| Dépendances | `npm audit --omit=dev` serveur | 0 vulnérabilité (`nodemailer` 10.6.0 ; minimum 10.1.4 gardé par `dependances.test.js`) |
+| Dépendances | `npm audit --omit=dev` interface | 3 modérées (E-09), inchangées ; aucune dépendance nouvelle |
+| LLM et MCP | Seize outils nouveaux (six notifications, cinq courriel, cinq modèles), mêmes services que les routes (parité testée) ; réglage du courriel et retour d'un modèle au texte livré en deux appels (`prepare_*`, `confirm_*`) ; modification d'un modèle en un appel, contrôlée comme à l'écran ; contenu d'une notification rendu comme donnée | Conforme (`mcp.test.js`, `notifications.test.js`, `courriel.test.js`, `modeles-courriel.test.js`) |
+| Migration | `015_notifications` sur une base 0.16.1 : quatre tables, retards déjà là notés sans avis ; la 0.16.1 démarre sur la base migrée (retour arrière sans restaurer la base) | Conforme (`recette-api.js`, essai local) |
+
+Preuves d'échec (chaque protection retirée seule, au moins un test échoue ; code de la 0.17.0 : tout réussi) :
+
+| Protection retirée | Échec constaté |
+| --- | --- |
+| `notifications.get()` : autre entité 403 | `cloison.test.js` (trois tests, API et MCP) ; `notifications.test.js` (plusieurs entités) |
+| `notifications.get()` : autre personne 404 | `notifications.test.js` (« une autre personne de l'entité reçoit 404 ») |
+| `notifications.get()` : module éteint | `notifications.test.js` (« module éteint ») |
+| `codesActifs()` : filtre du module à la liste | `notifications.test.js` (« module éteint ») |
+| `courriel.js` : réservé à l'administrateur | `courriel.test.js` (« réservé à l'administrateur ») |
+| `nodemailer` : `disableFileAccess` | `courriel.test.js` (« sécurité de nodemailer ») |
+| `nodemailer` : `disableUrlAccess` | `courriel.test.js` (« sécurité de nodemailer ») |
+| `settings.js` : `mail.password` dans `SECRETS` | `courriel.test.js` (« mot de passe chiffré, jamais rendu ») |
+| `modeles-courriel.js` : réservé à l'administrateur | `modeles-courriel.test.js` (« réservé à l'administrateur ») |
+| `modeles-courriel.js` : variable inconnue refusée | `modeles-courriel.test.js` (modification, aperçu) |
+| `modeles-courriel.js` : `{numero}` exigé | `modeles-courriel.test.js` (modification) |
+| `avis.js` : pas d'avis de sa propre action | `avis.test.js` (changements d'état) |
+| `avis.js` : `.invalid` jamais envoyé en SMTP | `avis.test.js` (« envoi réel ») |
+| `avis.js` : description hors du courriel (NOT-06 ; lue et passée en variable) | `avis.test.js` (accusé, « aucun courriel ne porte une description ») |
+| `avis.js` : une alerte par échéance | `avis.test.js` (quatre tests) |
+| `avis.rattraper()` | `avis.test.js` (« passage en 0.17.0 ») |
+
+Une mutation plus faible (description ajoutée à la variable du lieu sans être lue de la base) ne fait rien échouer : la description n'est pas lue par le service des avis, c'est la protection elle-même. Les trois contrôles qui ne restent jamais « non joués » (secrets commités, contrôle d'accès côté serveur, IDOR) ont été joués.
+
 ## 0.16.1 (16/11/2026)
 
 Correctifs de la recette de la 0.16.0 (R1 à R5), danger sans validation (décision du 16/11/2026), contrôle des téléphones sur le moteur WebKit avec des parcours complets. Environnement : bac à sable de Claude, Node 22.23.4, copie locale de la 0.16.1 sur une base de démonstration jetable.

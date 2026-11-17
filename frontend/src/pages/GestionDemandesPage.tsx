@@ -146,6 +146,11 @@ export default function GestionDemandesPage() {
   useEffect(() => { chargerFiche(); }, [chargerFiche]);
   const ouvrir = (d: Demande) => changer({ demande: d.id }, true);
   const fermer = () => { setQualifier(false); setAction(null); setDecouper(false); changer({ demande: undefined }, true); };
+  /**
+   * 0.17.0 (point 0, DV-137) : pendant « Regrouper », « Découper », « Qualifier » ou un passage, la croix, Échap ou un clic à
+   * côté ramène à la fiche (comme « Annuler ») au lieu de fermer le volet.
+   */
+  const fermerVolet = () => { if (qualifier || action || decouper) { setQualifier(false); setAction(null); setDecouper(false); } else fermer(); };
   /** Après une qualification ou un passage : fiche à jour, liste, compteurs et historique rechargés. */
   /** 0.15.0 (point 2) : fil lu ou message envoyé : liste et compteurs (« Messages à lire ») rechargés. */
   const apresLecture = () => { charger(); setBordAJour((n) => n + 1); };
@@ -344,7 +349,8 @@ export default function GestionDemandesPage() {
           ]} />
       )}
 
-      <Drawer open={!!fiche} onClose={fermer} width={mobile ? '100%' : 560}
+      <Drawer open={!!fiche} onClose={fermerVolet} width={mobile ? '100%' : 560}
+        closable={{ 'aria-label': t(qualifier || action || decouper ? 'common.retour_fiche' : 'common.close') }}
         title={fiche ? `${qualifier ? t('qualif.titre') : decouper ? t('decoupage.titre') : action ? t(cleAction(fiche.etat, action.vers)) : t('demande.fiche')} ${fiche.numero}` : ''}
         extra={fiche && !qualifier && !action && !decouper && peutQualifier && qualifiable(fiche)
           ? <Button type="primary" onClick={() => setQualifier(true)}>{fiche.etat === 'qualifiee' ? t('qualif.bouton.modifier') : t('qualif.bouton')}</Button> : null}>

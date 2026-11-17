@@ -92,6 +92,8 @@ const topic: HelpTopic = {
     },
   ],
   faq: [
+    // 0.17.0 (étape 13) : avis par la cloche et par courriel.
+    { q: { fr: 'Comment suis-je prévenu de l’avancement ?', nl: 'Hoe word ik op de hoogte gehouden?' }, a: { fr: 'Par la cloche en haut de l’écran et par courriel : demande reçue, accord ou refus de votre chef de service, prise en charge, intervention prévue, travaux terminés, clôture, réponse du service. Une demande que vous suivez par « Moi aussi » vous prévient aussi de ses changements d’état. Le courriel ne donne que le numéro, le lieu et l’état : le reste se lit ici.', nl: 'Via de bel bovenaan het scherm en per e-mail: aanvraag ontvangen, akkoord of weigering van uw diensthoofd, in behandeling, interventie gepland, werken beëindigd, afsluiting, antwoord van de dienst. Een aanvraag die u volgt via « Ik ook » meldt u ook haar statuswijzigingen. De e-mail geeft enkel het nummer, de plaats en de status: de rest leest u hier.' } },
     { q: { fr: 'Pourquoi une demande que je n’ai pas faite est-elle dans ma liste ?', nl: 'Waarom staat er een aanvraag in mijn lijst die ik niet indiende?' }, a: { fr: 'Elle a été faite pour vous par un collègue ({{demande.pour_moi.tag}}), ou vous la suivez par « Moi aussi » ({{demande.suivie.tag}}).', nl: 'Een collega diende ze voor u in ({{demande.pour_moi.tag}}), of u volgt ze via « Ik ook » ({{demande.suivie.tag}}).' } },
     { q: { fr: 'Je ne vois pas mes demandes de l’autre entité.', nl: 'Ik zie mijn aanvragen van de andere entiteit niet.' }, a: { fr: 'La liste suit l’entité active : changez d’entité dans l’en-tête.', nl: 'De lijst volgt de actieve entiteit: wissel van entiteit in de kop.' } },
     // 0.16.0 (DEM-15, GES-05, GES-06).
