@@ -313,6 +313,20 @@ describe('écrans', () => {
     }
   }
 
+  it('Services : choix de l\u2019entité vide pendant le chargement, sans violation axe-core (CI de la 0.17.0)', async () => {
+    const orig = globalThis.fetch;
+    globalThis.fetch = ((u: RequestInfo | URL, i?: RequestInit) => (String(u).startsWith('/api/entites') ? new Promise<Response>(() => {}) : orig(u, i))) as typeof fetch;
+    try {
+      const { container } = render(wrap(ServicesPage, 'fr'));
+      await waitFor(() => expect(container.querySelector('h1')).toBeTruthy());
+      expect(container.querySelector('.ant-radio-group')?.children.length).toBe(0);
+      const r = await axe.run(container, { rules: { 'color-contrast': { enabled: false }, region: { enabled: false } } });
+      expect(r.violations.map((v) => `${v.id}: ${v.nodes.length}`)).toEqual([]);
+    } finally {
+      globalThis.fetch = orig;
+    }
+  });
+
   it('l’accueil montre l’entité active, les rôles et les personnes de l’entité', async () => {
     render(wrap(HomePage, 'fr'));
     expect(await screen.findByText('Administration fictive')).toBeInTheDocument();

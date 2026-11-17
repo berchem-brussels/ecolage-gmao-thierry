@@ -16,7 +16,8 @@ Version de l'application : **0.17.0** · Mis à jour le 17/11/2026
 - `mobile:check` : cloche ouverte (service technique, chef de service), fiche d'un modèle de courriel (administrateur) : 45 écrans ; parcours : le chef puis l'agent ouvrent la demande depuis la cloche.
 - Aide : Paramètres (courriel, modèles), Accueil (« À quoi sert la cloche ? »), Mes demandes (avancement) ; documentation : `docs/fonctionnel/notifications.md`, sections 0.17.0 d'EXPLOITATION, ARCHITECTURE, MCP, SECURITE et APRES-DEPLOIEMENT ; `recette.sh` contrôle 5 : `015_notifications` et ses quatre tables.
 - Note de version : deux lignes pour tous, une pour le chef de service, une pour le service technique, une pour l'administrateur.
-- Tests : serveur 594 (544), interface 331 (320) et un contrôle des captures ; preuves d'échec dans `docs/fr/SECURITE.md`.
+- Correctif avant la fusion (travail `tests` de GitHub, demande #18) : le choix de l'entité de « Services et valideurs », encore vide pendant le chargement, portait un nom sans rôle (`aria-prohibited-attr` d'axe, vu seulement sur la machine plus lente de GitHub) ; `role="radiogroup"` ajouté, test qui retient le chargement des entités.
+- Tests : serveur 594 (544), interface 332 (320) et un contrôle des captures ; preuves d'échec dans `docs/fr/SECURITE.md`.
 
 ## 0.16.1 (16/11/2026)
 

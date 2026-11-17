@@ -42,6 +42,7 @@ Preuves d'échec (chaque protection retirée seule, au moins un test échoue ; c
 | `avis.js` : description hors du courriel (NOT-06 ; lue et passée en variable) | `avis.test.js` (accusé, « aucun courriel ne porte une description ») |
 | `avis.js` : une alerte par échéance | `avis.test.js` (quatre tests) |
 | `avis.rattraper()` | `avis.test.js` (« passage en 0.17.0 ») |
+| `ServicesPage.tsx` : `role="radiogroup"` du choix de l'entité (correctif de la demande #18) | `pages.test.tsx` (« choix de l'entité vide pendant le chargement ») |
 
 Une mutation plus faible (description ajoutée à la variable du lieu sans être lue de la base) ne fait rien échouer : la description n'est pas lue par le service des avis, c'est la protection elle-même. Les trois contrôles qui ne restent jamais « non joués » (secrets commités, contrôle d'accès côté serveur, IDOR) ont été joués.
 

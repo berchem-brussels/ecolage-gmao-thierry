@@ -145,9 +145,11 @@ Attendu : retour à l'invite du cmd du PC.
 | Journal d'audit | Réglages du courriel (mot de passe masqué), essai, modèles (sans texte) ; lecture d'une notification non journalisée (préférence d'affichage) |
 | Aide | Trois écrans mis à jour ; `help:check` 11/11 ; aucune capture nouvelle |
 | Téléphones | `mobile:check` 45 écrans, six appareils (Chromium et WebKit), FR et NL, parcours complets sur les deux moteurs : voir `ETAT.md` |
-| Tests | Serveur 594 (544 en 0.16.1), interface 331 (320) et un contrôle des captures ; seize preuves d'échec dans `docs/fr/SECURITE.md` |
+| Tests | Serveur 594 (544 en 0.16.1), interface 332 (320) et un contrôle des captures ; seize preuves d'échec dans `docs/fr/SECURITE.md` |
 | Dépendances | `nodemailer` 10.6.0 (E-48) ; audit serveur 0, interface 3 modérées (E-09) |
 | MCP | Seize outils, parité route et outil testée ; réglage du courriel et retour d'un modèle en deux appels |
+
+Correctif avant la fusion : le travail `tests` de GitHub (demande #18) a trouvé une violation d'accessibilité sur « Services et valideurs » (choix de l'entité nommé mais sans rôle, pendant le chargement) ; corrigée dans cette archive, avec un test qui la reproduit à coup sûr.
 
 ## Questions RGPD
 
