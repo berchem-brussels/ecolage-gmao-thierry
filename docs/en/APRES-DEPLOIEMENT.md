@@ -2,6 +2,10 @@
 
 The French text prevails. Update procedure: upload the archive, `cd <folder>`, `ls -l` the archive, `sudo bash backup.sh`, `sudo rm -rf backend frontend docs`, `sudo tar xzf … --strip-components=1`, `ls backend frontend`, `sudo docker compose build`, `sudo docker compose up -d`, `sudo docker compose ps`, `curl -sk https://localhost:<https>/api/version`, checklist from the delivery message. `.env` and the volumes are never touched.
 
+## 0.17.0 (17/11/2026)
+
+Notifications: bell, e-mail, templates, notices for requests and tickets, deadline alerts (step 13). Update through section 3, **with a migration and a new dependency**: building the `api` image downloads `nodemailer`. `sudo docker logs gmao-api --tail 30` shows `[DB] Migration 015_notifications appliquée` and `[APP] API 0.17.0 sur le port 3001`. No new run of `demo.js`. E-mail is delivered in test mode: nothing is sent. `sudo bash recette.sh`: nine `OK` lines. Back to 0.16.1 without restoring the database.
+
 ## 0.16.1 (16/11/2026)
 
 Usual update, no migration and no new run of `demo.js`; `[APP] API 0.16.1`. Rollback to 0.16.0 without restoring the database.

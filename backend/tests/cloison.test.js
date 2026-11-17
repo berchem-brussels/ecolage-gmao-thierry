@@ -50,6 +50,9 @@ const RESSOURCES = [
   // 0.15.0 (point 4) : modèle de réponse de l'autre entité.
   { route: 'GET /api/modeles-reponse/:id', tool: 'get_modele_reponse', id: (ent) => objets[ent.code].modele },
   { route: 'GET /api/demandes/:id/messages/mentionnables', tool: 'list_mentionnables_demande', id: (ent) => objets[ent.code].demande },
+  // 0.17.0 (étape 13) : notification de l'autre entité (accusé de réception de la demande encodée pour le demandeur).
+  // Ressource personnelle : une autre personne habilitée dans l'entité reçoit 404 (personnel), jamais l'objet.
+  { route: 'GET /api/notifications/:id', tool: 'get_notification', id: (ent) => objets[ent.code].notification, personnel: true },
 ];
 
 /** Écritures cloisonnées : même attente, 403 depuis l'autre entité, et l'objet n'a pas bougé. */
@@ -96,6 +99,7 @@ const ECRITURES = [
   { route: 'DELETE /api/modeles-reponse/:id', body: { motif: 'Piraté' }, tool: 'prepare_deactivate_modele_reponse', id: (ent) => objets[ent.code].modele },
   { route: 'DELETE /api/demandes/:id/suivre', body: {}, tool: 'prepare_ne_plus_suivre_demande', id: (ent) => objets[ent.code].demande },
   { route: 'POST /api/demandes/:id/messages/lu', body: {}, tool: 'mark_messages_lus', id: (ent) => objets[ent.code].demande },
+  { route: 'PUT /api/notifications/:id/lue', body: {}, tool: 'marquer_notification_lue', id: (ent) => objets[ent.code].notification },
   { route: 'POST /api/tickets/:id/faq', body: { question_fr: 'Piraté', question_nl: 'Piraté', answer_fr: 'Piraté', answer_nl: 'Piraté' }, tool: 'create_faq_from_ticket', id: (ent) => objets[ent.code].ticket },
 ];
 
@@ -136,7 +140,10 @@ before(async () => {
     const faq = await c.post('/api/faq', { question_fr: `Question ${ent.code}`, question_nl: `Vraag ${ent.code}`, answer_fr: 'Réponse', answer_nl: 'Antwoord' });
     assert.equal(faq.status, 201, JSON.stringify(faq.body));
     const modele = (await c.get('/api/modeles-reponse')).body.data[0];
-    objets[ent.code] = { lieu: lieu.body.data.id, modele: modele.id, valeur: valeur.id, categorie: categorie.id, jour: jour.id, demande: demande.body.data.id, question: question.id, piece: piece.body.data.id, ticket: ticket.body.data.id, faq: faq.body.data.id };
+    // 0.17.0 : accusé de réception de la demande, dans la cloche de qui l'a déposée.
+    const notification = (await c.get('/api/notifications')).body.data.find((n) => n.objet_id === demande.body.data.id);
+    assert.ok(notification, 'accusé de réception de la demande');
+    objets[ent.code] = { notification: notification.id, lieu: lieu.body.data.id, modele: modele.id, valeur: valeur.id, categorie: categorie.id, jour: jour.id, demande: demande.body.data.id, question: question.id, piece: piece.body.data.id, ticket: ticket.body.data.id, faq: faq.body.data.id };
   }
 });
 after(() => srv.stop());
@@ -159,7 +166,8 @@ for (const r of RESSOURCES) {
 
   test(`${r.route} : une personne habilitée dans les deux entités ne voit que l'entité active`, async () => {
     const url = (ent) => r.route.split(' ')[1].replace(':id', r.id(ent));
-    const own = r.statusOwn || 200;
+    // Ressource personnelle (notification) : multi n'en est pas le destinataire, 404 dans l'entité active, 403 ailleurs.
+    const own = r.personnel ? 404 : r.statusOwn || 200;
     await multi.put('/api/auth/entite', { entite_id: ea.id });
     assert.equal((await multi.get(url(ea))).status, own);
     assert.equal((await multi.get(url(eb))).status, 403, 'rôle dans BB, mais AA active');
@@ -323,6 +331,6 @@ test('toute route qui porte un identifiant d’entité figure dans la liste des 
     const key = `${r.method} ${r.path}`;
     if (/^\/api\/entites\/:id/.test(r.path) && !instance.has(key)) assert.ok(declared.has(key), `${key} hors de la liste`);
     // Ressources métier rattachées à une entité : toute route à identifiant est essayée depuis l'autre entité.
-    if (/^\/api\/(lieux|listes-valeurs|categories|questions-categorie|jours-non-ouvres|demandes|pieces|tickets)\/:id/.test(r.path)) assert.ok(declared.has(key) || ecritures.has(key), `${key} hors de la liste`);
+    if (/^\/api\/(lieux|listes-valeurs|categories|questions-categorie|jours-non-ouvres|demandes|pieces|tickets|notifications)\/:id/.test(r.path)) assert.ok(declared.has(key) || ecritures.has(key), `${key} hors de la liste`);
   }
 });

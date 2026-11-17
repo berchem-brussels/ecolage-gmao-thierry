@@ -68,6 +68,12 @@ body.app-dark ::-webkit-scrollbar-thumb { background: #424242; }
   .ant-layout-content { margin: 0 !important; padding: 8px !important; }
 }
 /* Texte lu par les lecteurs d'écran, invisible à l'écran (en-tête de la colonne de dépliage d'un tableau, par exemple). */
+/* 0.17.0 : filtre du journal des courriels, boutons séparés qui passent à la ligne. */
+.courriel-filtre .ant-radio-button-wrapper { border-inline-start-width: 1px; border-radius: 6px !important; }
+.courriel-filtre .ant-radio-button-wrapper::before { display: none; }
+/* 0.17.0 : ligne d'une notification dans le volet de la cloche. */
+.notif-item:hover { background: var(--app-bg-page) !important; }
+.notif-item:focus-visible { outline: 2px solid var(--app-primary); outline-offset: -2px; }
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
 
 /* Référentiel des demandes (0.4.0) : grilles qui passent sur une colonne en dessous de 900 px, tuiles du demandeur. */

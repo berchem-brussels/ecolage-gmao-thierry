@@ -248,6 +248,33 @@ module.exports = {
     domains: T.str(500),
   }),
 
+  // 0.17.0 (étape 13, point 2) : courriel (SMTP en paramètres, mode test, envoi d'essai, journal des envois).
+  courrielSettings: obj({
+    mode: T.en('test', 'smtp'),
+    host: { type: 'string', maxLength: 200, pattern: '^[A-Za-z0-9.-]*$' },
+    port: T.int(1, 65535),
+    securite: T.en('starttls', 'tls', 'aucune'),
+    user: T.str(200), password: { type: 'string', maxLength: 500 },
+    from: { anyOf: [{ type: 'string', maxLength: 0 }, T.email()] },
+    from_name: { type: 'string', maxLength: 100, pattern: '^[^<>"\\r\\n]*$' },
+    public_url: { type: 'string', maxLength: 300, pattern: '^(https://[^\\s/]+(/[^\\s]*)?)?$' },
+  }),
+  courrielEssai: obj({ destinataire: T.email() }),
+  courrielList: listQuery({ etat: T.en('test', 'en_attente', 'envoye', 'echec') }),
+  // Point 3 : modèles de courriel (sujet sur une ligne ; variables contrôlées par le service).
+  modeleCourrielParams: obj({ code: { type: 'string', maxLength: 60, pattern: '^[a-z_]+(\\.[a-z_]+){1,2}$' } }, ['code']),
+  modeleCourrielUpdate: { ...obj({
+    sujet_fr: { type: 'string', minLength: 1, maxLength: 150, pattern: '^[^\\r\\n]*$' },
+    sujet_nl: { type: 'string', minLength: 1, maxLength: 150, pattern: '^[^\\r\\n]*$' },
+    corps_fr: T.reqStr(4000), corps_nl: T.reqStr(4000),
+  }), minProperties: 1 },
+  modeleCourrielApercu: obj({
+    langue: T.en('fr', 'nl'),
+    sujet: { type: 'string', maxLength: 150, pattern: '^[^\\r\\n]*$' },
+    corps: { type: 'string', maxLength: 4000 },
+  }, ['langue']),
+  modeleCourrielRetablir: obj({}),
+
   // Demandes d'intervention (DEM-01 à 03, SUI-01) : un lieu, une catégorie, une description de 10 caractères au moins
   // (comptés après le retrait des espaces, DV-37). perimetre « entite » : gestionnaire et responsable (DV-46).
   demandeList: listQuery({ etat: T.en(...ETATS), ouvertes: flag, perimetre: { enum: ['miennes', 'entite'], default: 'miennes' }, ...filtresGestion }),
@@ -262,6 +289,9 @@ module.exports = {
   }, ['categorie_id', 'lieu_id', 'priorite']),
   // Vues enregistrées de la liste du service technique (0.9.0, GES-02) : un nom et les filtres de la liste.
   vueList: listQuery(),
+  // 0.17.0 (étape 13) : notifications de la cloche de la personne connectée, dans l'entité active.
+  notificationList: listQuery({ non_lues: flag }),
+  notificationLue: obj({}),
   vueCreate: obj({ nom: T.reqStr(60), filtres: vueFiltres }, ['nom', 'filtres']),
   vueUpdate: obj({ nom: T.reqStr(60), filtres: vueFiltres }),
   demandeCreate: obj({

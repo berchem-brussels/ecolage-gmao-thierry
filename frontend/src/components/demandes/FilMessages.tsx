@@ -71,7 +71,8 @@ export default function FilMessages({ d, service, onLu }: Props) {
       setMessages(liste);
       const nonLu = liste.find((m) => m.non_lu === 1);
       if (marquer) setPremierNonLu(nonLu ? nonLu.id : null);
-      if (nonLu) { await api.post(`/demandes/${d.id}/messages/lu`, {}); surLu.current?.(); }
+      // 0.17.0 (point 5) : fil lu, ses avis de message et de mention sont lus côté serveur ; la cloche se relit.
+      if (nonLu) { await api.post(`/demandes/${d.id}/messages/lu`, {}); surLu.current?.(); window.dispatchEvent(new Event('app-notifications')); }
     } catch { setMessages([]); }
   }, [d.id]);
 

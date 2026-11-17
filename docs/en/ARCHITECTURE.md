@@ -1,6 +1,10 @@
 # Architecture
 
-Application version: **0.16.1** · The French text prevails (`docs/fr/ARCHITECTURE.md`); this file summarises each version.
+Application version: **0.17.0** · The French text prevails (`docs/fr/ARCHITECTURE.md`); this file summarises each version.
+
+## Notifications, e-mail and alerts (0.17.0)
+
+Migration `015_notifications` (notifications, e-mails with queue and log, e-mail templates, deadline alerts). Catalogues `config/notifications.json` (NOT-01) and `config/modeles-courriel.json`. Services: `notifications.js` (bell, own notifications only), `courriel.js` (settings, queue, test, `nodemailer` without file or URL access), `modeles-courriel.js` (composed in the recipient's language), `avis.js` (who gets what: submission, state change through `cycle.ecrire`, messages, tickets, deadlines every 15 minutes). Interface: `NotificationsCloche.tsx`, `CourrielPanel.tsx`, `ModelesCourriel.tsx`.
 
 ## Approver, attachments and danger (0.16.1)
 

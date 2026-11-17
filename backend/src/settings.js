@@ -16,8 +16,18 @@ const DEFAULTS = {
   'tickets.reopen_days': '14',
   'tickets.business_roles': 'admin',
   'tickets.it_roles': 'admin',
+  // 0.17.0 (étape 13, point 2 ; NOT-02, NOT-04) : courriel. Mode test par défaut : rien ne part (réglage le plus protecteur).
+  'mail.mode': 'test',
+  'mail.host': '',
+  'mail.port': '587',
+  'mail.securite': 'starttls',
+  'mail.user': '',
+  'mail.password': '',
+  'mail.from': '',
+  'mail.from_name': '',
+  'mail.public_url': '',
 };
-const SECRETS = new Set(['auth.client_secret']);
+const SECRETS = new Set(['auth.client_secret', 'mail.password']);
 
 function getSetting(key) {
   const row = getDb().prepare('SELECT value FROM app_settings WHERE key = ?').get(key);

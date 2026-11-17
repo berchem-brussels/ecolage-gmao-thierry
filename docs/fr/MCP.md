@@ -1,6 +1,6 @@
 # Serveur MCP
 
-Version de l'application : **0.16.1** · Mis à jour le 16/11/2026 · Le français fait foi.
+Version de l'application : **0.17.0** · Mis à jour le 17/11/2026 · Le français fait foi.
 
 ## Accès
 
@@ -19,6 +19,16 @@ Version de l'application : **0.16.1** · Mis à jour le 16/11/2026 · Le frança
 - Depuis la 0.4.1, les fiches de catégorie, de priorité, de jour de l'horaire et de jour non ouvré portent `trace` (`etat`, `le`, `par`) : qui les a modifiées en dernier et quand, ou « livrée ». Le nom n'est rendu qu'aux personnes de l'entité. Aucun outil nouveau.
 - Depuis la 0.5.0, le serveur retire les espaces de début et de fin de tout texte reçu, par le MCP comme par l'API, sauf les mots de passe ; un champ obligatoire fait seulement d'espaces est refusé (`VALIDATION`), avant tout jeton de confirmation.
 - Les instructions envoyées au client demandent de commencer par `get_profile` : les données métier sont celles de l'entité active ; `select_entite` la change. Elles disent aussi que le MCP ne transporte aucun fichier, et qu'une demande se dépose par `create_demande`, le lieu proposé d'office étant `lieu_propose` dans `get_profile`, et les derniers lieux de ses demandes `lieux_recents` (0.7.5). Depuis la 0.8.0, elles disent que les pièces du brouillon partent avec la demande suivante, même déposée par `create_demande`, et qu'il faut le dire à la personne.
+
+## 0.17.0
+
+Seize outils nouveaux (étape 13) :
+
+- Notifications de la personne connectée, dans l'entité active : `list_notifications`, `get_compteur_notifications`, `get_notification`, `list_evenements_notification`, `marquer_notification_lue`, `marquer_notifications_lues`. Personne ne lit la notification d'une autre personne ; l'autre entité répond `FORBIDDEN`.
+- Courriel, administrateur : `get_mail_settings`, `update_mail_settings` (deux appels, mot de passe masqué dans le résumé), `send_test_mail` (en mode test, retenu ; sinon résultat et code d'erreur), `list_courriels`, `get_courriel`.
+- Modèles de courriel, administrateur : `list_modeles_courriel`, `get_modele_courriel`, `update_modele_courriel`, `retablir_modele_courriel` (deux appels), `apercu_modele_courriel` (rien n'est envoyé).
+
+Les avis (cloche et courriel) suivent les actions faites par le MCP comme celles faites à l'écran.
 
 ## 0.16.1
 

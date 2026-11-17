@@ -16,6 +16,9 @@ import { useI18n } from '../contexts/I18nContext';
 import { useRoles } from '../useRoles';
 import { texteObligatoire } from '../validation';
 
+/** Le choix de l'entité est vide pendant le chargement : sans rôle, son nom (`aria-label`) est interdit par axe (CI de la 0.17.0). */
+const GROUPE_RADIO = { role: 'radiogroup' } as Record<string, string>;
+
 interface Entite { id: number; code: string; nom_fr: string; nom_nl: string; is_active: number }
 interface RoleRow { entite_id: number; role: string }
 interface Personne { id: number; first_name: string; last_name: string; email: string; entite_id: number | null; service_id: number | null; is_active: number; roles: RoleRow[] }
@@ -137,7 +140,7 @@ export default function ServicesPage() {
       <Typography.Paragraph type="secondary">{t('services.intro')}</Typography.Paragraph>
       <Card>
         <Space direction="vertical" size={12} style={{ width: '100%' }}>
-          <Radio.Group optionType="button" aria-label={t('services.entite')} value={entiteId} onChange={(e) => setEntiteId(e.target.value)}
+          <Radio.Group {...GROUPE_RADIO} optionType="button" aria-label={t('services.entite')} value={entiteId} onChange={(e) => setEntiteId(e.target.value)}
             options={entites.map((e) => ({ value: e.id, label: e.code }))} />
           <Table<Service> rowKey="id" size="middle" loading={loading} dataSource={rows} pagination={false} locale={{ emptyText: t('services.vide') }}
             rowClassName={(s) => (s.is_active ? '' : 'dem-close')} scroll={mobile ? undefined : { x: 'max-content' }}

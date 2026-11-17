@@ -37,6 +37,8 @@ function buildApp() {
   const publicRouter = require('./routes/public');
   app.use('/api', publicRouter);
   app.use('/api', require('./routes/sso'));
+  // 0.17.0 (étape 13, point 2) : courriel, réglages et journal des envois.
+  app.use('/api', require('./routes/courriels'));
   app.use('/api/auth', require('./routes/auth'));
   app.use('/api/entites', require('./routes/entites'));
   app.use('/api/roles', require('./routes/roles'));
@@ -58,6 +60,8 @@ function buildApp() {
   app.use('/api/etats-demande', require('./routes/etats-demande'));
   app.use('/api/pieces', require('./routes/pieces'));
   app.use('/api/vues-demandes', require('./routes/vues-demandes'));
+  app.use('/api/notifications', require('./routes/notifications'));
+  app.use('/api/modeles-courriel', require('./routes/modeles-courriel'));
   app.use('/api/parametres', require('./routes/parametres'));
   app.use('/api/modules', require('./routes/modules'));
   app.use('/api/parametres-entite', require('./routes/parametres-entite'));
@@ -71,8 +75,8 @@ function buildApp() {
     windowMs: 60 * 1000, limit: Number(process.env.MCP_RATE_MAX || 60), standardHeaders: true, legacyHeaders: false,
     keyGenerator: (req) => `u${req.user.id}`, handler: (req, res) => fail(res, req, 429, 'TOO_MANY'),
   });
-  app.post('/api/mcp', authMiddleware, mcpLimiter, (req, res) => {
-    const out = handleRpc(req.body || {}, { user: req.user, version: VERSION });
+  app.post('/api/mcp', authMiddleware, mcpLimiter, async (req, res) => {
+    const out = await handleRpc(req.body || {}, { user: req.user, version: VERSION });
     if (out === null) return res.status(202).end();
     res.json(out);
   });

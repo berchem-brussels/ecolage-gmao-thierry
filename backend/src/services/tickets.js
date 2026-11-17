@@ -168,6 +168,8 @@ function create(user, data, channel = 'api') {
       .run(reference, data.type, data.title, data.description || null, data.expected || null, data.actual || null, queueOf(data.type),
         impact, urgency, priority, user.id, user.entiteId || null, data.screen || null, context, screenshot, d.resp, d.resol);
     event(r.lastInsertRowid, user.id, 'created');
+    // 0.17.0 (étape 13, point 5) : accusé à l'auteur, avis aux personnes qui traitent la file (services/avis.js, règle 7).
+    require('./avis').ticketCree(db, { ticketId: r.lastInsertRowid, auteurId: user.id });
     return r.lastInsertRowid;
   })();
   logAudit(user.id, 'ticket.create', 'ticket', id, { type: data.type, priority }, channel, user.entiteId || null);
@@ -267,6 +269,8 @@ function addMessage(user, id, { body, is_internal = false }, channel = 'api') {
       event(id, user.id, 'status:in_progress');
     }
     if (handler && !is_internal) db.prepare("UPDATE tickets SET first_response_at = COALESCE(first_response_at, datetime('now')) WHERE id = ?").run(id);
+    // 0.17.0 (point 5) : réponse publique de qui traite : avis à l'auteur.
+    if (handler && !is_internal) require('./avis').ticketReponse(db, { ticketId: id, auteurId: user.id });
   })();
   logAudit(user.id, 'ticket.message', 'ticket', id, { internal: !!is_internal }, channel, t.entite_id);
   return get(user, id);

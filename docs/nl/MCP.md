@@ -1,6 +1,10 @@
 # MCP-server
 
-Versie van de toepassing: **0.16.1** · Bijgewerkt op 16/11/2026 · De Franse tekst is rechtsgeldig (`docs/fr/MCP.md`).
+Versie van de toepassing: **0.17.0** · Bijgewerkt op 17/11/2026 · De Franse tekst is rechtsgeldig (`docs/fr/MCP.md`).
+
+## 0.17.0
+
+Zestien nieuwe tools: meldingen van de aangemelde persoon (`list_notifications`, `get_compteur_notifications`, `get_notification`, `list_evenements_notification`, `marquer_notification_lue`, `marquer_notifications_lues`), e-mail voor de beheerder (`get_mail_settings`, `update_mail_settings` in twee oproepen, `send_test_mail`, `list_courriels`, `get_courriel`) en e-mailmodellen (`list_modeles_courriel`, `get_modele_courriel`, `update_modele_courriel`, `retablir_modele_courriel` in twee oproepen, `apercu_modele_courriel`).
 
 ## 0.16.1
 

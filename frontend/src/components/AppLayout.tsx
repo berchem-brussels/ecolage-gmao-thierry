@@ -9,6 +9,7 @@
  * l'écran par le titre de sa fiche quand elle existe (section 13.5).
  * Téléphone (moins de 768 px ; 0.13.0, défaut D1 du contrôle DV-113) : l'en-tête tient dans 320 px, en FR comme en NL.
  * Le niveau de détail, le thème et la langue passent dans le menu de la personne ; marges et écarts resserrés.
+ * Cloche de notifications à côté du menu de la personne (0.17.0, étape 13 ; NotificationsCloche.tsx).
  */
 import { useState } from 'react';
 import { Avatar, Button, Drawer, Dropdown, Grid, Layout, Menu, Segmented, Select, Tag, Tooltip, message } from 'antd';
@@ -28,6 +29,7 @@ import PasswordModal from './PasswordModal';
 import NouveautesModal from './NouveautesModal';
 import LieuHabituelModal from './LieuHabituelModal';
 import ReportTicketModal from './ReportTicketModal';
+import NotificationsCloche from './NotificationsCloche';
 import HelpButton from '../help/HelpButton';
 import { topicForPath } from '../help';
 import { hasPermission, useRoles } from '../useRoles';
@@ -99,11 +101,14 @@ export default function AppLayout() {
     try { await setEntite(id); message.success(t('layout.entite.changed')); } catch { message.error(t('common.error')); }
   };
   const entites = user?.entites || [];
-  const entiteSelector = entites.length > 1 ? (
+  // 0.17.0 (point 1) : avec la cloche, l'en-tête d'une personne de plusieurs entités dépassait 320 px. Sur téléphone, le
+  // choix de l'entité (toujours en boutons, standard section 12.4) passe en tête du menu ; l'en-tête garde le code actif.
+  const choixEntite = (
     <Segmented size="small" aria-label={t('layout.entite')} value={user?.entite_active_id ?? undefined}
-      onChange={(v) => changeEntite(Number(v))}
+      onChange={(v) => { changeEntite(Number(v)); setDrawerOpen(false); }}
       options={entites.map((e) => ({ value: e.id, label: <Tooltip title={tField(e as unknown as Record<string, unknown>, 'nom')}><span>{e.code}</span></Tooltip> }))} />
-  ) : (
+  );
+  const entiteSelector = entites.length > 1 && !isMobile ? choixEntite : (
     <Tooltip title={entite ? tField(entite as unknown as Record<string, unknown>, 'nom') : t('layout.entite.none')}>
       <Tag color={entite ? 'var(--app-primary)' : 'default'} style={{ marginInlineEnd: 0 }} aria-label={t('layout.entite')}>
         {entite ? entite.code : t('layout.entite.none')}
@@ -116,6 +121,12 @@ export default function AppLayout() {
       <div style={{ height: 64, display: 'flex', alignItems: 'center', justifyContent: collapsed && !isMobile ? 'center' : 'flex-start', padding: collapsed && !isMobile ? '0 8px' : '0 16px', borderBottom: '1px solid rgba(255,255,255,0.12)' }}>
         <AppMark collapsed={collapsed && !isMobile} onDark />
       </div>
+      {isMobile && entites.length > 1 && (
+        <div style={{ padding: '12px 16px 4px' }}>
+          <div style={{ color: 'rgba(255,255,255,0.8)', fontSize: 12, marginBottom: 6 }}>{t('layout.entite')}</div>
+          {choixEntite}
+        </div>
+      )}
       <nav aria-label={t('layout.menu')} style={{ flex: 1, overflow: 'auto' }}>
         <Menu mode="inline" theme="dark" selectedKeys={[location.pathname]} items={menuItems} onClick={go}
           style={{ background: 'transparent', border: 'none', marginTop: 8 }} inlineCollapsed={collapsed && !isMobile} />
@@ -201,6 +212,8 @@ export default function AppLayout() {
                   icon={dark ? <SunOutlined /> : <MoonOutlined />} onClick={() => savePreferences({ theme: dark ? 'clair' : 'sombre' })} />
               </Tooltip>
             )}
+            {/* 0.17.0 (étape 13) : cloche de notifications (standard, section 12.3). */}
+            <NotificationsCloche />
             <Dropdown menu={userMenu} trigger={['click']}>
               <Button type="text" aria-label={t('layout.compte')} style={{ display: 'flex', alignItems: 'center', gap: 6, height: 44, paddingInline: isMobile ? 4 : undefined }}>
                 <Avatar size={30} style={{ background: 'var(--app-primary)', flexShrink: 0 }}>{user?.first_name?.[0]}{user?.last_name?.[0]}</Avatar>

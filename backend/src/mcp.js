@@ -32,6 +32,9 @@ const faq = require('./services/faq');
 const qualification = require('./services/qualification');
 const cycle = require('./services/cycle');
 const vues = require('./services/vues-demandes');
+const notifications = require('./services/notifications');
+const courriel = require('./services/courriel');
+const modelesCourriel = require('./services/modeles-courriel');
 const parametres = require('./services/parametres');
 const connexion = require('./services/connexion');
 const modulesService = require('./services/modules');
@@ -166,6 +169,25 @@ const TOOLS = [
   { name: 'update_etat_demande', route: 'PUT /api/etats-demande/:code', schema: { type: 'object', properties: { ...S.etatDemandeParams.properties, ...S.etatDemandeUpdate.properties }, required: ['code'], additionalProperties: false },
     fr: "Change, dans l'entité active, les libellés d'un état (responsable) : libelle_fr et libelle_nl vus par le demandeur, grc_fr et grc_nl envoyés à la GRC.", nl: 'Wijzigt, in de actieve entiteit, de benamingen van een status (verantwoordelijke): libelle_fr en libelle_nl voor de aanvrager, grc_fr en grc_nl voor het KRM.',
     run: (u, a) => { const { code, ...data } = a; return cycle.updateEtat(u, code, data, 'mcp'); } },
+  // 0.17.0 (étape 13) : notifications de la cloche de la personne connectée.
+  { name: 'list_notifications', route: 'GET /api/notifications', read: true, schema: S.notificationList,
+    fr: "Liste les notifications de la personne connectée dans l'entité active, les plus récentes d'abord : événement, numéro de l'objet, texte en FR et en NL, adresse de l'écran, lue ou non. non_lues=1 : les non lues seules. Jamais de texte libre ni de nom.", nl: 'Lijst van de meldingen van de aangemelde persoon in de actieve entiteit, de recentste eerst: gebeurtenis, nummer van het object, tekst in het FR en het NL, adres van het scherm, gelezen of niet. non_lues=1: alleen de ongelezen. Nooit vrije tekst of namen.',
+    run: (u, a) => { const { rows, pagination } = notifications.list(u, { limit: 20, offset: 0, ...a }); return { rows, pagination, ...notifications.compteur(u) }; } },
+  { name: 'get_compteur_notifications', route: 'GET /api/notifications/compteur', read: true, schema: { type: 'object', properties: {}, additionalProperties: false },
+    fr: "Nombre de notifications non lues de la personne connectée dans l'entité active (non_lues) et dans ses autres entités (autres_entites).", nl: 'Aantal ongelezen meldingen van de aangemelde persoon in de actieve entiteit (non_lues) en in haar andere entiteiten (autres_entites).',
+    run: (u) => notifications.compteur(u) },
+  { name: 'list_evenements_notification', route: 'GET /api/notifications/evenements', read: true, schema: { type: 'object', properties: {}, additionalProperties: false },
+    fr: "Catalogue des événements notifiables (NOT-01) : code, module, émis ou à venir (avec son étape), module actif ou non, destinataires et textes en FR et en NL.", nl: 'Catalogus van de meldbare gebeurtenissen (NOT-01): code, module, verzonden of gepland (met de stap), module actief of niet, ontvangers en teksten in het FR en het NL.',
+    run: (u) => notifications.evenements(u) },
+  { name: 'get_notification', route: 'GET /api/notifications/:id', read: true, schema: idSchema,
+    fr: 'Lit une notification de la personne connectée, sans la marquer lue.', nl: 'Leest een melding van de aangemelde persoon, zonder ze als gelezen te markeren.',
+    run: (u, a) => notifications.get(u, a.id) },
+  { name: 'marquer_notification_lue', route: 'PUT /api/notifications/:id/lue', schema: idSchema,
+    fr: 'Marque lue une notification de la personne connectée.', nl: 'Markeert een melding van de aangemelde persoon als gelezen.',
+    run: (u, a) => notifications.marquerLue(u, a.id) },
+  { name: 'marquer_notifications_lues', route: 'PUT /api/notifications/lues', schema: { type: 'object', properties: {}, additionalProperties: false },
+    fr: "Marque lues toutes les notifications de la personne connectée dans l'entité active.", nl: 'Markeert alle meldingen van de aangemelde persoon in de actieve entiteit als gelezen.',
+    run: (u) => notifications.marquerToutes(u) },
   { name: 'list_vues_demandes', route: 'GET /api/vues-demandes', read: true, schema: S.vueList,
     fr: "Liste les vues enregistrées de la personne connectée pour la liste du service technique, dans l'entité active : un nom et des filtres de list_demandes.", nl: 'Lijst van de opgeslagen weergaven van de aangemelde persoon voor de lijst van de technische dienst, in de actieve entiteit: een naam en filters van list_demandes.',
     run: page(vues.list) },
@@ -401,6 +423,40 @@ const TOOLS = [
   { name: 'list_parametres', route: 'GET /api/parametres', read: true, schema: S.parametreList,
     fr: "Liste les paramètres de l'instance avec leur valeur, leur défaut, leur description et leurs choix (filtre groupe) (administrateur).", nl: 'Lijst van de parameters van de installatie met hun waarde, standaardwaarde, beschrijving en keuzes (filter groupe) (beheerder).',
     run: page(parametres.list) },
+  // 0.17.0 (étape 13, point 2) : courriel ; mêmes fonctions que les routes (services/courriel.js).
+  { name: 'get_mail_settings', route: 'GET /api/settings/courriel', read: true, schema: { type: 'object', properties: {}, additionalProperties: false },
+    fr: "Réglages du courriel (administrateur) : mode (test : rien ne part, les courriels sont retenus et lisibles ; smtp : envoi réel), serveur, port, sécurité, compte, mot de passe renseigné ou non (jamais rendu), expéditeur, adresse des liens, état de la file.", nl: 'Instellingen van de e-mail (beheerder): modus (test: er vertrekt niets, de e-mails worden bijgehouden en zijn leesbaar; smtp: echte verzending), server, poort, beveiliging, account, wachtwoord ingevuld of niet (nooit teruggegeven), afzender, adres van de links, toestand van de wachtrij.',
+    run: (u) => courriel.lire(u) },
+  { name: 'update_mail_settings', route: 'PUT /api/settings/courriel', confirm: true, schema: S.courrielSettings,
+    fr: "Change les réglages du courriel (administrateur ; deux appels : prepare_update_mail_settings puis confirm_update_mail_settings). Le mode smtp exige le serveur et l'expéditeur. Le mot de passe est chiffré ; une chaîne vide l'efface.", nl: 'Wijzigt de instellingen van de e-mail (beheerder; twee oproepen: prepare_update_mail_settings en dan confirm_update_mail_settings). De modus smtp vereist de server en de afzender. Het wachtwoord wordt versleuteld; een lege tekst wist het.',
+    summary: (u, a) => ({ action: 'update_mail_settings', avant: courriel.lire(u), changements: { ...a, password: a.password ? '***' : a.password } }),
+    run: (u, a) => courriel.regler(u, a, 'mcp') },
+  { name: 'send_test_mail', route: 'POST /api/settings/courriel/essai', schema: S.courrielEssai,
+    fr: "Envoie un courriel d'essai à l'adresse donnée, sinon à celle de l'administrateur. En mode test, il est seulement retenu ; en mode smtp, le résultat (envoye ou echec avec le code de l'erreur) est rendu.", nl: "Verstuurt een testmail naar het opgegeven adres, anders naar dat van de beheerder. In testmodus wordt hij alleen bijgehouden; in smtp-modus wordt het resultaat (envoye of echec met de foutcode) teruggegeven.",
+    run: (u, a) => courriel.essai(u, a, 'mcp') },
+  { name: 'list_courriels', route: 'GET /api/courriels', read: true, schema: S.courrielList,
+    fr: 'Journal des courriels (administrateur), les plus récents d’abord : destinataire, événement, numéro, sujet, mode, état (test, en_attente, envoye, echec), essais, code de l’erreur. Sans le texte.', nl: 'Logboek van de e-mails (beheerder), de recentste eerst: ontvanger, gebeurtenis, nummer, onderwerp, modus, toestand (test, en_attente, envoye, echec), pogingen, foutcode. Zonder de tekst.',
+    run: page(courriel.list) },
+  { name: 'get_courriel', route: 'GET /api/courriels/:id', read: true, schema: idSchema,
+    fr: 'Lit un courriel du journal (administrateur), avec son texte.', nl: 'Leest een e-mail uit het logboek (beheerder), met de tekst.',
+    run: (u, a) => courriel.get(u, a.id) },
+  // 0.17.0 (étape 13, point 3) : modèles de courriel (services/modeles-courriel.js).
+  { name: 'list_modeles_courriel', route: 'GET /api/modeles-courriel', read: true, schema: { type: 'object', properties: {}, additionalProperties: false },
+    fr: "Modèles de courriel de l'instance (administrateur) : code (événement ou variante), libellé, sujet et texte en FR et en NL, texte livré ou modifié, variables admises ({numero}, {lieu}, {etat}, {delai}, {lien}, {entite}, {application}).", nl: 'E-mailmodellen van de installatie (beheerder): code (gebeurtenis of variant), benaming, onderwerp en tekst in het FR en het NL, geleverde of gewijzigde tekst, toegelaten variabelen ({numero}, {lieu}, {etat}, {delai}, {lien}, {entite}, {application}).',
+    run: (u) => modelesCourriel.list(u) },
+  { name: 'get_modele_courriel', route: 'GET /api/modeles-courriel/:code', read: true, schema: S.modeleCourrielParams,
+    fr: 'Lit un modèle de courriel par son code, par exemple demande.recue (administrateur).', nl: 'Leest een e-mailmodel op basis van zijn code, bijvoorbeeld demande.recue (beheerder).',
+    run: (u, a) => modelesCourriel.get(u, a.code) },
+  { name: 'update_modele_courriel', route: 'PUT /api/modeles-courriel/:code', schema: { type: 'object', properties: { ...S.modeleCourrielParams.properties, ...S.modeleCourrielUpdate.properties }, required: ['code'], additionalProperties: false },
+    fr: "Change le sujet ou le texte d'un modèle de courriel, en FR ou en NL (administrateur). Variables admises seulement ; chaque langue cite {numero}.", nl: 'Wijzigt het onderwerp of de tekst van een e-mailmodel, in het FR of het NL (beheerder). Alleen toegelaten variabelen; elke taal vermeldt {numero}.',
+    run: (u, a) => { const { code, ...data } = a; return modelesCourriel.update(u, code, data, 'mcp'); } },
+  { name: 'retablir_modele_courriel', route: 'POST /api/modeles-courriel/:code/retablir', confirm: true, schema: S.modeleCourrielParams,
+    fr: 'Rend à un modèle de courriel son texte livré, en FR et en NL (administrateur ; deux appels : prepare_retablir_modele_courriel puis confirm_retablir_modele_courriel).', nl: 'Geeft een e-mailmodel zijn geleverde tekst terug, in het FR en het NL (beheerder; twee oproepen: prepare_retablir_modele_courriel en dan confirm_retablir_modele_courriel).',
+    summary: (u, a) => ({ action: 'retablir_modele_courriel', modele: modelesCourriel.get(u, a.code) }),
+    run: (u, a) => modelesCourriel.retablir(u, a.code, 'mcp') },
+  { name: 'apercu_modele_courriel', route: 'POST /api/modeles-courriel/:code/apercu', read: true, schema: { type: 'object', properties: { ...S.modeleCourrielParams.properties, ...S.modeleCourrielApercu.properties }, required: ['code', 'langue'], additionalProperties: false },
+    fr: "Aperçu d'un modèle de courriel dans une langue, avec des valeurs d'exemple ; sujet et texte facultatifs pour essayer un texte avant de l'enregistrer. Rien n'est envoyé.", nl: 'Voorbeeld van een e-mailmodel in een taal, met voorbeeldwaarden; onderwerp en tekst facultatief om een tekst te proberen voor hij wordt opgeslagen. Er wordt niets verstuurd.',
+    run: (u, a) => { const { code, ...b } = a; return modelesCourriel.apercu(u, code, b); } },
   { name: 'get_auth_settings', route: 'GET /api/settings/auth', read: true, schema: { type: 'object', properties: {}, additionalProperties: false },
     fr: "Lit les réglages de la connexion Microsoft : mode, locataire, application, adresse publique, domaines, adresse de retour ; le secret n'est jamais rendu, seul son état « renseigné » l'est (administrateur).", nl: 'Leest de instellingen van de Microsoft-aanmelding: modus, tenant, toepassing, publiek adres, domeinen, terugkeeradres; het geheim wordt nooit teruggegeven, alleen of het ingevuld is (beheerder).',
     run: (u) => connexion.lire(u) },
@@ -611,13 +667,19 @@ function handleRpc(msg, { user, version }) {
     case 'tools/list':
       return reply({ tools: exposedTools() });
     case 'tools/call': {
-      try {
-        const data = callTool(params.name, params.arguments, user);
-        return reply({ content: [{ type: 'text', text: JSON.stringify({ data }) }] });
-      } catch (e) {
+      const succes = (data) => reply({ content: [{ type: 'text', text: JSON.stringify({ data }) }] });
+      const echec = (e) => {
         const code = e instanceof AppError ? e.code : 'INTERNAL';
         if (!(e instanceof AppError)) console.error('[MCP]', e);
         return reply({ isError: true, content: [{ type: 'text', text: JSON.stringify({ error: true, code, message: e instanceof AppError ? messageOf(user.lang, e) : L(user.lang, code), details: e.details }) }] });
+      };
+      try {
+        const data = callTool(params.name, params.arguments, user);
+        // 0.17.0 : un outil qui attend un serveur tiers (envoi d'essai d'un courriel) rend une promesse.
+        if (data && typeof data.then === 'function') return data.then(succes, echec);
+        return succes(data);
+      } catch (e) {
+        return echec(e);
       }
     }
     default:

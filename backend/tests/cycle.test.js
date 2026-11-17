@@ -293,7 +293,7 @@ test('migration 012 sur une base 0.13.0 : historique repris de la fiche, état d
   assert.equal(up.status, 0, up.stderr);
   assert.match(up.stdout, /\[DB\] Migration 012_cycle_de_vie appliquée/);
   const out = JSON.parse(up.stdout.trim().split('\n').pop());
-  assert.equal(out.migration, '014_validation', 'les migrations suivantes passent aussi (0.16.0)');
+  assert.equal(out.migration, '015_notifications', 'les migrations suivantes passent aussi (0.17.0)');
   assert.deepEqual(out.historique, [
     { demande_id: 1, de_etat: null, vers_etat: 'a_qualifier', canal: 'ecran', created_at: '2026-11-01 08:00:00' },
     { demande_id: 2, de_etat: null, vers_etat: 'a_qualifier', canal: 'mcp', created_at: '2026-11-02 08:00:00' },

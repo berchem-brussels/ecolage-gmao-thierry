@@ -186,18 +186,52 @@ const faqLocale = [
   { id: 1, entite_id: null, entite_code: null, topic_id: null, question_fr: 'Qui contacter le week-end ?', question_nl: 'Wie contacteren in het weekend?', answer_fr: 'Le numéro d’urgence de votre entité.', answer_nl: 'Het noodnummer van uw entiteit.', is_active: 1, motif_desactivation: null, can_manage: true, source_ticket_reference: null },
   { id: 2, entite_id: 1, entite_code: 'AA', topic_id: 'tickets', question_fr: 'Où voir la réponse à ma question ?', question_nl: 'Waar zie ik het antwoord op mijn vraag?', answer_fr: 'Dans le fil du ticket.', answer_nl: 'In de berichten van het ticket.', is_active: 1, motif_desactivation: null, can_manage: true, source_ticket_reference: 'TCK-2026-00001' },
 ];
+// Notifications de la cloche (0.17.0, étape 13) : deux non lues dans l'entité active, une lue ; une non lue ailleurs.
+const notif = (id: number, numero: string, lue: 0 | 1, extra: Record<string, unknown> = {}) => ({ id, entite_id: 1, evenement: 'demande.recue', variante: 'defaut', objet: 'demande', objet_id: id,
+  numero, lien: `/demandes?demande=${id}`, lue, lue_le: lue ? '2026-11-16 10:00:00' : null, created_at: '2026-11-16 09:00:00', libelle_fr: 'Accusé de réception d’une demande', libelle_nl: 'Ontvangstbevestiging van een aanvraag',
+  texte_fr: `Votre demande ${numero} est bien reçue par le service technique.`, texte_nl: `Uw aanvraag ${numero} is goed ontvangen door de technische dienst.`, ...extra });
+const notifsData = [notif(12, 'AA-DI-2026-00012', 0), notif(11, 'AA-DI-2026-00011', 0, { variante: 'beneficiaire', texte_fr: 'Une demande faite pour vous est enregistrée : AA-DI-2026-00011.', texte_nl: 'Een aanvraag voor u is geregistreerd: AA-DI-2026-00011.' }), notif(10, 'AA-DI-2026-00010', 1)];
+let compteurNotifs = { non_lues: 2, autres_entites: 1 };
+// Courriel (0.17.0, point 2) : réglages en mode test, un courriel retenu, un essai qui répond selon essaiReponse.
+const courrielBase = { mode: 'test', host: '', port: 587, securite: 'starttls', user: '', password_set: false, from: '', from_name: '', public_url: '', adresse_liens: null, file: { en_attente: 0, echec: 0, test: 1 }, enregistre: null };
+let courrielSettings: Record<string, unknown> = { ...courrielBase };
+const courrielRetenu = { id: 4, destinataire: 'agent@exemple.test', langue: 'fr', evenement: 'essai', numero: null, sujet: 'Courriel d’essai de GMAO', mode: 'test', etat: 'test', essais: 0, erreur: null, envoye_le: null, created_at: '2026-11-16 10:00:00' };
+// Modèles de courriel (0.17.0, point 3) : un livré, un modifié ; PUT répond selon modeleReponse.
+const modeleC = (code: string, fr: string, livre: 0 | 1) => ({ code, libelle_fr: fr, libelle_nl: `${fr} (nl)`, sujet_fr: 'Demande {numero} reçue', sujet_nl: 'Aanvraag {numero} ontvangen',
+  corps_fr: 'Votre demande {numero} est reçue.\n{lien}', corps_nl: 'Uw aanvraag {numero} is ontvangen.\n{lien}', texte_livre: livre,
+  variables: ['numero', 'lieu', 'etat', 'delai', 'lien', 'entite', 'application'], trace: livre ? { etat: 'livree', le: null, par: null } : { etat: 'modifiee', le: '2026-11-16T10:00:00Z', par: 'Ada Admin' } });
+const modelesC = [modeleC('demande.recue', 'Accusé de réception d’une demande', 1), modeleC('demande.retard', 'Demande en retard', 0)];
+let modeleReponse: { status: number; json: Record<string, unknown> } | null = null;
+let essaiReponse: Record<string, unknown> = { id: 5, mode: 'test', resultat: 'retenu', erreur: null, destinataire: 'a@exemple.test' };
 const dernierDialogue = () => { const d = screen.getAllByRole('dialog'); return d[d.length - 1]; };
 // Connexion Microsoft (0.10.0) : mode local par défaut ; les tests de la section 8.6 le changent.
 let authConfig: Record<string, unknown> = { mode: 'local', microsoft: false, installed: true };
 const authSettings = { mode: 'sso_optional', tenant: 'locataire-fictif', client_id: 'application-fictive', public_url: 'https://gmao.exemple.test', domains: 'exemple.test', secret_set: true, redirect_uri: 'https://gmao.exemple.test/api/auth/callback', enregistre: { le: '2026-11-05T11:24:00Z', par: 'Ada Admin' } };
 beforeEach(() => {
   modules = modulesActifs;
+  compteurNotifs = { non_lues: 2, autres_entites: 1 };
+  courrielSettings = { ...courrielBase };
+  modeleReponse = null;
+  essaiReponse = { id: 5, mode: 'test', resultat: 'retenu', erreur: null, destinataire: 'a@exemple.test' };
   authConfig = { mode: 'local', microsoft: false, installed: true };
   ticketDetail = { ...ticketBase };
-  vi.stubGlobal('fetch', vi.fn(async (url: string, init?: RequestInit) => ({
+  vi.stubGlobal('fetch', vi.fn(async (url: string, init?: RequestInit) => (modeleReponse && url.startsWith('/api/modeles-courriel/') && init?.method === 'PUT'
+    ? { ok: modeleReponse.status < 300, status: modeleReponse.status, statusText: 'X', json: async () => modeleReponse!.json } : {
     ok: true, status: 200, statusText: 'OK',
     json: async () => (url.includes('/membres') ? { data: membres, meta: { envelope: 1 } }
       // Tickets (0.11.0) : compteurs, fiche, liste ; un transfert (PUT) vers une file non traitée rend la confirmation seule.
+      : /^\/api\/modeles-courriel\/[a-z.]+\/apercu$/.test(url) ? { data: { langue: JSON.parse(String(init?.body)).langue, sujet: 'Aanvraag AC-DI-2026-00042 ontvangen', corps: 'Uw aanvraag AC-DI-2026-00042 is ontvangen.\n\n—\nAutomatische e-mail van GMAO: antwoord er niet op.' }, meta: { envelope: 1 } }
+      : /^\/api\/modeles-courriel\/[a-z.]+\/retablir$/.test(url) ? { data: { ...modelesC[1], texte_livre: 1, trace: { etat: 'retablie', le: '2026-11-16T11:00:00Z', par: 'Ada Admin' } }, meta: { envelope: 1 } }
+      : /^\/api\/modeles-courriel\/[a-z.]+$/.test(url) ? { data: { ...modelesC[0], ...(init?.body ? JSON.parse(String(init.body)) : {}), texte_livre: 0 }, meta: { envelope: 1 } }
+      : url.startsWith('/api/modeles-courriel') ? { data: modelesC, meta: { envelope: 1, variables: modelesC[0].variables } }
+      : url === '/api/settings/courriel/essai' ? { data: essaiReponse, meta: { envelope: 1 } }
+      : url.startsWith('/api/settings/courriel') ? { data: init?.method === 'PUT' ? { ...courrielSettings, ...JSON.parse(String(init.body)) } : courrielSettings, meta: { envelope: 1 } }
+      : /^\/api\/courriels\/\d+$/.test(url) ? { data: { ...courrielRetenu, corps: 'Bonjour,\n\nCe courriel confirme que GMAO peut envoyer des courriels.' }, meta: { envelope: 1 } }
+      : url.startsWith('/api/courriels') ? { ...page([courrielRetenu]), meta: { envelope: 1, mode: 'test' } }
+      : url.startsWith('/api/notifications/compteur') ? { data: compteurNotifs, meta: { envelope: 1 } }
+      : url === '/api/notifications/lues' ? { data: { marquees: 2, non_lues: 0, autres_entites: compteurNotifs.autres_entites }, meta: { envelope: 1 } }
+      : /^\/api\/notifications\/\d+\/lue$/.test(url) ? { data: { ...notifsData[0], lue: 1 }, meta: { envelope: 1 } }
+      : url.startsWith('/api/notifications') ? { ...page(url.includes('non_lues=1') ? notifsData.filter((n) => !n.lue) : notifsData), meta: { envelope: 1, ...compteurNotifs } }
       : url.startsWith('/api/tickets/stats') ? { data: { open: 2, overdue: 1, unassigned: 1, resolved_30d: 3, by_priority: [], by_type: [], by_screen: [] }, meta: { envelope: 1 } }
       : /^\/api\/tickets\/\d+$/.test(url) && init?.method === 'PUT' ? { data: { id: 7, reference: 'TCK-2026-00007', queue: 'it', transferred: true }, meta: { envelope: 1 } }
       : /^\/api\/tickets\/\d+$/.test(url) ? { data: ticketDetail, meta: { envelope: 1 } }
@@ -278,6 +312,20 @@ describe('écrans', () => {
       });
     }
   }
+
+  it('Services : choix de l\u2019entité vide pendant le chargement, sans violation axe-core (CI de la 0.17.0)', async () => {
+    const orig = globalThis.fetch;
+    globalThis.fetch = ((u: RequestInfo | URL, i?: RequestInit) => (String(u).startsWith('/api/entites') ? new Promise<Response>(() => {}) : orig(u, i))) as typeof fetch;
+    try {
+      const { container } = render(wrap(ServicesPage, 'fr'));
+      await waitFor(() => expect(container.querySelector('h1')).toBeTruthy());
+      expect(container.querySelector('.ant-radio-group')?.children.length).toBe(0);
+      const r = await axe.run(container, { rules: { 'color-contrast': { enabled: false }, region: { enabled: false } } });
+      expect(r.violations.map((v) => `${v.id}: ${v.nodes.length}`)).toEqual([]);
+    } finally {
+      globalThis.fetch = orig;
+    }
+  });
 
   it('l’accueil montre l’entité active, les rôles et les personnes de l’entité', async () => {
     render(wrap(HomePage, 'fr'));
@@ -814,9 +862,12 @@ describe('écrans', () => {
     expect(screen.getByLabelText('Nom en néerlandais')).toBeInTheDocument();
   });
 
-  it('l’en-tête propose les entités de la personne en boutons et sans violation axe-core', async () => {
+  it('les entités de la personne se choisissent en boutons, sans violation axe-core ; sur téléphone, dans le menu (0.17.0)', async () => {
     const { container } = render(wrap(AppLayout, 'fr'));
-    const selector = await screen.findByLabelText('Entité active');
+    // jsdom a la mise en page du téléphone : l'en-tête montre le code actif, le choix est en tête du menu (0.17.0, point 1).
+    expect((await screen.findByLabelText('Entité active')).textContent).toBe('AA');
+    fireEvent.click(screen.getByRole('button', { name: 'Ouvrir ou fermer le menu' }));
+    const selector = (await screen.findAllByLabelText('Entité active')).find((e) => e.querySelector('input[type="radio"]')) as HTMLElement;
     expect(within(selector).getByText('AA')).toBeInTheDocument();
     expect(within(selector).getByText('BB')).toBeInTheDocument();
     expect(selector.querySelectorAll('input[type="radio"]')).toHaveLength(2);
@@ -1730,5 +1781,134 @@ describe('services et valideurs (0.16.0, point 2 ; ROL-04)', () => {
     fireEvent.click(screen.getByTitle('Secrétariat (SEC)'));
     fireEvent.click(within(d).getByRole('button', { name: 'Enregistrer' }));
     await waitFor(() => expect(appels.find((a) => a.url === '/api/users/6')?.body).toEqual({ service_id: 3 }));
+  });
+});
+
+describe('cloche de notifications (0.17.0, étape 13, point 1 ; NOT-01, NOT-02)', () => {
+  const appels = () => (fetch as unknown as { mock: { calls: [string, RequestInit?][] } }).mock.calls.map(([url, init]) => ({ url, method: init?.method || 'GET' }));
+
+  it('en-tête : la cloche dit le nombre de non lues ; le volet liste les notifications, les non lues annoncées', async () => {
+    const { container } = render(wrap(AppLayout, 'fr'));
+    const cloche = await screen.findByRole('button', { name: 'Notifications, 2 non lues' });
+    fireEvent.click(cloche);
+    const d = await screen.findByRole('dialog', { name: 'Notifications' });
+    const liste = await within(d).findByRole('list', { name: 'Notifications' });
+    expect(within(liste).getAllByRole('button')).toHaveLength(3);
+    expect(within(liste).getByRole('button', { name: /^Non lue : Votre demande AA-DI-2026-00012 est bien reçue/ })).toBeInTheDocument();
+    expect(within(liste).getByRole('button', { name: /^Votre demande AA-DI-2026-00010/ })).toBeInTheDocument();
+    expect(within(d).getByText('Vous avez 1 notification non lue dans une autre entité : choisissez-la en haut de l\'écran pour la voir.')).toBeInTheDocument();
+    const r = await axe.run(container.ownerDocument.body, { rules: { 'color-contrast': { enabled: false }, region: { enabled: false } } });
+    expect(r.violations.map((v) => `${v.id}: ${v.nodes.length} ${v.nodes.map((n) => n.html.slice(0, 200)).join(' | ')}`)).toEqual([]);
+  });
+
+  it('ouvrir une notification non lue la marque lue et ferme le volet ; « Tout marquer comme lu » ; filtre « Non lues »', async () => {
+    render(wrap(AppLayout, 'fr'));
+    fireEvent.click(await screen.findByRole('button', { name: 'Notifications, 2 non lues' }));
+    const d = await screen.findByRole('dialog', { name: 'Notifications' });
+    fireEvent.click(within(d).getByRole('radio', { name: 'Non lues (2)' }));
+    await waitFor(() => expect(appels().some((a) => a.url.startsWith('/api/notifications?') && a.url.includes('non_lues=1'))).toBe(true));
+    await waitFor(() => expect(within(d).getAllByRole('button', { name: /^Non lue :/ })).toHaveLength(2));
+    fireEvent.click(within(d).getByRole('button', { name: 'Tout marquer comme lu' }));
+    await waitFor(() => expect(appels().some((a) => a.url === '/api/notifications/lues' && a.method === 'PUT')).toBe(true));
+    fireEvent.click(within(d).getAllByRole('button', { name: /AA-DI-2026-00012/ })[0]);
+    await waitFor(() => expect(appels().some((a) => a.url === '/api/notifications/12/lue' && a.method === 'PUT')).toBe(true));
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Notifications' })).toBeNull());
+  });
+
+  it('en néerlandais ; sans non lue, la cloche n’annonce pas de nombre et « Tout marquer comme lu » est grisé ; relue au retour sur l’onglet', async () => {
+    compteurNotifs = { non_lues: 0, autres_entites: 0 };
+    render(wrap(AppLayout, 'nl'));
+    const cloche = await screen.findByRole('button', { name: 'Meldingen' });
+    const avant = appels().filter((a) => a.url === '/api/notifications/compteur').length;
+    fireEvent(window, new Event('focus'));
+    await waitFor(() => expect(appels().filter((a) => a.url === '/api/notifications/compteur').length).toBeGreaterThan(avant));
+    fireEvent.click(cloche);
+    const d = await screen.findByRole('dialog', { name: 'Meldingen' });
+    expect(await within(d).findByRole('button', { name: /Uw aanvraag AA-DI-2026-00012/ })).toBeInTheDocument();
+    expect(within(d).getByRole('button', { name: 'Alles als gelezen markeren' })).toBeDisabled();
+    expect(within(d).queryByText(/andere entiteit/)).toBeNull();
+  });
+});
+
+describe('Paramètres › Courriel (0.17.0, étape 13, point 2 ; NOT-02, NOT-04)', () => {
+  const appels = () => (fetch as unknown as { mock: { calls: [string, RequestInit?][] } }).mock.calls.map(([url, init]) => ({ url, method: init?.method || 'GET', body: init?.body ? JSON.parse(String(init.body)) : undefined }));
+
+  for (const lang of ['fr', 'nl'] as const) {
+    it(`onglet Courriel (${lang}) sans violation axe-core ; mode test annoncé « simulé »`, async () => {
+      const { container } = render(wrap(ParametresPage, lang, FALLBACK_SETTINGS, ['/parametres?onglet=courriel']));
+      expect(await screen.findByText(lang === 'fr' ? 'Mode test (simulé) : aucun courriel ne part.' : 'Testmodus (gesimuleerd): er vertrekt geen enkele e-mail.')).toBeInTheDocument();
+      await screen.findByText('agent@exemple.test');
+      const r = await axe.run(container, { rules: { 'color-contrast': { enabled: false }, region: { enabled: false } } });
+      expect(r.violations.map((v) => `${v.id}: ${v.nodes.length} ${v.nodes.map((n) => n.html.slice(0, 200)).join(' | ')}`)).toEqual([]);
+    });
+  }
+
+  it('journal : un courriel retenu s’ouvre avec son texte et la mention « Simulé » ; essai en mode test retenu', async () => {
+    render(wrap(ParametresPage, 'fr', FALLBACK_SETTINGS, ['/parametres?onglet=courriel']));
+    fireEvent.click(await screen.findByRole('button', { name: 'Courriel d’essai de GMAO' }));
+    const d = await screen.findByRole('dialog', { name: 'Courriel d’essai de GMAO' });
+    expect(await within(d).findByText(/Ce courriel confirme que GMAO peut envoyer des courriels/)).toBeInTheDocument();
+    expect(within(d).getByText('Simulé : ce courriel n’est pas parti (mode test).')).toBeInTheDocument();
+    fireEvent.click(within(d).getByRole('button', { name: 'Fermer' }));
+    fireEvent.click(screen.getByRole('button', { name: /Envoyer un courriel d’essai/ }));
+    await waitFor(() => expect(appels().find((a) => a.url === '/api/settings/courriel/essai')?.body).toEqual({}));
+    expect(await screen.findByText('Mode test : le courriel pour a@exemple.test est retenu dans le journal, rien n’est parti.')).toBeInTheDocument();
+  });
+
+  it('envoi réel : serveur et expéditeur exigés avant l’envoi ; mot de passe vide non envoyé ; essai en échec expliqué', async () => {
+    render(wrap(ParametresPage, 'fr', FALLBACK_SETTINGS, ['/parametres?onglet=courriel']));
+    fireEvent.click(await screen.findByText('Envoi réel (SMTP)'));
+    fireEvent.click(screen.getByRole('button', { name: 'Enregistrer' }));
+    await waitFor(() => expect(screen.getAllByText('Ce champ est obligatoire')).toHaveLength(2));
+    expect(appels().some((a) => a.url === '/api/settings/courriel' && a.method === 'PUT')).toBe(false);
+    fireEvent.change(screen.getByLabelText('Serveur SMTP'), { target: { value: 'smtp.exemple.be' } });
+    fireEvent.change(screen.getByLabelText('Adresse de l’expéditeur'), { target: { value: 'gmao@exemple.be' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Enregistrer' }));
+    await waitFor(() => expect(appels().find((a) => a.url === '/api/settings/courriel' && a.method === 'PUT')?.body).toMatchObject({ mode: 'smtp', host: 'smtp.exemple.be', from: 'gmao@exemple.be', port: 587 }));
+    expect(appels().find((a) => a.url === '/api/settings/courriel' && a.method === 'PUT')?.body.password).toBeUndefined();
+    essaiReponse = { id: 6, mode: 'smtp', resultat: 'echec', erreur: 'EAUTH', destinataire: 'a@exemple.test' };
+    fireEvent.click(screen.getByRole('button', { name: /Envoyer un courriel d’essai/ }));
+    expect(await screen.findByText('Le courriel pour a@exemple.test n’est pas parti.')).toBeInTheDocument();
+    expect(screen.getByText('EAUTH : le serveur refuse le compte ou le mot de passe.')).toBeInTheDocument();
+  });
+});
+
+describe('Paramètres › Courriel › Modèles de courriel (0.17.0, étape 13, point 3 ; NOT-04, LNG-05)', () => {
+  const appels = () => (fetch as unknown as { mock: { calls: [string, RequestInit?][] } }).mock.calls.map(([url, init]) => ({ url, method: init?.method || 'GET', body: init?.body ? JSON.parse(String(init.body)) : undefined }));
+
+  it('liste « Texte livré » ou « Modifié » ; fiche FR et NL ; aperçu du texte en cours, en néerlandais, sans enregistrer', async () => {
+    render(wrap(ParametresPage, 'fr', FALLBACK_SETTINGS, ['/parametres?onglet=courriel']));
+    const liste = (await screen.findByText('Modèles de courriel')).closest('.ant-card') as HTMLElement;
+    await within(liste).findByText('Texte livré');
+    expect(within(liste).getByText('Texte livré')).toBeInTheDocument();
+    expect(within(liste).getByText('Modifié')).toBeInTheDocument();
+    fireEvent.click(within(liste).getByRole('button', { name: 'Accusé de réception d’une demande' }));
+    const d = await screen.findByRole('dialog', { name: 'Accusé de réception d’une demande' });
+    expect(within(d).getByLabelText('Sujet en néerlandais')).toHaveValue('Aanvraag {numero} ontvangen');
+    expect(within(d).getByText(/\{numero\}\s+\{lieu\}/)).toBeInTheDocument();
+    fireEvent.change(within(d).getByLabelText('Texte en néerlandais'), { target: { value: 'Uw aanvraag {numero}.' } });
+    fireEvent.click(within(d).getByRole('button', { name: /Aperçu en néerlandais/ }));
+    await waitFor(() => expect(appels().find((a) => a.url === '/api/modeles-courriel/demande.recue/apercu')?.body).toEqual({ langue: 'nl', sujet: 'Aanvraag {numero} ontvangen', corps: 'Uw aanvraag {numero}.' }));
+    expect(await within(d).findByText('Aanvraag AC-DI-2026-00042 ontvangen')).toBeInTheDocument();
+    expect(within(d).getByText(/Automatische e-mail van GMAO/)).toBeInTheDocument();
+    expect(appels().some((a) => a.url === '/api/modeles-courriel/demande.recue' && a.method === 'PUT')).toBe(false);
+  });
+
+  it('enregistrer : refus du serveur affiché dans la fiche ; puis enregistré ; « Rétablir le texte livré » après confirmation', async () => {
+    render(wrap(ParametresPage, 'fr', FALLBACK_SETTINGS, ['/parametres?onglet=courriel']));
+    fireEvent.click(await screen.findByRole('button', { name: 'Demande en retard' }));
+    const d = await screen.findByRole('dialog', { name: 'Demande en retard' });
+    expect(within(d).getByText(/Modifié le 16\/11\/2026 à 11:00 par Ada Admin/)).toBeInTheDocument();
+    modeleReponse = { status: 409, json: { error: true, code: 'MODELE_VARIABLE', message: 'Variable inconnue dans le modèle : {prenom}.' } };
+    fireEvent.change(within(d).getByLabelText('Texte en français'), { target: { value: 'Bonjour {prenom}, {numero}' } });
+    fireEvent.click(within(d).getByRole('button', { name: 'Enregistrer' }));
+    expect(await within(d).findByText('Variable inconnue dans le modèle : {prenom}.')).toBeInTheDocument();
+    modeleReponse = null;
+    fireEvent.change(within(d).getByLabelText('Texte en français'), { target: { value: 'Retard : {numero}' } });
+    fireEvent.click(within(d).getByRole('button', { name: 'Enregistrer' }));
+    await waitFor(() => expect(appels().filter((a) => a.url === '/api/modeles-courriel/demande.retard' && a.method === 'PUT').slice(-1)[0]?.body).toMatchObject({ corps_fr: 'Retard : {numero}' }));
+    fireEvent.click(await within(d).findByRole('button', { name: /Rétablir le texte livré/ }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Rétablir le texte livré' }));
+    await waitFor(() => expect(appels().some((a) => a.url === '/api/modeles-courriel/demande.recue/retablir' || a.url === '/api/modeles-courriel/demande.retard/retablir')).toBe(true));
   });
 });

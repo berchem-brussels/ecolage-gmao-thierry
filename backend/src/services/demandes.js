@@ -535,6 +535,10 @@ function create(user, data, channel = 'api') {
     questions.enregistrer(r.lastInsertRowid, reponses);
     // Historique de la fiche (0.14.0, CYC-02) : la réception est sa première étape.
     require('./cycle').ecrire(db, { demandeId: r.lastInsertRowid, entiteId, de: null, vers: etat, userId: user.id, channel, quand: versSql(maintenant) });
+    // Avis du dépôt (0.17.0, étape 13 ; DEM-12, DEM-07, DEM-15, DV-135 ; services/avis.js) : accusé de réception au
+    // demandeur et au bénéficiaire, demande à valider ou danger au chef de service ; cloche et courriel. Celui de la
+    // personne qui vient d'envoyer sa demande naît lu, sans courriel ; l'agent dont la demande est encodée le reçoit.
+    require('./avis').depot(db, { demandeId: r.lastInsertRowid, validation, auteurId: user.id });
     // Les pièces jointes du brouillon passent à la demande (DV-85, 0.8.0), avant l'effacement du brouillon.
     // Règle 15 : le brouillon et ses pièces restent à qui encode une demande pour un agent.
     const nbPieces = encodage ? 0 : require('./pieces').rattacher(user.id, entiteId, r.lastInsertRowid);

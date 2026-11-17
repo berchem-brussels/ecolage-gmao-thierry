@@ -149,6 +149,8 @@ function marquerLus(user, id, { jusqu_a: jusqua } = {}) {
   const max = db.prepare('SELECT MAX(id) AS m FROM demande_messages WHERE demande_id = ? AND (interne = 0 OR ? = 1)').get(d.id, service ? 1 : 0).m || 0;
   const cible = Math.min(jusqua || max, max);
   const avant = dernierLu(d.id, user.id);
+  // 0.17.0 (point 5) : fil lu jusqu'au dernier message : ses avis de message et de mention sont lus dans la cloche.
+  if (cible >= max) require('./avis').filLu(db, { demandeId: d.id, userId: user.id });
   if (cible > avant) {
     db.prepare(`INSERT INTO demande_messages_lus (demande_id, user_id, dernier_id, lu_le) VALUES (?, ?, ?, datetime('now'))
       ON CONFLICT (demande_id, user_id) DO UPDATE SET dernier_id = excluded.dernier_id, lu_le = excluded.lu_le`).run(d.id, user.id, cible);
@@ -226,6 +228,8 @@ function create(user, id, { texte, interne = false, langue, mentions = [] }, cha
       .run(d.id, d.entite_id, user.id, auteur, interne ? 1 : 0, contenu, langue || user.lang || 'fr', CANAUX[channel] || 'api').lastInsertRowid;
     const n = require('./pieces').attacher(user.id, d.id, messageId);
     for (const x of mentions) db.prepare('INSERT INTO demande_mentions (message_id, user_id) VALUES (?, ?)').run(messageId, x);
+    // 0.17.0 (étape 13, point 5) : avis du nouveau message et des mentions (services/avis.js, règle 6).
+    require('./avis').message(db, { demandeId: d.id, auteur, interne, mentions, auteurId: user.id });
     logAudit(user.id, 'demande.message', 'demande', d.id, {
       numero: d.numero, message_id: messageId, interne: interne ? 1 : 0, longueur: contenu ? contenu.length : 0, pieces: n,
       ...(mentions.length ? { mentions: mentions.length } : {}),

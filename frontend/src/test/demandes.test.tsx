@@ -1730,9 +1730,12 @@ describe('validation par le chef de service (0.16.0, point 2 ; DEM-15, ROL-04)',
       const d = await screen.findByRole('dialog');
       expect(await within(d).findByText('Secrétariat')).toBeInTheDocument();
       expect(within(d).getByText(/Didier Demandeur/)).toBeInTheDocument();
-      expect(within(d).getByText("Délai : compté à partir de l'accord de votre chef de service")).toBeInTheDocument();
+      // 0.17.0 (point 0, DV-137) : le chef de service lit « du chef de service », jamais « votre chef de service ».
+      expect(within(d).getByText("Délai : compté à partir de l'accord du chef de service")).toBeInTheDocument();
+      expect(within(d).queryByText(/votre chef de service/)).toBeNull();
       fireEvent.click(within(d).getByRole('button', { name: 'Valider et transmettre' }));
-      expect(await within(d).findByText(/passe de « En attente de l'accord de votre chef de service » à « Reçue par le service technique »/)).toBeInTheDocument();
+      expect(await within(d).findByText(/passe de « En attente de l'accord du chef de service » à « Reçue par le service technique »/)).toBeInTheDocument();
+      expect(within(d).queryByText(/votre chef de service/)).toBeNull();
       fireEvent.click(within(d).getAllByRole('button', { name: 'Valider et transmettre' }).slice(-1)[0]);
       await waitFor(() => expect(posts.find((p) => p.url === '/api/demandes/5/transitions')?.body).toEqual({ etat: 'a_qualifier' }));
       expect(await within(d).findByText(/n’attend plus votre accord/)).toBeInTheDocument();
@@ -1752,6 +1755,26 @@ describe('validation par le chef de service (0.16.0, point 2 ; DEM-15, ROL-04)',
       fireEvent.change(within(d).getByLabelText(/Commentaire/), { target: { value: 'Budget épuisé.' } });
       fireEvent.click(within(d).getAllByRole('button', { name: 'Refuser la demande' }).slice(-1)[0]);
       await waitFor(() => expect(posts.find((p) => p.url === '/api/demandes/5/transitions')?.body).toEqual({ etat: 'refusee_validation', commentaire: 'Budget épuisé.' }));
+    });
+  });
+
+  it('chef de service (0.17.0, point 0, DV-137) : historique sans « votre chef de service » ; la croix pendant « Refuser » ramène à la fiche', async () => {
+    ficheData = enValidation();
+    historiqueData = [{ id: 1, de_etat: null, vers_etat: 'en_validation', auteur: 'demandeur', commentaire: null, created_at: '2026-11-10 08:00:00', etat_libelle_fr: "En attente de l'accord de votre chef de service", etat_libelle_nl: 'x' },
+      { id: 2, de_etat: 'en_validation', vers_etat: 'refusee_validation', auteur: 'valideur', commentaire: 'Budget épuisé.', created_at: '2026-11-10 09:00:00', etat_libelle_fr: 'Refusée par votre chef de service', etat_libelle_nl: 'x' }];
+    await avecRole(async () => {
+      render(wrap(AValiderPage, 'fr', ['/a-valider?demande=5']));
+      const d = await screen.findByRole('dialog');
+      expect(await within(d).findByText('Refusée par le chef de service')).toBeInTheDocument();
+      expect(within(d).queryByText(/votre chef de service/)).toBeNull();
+      fireEvent.click(within(d).getByRole('button', { name: 'Refuser la demande' }));
+      expect(await within(d).findByText('Le demandeur lira ce commentaire dans sa demande.')).toBeInTheDocument();
+      fireEvent.click(within(d).getByRole('button', { name: 'Revenir à la fiche' }));
+      expect(await within(d).findByRole('button', { name: 'Valider et transmettre' })).toBeInTheDocument();
+      expect(screen.getByRole('dialog')).toBeVisible();
+      expect(within(d).queryByText('Le demandeur lira ce commentaire dans sa demande.')).toBeNull();
+      expect(within(d).getByRole('button', { name: 'Fermer' })).toBeInTheDocument();
+      expect(posts.length).toBe(0);
     });
   });
 
@@ -1891,6 +1914,22 @@ describe('fusion de doublons (0.16.0, point 4 ; GES-06)', () => {
     await waitFor(() => expect(posts.find((p) => p.url === '/api/demandes/5/fusionner')?.body).toEqual({ principale_id: 2, commentaire: 'Même néon.' }));
     expect(await within(d).findByText('Cette demande a été regroupée avec la demande')).toBeInTheDocument();
     expect(within(d).getByRole('link', { name: 'AA-DI-2026-00002' })).toHaveAttribute('href', '/demandes-entite?demande=2');
+  });
+
+  it('la croix pendant « Regrouper » ramène à la fiche, sans la fermer ; la croix de la fiche la ferme (0.17.0, point 0, DV-137)', async () => {
+    ficheData = doublon();
+    render(wrap(DemandesEntite, 'fr', ['/demandes-entite?demande=5']));
+    const d = await screen.findByRole('dialog');
+    expect(within(d).getByRole('button', { name: 'Fermer' })).toBeInTheDocument();
+    fireEvent.click(await within(d).findByRole('button', { name: 'Regrouper avec une autre demande' }));
+    await within(d).findByRole('list', { name: 'Demandes ouvertes au même endroit' });
+    fireEvent.click(within(d).getByRole('button', { name: 'Revenir à la fiche' }));
+    expect(await within(d).findByRole('button', { name: 'Regrouper avec une autre demande' })).toBeInTheDocument();
+    expect(within(d).queryByRole('list', { name: 'Demandes ouvertes au même endroit' })).toBeNull();
+    expect(screen.getByRole('dialog')).toBeVisible();
+    expect(posts.length).toBe(0);
+    fireEvent.click(within(d).getByRole('button', { name: 'Fermer' }));
+    await waitFor(() => expect(screen.queryByRole('button', { name: 'Regrouper avec une autre demande' })).toBeNull());
   });
 
   it('un refus du serveur s’affiche, le choix reste ; la principale liste ses demandes regroupées', async () => {

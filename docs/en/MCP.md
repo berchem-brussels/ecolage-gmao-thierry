@@ -1,6 +1,10 @@
 # MCP server
 
-Application version: **0.16.1** · Updated on 16/11/2026 · The French text prevails (`docs/fr/MCP.md`).
+Application version: **0.17.0** · Updated on 17/11/2026 · The French text prevails (`docs/fr/MCP.md`).
+
+## 0.17.0
+
+Sixteen new tools: notifications of the signed-in person (`list_notifications`, `get_compteur_notifications`, `get_notification`, `list_evenements_notification`, `marquer_notification_lue`, `marquer_notifications_lues`), e-mail for the administrator (`get_mail_settings`, `update_mail_settings` in two calls, `send_test_mail`, `list_courriels`, `get_courriel`) and e-mail templates (`list_modeles_courriel`, `get_modele_courriel`, `update_modele_courriel`, `retablir_modele_courriel` in two calls, `apercu_modele_courriel`).
 
 ## 0.16.1
 

@@ -1,6 +1,10 @@
 # Architectuur
 
-Versie van de toepassing: **0.16.1** · De Franse tekst is rechtsgeldig (`docs/fr/ARCHITECTURE.md`); dit bestand vat elke versie samen.
+Versie van de toepassing: **0.17.0** · De Franse tekst is rechtsgeldig (`docs/fr/ARCHITECTURE.md`); dit bestand vat elke versie samen.
+
+## Meldingen, e-mail en waarschuwingen (0.17.0)
+
+Migratie `015_notifications` (meldingen, e-mails met wachtrij en logboek, e-mailmodellen, vervaldagwaarschuwingen). Catalogi `config/notifications.json` (NOT-01) en `config/modeles-courriel.json`. Diensten: `notifications.js` (bel, alleen de eigen meldingen), `courriel.js` (instellingen, wachtrij, test, `nodemailer` zonder toegang tot bestanden of URL's), `modeles-courriel.js` (samenstelling in de taal van de ontvanger), `avis.js` (wie wat ontvangt: indiening, statuswijziging via `cycle.ecrire`, berichten, tickets, vervaldagen elke 15 minuten). Interface: `NotificationsCloche.tsx`, `CourrielPanel.tsx`, `ModelesCourriel.tsx`.
 
 ## Goedkeurder, bijlagen en gevaar (0.16.1)
 

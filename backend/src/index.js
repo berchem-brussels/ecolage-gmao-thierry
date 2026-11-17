@@ -9,6 +9,10 @@ async function start() {
   const n = require('./services/qualification').completerEcheances(require('./database').getDb());
   if (n) { console.log(`[DB] Échéances calculées pour ${n} demande(s)`); saveNow(); }
   const app = buildApp();
+  // 0.17.0 (étape 13) : file des courriels traitée dans l'API, sans tâche planifiée externe (services/courriel.js).
+  require('./services/courriel').demarrer();
+  // 0.17.0 (point 6) : alertes d'échéance proche et de retard, contrôlées dans l'API (services/avis.js, règle 8).
+  require('./services/avis').demarrerAlertes();
   const server = app.listen(PORT, '0.0.0.0', () => console.log(`[APP] API ${VERSION} sur le port ${PORT}`));
   const stop = () => { saveNow(); server.close(() => process.exit(0)); };
   process.on('SIGTERM', stop);
