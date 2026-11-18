@@ -57,8 +57,25 @@ async function upload<T>(path: string, blob: Blob, nom = 'fichier'): Promise<T> 
   return json.data as T;
 }
 
+/**
+ * Téléchargement d'un fichier produit par le serveur (0.18.0, point 2 : exports Excel et CSV) : même cookie ; une erreur
+ * rendue en JSON (droits, plafond) devient une ApiError comme ailleurs. Rend le contenu et le nom donné par le serveur.
+ */
+async function telecharger(path: string): Promise<{ blob: Blob; fichier: string }> {
+  const res = await fetch(`/api${path}`, { method: 'GET', credentials: 'same-origin' });
+  if (!res.ok) {
+    const json = await res.json().catch(() => null);
+    if (res.status === 401) window.dispatchEvent(new Event('app-unauthorized'));
+    noterErreur(res.status, 'GET', path, json, res.statusText);
+    throw new ApiError(res.status, json?.code || 'INTERNAL', json?.message || res.statusText, json?.details);
+  }
+  const nom = /filename="([^"]+)"/.exec(res.headers.get('Content-Disposition') || '');
+  return { blob: await res.blob(), fichier: nom ? nom[1] : 'export' };
+}
+
 export const api = {
   upload,
+  telecharger,
   get: <T>(path: string) => request<T>('GET', path).then((r) => r.data),
   page: <T>(path: string) => request<T[]>('GET', path).then((r): Page<T> => ({ data: r.data, pagination: r.pagination!, meta: r.meta })),
   post: <T>(path: string, body: unknown) => request<T>('POST', path, body).then((r) => r.data),

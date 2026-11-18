@@ -75,6 +75,9 @@ async function connecter(page: Page, user: string, password: string) {
 }
 
 test('captures de l’aide', async ({ page, browser }) => {
+  // 0.18.0 (point 4) : pas de visite guidée automatique sur les captures (VisiteGuidee.tsx).
+  const sansVisite = () => window.localStorage.setItem('gmao.visite.auto', '0');
+  await page.context().addInitScript(sansVisite);
   await connecter(page, process.env.HELP_USER || '', process.env.HELP_PASSWORD || '');
   // Sessions des autres comptes (0.16.0), ouvertes à la première capture qui les demande.
   const sessions = new Map<string, Page>();
@@ -85,6 +88,7 @@ test('captures de l’aide', async ({ page, browser }) => {
       const user = process.env[`HELP_USER_${v}`];
       if (!user) throw new Error(`HELP_USER_${v} manque`);
       const ctx = await browser.newContext({ baseURL: test.info().project.use.baseURL, ignoreHTTPSErrors: true, viewport: { width: 1280, height: 800 } });
+      await ctx.addInitScript(sansVisite);
       const p = await ctx.newPage();
       await connecter(p, user, process.env[`HELP_PASSWORD_${v}`] || process.env.HELP_PASSWORD || '');
       sessions.set(compte, p);
@@ -122,7 +126,8 @@ test('captures de l’aide', async ({ page, browser }) => {
         await page.locator('.ant-spin-spinning').first().waitFor({ state: 'detached', timeout: 5000 }).catch(() => {});
         await page.waitForTimeout(700);
         // Le bouton flottant de l'assistant masquerait une partie de l'écran : il n'apparaît pas sur les captures.
-        await page.addStyleTag({ content: '.chatbot-widget { display: none !important; }' });
+        // 0.18.0 : sauf sur la capture de l'assistant lui-même (assistant: true).
+        if (!shot.assistant) await page.addStyleTag({ content: '.chatbot-widget { display: none !important; }' });
         for (const a of shot.actions || []) {
           if (a.wait) await page.waitForTimeout(a.wait);
           if (a.clickSel) await page.locator(a.clickSel).first().click();

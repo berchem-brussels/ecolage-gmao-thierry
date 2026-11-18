@@ -40,6 +40,18 @@ const topic: HelpTopic = {
       errors: [{ problem: { fr: 'La zone d’écriture n’apparaît pas.', nl: 'Het schrijfvak verschijnt niet.' }, solution: { fr: 'La demande est fermée : les messages restent lisibles. Si le problème revient, rouvrez-la ou faites une nouvelle demande.', nl: 'De aanvraag is gesloten: de berichten blijven leesbaar. Komt het probleem terug, heropen ze dan of dien een nieuwe aanvraag in.' } }],
       shots: ['mes-demandes-fil'],
     },
+    // 0.18.0 (point 5 ; IMP-03) : export de la liste.
+    {
+      title: { fr: 'Exporter la liste en Excel ou en CSV', nl: 'De lijst exporteren naar Excel of CSV' },
+      when: { fr: 'Pour garder, trier ou transmettre vos demandes dans un tableur.', nl: 'Om uw aanvragen in een rekenblad te bewaren, te sorteren of door te geven.' },
+      steps: [
+        { fr: 'Réglez les filtres et la recherche : le fichier reprend exactement ce que la liste montre.', nl: 'Stel de filters en de zoekopdracht in: het bestand neemt precies over wat de lijst toont.' },
+        { fr: 'Cliquez sur {{export.bouton}}, puis sur {{export.xlsx}} ou {{export.csv}}.', nl: 'Klik op {{export.bouton}} en dan op {{export.xlsx}} of {{export.csv}}.' },
+        { fr: 'Ouvrez le fichier téléchargé ; sur iPhone, il est dans Fichiers, sur Android dans Téléchargements.', nl: 'Open het gedownloade bestand; op iPhone staat het in Bestanden, op Android in Downloads.' },
+      ],
+      result: { fr: 'Un fichier au nom de la liste, de l’entité et du jour, colonnes dans votre langue, 5 000 lignes au plus. L’export est noté au journal, sans son contenu.', nl: 'Een bestand met de naam van de lijst, de entiteit en de dag, kolommen in uw taal, hoogstens 5 000 regels. De export wordt in het logboek genoteerd, zonder de inhoud.' },
+      errors: [{ problem: { fr: 'Message « Plus de 5 000 lignes ».', nl: 'Melding « Meer dan 5 000 regels ».' }, solution: { fr: 'Ajoutez un filtre (état, période, bâtiment) ou une recherche, puis exportez de nouveau.', nl: 'Voeg een filter (status, periode, gebouw) of een zoekopdracht toe en exporteer opnieuw.' } }],
+    },
     {
       title: { fr: 'Ne plus suivre une demande', nl: 'Een aanvraag niet meer volgen' },
       when: { fr: 'Quand une demande que vous suivez (« Moi aussi » ou {{suivi.suivre}}) ne vous concerne plus.', nl: 'Wanneer een aanvraag die u volgt (« Ik ook » of {{suivi.suivre}}) u niet meer aanbelangt.' },

@@ -41,14 +41,17 @@ test('initialize et liste des outils, descriptions FR et NL', async () => {
 // 0.14.0 (point 5) : photo ajoutée à une demande envoyée, même lecteur de fichiers que le brouillon (écart E-17 étendu).
 const HORS_MCP = new Set(['POST /api/lieux/:id/photo', 'GET /api/lieux/:id/photo', 'POST /api/demandes/brouillon/pieces', 'GET /api/pieces/:id/fichier', 'POST /api/demandes/:id/pieces',
   // 0.15.0 (point 1) : pièce jointe en attente du prochain message du fil (écart E-17 étendu).
-  'POST /api/demandes/:id/messages/pieces']);
+  'POST /api/demandes/:id/messages/pieces',
+  // 0.18.0 (point 2, IMP-03) : exports Excel et CSV, fichiers binaires ; mêmes données par list_demandes,
+  // list_demandes_a_valider et list_tickets (écart E-17 étendu).
+  'GET /api/demandes/export', 'GET /api/demandes/a-valider/export', 'GET /api/tickets/export']);
 
 test('parité : chaque route de ressource a son outil ; chaque outil a sa route', () => {
   const routes = collectRoutes(srv.app)
     .filter((r) => /^\/api\/(entites|roles|roles-utilisateurs|users|listes-valeurs|lieux|categories|questions-categorie|priorites|horaires|jours-non-ouvres|jours-feries|echeances|demandes|pieces|vues-demandes|parametres|modules|parametres-entite|audit|notes-version|settings\/auth|settings\/courriel|courriels|modeles-courriel|tickets|faq|etats-demande|modeles-reponse|services|notifications)(\/|$)/.test(r.path) || ['/api/auth/me', '/api/auth/entite', '/api/auth/nouveautes', '/api/auth/lieu-habituel'].includes(r.path))
     .map((r) => `${r.method} ${r.path}`)
     .filter((r) => !HORS_MCP.has(r));
-  assert.equal(HORS_MCP.size, 6, 'la liste des exceptions ne grandit pas sans écart consigné (E-17, étendu en 0.14.0 et 0.15.0)');
+  assert.equal(HORS_MCP.size, 9, 'la liste des exceptions ne grandit pas sans écart consigné (E-17, étendu en 0.14.0, 0.15.0 et 0.18.0)');
   const covered = TOOLS.map((t) => t.route);
   for (const r of routes) assert.ok(covered.includes(r), `route sans outil MCP : ${r}`);
   for (const c of covered) assert.ok(routes.includes(c), `outil sans route : ${c}`);

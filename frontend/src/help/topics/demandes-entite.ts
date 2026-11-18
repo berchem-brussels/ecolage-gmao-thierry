@@ -16,6 +16,19 @@ const topic: HelpTopic = {
   ],
   overviewShot: 'demandes-entite-overview',
   procedures: [
+    // 0.18.0 (point 5 ; IMP-03) : export de la liste.
+    {
+      title: { fr: 'Exporter la liste en Excel ou en CSV', nl: 'De lijst exporteren naar Excel of CSV' },
+      when: { fr: 'Pour garder, trier ou transmettre les demandes de l’entité dans un tableur.', nl: 'Om de aanvragen van de entiteit in een rekenblad te bewaren, te sorteren of door te geven.' },
+      steps: [
+        { fr: 'Réglez les filtres et la recherche : le fichier reprend exactement ce que la liste montre.', nl: 'Stel de filters en de zoekopdracht in: het bestand neemt precies over wat de lijst toont.' },
+        { fr: 'Cliquez sur {{export.bouton}}, puis sur {{export.xlsx}} ou {{export.csv}}.', nl: 'Klik op {{export.bouton}} en dan op {{export.xlsx}} of {{export.csv}}.' },
+        { fr: 'Ouvrez le fichier téléchargé ; sur iPhone, il est dans Fichiers, sur Android dans Téléchargements.', nl: 'Open het gedownloade bestand; op iPhone staat het in Bestanden, op Android in Downloads.' },
+      ],
+      result: { fr: 'Un fichier au nom de la liste, de l’entité et du jour, colonnes dans votre langue, 5 000 lignes au plus. L’export est noté au journal, sans son contenu.', nl: 'Een bestand met de naam van de lijst, de entiteit en de dag, kolommen in uw taal, hoogstens 5 000 regels. De export wordt in het logboek genoteerd, zonder de inhoud.' },
+      shots: ['demandes-entite-export'],
+      errors: [{ problem: { fr: 'Message « Plus de 5 000 lignes ».', nl: 'Melding « Meer dan 5 000 regels ».' }, solution: { fr: 'Ajoutez un filtre ou une recherche, puis exportez de nouveau.', nl: 'Voeg een filter of een zoekopdracht toe en exporteer opnieuw.' } }],
+    },
     {
       title: { fr: 'Trier les demandes du jour', nl: 'De aanvragen van de dag sorteren' },
       when: { fr: 'Chaque matin, pour voir ce qui presse.', nl: 'Elke ochtend, om te zien wat dringend is.' },
@@ -131,6 +144,8 @@ const topic: HelpTopic = {
     },
   ],
   faq: [
+    // 0.18.0 (point 5 ; IMP-03).
+    { q: { fr: 'Le fichier CSV montre des caractères bizarres ou tout dans une colonne.', nl: 'Het CSV-bestand toont vreemde tekens of alles in één kolom.' }, a: { fr: 'Ouvrez-le avec Excel par un double clic : il est en UTF-8 avec des colonnes séparées par « ; », comme Excel les attend en Belgique. Ailleurs (autre tableur), choisissez l’encodage UTF-8 et le séparateur point-virgule. Le format Excel (.xlsx) évite ces réglages.', nl: 'Open het met Excel door te dubbelklikken: het is in UTF-8 met kolommen gescheiden door « ; », zoals Excel ze in België verwacht. Elders (ander rekenblad) kiest u de codering UTF-8 en het scheidingsteken puntkomma. Het Excel-formaat (.xlsx) vermijdt die instellingen.' } },
     { q: { fr: 'Que veut dire « Délai suspendu » ?', nl: 'Wat betekent « Termijn opgeschort »?' }, a: { fr: 'La demande attend pour un motif extérieur au service (par défaut : réponse du demandeur, accès impossible ; réglé dans Réglages de l’entité). Elle n’est pas en retard ; à la reprise, son échéance est repoussée du temps d’attente, en heures d’ouverture.', nl: 'De aanvraag wacht om een reden buiten de dienst (standaard: antwoord van de aanvrager, toegang onmogelijk; ingesteld in Instellingen van de entiteit). Ze is niet te laat; bij de hervatting wordt de vervaldag verschoven met de wachttijd, in openingsuren.' } },
     { q: { fr: 'Une demande clôturée revient « Rouverte » : pourquoi ?', nl: 'Een afgesloten aanvraag komt terug als « Heropend »: waarom?' }, a: { fr: 'Le demandeur l’a rouverte dans le délai de l’entité en disant ce qui ne va pas (voir l’historique). Elle revient dans « À qualifier » ; ses délais repartent de la réouverture.', nl: 'De aanvrager heropende ze binnen de termijn van de entiteit en zei wat er niet in orde is (zie de historiek). Ze komt terug in « Te kwalificeren »; de termijnen beginnen opnieuw bij de heropening.' } },
     { q: { fr: 'Pourquoi le délai a-t-il changé après la qualification ?', nl: 'Waarom veranderde de termijn na de kwalificatie?' }, a: { fr: 'Le délai suit la priorité : une priorité changée recalcule les échéances, toujours comptées depuis la réception de la demande.', nl: 'De termijn volgt de prioriteit: een gewijzigde prioriteit herberekent de vervaldagen, altijd geteld vanaf de ontvangst van de aanvraag.' } },
@@ -149,6 +164,8 @@ const topic: HelpTopic = {
     { id: 'demandes-entite-fil', path: '/demandes-entite', actions: [{ clickSel: '.ant-table-row .ant-btn-link' }, { wait: 1000 }, { scrollSel: 'section.fil' }, { clickSel: '.fil-saisie .ant-radio-button-wrapper:nth-child(2)' }, { wait: 600 }, { scrollSel: '.fil-saisie' }],
       clip: 'drawer', marks: [{ sel: '.fil-bulle-interne' }, { sel: '.fil-saisie .ant-radio-group' }, { sel: '.fil-saisie .ant-select' }], caption: { fr: 'Note interne et collègue prévenu', nl: 'Interne nota en verwittigde collega' } },
     { id: 'demandes-entite-qualifier', path: '/demandes-entite', actions: [{ clickSel: '.ant-table-row .ant-btn-link' }, { wait: 600 }], clip: 'drawer', caption: { fr: 'Fiche d’une demande : passages permis et historique', nl: 'Fiche van een aanvraag: toegestane overgangen en historiek' } },
+    // 0.18.0 (point 5) : menu « Exporter » ouvert.
+    { id: 'demandes-entite-export', path: '/demandes-entite', actions: [{ clickSel: '.bouton-export' }, { wait: 500 }], marks: [{ sel: '.bouton-export' }, { sel: '.ant-dropdown:not(.ant-dropdown-hidden) .ant-dropdown-menu' }], caption: { fr: 'Exporter la liste', nl: 'De lijst exporteren' } },
     // 0.16.0 : colonnes, regrouper, découper (la première carte de la colonne « À qualifier » est ouverte).
     { id: 'demandes-entite-colonnes', path: '/demandes-entite?affichage=colonnes', marks: [{ sel: '.gest-affichage' }, { sel: '.col-tableau .col-colonne' }, { sel: '.col-carte .ant-btn-sm' }], caption: { fr: 'Colonnes par état', nl: 'Kolommen per status' } },
     { id: 'demandes-entite-regrouper', path: '/demandes-entite?affichage=colonnes', actions: [{ clickSel: '.col-colonne .col-carte .ant-btn-link' }, { wait: 800 }, { click: 'cycle.action.fusionnee' }, { wait: 800 }], clip: 'drawer', marks: [{ sel: '.ant-drawer .dem-resultats' }, { sel: '#fusion-q' }], caption: { fr: 'Regrouper avec une autre demande', nl: 'Samenvoegen met een andere aanvraag' } },

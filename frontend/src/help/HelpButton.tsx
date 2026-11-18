@@ -31,7 +31,7 @@ export default function HelpButton() {
   if (location.pathname === '/help') return null;
   return (
     <>
-      <Button size={mobile ? 'middle' : 'small'} icon={<QuestionCircleOutlined />} aria-label={mobile ? t('help.button') : undefined}
+      <Button size={mobile ? 'middle' : 'small'} icon={<QuestionCircleOutlined />} aria-label={mobile ? t('help.button') : undefined} data-visite="aide"
         onClick={() => (topic ? setOpen(true) : navigate('/help'))}>
         {mobile ? null : t('help.button')}
       </Button>

@@ -1,6 +1,10 @@
 # MCP-server
 
-Versie van de toepassing: **0.17.0** · Bijgewerkt op 17/11/2026 · De Franse tekst is rechtsgeldig (`docs/fr/MCP.md`).
+Versie van de toepassing: **0.18.0** · Bijgewerkt op 18/11/2026 · De Franse tekst is rechtsgeldig (`docs/fr/MCP.md`).
+
+## 0.18.0
+
+Geen nieuwe tool. De drie exports naar Excel en CSV leveren een bestand en blijven buiten MCP (afwijking E-17, negen routes in de gesloten lijst); dezelfde regels lezen via `list_demandes`, `list_demandes_a_valider` en `list_tickets`. Zoeken, assistent en rondleiding zijn functies van het scherm.
 
 ## 0.17.0
 

@@ -2,6 +2,10 @@
 
 De Franse tekst is rechtsgeldig. Bijwerkingsprocedure: archief plaatsen, `cd <map>`, `ls -l` van het archief, `sudo bash backup.sh`, `sudo rm -rf backend frontend docs`, `sudo tar xzf … --strip-components=1`, `ls backend frontend`, `sudo docker compose build`, `sudo docker compose up -d`, `sudo docker compose ps`, `curl -sk https://localhost:<https>/api/version`, controlelijst van het leveringsbericht. `.env` en de volumes worden nooit aangeraakt.
 
+## 0.18.0 (18/11/2026)
+
+Globaal zoeken, export naar Excel en CSV, assistent, rondleiding, hulp, protocol van de gebruikstest (stap 14). Update via sectie 3, **zonder migratie, met een nieuwe afhankelijkheid** (`exceljs`, gedownload bij de opbouw van het image `api`). `sudo docker logs gmao-api --tail 30`: `[APP] API 0.18.0`, geen regel « Migration ». `sudo bash recette.sh`: negen regels `OK`. Terug naar 0.17.0 zonder de basis te herstellen.
+
 ## 0.17.0 (17/11/2026)
 
 Meldingen: bel, e-mail, modellen, meldingen van aanvragen en tickets, vervaldagwaarschuwingen (stap 13). Update via sectie 3, **met migratie en een nieuwe afhankelijkheid**: de build van het image `api` downloadt `nodemailer`. `sudo docker logs gmao-api --tail 30` toont `[DB] Migration 015_notifications appliquée` en `[APP] API 0.17.0 sur le port 3001`. Geen nieuwe start van `demo.js`. De e-mail staat in testmodus: er vertrekt niets. `sudo bash recette.sh`: negen keer `OK`. Terug naar 0.16.1 zonder de databank te herstellen.

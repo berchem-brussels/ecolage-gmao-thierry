@@ -229,3 +229,8 @@ body.app-dark .fil-bulle-interne { border-color: #ffa940; }
 .col-permise { border-color: var(--app-primary); }
 .col-refusee { opacity: 0.5; }
 .col-carte[draggable='true'] { cursor: grab; }
+
+/* 0.18.0 (point 4) : visite guidée. Le panneau du Tour d'Ant Design fait 520 px : sur téléphone, il sortait de l'écran
+   (bouton « Suivant » hors d'atteinte à 320 px, vu dans WebKit). Il prend au plus la largeur de l'écran moins 24 px. */
+.visite-guidee.ant-tour, .visite-guidee .ant-tour { width: min(520px, calc(100vw - 24px)) !important; max-width: calc(100vw - 24px); }
+.visite-guidee .ant-tour-description { overflow-wrap: anywhere; }

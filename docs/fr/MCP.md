@@ -1,6 +1,6 @@
 # Serveur MCP
 
-Version de l'application : **0.17.0** · Mis à jour le 17/11/2026 · Le français fait foi.
+Version de l'application : **0.18.0** · Mis à jour le 18/11/2026 · Le français fait foi.
 
 ## Accès
 
@@ -12,13 +12,17 @@ Version de l'application : **0.17.0** · Mis à jour le 17/11/2026 · Le frança
 ## Règles
 
 - Chaque outil appelle la même fonction de service que la route REST, sous l'identité et les droits de la personne, dans son entité active.
-- Un test de parité échoue si une route n'a pas son outil ou l'inverse. Six routes binaires en sont exclues par une liste fermée : le dépôt et la lecture du fichier d'une photo d'un lieu, depuis la 0.8.0 d'une pièce jointe d'une demande, depuis la 0.14.0 l'ajout d'un fichier à une demande envoyée et depuis la 0.15.0 le dépôt d'une pièce d'un message (écart E-17).
+- Un test de parité échoue si une route n'a pas son outil ou l'inverse. Neuf routes binaires en sont exclues par une liste fermée : le dépôt et la lecture du fichier d'une photo d'un lieu, depuis la 0.8.0 d'une pièce jointe d'une demande, depuis la 0.14.0 l'ajout d'un fichier à une demande envoyée et depuis la 0.15.0 le dépôt d'une pièce d'un message, depuis la 0.18.0 les exports Excel et CSV (écart E-17).
 - Une désactivation, un retrait ou un effacement se fait en deux appels : `prepare_*` décrit l'effet et rend un jeton de cinq minutes lié à la personne, `confirm_*` exécute. Le droit d'écrire est vérifié dès `prepare_*`.
 - Descriptions en français et en néerlandais. Aucun outil de SQL libre.
 - Un module éteint (Paramètres, Modules) retire ses outils de `tools/list` et refuse leur appel (`MODULE_DISABLED`) ; module Patrimoine éteint : `create_lieu`, `update_lieu`, `deactivate_lieu`, `delete_lieu_photo`.
 - Depuis la 0.4.1, les fiches de catégorie, de priorité, de jour de l'horaire et de jour non ouvré portent `trace` (`etat`, `le`, `par`) : qui les a modifiées en dernier et quand, ou « livrée ». Le nom n'est rendu qu'aux personnes de l'entité. Aucun outil nouveau.
 - Depuis la 0.5.0, le serveur retire les espaces de début et de fin de tout texte reçu, par le MCP comme par l'API, sauf les mots de passe ; un champ obligatoire fait seulement d'espaces est refusé (`VALIDATION`), avant tout jeton de confirmation.
 - Les instructions envoyées au client demandent de commencer par `get_profile` : les données métier sont celles de l'entité active ; `select_entite` la change. Elles disent aussi que le MCP ne transporte aucun fichier, et qu'une demande se dépose par `create_demande`, le lieu proposé d'office étant `lieu_propose` dans `get_profile`, et les derniers lieux de ses demandes `lieux_recents` (0.7.5). Depuis la 0.8.0, elles disent que les pièces du brouillon partent avec la demande suivante, même déposée par `create_demande`, et qu'il faut le dire à la personne.
+
+## 0.18.0
+
+Aucun outil nouveau. Les trois exports Excel et CSV (`GET /api/demandes/export`, `GET /api/demandes/a-valider/export`, `GET /api/tickets/export`) rendent un fichier : ils restent hors du MCP (écart E-17, neuf routes dans la liste fermée de `mcp.test.js`). Les mêmes lignes se lisent par `list_demandes` (périmètre `miennes` ou `entite`, mêmes filtres), `list_demandes_a_valider` et `list_tickets`. La recherche globale, l'assistant et la visite guidée sont des fonctions de l'écran : rien à ajouter au MCP.
 
 ## 0.17.0
 

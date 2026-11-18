@@ -42,6 +42,7 @@ import HistoriqueDemande from '../components/demandes/HistoriqueDemande';
 import FilMessages from '../components/demandes/FilMessages';
 import SuiviDemande from '../components/demandes/SuiviDemande';
 import { AnnulerForm, AvisDemandeur, AvisDonne, BoutonsDemandeur, CompleterForm, ReouvrirForm } from '../components/demandes/ActionsDemandeur';
+import BoutonExport from '../components/BoutonExport';
 
 /** Mention « Danger » (0.7.0, DEM-06), à côté de l'état. */
 export function DangerTag() {
@@ -288,6 +289,9 @@ function MesDemandes() {
     <div>
       <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8, gap: 12, flexWrap: 'wrap' }}>
         <Typography.Title level={1} style={{ fontSize: 22, margin: 0 }}>{titre}</Typography.Title>
+        {/* 0.18.0 (point 2, IMP-03) : export avec les filtres affichés. */}
+        <BoutonExport chemin="/demandes/export" filtres={{ perimetre: 'miennes', ouvertes: filtre === 'ouvertes' ? 1 : filtre === 'closes' ? 0 : undefined,
+          messages: nonLus ? 'non_lus' : undefined, q: q.trim() || undefined }} />
       </div>
       <Typography.Paragraph type="secondary">{t('demande.mes.intro')}</Typography.Paragraph>
       {nonLus && (

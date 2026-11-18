@@ -1,6 +1,10 @@
 # MCP server
 
-Application version: **0.17.0** · Updated on 17/11/2026 · The French text prevails (`docs/fr/MCP.md`).
+Application version: **0.18.0** · Updated on 18/11/2026 · The French text prevails (`docs/fr/MCP.md`).
+
+## 0.18.0
+
+No new tool. The three Excel and CSV exports return a file and stay outside MCP (deviation E-17, nine routes in the closed list); the same rows are read through `list_demandes`, `list_demandes_a_valider` and `list_tickets`. Search, assistant and guided tour are screen features.
 
 ## 0.17.0
 

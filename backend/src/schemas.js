@@ -278,6 +278,10 @@ module.exports = {
   // Demandes d'intervention (DEM-01 à 03, SUI-01) : un lieu, une catégorie, une description de 10 caractères au moins
   // (comptés après le retrait des espaces, DV-37). perimetre « entite » : gestionnaire et responsable (DV-46).
   demandeList: listQuery({ etat: T.en(...ETATS), ouvertes: flag, perimetre: { enum: ['miennes', 'entite'], default: 'miennes' }, ...filtresGestion }),
+  // 0.18.0 (point 2, IMP-03) : export Excel ou CSV d'une liste avec les mêmes filtres, sans pagination ; format obligatoire.
+  demandeExport: obj({ q: T.str(100), etat: T.en(...ETATS), ouvertes: flag, perimetre: { enum: ['miennes', 'entite'], default: 'miennes' }, ...filtresGestion,
+    format: T.en('xlsx', 'csv') }, ['format']),
+  demandeAValiderExport: obj({ q: T.str(100), format: T.en('xlsx', 'csv') }, ['format']),
   // Qualification par le service technique (0.9.0, GES-04, PRI-01) : catégorie, lieu et priorité obligatoires ; le motif
   // est exigé par le serveur quand la priorité diffère de la priorité proposée. Champs facultatifs absents : inchangés.
   demandeQualifier: obj({
@@ -373,6 +377,12 @@ module.exports = {
     type: T.en('incident', 'bug', 'question', 'wish'), queue: T.en('business', 'it'),
     open_only: { type: 'boolean' }, mine: { type: 'boolean' },
   }),
+  // 0.18.0 (point 2, IMP-03) : export des tickets avec les filtres de la liste.
+  ticketExport: obj({
+    q: T.str(100), status: T.en('new', 'in_progress', 'waiting_requester', 'resolved', 'rejected', 'cancelled', 'closed'),
+    type: T.en('incident', 'bug', 'question', 'wish'), queue: T.en('business', 'it'),
+    open_only: { type: 'boolean' }, mine: { type: 'boolean' }, format: T.en('xlsx', 'csv'),
+  }, ['format']),
   ticketCreate: obj({
     type: T.en('incident', 'bug', 'question', 'wish'), title: T.reqStr(200),
     description: T.text(8000), expected: T.text(4000), actual: T.text(4000),

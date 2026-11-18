@@ -37,6 +37,8 @@ export interface Shot {
    * administrateur ne voit pas ; le script lit HELP_USER_<CODE> (par exemple HELP_USER_VALIDEUR). Absent : HELP_USER.
    */
   compte?: string;
+  /** 0.18.0 : garde le bouton de l'assistant, masqué sur les autres captures (capture de l'assistant lui-même). */
+  assistant?: boolean;
 }
 
 export interface Procedure {

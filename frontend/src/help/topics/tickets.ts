@@ -58,6 +58,18 @@ const topic: HelpTopic = {
       ],
       result: { fr: "La question apparaît dans l'aide de votre entité et sur le bouton {{help.button}} de l'écran choisi ; le ticket ne change pas.", nl: 'De vraag verschijnt in de hulp van uw entiteit en via de knop {{help.button}} van het gekozen scherm; het ticket verandert niet.' },
     },
+    // 0.18.0 (point 5 ; IMP-03) : export de la liste.
+    {
+      title: { fr: 'Exporter la liste en Excel ou en CSV', nl: 'De lijst exporteren naar Excel of CSV' },
+      when: { fr: 'Pour garder, trier ou transmettre les tickets que vous voyez dans un tableur.', nl: 'Om de tickets die u ziet in een rekenblad te bewaren, te sorteren of door te geven.' },
+      steps: [
+        { fr: 'Réglez les filtres et la recherche : le fichier reprend exactement ce que la liste montre.', nl: 'Stel de filters en de zoekopdracht in: het bestand neemt precies over wat de lijst toont.' },
+        { fr: 'Cliquez sur {{export.bouton}}, puis sur {{export.xlsx}} ou {{export.csv}}.', nl: 'Klik op {{export.bouton}} en dan op {{export.xlsx}} of {{export.csv}}.' },
+        { fr: 'Ouvrez le fichier téléchargé ; sur iPhone, il est dans Fichiers, sur Android dans Téléchargements.', nl: 'Open het gedownloade bestand; op iPhone staat het in Bestanden, op Android in Downloads.' },
+      ],
+      result: { fr: 'Un fichier au nom de la liste, de l’entité et du jour, colonnes dans votre langue, 5 000 lignes au plus. L’export est noté au journal, sans son contenu.', nl: 'Een bestand met de naam van de lijst, de entiteit en de dag, kolommen in uw taal, hoogstens 5 000 regels. De export wordt in het logboek genoteerd, zonder de inhoud.' },
+      errors: [{ problem: { fr: 'Message « Plus de 5 000 lignes ».', nl: 'Melding « Meer dan 5 000 regels ».' }, solution: { fr: 'Ajoutez un filtre ou une recherche, puis exportez de nouveau.', nl: 'Voeg een filter of een zoekopdracht toe en exporteer opnieuw.' } }],
+    },
   ],
   faq: [
     { q: { fr: 'Qui voit mon ticket ?', nl: 'Wie ziet mijn ticket?' }, a: { fr: "Vous, et les personnes qui traitent sa file : pour une question métier, le service technique de votre entité ; pour un incident, un bug ou un souhait, l'administrateur de l'application.", nl: 'U, en de personen die de wachtrij behandelen: voor een functionele vraag de technische dienst van uw entiteit; voor een incident, een bug of een wens de beheerder van de toepassing.' } },
@@ -65,7 +77,7 @@ const topic: HelpTopic = {
   ],
   seeAlso: ['help'],
   shots: [
-    { id: 'tickets-overview', path: '/tickets', marks: [{ sel: '.page-header-actions button' }, { sel: '.tickets-filters' }, { sel: '.ant-table' }], caption: { fr: 'Liste des tickets', nl: 'Lijst van de tickets' } },
+    { id: 'tickets-overview', path: '/tickets', marks: [{ sel: '.page-header-actions .ant-btn-primary' }, { sel: '.tickets-filters' }, { sel: '.ant-table' }], caption: { fr: 'Liste des tickets', nl: 'Lijst van de tickets' } },
     { id: 'tickets-report', path: '/tickets', actions: [{ click: 'tickets.report' }, { wait: 400 }], clip: 'modal', marks: [{ sel: '.ant-modal .ant-radio-group' }, { sel: '.ant-modal #title' }], caption: { fr: 'Signaler : type, titre, qui est touché, gravité', nl: 'Melden: soort, titel, wie getroffen is, ernst' } },
   ],
 };

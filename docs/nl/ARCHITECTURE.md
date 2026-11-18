@@ -1,6 +1,10 @@
 # Architectuur
 
-Versie van de toepassing: **0.17.0** · De Franse tekst is rechtsgeldig (`docs/fr/ARCHITECTURE.md`); dit bestand vat elke versie samen.
+Versie van de toepassing: **0.18.0** · De Franse tekst is rechtsgeldig (`docs/fr/ARCHITECTURE.md`); dit bestand vat elke versie samen.
+
+## Zoeken, exports, assistent en rondleiding (0.18.0)
+
+Geen migratie. Server: `services/exports.js` (Excel via `exceljs`, CSV met BOM en « ; », `celluleCsv()`, maximum 5 000 regels, `export.liste` in het logboek) en drie routes die `demandes.list`, `demandes.aValider` en `tickets.list` aanroepen (zelfde rechten en scheiding), buiten MCP (E-17). Interface: `RechercheGlobale.tsx`, `BoutonExport.tsx` en `api.telecharger()`, `Chatbot.tsx` (`ACCES_ECRANS`, opvolging via de API, fiches van de hulp), `VisiteGuidee.tsx` (`Tour` van Ant Design, zonder masker). `mobile:check`: `charge()` en `ouvrir()`, schermen `#recherche`, `#chatbot`, `#visite`, trajecten 6 tot 8.
 
 ## Meldingen, e-mail en waarschuwingen (0.17.0)
 

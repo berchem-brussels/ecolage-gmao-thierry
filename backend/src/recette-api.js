@@ -1,6 +1,6 @@
 /**
  * Contrôles automatiques après installation, partie « serveur » (0.12.0, DV-110 ; 0.14.0 : migration 012_cycle_de_vie ; 0.15.0 : migration 013_messages ; 0.16.0 : migration
- * 014_validation, table des services et passages du valideur ; 0.17.0 : migration 015_notifications et ses quatre tables), lancés par recette.sh dans le
+ * 014_validation, table des services et passages du valideur ; 0.17.0 : migration 015_notifications et ses quatre tables ; 0.18.0 : aucune migration, exports refusés sans session), lancés par recette.sh dans le
  * conteneur de l'API : `docker exec -i <app>-api node src/recette-api.js <version> <adresse>`.
  *
  * Lecture seule pour les données métier : rien n'est créé, modifié ni supprimé. Seules la connexion du compte de
@@ -65,7 +65,8 @@ async function main() {
   note(v.body?.data?.version === VERSION_ATTENDUE, 4, `version de l'API ${VERSION_ATTENDUE}`, v.body?.data?.version);
 
   // 5. Migration de la version appliquée (lecture de schema_migrations et des tables nouvelles) ; 0.17.0 : migration
-  // 015_notifications, ses quatre tables, passages du valideur toujours là (0.16.0).
+  // 015_notifications, ses quatre tables, passages du valideur toujours là (0.16.0). 0.18.0 : aucune migration nouvelle,
+  // 015_notifications reste la dernière.
   const db = await lireBase();
   const migr = db.exec("SELECT name FROM schema_migrations ORDER BY id DESC LIMIT 1")[0]?.values?.[0]?.[0];
   const tables = db.exec("SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name IN ('notifications', 'courriels', 'modeles_courriel', 'demande_alertes')")[0]?.values?.[0]?.[0];
@@ -73,11 +74,12 @@ async function main() {
   note(migr === '015_notifications' && tables === 4 && passages === 2, 5, 'migration 015_notifications appliquée, tables des notifications et des courriels présentes, passages du valideur gardés',
     `${migr}, ${tables ?? 0} table(s) sur 4, ${passages} passage(s) du valideur sur 2`);
 
-  // 6. Refus sans session.
-  const sans = await Promise.all(['/api/demandes', '/api/faq', '/api/tickets', '/api/audit'].map((u) => anonyme('GET', u)));
+  // 6. Refus sans session ; 0.18.0 : les trois exports Excel et CSV aussi.
+  const sans = await Promise.all(['/api/demandes', '/api/faq', '/api/tickets', '/api/audit',
+    '/api/demandes/export?format=csv', '/api/demandes/a-valider/export?format=csv', '/api/tickets/export?format=csv'].map((u) => anonyme('GET', u)));
   const pub = await anonyme('GET', '/api/settings/public');
   note(sans.every((r) => r.status === 401) && !/business_roles|tickets\./.test(JSON.stringify(pub.body)), 6,
-    'sans session : demandes, FAQ, tickets et journal refusés (401), réglages des tickets jamais servis', sans.map((r) => r.status).join(' '));
+    'sans session : demandes, FAQ, tickets, journal et exports refusés (401), réglages des tickets jamais servis', sans.map((r) => r.status).join(' '));
 
   // 7. Connexion du compte de démonstration et entités.
   const c = client();

@@ -101,7 +101,7 @@ export default function NotificationsCloche() {
     : compteur.non_lues ? t('notif.cloche.non_lues').replace('{n}', String(compteur.non_lues)) : t('notif.cloche');
   return (
     <>
-      <Button type="text" aria-label={nom} title={nom} onClick={() => setOuvert(true)} style={{ paddingInline: mobile ? 6 : undefined }}
+      <Button type="text" aria-label={nom} title={nom} onClick={() => setOuvert(true)} data-visite="cloche" style={{ paddingInline: mobile ? 6 : undefined }}
         icon={<Badge count={compteur.non_lues} size="small" overflowCount={99} offset={[2, -2]}><BellOutlined style={{ fontSize: 18 }} /></Badge>} />
       <Drawer open={ouvert} onClose={() => setOuvert(false)} width={mobile ? '100%' : 400} title={t('notif.titre')}
         closable={{ 'aria-label': t('common.close') }}>

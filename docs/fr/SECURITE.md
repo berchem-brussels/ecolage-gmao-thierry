@@ -2,6 +2,48 @@
 
 Le français fait foi. Grille de la section 10.2 du standard, rejouée à chaque version. « Non joué » veut dire que le contrôle n'a pas tourné.
 
+## 0.18.0 (18/11/2026)
+
+Étape 14 : recherche globale, exports Excel et CSV des listes (tickets compris), assistant (suivi lu par l'API, liens selon le rôle, fiches d'aide citées), visite guidée par rôle ; aide, FAQ et captures. Environnement : bac à sable de Claude, Node 22 ; copie locale servie par `vite preview` (nginx et sa CSP non exercés dans le bac à sable).
+
+| Famille | Contrôle | Résultat |
+| --- | --- | --- |
+| Autorisation (cloison) | Exports par les fonctions de liste existantes : l'entité BB n'exporte rien de AA ; un agent sans `demandes:entite` reçoit 403 pour l'export de l'entité ; « Demandes à valider » ne rend que les demandes du chef (vide pour un autre, comme la liste) ; tickets : ceux que la personne voit | Conforme (`exports.test.js`) |
+| Autorisation | Recherche globale et assistant sans route nouvelle : listes existantes, droits de la personne ; l'assistant ne propose que les écrans que la personne peut ouvrir (module, permission, administrateur) et ne cite que les fiches d'aide qu'elle voit | Conforme (`pages.test.tsx`, `i18n.test.ts`) |
+| Authentification | Export sans session : 401 | Conforme (`exports.test.js`) |
+| Validation | Schémas `demandeExport`, `demandeAValiderExport`, `ticketExport` : format obligatoire (`xlsx`, `csv`), pas de pagination, paramètre inconnu refusé (400) | Conforme (`exports.test.js`) |
+| Injections | CSV : cellule commençant par `=`, `+`, `-`, `@`, tabulation ou retour chariot précédée d'une apostrophe ; guillemets doublés ; Excel : texte écrit comme texte (type `String`), aucune formule | Conforme (`exports.test.js`) |
+| Disponibilité | Plafond de 5 000 lignes par export, total lu avant les lignes (refus `EXPORT_TROP` sans charger les lignes) | Conforme (`exports.test.js`) |
+| Données (RGPD) | Exports : colonnes de la liste ; demandeur seulement là où la liste le montre (entité, à valider) ; fichier jamais gardé sur le serveur (`Cache-Control: no-store`) ; journal `export.liste` avec la liste, le format et le nombre de lignes, jamais le contenu (DV-116). Visite guidée : rien en base, une clé « déjà vue » dans le navigateur | Conforme (`exports.test.js`) |
+| LLM et MCP | Assistant local sans modèle de langage ni appel sortant ; aucun outil MCP nouveau ; exports hors MCP (E-17, neuf routes ; mêmes données par `list_demandes`, `list_demandes_a_valider`, `list_tickets`) ; parité testée | Conforme (`mcp.test.js`) |
+| Interface | Loupe (menu sous 360 px), bouton « Exporter », assistant, visite guidée (panneau limité à la largeur de l'écran, sans masque SVG qui écrivait des erreurs de console dans WebKit) ; `mobile:check` : 49 écrans, six appareils, FR et NL, parcours complets sur deux moteurs | Conforme |
+| Secrets commités | Aucun secret ni valeur de NIXUS ; captures sur des données fictives | Conforme |
+| Infrastructure | Dockerfile, compose, `nginx.conf`, `backup.sh`, `.env`, `ci.yml` inchangés | Conforme |
+| Dépendances | `npm audit --omit=dev` serveur | 2 modérées : `uuid` 8.3.2 sous `exceljs` 4.4.0 (contrôle de taille absent pour v3, v5, v6 avec un tampon fourni ; `exceljs` n'appelle que `v4()` sans tampon) ; écart E-50, forçage `uuid` ≥ 11.1.1 soumis à Renaud ; `exceljs` ≥ 4.4.0 gardé par `dependances.test.js` |
+| Dépendances | `npm audit --omit=dev` interface | 3 modérées (E-09), inchangées ; aucune dépendance nouvelle |
+| Migration | Aucune | Sans objet |
+
+Preuves d'échec (chaque protection retirée seule, au moins un test échoue ; code de la 0.18.0 : tout réussi) :
+
+| Protection retirée | Échec constaté |
+| --- | --- |
+| `exports.js` : apostrophe devant une formule (CSV) | `exports.test.js` (CSV de mes demandes ; cellule CSV) |
+| `exports.js` : plafond de 5 000 lignes | `exports.test.js` (« plafond ») |
+| `exports.js` : ligne `export.liste` au journal | `exports.test.js` (« journal ») |
+| `exports.js` : BOM du CSV | `exports.test.js` (CSV de mes demandes) |
+| Route d'export : filtres de la liste transmis | `exports.test.js` (recherche et état appliqués) |
+| `BoutonExport.tsx` : pagination retirée de l'adresse | `pages.test.tsx` (« adresseExport ») |
+| `BoutonExport.tsx` : nom du fichier donné par le serveur | `pages.test.tsx` (« Excel : appelle l'export ») |
+| `RechercheGlobale.tsx` : liste de l'entité seulement avec `demandes:entite` | `pages.test.tsx` (« sans demandes:entite ni Patrimoine ») |
+| `RechercheGlobale.tsx` : lieux seulement avec le module Patrimoine | `pages.test.tsx` (idem) |
+| `RechercheGlobale.tsx` : doublons, 2 caractères, écran de destination, remise à zéro | `pages.test.tsx` (recherche globale) |
+| `Chatbot.tsx` : écran proposé selon le rôle | `pages.test.tsx` (« écran proposé selon le rôle ») |
+| `Chatbot.tsx` : fiches d'aide non visibles écartées | `pages.test.tsx` (« une fiche d'aide que la personne ne voit pas ») |
+| `Chatbot.tsx` : demandes ouvertes seulement, numéro complet, trois fiches au plus, titre pondéré | `pages.test.tsx`, `i18n.test.ts` (chatbot) |
+| `VisiteGuidee.tsx` : attente des « Nouveautés », rôle nouveau, « déjà vue », réglage automatique, profil administrateur | `pages.test.tsx` (visite guidée) |
+
+Deux défauts de la visite guidée n'étaient visibles que dans un vrai navigateur (WebKit, 320 px) et pas dans jsdom : panneau de 520 px hors de l'écran, erreurs de console du masque SVG. Ils sont corrigés et l'écran `#visite` de `mobile:check` les garde. Deux tests de l'assistant ont été renforcés après des mutations qui ne les faisaient pas échouer (numéro complet avec une autre intention ; fiche d'aide cachée trouvée seulement dans les étapes d'une procédure, désormais cherchées).
+
 ## 0.17.0 (17/11/2026)
 
 Étape 13 : notifications dans l'application (cloche), courriel (mode test ou SMTP, file d'envoi), modèles de courriel, avis d'une demande, du fil et des tickets, alertes d'échéance ; remarques de la recette de la 0.16.1. Environnement : bac à sable de Claude, Node 22.23.4, copie locale de la 0.17.0 sur une base de démonstration jetable passée de 0.16.1 à 0.17.0. Migration `015_notifications`. Dépendance nouvelle : `nodemailer` 10.6.0 (écart E-48).

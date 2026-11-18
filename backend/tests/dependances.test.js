@@ -47,3 +47,9 @@ test('0.9.0 : chaque fichier de test du dossier tests est joué par « npm test 
   assert.ok(fichiers.length >= 30);
   for (const f of fichiers) assert.ok(script.includes(`tests/${f}`), `${f} absent du script de test`);
 });
+
+test('0.18.0 : `exceljs` du stack en version 4.4.0 ou au-delà (TEC-03 ; `uuid` 8 en dessous, écart E-50)', () => {
+  const v = VERROU['node_modules/exceljs'].version;
+  assert.ok(auMoins(v, '4.4.0'), `exceljs ${v}`);
+  assert.equal(JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'package.json'), 'utf8')).dependencies.exceljs, '^4.4.0');
+});

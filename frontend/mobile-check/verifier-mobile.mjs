@@ -28,12 +28,17 @@
  *   - MOBILE_PARCOURS=1 : parcours complets au doigt sur chaque moteur (mobile-check/parcours.mjs), qui ÉCRIVENT dans la
  *     base : refusés hors d'une copie locale (localhost) ; compte de plus MOBILE_AGENT_USER (agent du service du chef).
  *     MOBILE_ECRANS=0 : parcours seuls, sans le tour des écrans.
+ * 0.18.0 (point 0) : chaque ouverture d'écran attend la fin du chargement (ouvrir() et charge() de parcours.mjs).
+ * 0.18.0 (point 1) : fenêtre de la recherche globale ouverte avec des résultats (service technique et chef de service) :
+ *   47 écrans avec les trois comptes.
+ * 0.18.0 (point 3) : assistant ouvert avec une réponse de suivi (service technique) : 48 écrans.
+ * 0.18.0 (point 4) : visite guidée à sa dernière étape (service technique) : 49 écrans ; ouverture automatique coupée.
  * 0.17.0 (point 7) : volet de la cloche ouvert (service technique et chef de service), onglet Courriel de Paramètres et
  *   fiche d'un modèle de courriel avec son aperçu (administrateur) : 45 écrans avec les trois comptes.
  */
 
 import { chromium, webkit, devices } from '@playwright/test';
-import { parcours, hoteLocal } from './parcours.mjs';
+import { parcours, hoteLocal, charge, ouvrir } from './parcours.mjs';
 
 const B = (process.env.MOBILE_BASE_URL || 'https://localhost:18443').replace(/\/$/, '');
 const USER = process.env.MOBILE_USER;
@@ -66,12 +71,12 @@ if (PARCOURS && !hoteLocal(B)) { console.error('MOBILE_PARCOURS=1 écrit dans la
  * faite avant la mesure (voir agir()).
  */
 const COMPTES = [
-  { nom: 'service technique', user: USER, password: PASSWORD, routes: (f) => [...ROUTES, '/#cloche',
+  { nom: 'service technique', user: USER, password: PASSWORD, routes: (f) => [...ROUTES, '/#cloche', '/#recherche', '/#chatbot', '/#visite',
     ...(f.mienne ? [`/demandes?demande=${f.mienne}`] : []),
     ...(f.entite ? [`/demandes-entite?demande=${f.entite}`, `/demandes-entite?demande=${f.entite}#note-interne`] : []),
     ...(f.aQualifier ? [`/demandes-entite?demande=${f.aQualifier}#regrouper`, `/demandes-entite?demande=${f.aQualifier}#decouper`] : [])] },
   { nom: 'chef de service', user: process.env.MOBILE_VALIDEUR_USER, password: process.env.MOBILE_VALIDEUR_PASSWORD || PASSWORD,
-    routes: (f) => ['/', '/#cloche', '/a-valider', '/demandes', ...(f.aValider ? [`/a-valider?demande=${f.aValider}`, `/a-valider?demande=${f.aValider}#refuser`] : [])] },
+    routes: (f) => ['/', '/#cloche', '/#recherche', '/a-valider', '/demandes', ...(f.aValider ? [`/a-valider?demande=${f.aValider}`, `/a-valider?demande=${f.aValider}#refuser`] : [])] },
   { nom: 'administrateur', user: process.env.MOBILE_ADMIN_USER, password: process.env.MOBILE_ADMIN_PASSWORD || PASSWORD,
     // 0.17.0 (point 2) : onglet Courriel de Paramètres (réglages, essai, journal des courriels retenus).
     routes: () => ['/services', '/services#ouvrir', '/users#ouvrir', '/parametres?onglet=courriel', '/parametres?onglet=courriel#modele'] },
@@ -123,6 +128,41 @@ async function agir(page, action) {
       const pb = await cliquer(page.locator('.ant-card').filter({ hasText: /Modèles de courriel|E-mailmodellen/ }).locator('.ant-list-item .ant-btn-link'), 'modèle de courriel');
       return pb || cliquer(page.locator('.ant-drawer-open button').filter({ hasText: /Aperçu en français|Voorbeeld in het Frans/ }), '« Aperçu »');
     }
+    // 0.18.0 (point 1) : fenêtre de la recherche globale (loupe de l'en-tête), remplie de « DI- » (numéros des demandes).
+    case 'recherche': {
+      // Sous 360 px, la loupe est en tête du menu latéral (l'en-tête ne la contient pas).
+      const loupe = page.locator('header button[aria-label="Rechercher"], header button[aria-label="Zoeken"]');
+      const pb = (await loupe.count()) ? await cliquer(loupe, 'loupe de la recherche')
+        : (await cliquer(page.locator('header button').first(), 'menu')) || await cliquer(page.locator('.ant-drawer-open .recherche-menu'), '« Rechercher » du menu');
+      if (pb) return pb;
+      await page.locator('.ant-modal-wrap input').first().fill('DI-');
+      // Résultats, ou « Aucun résultat » pour un compte sans demande à lui (chef de service de démonstration).
+      try { await page.locator('.ant-modal-wrap .recherche-resultat, .ant-modal-wrap .ant-empty').first().waitFor({ timeout: 8000 }); } catch { return 'recherche sans réponse pour « DI- »'; }
+      return null;
+    }
+    // 0.18.0 (point 3) : assistant ouvert en plein écran, question de suivi posée, réponse lue par l'API (AID-03).
+    case 'chatbot': {
+      const pb = await cliquer(page.locator('button[aria-label="Ouvrir l\'assistant"], button[aria-label="Assistent openen"]'), 'bouton de l’assistant');
+      if (pb) return pb;
+      await page.locator('.chatbot-widget input').first().fill('où en est ma demande');
+      await page.locator('.chatbot-widget input').first().press('Enter');
+      try { await page.locator('.chatbot-messages li, .chatbot-messages .ant-btn-link').first().waitFor({ timeout: 8000 }); } catch { return 'assistant sans réponse au suivi'; }
+      return null;
+    }
+    // 0.18.0 (point 4) : visite guidée ouverte (comme « Revoir la visite guidée ») et menée jusqu'à sa dernière étape,
+    // l'assistant en bas à droite, la plus exposée au débordement.
+    case 'visite': {
+      await page.evaluate(() => window.dispatchEvent(new Event('app-visite')));
+      try { await page.locator('.visite-guidee .ant-tour-title').first().waitFor({ timeout: 5000 }); } catch { return 'visite guidée non ouverte'; }
+      for (let i = 0; i < 15; i += 1) {
+        const etat = await page.evaluate(() => { const ind = [...document.querySelectorAll('.visite-guidee .ant-tour-indicator')];
+          return { n: ind.length, active: ind.findIndex((e) => e.classList.contains('ant-tour-indicator-active')) }; });
+        if (etat.n === 0 || etat.active >= etat.n - 1) break;
+        const pb = await cliquer(page.locator('.visite-guidee .ant-tour-next-btn'), '« Suivant » de la visite');
+        if (pb) return pb;
+      }
+      return null;
+    }
     default: return null;
   }
 }
@@ -168,6 +208,8 @@ const lancer = async (m) => {
 const sessions = new Map();
 async function connecter(navigateur, appareil, user, password) {
   const ctx = await navigateur.newContext({ ...appareil, ignoreHTTPSErrors: true, ...(sessions.has(user) ? { storageState: sessions.get(user) } : {}) });
+  // 0.18.0 (point 4) : pas de visite guidée automatique (elle couvrirait les écrans) ; l'écran #visite l'ouvre à la demande.
+  await ctx.addInitScript(() => window.localStorage.setItem('gmao.visite.auto', '0'));
   const page = await ctx.newPage();
   const erreurs = [];
   const suivi = { connecte: false, sansNouveautes: false };
@@ -182,13 +224,14 @@ async function connecter(navigateur, appareil, user, password) {
   });
   page.on('console', (m) => { if (suivi.connecte && m.type() === 'error') erreurs.push(m.text().slice(0, 140)); });
   page.on('response', (r) => { if (suivi.connecte && r.url().includes('/api/') && r.status() >= 400) erreurs.push(`${r.status()} ${r.url().replace(B, '')}`); });
-  if (sessions.has(user)) await page.goto(`${B}/`);
+  if (sessions.has(user)) await ouvrir(page, `${B}/`);
   else {
     await page.goto(`${B}/login?local=1`);
     await page.fill('input[type=email], input#email, input[autocomplete=username]', user);
     await page.fill('input[type=password]', password);
     await page.keyboard.press('Enter');
     await page.waitForURL((u) => !u.pathname.startsWith('/login'), { timeout: 15000 });
+    await charge(page); // 0.18.0 (point 0) : écran d'accueil chargé avant la suite
     sessions.set(user, await ctx.storageState());
   }
   return { ctx, page, erreurs, suivi };
@@ -233,7 +276,7 @@ for (const compte of COMPTES.filter((c) => c.user && ECRANS)) {
       if (nom === APPAREILS[0][0] && lang === 'fr') nbEcrans += routes.length;
       for (const r of routes) {
         const [adresse, action] = r.split('#');
-        await page.goto(B + adresse);
+        await ouvrir(page, B + adresse);
         await page.waitForTimeout(1200);
         const manque = action ? await agir(page, action) : null;
         const fige = await stable(page);

@@ -1,6 +1,10 @@
 # Architecture
 
-Application version: **0.17.0** · The French text prevails (`docs/fr/ARCHITECTURE.md`); this file summarises each version.
+Application version: **0.18.0** · The French text prevails (`docs/fr/ARCHITECTURE.md`); this file summarises each version.
+
+## Search, exports, assistant and guided tour (0.18.0)
+
+No migration. Server: `services/exports.js` (Excel through `exceljs`, CSV with BOM and « ; », `celluleCsv()`, 5,000-row ceiling, `export.liste` in the log) and three routes calling `demandes.list`, `demandes.aValider` and `tickets.list` (same rights and partition), outside MCP (E-17). Interface: `RechercheGlobale.tsx`, `BoutonExport.tsx` and `api.telecharger()`, `Chatbot.tsx` (`ACCES_ECRANS`, follow-up through the API, help sheets), `VisiteGuidee.tsx` (Ant Design `Tour`, without a mask). `mobile:check`: `charge()` and `ouvrir()`, screens `#recherche`, `#chatbot`, `#visite`, journeys 6 to 8.
 
 ## Notifications, e-mail and alerts (0.17.0)
 

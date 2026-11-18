@@ -2,6 +2,10 @@
 
 The French text (`docs/fr/SECURITE.md`) prevails and holds the full grid per version.
 
+## 0.18.0 (18/11/2026)
+
+Global search, Excel and CSV export, assistant, guided tour. Exports through the existing list functions: entity BB exports nothing of AA, a requester without `demandes:entite` 403, no session 401, unknown parameter 400; CSV formulas neutralised, Excel written as text; 5,000-row ceiling checked before loading; log without content; file never kept. Assistant local, with no language model or outgoing call; offers only screens the person can open. No new MCP tool. Server `npm audit`: 2 moderate (`uuid` under `exceljs`, E-50). Proof of failure: fourteen protections removed one at a time, each makes at least one test fail (details in the French text).
+
 ## 0.17.0 (17/11/2026)
 
 Notifications (bell), e-mail (test mode or SMTP, send queue), e-mail templates, notices for requests, the thread and tickets, deadline alerts. A notification of another entity 403, of another person 404, also through MCP; e-mail and templates for the administrator only; no notice of one's own action, except the e-mail acknowledgement (DEM-12); no free text in a notification or e-mail (NOT-06); SMTP password encrypted; `nodemailer` with no access to files or web addresses. Migration `015_notifications`; new dependency `nodemailer` 10.6.0 (deviation E-48). Proof of failure: sixteen protections, each removed on its own, make at least one test fail.
