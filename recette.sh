@@ -1,5 +1,5 @@
 #!/bin/bash
-# Contrôles automatiques après installation (0.12.0, DV-110 ; 0.14.0 : saisie visible DV-117 ; 0.15.0 : migration 013_messages ; 0.16.0 : migration 014_validation ; 0.17.0 : migration 015_notifications), à lancer dans la session SSH du NAS, dans le dossier
+# Contrôles automatiques après installation (0.12.0, DV-110 ; 0.14.0 : saisie visible DV-117 ; 0.15.0 : migration 013_messages ; 0.16.0 : migration 014_validation ; 0.17.0 : migration 015_notifications ; 0.18.0 : sans migration, capture de la recherche, exports refusés sans session), à lancer dans la session SSH du NAS, dans le dossier
 # de l'application :   sudo bash recette.sh            (compte de démonstration multi-entites@demo.invalid)
 #                      sudo bash recette.sh <adresse>  (un autre compte de démonstration qui a un rôle dans deux entités)
 # Le mot de passe de démonstration est demandé et reste visible pendant la saisie (0.14.0, DV-117) ; la ligne est effacée
@@ -33,7 +33,9 @@ rm -f /tmp/recette-help.html
 # 3. Les captures de l'aide sont servies, en français et en néerlandais.
 C_FR=$(curl -sk -o /dev/null -w '%{http_code} %{content_type}' "$BASE/aide-captures/fr/accueil-overview.jpg")
 C_NL=$(curl -sk -o /dev/null -w '%{http_code} %{content_type}' "$BASE/aide-captures/nl/accueil-overview.jpg")
-[ "$C_FR" = "200 image/jpeg" ] && [ "$C_NL" = "200 image/jpeg" ]; note $? "3. captures de l'aide servies (fr : $C_FR ; nl : $C_NL)"
+# 0.18.0 : une capture nouvelle de la version (recherche globale), en néerlandais.
+C_NV=$(curl -sk -o /dev/null -w '%{http_code} %{content_type}' "$BASE/aide-captures/nl/accueil-recherche.jpg")
+[ "$C_FR" = "200 image/jpeg" ] && [ "$C_NL" = "200 image/jpeg" ] && [ "$C_NV" = "200 image/jpeg" ]; note $? "3. captures de l'aide servies (fr : $C_FR ; nl : $C_NL ; recherche : $C_NV)"
 
 # 4 à 9. Contrôles du serveur, dans le conteneur de l'API (version, migration, refus, cloison, journal).
 echo "Compte de démonstration : $ADRESSE (le mot de passe reste visible pendant la saisie, la ligne s'efface à Entrée)"

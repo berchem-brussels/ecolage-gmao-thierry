@@ -14,6 +14,7 @@ import api, { ApiError, qs } from '../api';
 import { useAuth } from '../contexts/AuthContext';
 import { useI18n } from '../contexts/I18nContext';
 import PageHeader from '../components/PageHeader';
+import BoutonExport from '../components/BoutonExport';
 import ReportTicketModal from '../components/ReportTicketModal';
 import TicketDrawer, { dateTicket } from '../components/TicketDrawer';
 
@@ -54,7 +55,11 @@ export default function TicketsPage() {
 
   return (
     <div>
-      <PageHeader title={t('tickets.title')} actions={<Button type="primary" onClick={() => setReport(true)}>{t('tickets.report')}</Button>} />
+      {/* 0.18.0 (point 2, IMP-03) : export des tickets avec les filtres affichés. */}
+      <PageHeader title={t('tickets.title')} actions={<>
+        <BoutonExport chemin="/tickets/export" filtres={{ q: q || undefined, type: type || undefined, open_only: openOnly ? 'true' : undefined }} />
+        <Button type="primary" onClick={() => setReport(true)}>{t('tickets.report')}</Button>
+      </>} />
       <Typography.Paragraph type="secondary">{t('tickets.intro')}</Typography.Paragraph>
       {stats && (
         <Row gutter={[12, 12]} style={{ marginBottom: 16 }}>

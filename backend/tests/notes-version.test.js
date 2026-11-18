@@ -12,10 +12,10 @@ const { getDb } = require('../src/database');
 const { VERSION } = require('../src/config');
 const notes = require('../src/services/notes-version');
 /**
- * Notes d'une version précédente : les notes de la 0.14.0, de la 0.15.0, de la 0.16.0, de la 0.16.1 et de la 0.17.0, plus récentes, sont éprouvées
+ * Notes d'une version précédente : les notes de la 0.14.0, de la 0.15.0, de la 0.16.0, de la 0.16.1, de la 0.17.0 et de la 0.18.0, plus récentes, sont éprouvées
  * par leurs propres tests (fin du fichier).
  */
-const avant014 = (n) => !['0.14.0', '0.15.0', '0.16.0', '0.16.1', '0.17.0'].includes(n.version);
+const avant014 = (n) => !['0.14.0', '0.15.0', '0.16.0', '0.16.1', '0.17.0', '0.18.0'].includes(n.version);
 
 let srv;
 let admin;
@@ -412,12 +412,12 @@ test('note de la 0.13.0 : téléphone et aide pour tous ; photo de l’endroit e
 
 test('note de la 0.14.0 : suivi, avis et réouverture pour tous ; passages pour le service technique ; compteurs ; réglages pour le responsable, en FR et en NL', async () => {
   getDb().prepare("UPDATE users SET version_vue = '0.13.0' WHERE id IN (?, ?)").run(agent.id, resp.id);
-  const g = (await agent.get('/api/auth/me')).body.data.nouveautes.filter((n) => !['0.15.0', '0.16.0', '0.16.1', '0.17.0'].includes(n.version));
+  const g = (await agent.get('/api/auth/me')).body.data.nouveautes.filter((n) => !['0.15.0', '0.16.0', '0.16.1', '0.17.0', '0.18.0'].includes(n.version));
   assert.deepEqual(g.map((n) => n.version), ['0.14.0']);
   assert.equal(g[0].lignes.length, 2, 'demandeur : les deux lignes pour tous');
   assert.ok(/compléter/.test(g[0].lignes[0].fr) && /aanvullen/.test(g[0].lignes[0].nl));
   assert.ok(/rouvrez/.test(g[0].lignes[1].fr) && /heropen/.test(g[0].lignes[1].nl));
-  const r = (await resp.get('/api/auth/me')).body.data.nouveautes.filter((n) => !['0.15.0', '0.16.0', '0.16.1', '0.17.0'].includes(n.version));
+  const r = (await resp.get('/api/auth/me')).body.data.nouveautes.filter((n) => !['0.15.0', '0.16.0', '0.16.1', '0.17.0', '0.18.0'].includes(n.version));
   assert.equal(r[0].lignes.length, 5, 'responsable : tous, passages, compteurs et réglages');
   assert.ok(r[0].lignes.some((l) => /suspend le délai/.test(l.fr) && /schort de termijn op/.test(l.nl)));
   assert.ok(r[0].lignes.some((l) => /États des demandes/.test(l.fr)));
@@ -428,12 +428,12 @@ test('note de la 0.14.0 : suivi, avis et réouverture pour tous ; passages pour 
 
 test('note de la 0.15.0 : messages et suivi pour tous ; réponse, note interne et compteurs pour le service ; modèles pour le responsable', async () => {
   getDb().prepare("UPDATE users SET version_vue = '0.14.0' WHERE id IN (?, ?)").run(agent.id, resp.id);
-  const g = (await agent.get('/api/auth/me')).body.data.nouveautes.filter((n) => !['0.16.0', '0.16.1', '0.17.0'].includes(n.version));
+  const g = (await agent.get('/api/auth/me')).body.data.nouveautes.filter((n) => !['0.16.0', '0.16.1', '0.17.0', '0.18.0'].includes(n.version));
   assert.deepEqual(g.map((n) => n.version), ['0.15.0']);
   assert.equal(g[0].lignes.length, 2, 'demandeur : les deux lignes pour tous');
   assert.ok(/écrivez au service technique/.test(g[0].lignes[0].fr) && /technische dienst/.test(g[0].lignes[0].nl));
   assert.ok(/Ne plus suivre/.test(g[0].lignes[1].fr) && /Niet meer volgen/.test(g[0].lignes[1].nl));
-  const r = (await resp.get('/api/auth/me')).body.data.nouveautes.filter((n) => !['0.16.0', '0.16.1', '0.17.0'].includes(n.version));
+  const r = (await resp.get('/api/auth/me')).body.data.nouveautes.filter((n) => !['0.16.0', '0.16.1', '0.17.0', '0.18.0'].includes(n.version));
   assert.equal(r[0].lignes.length, 4, 'responsable : tous, fiche du service et modèles');
   assert.ok(r[0].lignes.some((l) => /note interne/.test(l.fr) && /interne nota/.test(l.nl)));
   assert.ok(r[0].lignes.some((l) => /Modèles de réponse/.test(l.fr) && /Antwoordmodellen/.test(l.nl)));
@@ -445,19 +445,19 @@ test('note de la 0.15.0 : messages et suivi pour tous ; réponse, note interne e
 test('note de la 0.16.0 : validation et regroupement pour tous ; chef de service ; service technique ; administrateur', async () => {
   getDb().prepare("UPDATE users SET version_vue = '0.15.0' WHERE id IN (?, ?)").run(agent.id, resp.id);
   getDb().prepare("UPDATE users SET version_vue = '0.15.0' WHERE user_role = 'admin'").run();
-  const g = (await agent.get('/api/auth/me')).body.data.nouveautes.filter((n) => !['0.16.1', '0.17.0'].includes(n.version));
+  const g = (await agent.get('/api/auth/me')).body.data.nouveautes.filter((n) => !['0.16.1', '0.17.0', '0.18.0'].includes(n.version));
   assert.deepEqual(g.map((n) => n.version), ['0.16.0']);
   assert.equal(g[0].lignes.length, 2, 'demandeur : les deux lignes pour tous');
   assert.ok(/accord de votre chef de service/.test(g[0].lignes[0].fr) && /diensthoofd/.test(g[0].lignes[0].nl));
   assert.ok(/regrouper/.test(g[0].lignes[1].fr) && /samenvoegen/.test(g[0].lignes[1].nl));
-  const r = (await resp.get('/api/auth/me')).body.data.nouveautes.filter((n) => !['0.16.1', '0.17.0'].includes(n.version));
+  const r = (await resp.get('/api/auth/me')).body.data.nouveautes.filter((n) => !['0.16.1', '0.17.0', '0.18.0'].includes(n.version));
   assert.equal(r[0].lignes.length, 3, 'responsable : tous et service technique (pas de ligne du chef de service)');
   assert.ok(r[0].lignes.some((l) => /Colonnes par état/.test(l.fr) && /Kolommen per status/.test(l.nl)));
   assert.ok(!r[0].lignes.some((l) => /Demandes à valider/.test(l.fr)), 'ligne du chef de service réservée à demandes:valider');
-  const a = (await admin.get('/api/auth/me')).body.data.nouveautes.filter((n) => !['0.16.1', '0.17.0'].includes(n.version));
+  const a = (await admin.get('/api/auth/me')).body.data.nouveautes.filter((n) => !['0.16.1', '0.17.0', '0.18.0'].includes(n.version));
   assert.ok(a[0].lignes.some((l) => /Services et valideurs/.test(l.fr) && /Diensten en goedkeurders/.test(l.nl)));
   // Chef de service : public « demandes:valider » (rôle « valideur »), lu par le service des notes.
-  const v = notes.aLire({ id: agent.id, role: 'agent', roles: ['valideur'] }).filter((n) => !['0.16.1', '0.17.0'].includes(n.version));
+  const v = notes.aLire({ id: agent.id, role: 'agent', roles: ['valideur'] }).filter((n) => !['0.16.1', '0.17.0', '0.18.0'].includes(n.version));
   assert.ok(v[0].lignes.some((l) => /Demandes à valider/.test(l.fr) && /Goed te keuren aanvragen/.test(l.nl)));
   for (const l of [...r[0].lignes, ...a[0].lignes, ...v[0].lignes]) assert.doesNotMatch(`${l.fr} ${l.nl}`, /GMAO|\bDI\b|RGPD|AVG|MCP|fusionnee|issue_de|valideur_id|en_validation/, 'sans jargon');
   await agent.put('/api/auth/nouveautes', {});
@@ -466,13 +466,13 @@ test('note de la 0.16.0 : validation et regroupement pour tous ; chef de service
 
 test('note de la 0.16.1 : danger sans validation pour tous ; pièces jointes pour le chef de service', async () => {
   getDb().prepare("UPDATE users SET version_vue = '0.16.0' WHERE id IN (?, ?)").run(agent.id, resp.id);
-  const g = (await agent.get('/api/auth/me')).body.data.nouveautes.filter((n) => n.version !== '0.17.0');
+  const g = (await agent.get('/api/auth/me')).body.data.nouveautes.filter((n) => !['0.17.0', '0.18.0'].includes(n.version));
   assert.deepEqual(g.map((n) => n.version), ['0.16.1']);
   assert.equal(g[0].lignes.length, 1, 'demandeur : la ligne pour tous');
   assert.ok(/Danger pour les personnes ou les biens/.test(g[0].lignes[0].fr) && /Gevaar voor personen of goederen/.test(g[0].lignes[0].nl));
-  const r = (await resp.get('/api/auth/me')).body.data.nouveautes.filter((n) => n.version !== '0.17.0');
+  const r = (await resp.get('/api/auth/me')).body.data.nouveautes.filter((n) => !['0.17.0', '0.18.0'].includes(n.version));
   assert.equal(r[0].lignes.length, 1, 'responsable : pas de ligne du chef de service');
-  const v = notes.aLire({ id: agent.id, role: 'agent', roles: ['valideur'] }).filter((n) => n.version !== '0.17.0');
+  const v = notes.aLire({ id: agent.id, role: 'agent', roles: ['valideur'] }).filter((n) => !['0.17.0', '0.18.0'].includes(n.version));
   assert.equal(v[0].version, '0.16.1');
   assert.ok(v[0].lignes.some((l) => /photos et les documents joints/.test(l.fr) && /foto's en documenten/.test(l.nl)));
   for (const l of v[0].lignes) assert.doesNotMatch(`${l.fr} ${l.nl}`, /GMAO|\bDI\b|RGPD|AVG|MCP|valideur|en_validation|danger:/, 'sans jargon');
@@ -482,20 +482,36 @@ test('note de la 0.16.1 : danger sans validation pour tous ; pièces jointes pou
 
 test('note de la 0.17.0 : cloche et choix de l’entité pour tous ; chef de service ; service technique ; administrateur', async () => {
   getDb().prepare("UPDATE users SET version_vue = '0.16.1' WHERE id IN (?, ?)").run(agent.id, resp.id);
-  const g = (await agent.get('/api/auth/me')).body.data.nouveautes;
+  const g = (await agent.get('/api/auth/me')).body.data.nouveautes.filter((n) => n.version !== '0.18.0');
   assert.deepEqual(g.map((n) => n.version), ['0.17.0']);
   assert.equal(g[0].lignes.length, 2, 'demandeur : les deux lignes pour tous');
   assert.ok(/cloche/.test(g[0].lignes[0].fr) && /bel/.test(g[0].lignes[0].nl));
-  const r = (await resp.get('/api/auth/me')).body.data.nouveautes;
+  const r = (await resp.get('/api/auth/me')).body.data.nouveautes.filter((n) => n.version !== '0.18.0');
   assert.equal(r[0].lignes.length, 3, 'responsable : tous et service technique');
   assert.ok(r[0].lignes.some((l) => /Service technique : la cloche/.test(l.fr)));
-  const v = notes.aLire({ id: agent.id, role: 'agent', roles: ['valideur'] });
+  const v = notes.aLire({ id: agent.id, role: 'agent', roles: ['valideur'] }).filter((n) => n.version !== '0.18.0');
   assert.ok(v[0].lignes.some((l) => /Chef de service : la cloche/.test(l.fr) && /Diensthoofd: de bel/.test(l.nl)));
   const adminId = getDb().prepare("SELECT id FROM users WHERE user_role = 'admin' ORDER BY id LIMIT 1").get().id;
   getDb().prepare("UPDATE users SET version_vue = '0.16.1' WHERE id = ?").run(adminId);
-  const a = notes.aLire({ id: adminId, role: 'admin', roles: [] });
+  const a = notes.aLire({ id: adminId, role: 'admin', roles: [] }).filter((n) => n.version !== '0.18.0');
   assert.ok(a[0].lignes.some((l) => /onglet « Courriel »/.test(l.fr)));
   for (const n of [g[0], r[0], v[0], a[0]]) for (const l of n.lignes) assert.doesNotMatch(`${l.fr} ${l.nl}`, /GMAO|\bDI\b|RGPD|AVG|MCP|SMTP|valideur|notification\./, 'sans jargon');
+  await agent.put('/api/auth/nouveautes', {});
+  await resp.put('/api/auth/nouveautes', {});
+});
+
+test('note de la 0.18.0 : recherche, assistant, visite guidée et exports, pour tous', async () => {
+  getDb().prepare("UPDATE users SET version_vue = '0.17.0' WHERE id IN (?, ?)").run(agent.id, resp.id);
+  const g = (await agent.get('/api/auth/me')).body.data.nouveautes;
+  assert.deepEqual(g.map((n) => n.version), ['0.18.0']);
+  assert.equal(g[0].lignes.length, 4, 'demandeur : les quatre lignes pour tous');
+  assert.ok(/loupe/.test(g[0].lignes[0].fr) && /vergrootglas/.test(g[0].lignes[0].nl));
+  assert.ok(g[0].lignes.some((l) => /où en est ma demande/.test(l.fr) && /waar staat mijn aanvraag/.test(l.nl)));
+  assert.ok(g[0].lignes.some((l) => /visite guidée/.test(l.fr) && /rondleiding/.test(l.nl)));
+  assert.ok(g[0].lignes.some((l) => /Exporter/.test(l.fr) && /Exporteren/.test(l.nl)));
+  const r = (await resp.get('/api/auth/me')).body.data.nouveautes;
+  assert.equal(r[0].lignes.length, 4, 'responsable : les mêmes lignes');
+  for (const l of g[0].lignes) assert.doesNotMatch(`${l.fr} ${l.nl}`, /GMAO|\bDI\b|RGPD|AVG|MCP|localStorage|\bAPI\b/, 'sans jargon');
   await agent.put('/api/auth/nouveautes', {});
   await resp.put('/api/auth/nouveautes', {});
 });

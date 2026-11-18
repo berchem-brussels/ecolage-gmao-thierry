@@ -123,6 +123,8 @@ const MESSAGES = {
   DATE_CONVENUE_INUTILE: { fr: "Cette priorité a déjà un délai de fin : la date convenue ne sert qu'aux priorités sans délai.", nl: 'Deze prioriteit heeft al een eindtermijn: de afgesproken datum dient enkel voor prioriteiten zonder termijn.' },
   DATE_CONVENUE_INVALIDE: { fr: "La date convenue doit être aujourd'hui ou plus tard, dans les deux ans.", nl: 'De afgesproken datum moet vandaag of later zijn, binnen twee jaar.' },
   VUE_NOM_PRIS: { fr: 'Vous avez déjà une vue de ce nom : choisissez-en un autre.', nl: 'U hebt al een weergave met deze naam: kies een andere.' },
+  // 0.18.0 (point 2) : export d'une liste plafonné à 5 000 lignes.
+  EXPORT_TROP: { fr: 'Plus de 5 000 lignes : affinez les filtres avant d’exporter.', nl: 'Meer dan 5 000 regels: verfijn de filters voor u exporteert.' },
   VUES_MAX: { fr: 'Vingt vues enregistrées au plus : supprimez-en une d’abord.', nl: 'Hoogstens twintig opgeslagen weergaven: verwijder er eerst een.' },
 };
 

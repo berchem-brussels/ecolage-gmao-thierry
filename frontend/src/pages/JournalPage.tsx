@@ -77,6 +77,8 @@ export const CODES_ACTION: Record<string, Record<string, string>> = {
   'demande.create': { validation: 'audit.validation', canal: 'gest.canal' },
   // 0.16.1 (R4 de la recette 0.16.0) : état de départ d'une demande regroupée.
   'demande.fusion': { de: 'demande.etat_service' },
+  // 0.18.0 (point 2, IMP-03) : liste et format d'un export.
+  'export.liste': { liste: 'export.liste', format: 'export.format' },
 };
 /**
  * Champs redondants selon l'action (0.16.1, R4) : champ masqué → champ qui le dit déjà quand le serveur l'a nommé.

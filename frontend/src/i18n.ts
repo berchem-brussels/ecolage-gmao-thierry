@@ -720,6 +720,55 @@ export const translations: Record<string, Record<Lang, string>> = {
   'common.created': { fr: 'Créé le', nl: 'Aangemaakt op' },
   'common.saved': { fr: 'Enregistré', nl: 'Opgeslagen' },
   'common.error': { fr: 'Une erreur est survenue', nl: 'Er is een fout opgetreden' },
+
+  // Visite guidée (0.18.0, point 4, ERG-07)
+  'visite.revoir': { fr: 'Revoir la visite guidée', nl: 'Rondleiding opnieuw bekijken' },
+  'visite.accueil.titre': { fr: 'Bienvenue', nl: 'Welkom' },
+  'visite.accueil.texte': { fr: "Quelques étapes pour découvrir l'application. Vous pourrez revoir cette visite dans Aide.", nl: 'Enkele stappen om de toepassing te ontdekken. U kunt deze rondleiding opnieuw bekijken in Help.' },
+  'visite.profil.demandeur.titre': { fr: 'Vos demandes', nl: 'Uw aanvragen' },
+  'visite.profil.demandeur.texte': { fr: "Signalez un problème dans un bâtiment par « Nouvelle demande », puis suivez-le dans « Mes demandes » : état, délai et messages avec le service technique.", nl: 'Meld een probleem in een gebouw via « Nieuwe aanvraag » en volg het op in « Mijn aanvragen »: status, termijn en berichten met de technische dienst.' },
+  'visite.profil.service.titre': { fr: 'Service technique', nl: 'Technische dienst' },
+  'visite.profil.service.texte': { fr: "« Demandes de l'entité » réunit le tableau de bord, la qualification, la vue en colonnes et l'export. Une demande reçue par téléphone s'y encode.", nl: '« Aanvragen van de entiteit » bundelt het dashboard, de kwalificatie, de kolommenweergave en de export. Een telefonisch ontvangen aanvraag voert u daar in.' },
+  'visite.profil.valideur.titre': { fr: 'Chef de service', nl: 'Diensthoofd' },
+  'visite.profil.valideur.texte': { fr: "Les demandes d'aménagement, de déménagement et d'achat de votre service attendent votre accord dans « Demandes à valider ».", nl: 'De aanvragen voor inrichting, verhuizing en aankoop van uw dienst wachten op uw akkoord in « Goed te keuren aanvragen ».' },
+  'visite.profil.admin.titre': { fr: 'Administration', nl: 'Beheer' },
+  'visite.profil.admin.texte': { fr: "Le menu Administration règle les entités, les utilisateurs et leurs rôles, les services et valideurs, les paramètres et le journal d'audit.", nl: 'Het menu Beheer regelt de entiteiten, de gebruikers en hun rollen, de diensten en goedkeurders, de parameters en het auditlogboek.' },
+  'visite.cible.nouvelle.titre': { fr: 'Nouvelle demande', nl: 'Nieuwe aanvraag' },
+  'visite.cible.nouvelle.texte': { fr: 'Sur chaque écran : où, quoi, quelques mots, et vous recevez un numéro.', nl: 'Op elk scherm: waar, wat, enkele woorden, en u krijgt een nummer.' },
+  'visite.cible.recherche.titre': { fr: 'Rechercher', nl: 'Zoeken' },
+  'visite.cible.recherche.texte': { fr: "Retrouvez une demande par son numéro, son lieu ou un mot de sa description.", nl: 'Vind een aanvraag terug via haar nummer, haar plaats of een woord uit de beschrijving.' },
+  'visite.cible.cloche.titre': { fr: 'Notifications', nl: 'Meldingen' },
+  'visite.cible.cloche.texte': { fr: 'La cloche annonce ce qui vous concerne : demande reçue, décision, message, échéance.', nl: 'De bel meldt wat u aanbelangt: ontvangen aanvraag, beslissing, bericht, termijn.' },
+  'visite.cible.aide.titre': { fr: 'Aide', nl: 'Help' },
+  'visite.cible.aide.texte': { fr: "Le mode d'emploi de l'écran où vous êtes, avec ses questions fréquentes.", nl: 'De handleiding van het scherm waar u bent, met de veelgestelde vragen.' },
+  'visite.cible.signaler.titre': { fr: 'Signaler', nl: 'Melden' },
+  'visite.cible.signaler.texte': { fr: "Un souci avec l'application elle-même, une question ou une idée : un ticket, sans quitter l'écran.", nl: 'Een probleem met de toepassing zelf, een vraag of een idee: een ticket, zonder het scherm te verlaten.' },
+  'visite.cible.assistant.titre': { fr: 'Assistant', nl: 'Assistent' },
+  'visite.cible.assistant.texte': { fr: "Posez une question en quelques mots, par exemple « où en est ma demande ».", nl: 'Stel een vraag in enkele woorden, bijvoorbeeld « waar staat mijn aanvraag ».' },
+  'chat.intent.visite': { fr: "La visite guidée se revoit dans Aide, bouton « Revoir la visite guidée ».", nl: 'De rondleiding bekijkt u opnieuw in Help, knop « Rondleiding opnieuw bekijken ».' },
+
+  // Export des listes (0.18.0, point 2, IMP-03)
+  'export.bouton': { fr: 'Exporter', nl: 'Exporteren' },
+  'export.xlsx': { fr: 'Excel (.xlsx)', nl: 'Excel (.xlsx)' },
+  'export.csv': { fr: 'CSV (texte, séparé par « ; »)', nl: 'CSV (tekst, gescheiden door « ; »)' },
+  'audit.famille.export': { fr: 'Exports', nl: 'Exports' },
+  'audit.action.export.liste': { fr: "Liste exportée", nl: 'Lijst geëxporteerd' },
+  'audit.detail.format': { fr: 'Format', nl: 'Formaat' },
+  'audit.detail.lignes': { fr: 'Nombre de lignes', nl: 'Aantal regels' },
+  'export.liste.demandes_miennes': { fr: 'Mes demandes', nl: 'Mijn aanvragen' },
+  'export.liste.demandes_entite': { fr: "Demandes de l'entité", nl: 'Aanvragen van de entiteit' },
+  'export.liste.demandes_a_valider': { fr: 'Demandes à valider', nl: 'Goed te keuren aanvragen' },
+  'export.liste.tickets': { fr: 'Tickets', nl: 'Tickets' },
+  'export.format.xlsx': { fr: 'Excel', nl: 'Excel' },
+  'export.format.csv': { fr: 'CSV', nl: 'CSV' },
+
+  // Recherche globale de l'en-tête (0.18.0, point 1, ERG-04)
+  'recherche.bouton': { fr: 'Rechercher', nl: 'Zoeken' },
+  'recherche.titre': { fr: 'Rechercher une demande ou un lieu', nl: 'Een aanvraag of een plaats zoeken' },
+  'recherche.placeholder': { fr: 'Numéro, lieu ou mot de la description', nl: 'Nummer, plaats of woord uit de beschrijving' },
+  'recherche.min': { fr: 'Tapez au moins 2 caractères.', nl: 'Typ minstens 2 tekens.' },
+  'recherche.vide': { fr: 'Aucun résultat', nl: 'Geen resultaten' },
+  'recherche.chargement': { fr: 'Recherche en cours', nl: 'Bezig met zoeken' },
   'common.edit': { fr: 'Modifier', nl: 'Wijzigen' },
   'common.active': { fr: 'Active', nl: 'Actief' },
   'common.inactive': { fr: 'Désactivée', nl: 'Gedeactiveerd' },
@@ -1782,6 +1831,15 @@ export const translations: Record<string, Record<Lang, string>> = {
   'chat.send': { fr: 'Envoyer', nl: 'Verzenden' },
   'chat.unknown': { fr: "Je n'ai pas trouvé de réponse. Consultez le mode d'emploi ou contactez le support.", nl: 'Ik vond geen antwoord. Raadpleeg de handleiding of neem contact op met de support.' },
   'chat.go': { fr: "Ouvrir l'écran", nl: 'Scherm openen' },
+  // 0.18.0 (point 3) : suivi lu dans les demandes de la personne (AID-03), fiches d'aide citées, exports et recherche.
+  'chat.suivi.ouvertes': { fr: 'Vos demandes ouvertes les plus récentes :', nl: 'Uw meest recente lopende aanvragen:' },
+  'chat.suivi.trouvee': { fr: 'Voici la demande trouvée :', nl: 'Dit is de gevonden aanvraag:' },
+  'chat.suivi.aucune': { fr: "Vous n'avez aucune demande ouverte. Toutes vos demandes sont dans « Mes demandes ».", nl: 'U hebt geen lopende aanvraag. Al uw aanvragen staan in « Mijn aanvragen ».' },
+  'chat.suivi.introuvable': { fr: 'Je ne trouve pas la demande {numero} parmi les vôtres. Toutes vos demandes sont dans « Mes demandes ».', nl: 'Ik vind aanvraag {numero} niet bij de uwe. Al uw aanvragen staan in « Mijn aanvragen ».' },
+  'chat.aide.trouvee': { fr: "Je n'ai pas de réponse directe, mais le mode d'emploi en parle ici :", nl: 'Ik heb geen rechtstreeks antwoord, maar de handleiding vermeldt het hier:' },
+  'chat.aide.fiche': { fr: 'Mode d’emploi : {titre}', nl: 'Handleiding: {titre}' },
+  'chat.intent.export': { fr: "Chaque liste (Mes demandes, Demandes de l'entité, Demandes à valider, Tickets) a un bouton « Exporter » : Excel ou CSV, avec les filtres affichés. 5 000 lignes au plus.", nl: "Elke lijst (Mijn aanvragen, Aanvragen van de entiteit, Goed te keuren aanvragen, Tickets) heeft een knop « Exporteren »: Excel of CSV, met de getoonde filters. Hoogstens 5 000 regels." },
+  'chat.intent.recherche': { fr: "La loupe en haut de l'écran cherche une demande (numéro, lieu, mot de la description) ou un lieu. Sur un petit téléphone, « Rechercher » est en tête du menu.", nl: 'Het vergrootglas bovenaan zoekt een aanvraag (nummer, plaats, woord uit de beschrijving) of een plaats. Op een kleine telefoon staat « Zoeken » bovenaan het menu.' },
   'chat.intent.entite': { fr: "L'entité active se change en haut de l'écran, en cliquant sur son code. Vous ne voyez que les entités où vous avez un rôle.", nl: 'De actieve entiteit wijzigt u bovenaan het scherm door op haar code te klikken. U ziet alleen de entiteiten waar u een rol hebt.' },
   'chat.intent.roles': { fr: "Les rôles sont donnés par l'administrateur de l'application dans l'écran « Utilisateurs et rôles ». Vos rôles dans l'entité active sont sur l'accueil.", nl: 'De rollen worden toegekend door de beheerder van de toepassing in het scherm « Gebruikers en rollen ». Uw rollen in de actieve entiteit staan op de startpagina.' },
   'chat.intent.password': { fr: 'Le changement de mot de passe se fait dans le menu de votre nom, en haut à droite.', nl: 'Uw wachtwoord wijzigt u via het menu met uw naam, rechtsboven.' },
@@ -1796,9 +1854,15 @@ export const translations: Record<string, Record<Lang, string>> = {
 /** Intentions du chatbot local : mots-clés FR et NL, réponse, écran cible (patron SAGA Chatbot.tsx). */
 /** Intentions de l'assistant ; une intention rattachée à un module n'est proposée que si le module est actif. */
 export const intents: { keys: string[]; answer: string; route?: string; module?: string }[] = [
+  // 0.18.0 (point 4) : visite guidée.
+  { keys: ['visite guidée', 'visite guidee', 'rondleiding', 'découvrir l', 'decouvrir l', 'ontdekken'], answer: 'chat.intent.visite', route: '/help' },
+  // 0.18.0 (point 3) : exports, avant les tickets (« exporter les tickets »).
+  { keys: ['exporter', 'export', 'excel', 'csv', 'tableur', 'rekenblad', 'exporteren'], answer: 'chat.intent.export', route: '/demandes' },
   // 0.11.0 : tickets, avant les intentions des demandes (« bug », « signaler un problème de l'application »).
   // Mots propres à l'application seulement : « ne fonctionne pas » seul vise aussi une panne dans un bâtiment (demande d'intervention).
   { keys: ['ticket', 'bug', "l'application", 'l’application', 'de toepassing', 'suggestion', 'suggestie', 'amélioration', 'verbetering'], answer: 'chat.intent.tickets', route: '/tickets' },
+  // 0.18.0 (point 3) : recherche globale, après les tickets (« la recherche de l'application ne marche pas ») et avant le suivi.
+  { keys: ['rechercher', 'chercher', 'recherche', 'loupe', 'zoeken', 'vergrootglas', 'opzoeken'], answer: 'chat.intent.recherche' },
   // 0.7.0 : « Moi aussi », danger, brouillon et protection des données, avant le suivi, le contact (« urgence ») et le dépôt.
   { keys: ['moi aussi', 'ik ook', 'déjà signalé', 'deja signale', 'al gemeld', 'doublon', 'dubbel'], answer: 'chat.intent.moiaussi', route: '/demandes/nouvelle', module: 'demandes' },
   { keys: ['danger', 'gevaar', 'odeur de gaz', 'gasgeur', 'câble à nu', 'blootliggende kabel'], answer: 'chat.intent.danger', route: '/demandes/nouvelle', module: 'demandes' },

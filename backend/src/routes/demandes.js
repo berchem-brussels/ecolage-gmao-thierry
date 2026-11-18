@@ -10,6 +10,9 @@
  * CYC-05) ; POST /:id/pieces ajoute une photo ou un document à une demande envoyée (formulaire multipart, hors MCP, E-17).
  * 0.15.0, point 1 (SUI-04, SEC-02) : fil de messages et commentaires internes (services/messages.js) ; pièces jointes en
  * attente du prochain message de la personne (formulaire multipart, hors MCP, E-17).
+ * 0.18.0, point 2 (IMP-03) : export Excel ou CSV de la liste (mes demandes ou entité) et des demandes à valider, avec les
+ * filtres de la liste ; fichier binaire, hors MCP (E-17 étendu ; les mêmes données par list_demandes et
+ * list_demandes_a_valider).
  */
 const express = require('express');
 const { authMiddleware } = require('../auth');
@@ -22,6 +25,7 @@ const cycle = require('../services/cycle');
 const messages = require('../services/messages');
 const brouillons = require('../services/brouillons');
 const pieces = require('../services/pieces');
+const exports_ = require('../services/exports');
 const fichiers = require('../fichiers');
 const { PIECE_MAX_OCTETS } = require('../config');
 
@@ -45,6 +49,19 @@ router.get('/a-valider', validateQuery(S.demandeAValider), handle((req, res) => 
 }));
 
 // Avant « /:id » : tableau de bord du service technique de l'entité active (GES-01, 0.9.0).
+router.get('/export', validateQuery(S.demandeExport), handle(async (req, res) => {
+  const { format, ...filtres } = req.query;
+  const liste = filtres.perimetre === 'entite' ? 'demandes_entite' : 'demandes_miennes';
+  exports_.envoyer(res, await exports_.produire(req.user, { liste, format, lang: req.user.lang,
+    lire: (limit) => demandes.list(req.user, { ...filtres, limit, offset: 0 }) }));
+}));
+
+router.get('/a-valider/export', validateQuery(S.demandeAValiderExport), handle(async (req, res) => {
+  const { format, ...filtres } = req.query;
+  exports_.envoyer(res, await exports_.produire(req.user, { liste: 'demandes_a_valider', format, lang: req.user.lang,
+    lire: (limit) => demandes.aValider(req.user, { ...filtres, limit, offset: 0 }) }));
+}));
+
 router.get('/tableau-bord', handle((req, res) => {
   ok(res, qualification.tableauBord(req.user), { resource: 'demandes' });
 }));

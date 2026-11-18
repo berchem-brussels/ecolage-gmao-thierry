@@ -10,14 +10,17 @@
  * Téléphone (moins de 768 px ; 0.13.0, défaut D1 du contrôle DV-113) : l'en-tête tient dans 320 px, en FR comme en NL.
  * Le niveau de détail, le thème et la langue passent dans le menu de la personne ; marges et écarts resserrés.
  * Cloche de notifications à côté du menu de la personne (0.17.0, étape 13 ; NotificationsCloche.tsx).
+ * Loupe de la recherche globale avant la cloche (0.18.0, point 1, ERG-04 ; RechercheGlobale.tsx) ; sous 360 px, elle
+ * passe en tête du menu latéral (l'en-tête dépassait 320 px de 29 px).
+ * Visite guidée à la première ouverture (0.18.0, point 4, ERG-07 ; VisiteGuidee.tsx) : éléments marqués data-visite.
  */
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Avatar, Button, Drawer, Dropdown, Grid, Layout, Menu, Segmented, Select, Tag, Tooltip, message } from 'antd';
 import type { MenuProps } from 'antd';
 import {
   HomeOutlined, ApartmentOutlined, TeamOutlined, QuestionCircleOutlined, EyeOutlined, MenuFoldOutlined, MenuUnfoldOutlined,
   LogoutOutlined, LockOutlined, SunOutlined, MoonOutlined, ControlOutlined, BankOutlined, UnorderedListOutlined, SettingOutlined, AuditOutlined, FieldTimeOutlined,
-  PlusOutlined, ProfileOutlined, InboxOutlined, EnvironmentOutlined, AlertOutlined, FlagOutlined, GlobalOutlined, CheckSquareOutlined, ClusterOutlined,
+  PlusOutlined, SearchOutlined, ProfileOutlined, InboxOutlined, EnvironmentOutlined, AlertOutlined, FlagOutlined, GlobalOutlined, CheckSquareOutlined, ClusterOutlined,
 } from '@ant-design/icons';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -30,6 +33,8 @@ import NouveautesModal from './NouveautesModal';
 import LieuHabituelModal from './LieuHabituelModal';
 import ReportTicketModal from './ReportTicketModal';
 import NotificationsCloche from './NotificationsCloche';
+import RechercheGlobale, { ouvrirRecherche } from './RechercheGlobale';
+import VisiteGuidee from './VisiteGuidee';
 import HelpButton from '../help/HelpButton';
 import { topicForPath } from '../help';
 import { hasPermission, useRoles } from '../useRoles';
@@ -37,10 +42,25 @@ import { routeActive, useModules } from '../moduleMap';
 
 const { Header, Sider, Content } = Layout;
 
+/** Écran de moins de 360 px (0.18.0, point 1) : Ant Design n'a pas de point de rupture à cette largeur. */
+const ETROIT = '(max-width: 359px)';
+function useEtroit(): boolean {
+  const [etroit, setEtroit] = useState(() => typeof window !== 'undefined' && !!window.matchMedia && window.matchMedia(ETROIT).matches);
+  useEffect(() => {
+    if (!window.matchMedia) return undefined;
+    const m = window.matchMedia(ETROIT);
+    const suivre = () => setEtroit(m.matches);
+    m.addEventListener?.('change', suivre);
+    return () => m.removeEventListener?.('change', suivre);
+  }, []);
+  return etroit;
+}
+
 export default function AppLayout() {
   const screens = Grid.useBreakpoint();
   // Grid.useBreakpoint() est vide au premier rendu : on attend la vraie valeur (piège SAGA 84)
   const isMobile = screens.md === false;
+  const etroit = useEtroit();
   const [collapsed, setCollapsed] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [pwdOpen, setPwdOpen] = useState(false);
@@ -121,6 +141,12 @@ export default function AppLayout() {
       <div style={{ height: 64, display: 'flex', alignItems: 'center', justifyContent: collapsed && !isMobile ? 'center' : 'flex-start', padding: collapsed && !isMobile ? '0 8px' : '0 16px', borderBottom: '1px solid rgba(255,255,255,0.12)' }}>
         <AppMark collapsed={collapsed && !isMobile} onDark />
       </div>
+      {isMobile && etroit && entite && (
+        <div style={{ padding: '12px 16px 4px' }}>
+          <Button block icon={<SearchOutlined aria-hidden />} className="recherche-menu" aria-haspopup="dialog"
+            onClick={() => { setDrawerOpen(false); ouvrirRecherche(); }}>{t('recherche.bouton')}</Button>
+        </div>
+      )}
       {isMobile && entites.length > 1 && (
         <div style={{ padding: '12px 16px 4px' }}>
           <div style={{ color: 'rgba(255,255,255,0.8)', fontSize: 12, marginBottom: 6 }}>{t('layout.entite')}</div>
@@ -165,6 +191,8 @@ export default function AppLayout() {
     <Layout style={{ minHeight: '100vh' }}>
       <a className="skip-link" href="#main-content">{t('layout.skip')}</a>
       <NouveautesModal />
+      {/* 0.18.0 (point 4, ERG-07) : visite guidée à la première ouverture, propre aux rôles. */}
+      <VisiteGuidee />
       <LieuHabituelModal open={lieuOpen} onClose={() => setLieuOpen(false)} />
       <ReportTicketModal open={reportOpen} onClose={() => setReportOpen(false)} screenName={ecran} />
       <PasswordModal open={pwdOpen || user?.must_change_password === 1} forced={user?.must_change_password === 1} onClose={() => setPwdOpen(false)} />
@@ -188,12 +216,12 @@ export default function AppLayout() {
           <div className="entete-actions" style={{ display: 'flex', alignItems: 'center', gap: isMobile ? 4 : 12, minWidth: 0 }}>
             {/* Bouton « Nouvelle demande » sur chaque écran (DEM-01) ; sur téléphone, l'icône seule avec son nom accessible. */}
             {entite && location.pathname !== '/demandes/nouvelle' && (
-              <Button type="primary" size={isMobile ? 'middle' : 'small'} icon={<PlusOutlined />} onClick={() => navigate('/demandes/nouvelle')}
+              <Button type="primary" size={isMobile ? 'middle' : 'small'} icon={<PlusOutlined />} onClick={() => navigate('/demandes/nouvelle')} data-visite="nouvelle"
                 aria-label={isMobile ? t('nav.demande.nouvelle') : undefined}>
                 {isMobile ? null : t('nav.demande.nouvelle')}
               </Button>
             )}
-            <Button size={isMobile ? 'middle' : 'small'} icon={<FlagOutlined />} onClick={() => setReportOpen(true)}
+            <Button size={isMobile ? 'middle' : 'small'} icon={<FlagOutlined />} onClick={() => setReportOpen(true)} data-visite="signaler"
               aria-label={isMobile ? t('tickets.report') : undefined}>
               {isMobile ? null : t('tickets.report')}
             </Button>
@@ -212,6 +240,8 @@ export default function AppLayout() {
                   icon={dark ? <SunOutlined /> : <MoonOutlined />} onClick={() => savePreferences({ theme: dark ? 'clair' : 'sombre' })} />
               </Tooltip>
             )}
+            {/* 0.18.0 (point 1) : recherche globale (ERG-04). */}
+            <RechercheGlobale enTete={!(isMobile && etroit)} />
             {/* 0.17.0 (étape 13) : cloche de notifications (standard, section 12.3). */}
             <NotificationsCloche />
             <Dropdown menu={userMenu} trigger={['click']}>

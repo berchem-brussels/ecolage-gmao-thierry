@@ -3,7 +3,7 @@ import { describe, it, expect } from 'vitest';
 import fs from 'fs';
 import path from 'path';
 import { translations, intents } from '../i18n';
-import { answer } from '../components/Chatbot';
+import { accesEcran, answer, fichesPour, numeroCite } from '../components/Chatbot';
 import { ICONE_CODES } from '../referentiel';
 import { ETATS } from '../demandes';
 import { GROUPES as GROUPES_REGLAGES } from '../pages/ReglagesEntitePage';
@@ -242,5 +242,47 @@ describe('libellé de la note interne', () => {
     expect(translations['audit.detail.interne']).toEqual(translations['fil.interne']);
     expect(translations['audit.detail.interne'].fr).toBe('Note interne');
     expect(translations['audit.detail.interne'].nl).toBe('Interne nota');
+  });
+});
+
+// 0.18.0 (point 3 ; AID-02, AID-03, DV-150) : chatbot.
+describe('chatbot 0.18.0 : intentions, numéro cité, écrans selon le rôle, fiches d’aide', () => {
+  it('exports et recherche globale', () => {
+    expect(answer('comment exporter la liste en Excel').key).toBe('chat.intent.export');
+    expect(answer('exporter les tickets').key).toBe('chat.intent.export');
+    expect(answer('lijst exporteren naar csv').key).toBe('chat.intent.export');
+    expect(answer('rechercher un numéro').key).toBe('chat.intent.recherche');
+    expect(answer('een plaats zoeken').key).toBe('chat.intent.recherche');
+    expect(answer('où en est ma demande').key, 'inchangé').toBe('chat.intent.suivi');
+  });
+  it('numéro cité : complet ou nombre de 3 à 6 chiffres', () => {
+    expect(numeroCite('où en est ac-di-2026-00012 ?')).toBe('AC-DI-2026-00012');
+    expect(numeroCite('waar staat CPAS-DI-2026-7')).toBe('CPAS-DI-2026-7');
+    expect(numeroCite('ma demande 00012')).toBe('00012');
+    expect(numeroCite('ma demande 12')).toBeNull();
+    expect(numeroCite('où en est ma demande')).toBeNull();
+  });
+  it('condition d’un écran : la plus longue adresse qui le commence', () => {
+    expect(accesEcran('/demandes-entite?affichage=colonnes')).toEqual({ permission: 'demandes:entite', module: 'demandes' });
+    expect(accesEcran('/demandes/encoder')).toEqual({ permission: 'demandes:traiter', module: 'demandes' });
+    expect(accesEcran('/demandes/nouvelle')).toEqual({ entite: true, module: 'demandes' });
+    expect(accesEcran('/referentiel?onglet=modeles')).toEqual({ permission: 'categories:gerer' });
+    expect(accesEcran('/journal')).toEqual({ admin: true });
+    expect(accesEcran('/help?onglet=faq')).toBeUndefined();
+    // Chaque écran proposé par une intention a sa condition, ou n'en a pas besoin (aide, accueil, tickets).
+    const libres = ['/help', '/', '/tickets'];
+    for (const i of intents.filter((x) => x.route)) {
+      const chemin = i.route!.split(/[?#]/)[0];
+      expect(accesEcran(i.route!) || libres.includes(chemin), i.route).toBeTruthy();
+    }
+  });
+  it('fiches d’aide : mots de 4 lettres et plus, titre compté double, trois au plus', () => {
+    const fiche = (id: string, titre: string, corps: string) => ({ id, titre, corps });
+    // « a » ne cite le mot que dans son titre (compté double) et vient en dernier dans la liste : il doit passer en tête.
+    const fiches = [fiche('b', 'Patrimoine', 'imprimer une fiche'), fiche('c', 'Tickets', 'rien'), fiche('d', 'Journal', 'imprimer'),
+      fiche('e', 'Autre', 'imprimer'), fiche('a', 'Imprimer le mode d’emploi', 'papier')];
+    const r = fichesPour('Comment IMPRIMER ?', fiches as never, (f) => f as unknown as { titre: string; corps: string });
+    expect((r as unknown as { id: string }[]).map((f) => f.id)).toEqual(['a', 'b', 'd']);
+    expect(fichesPour('le de la', fiches as never, (f) => f as unknown as { titre: string; corps: string })).toEqual([]);
   });
 });

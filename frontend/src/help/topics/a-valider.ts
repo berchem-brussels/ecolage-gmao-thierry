@@ -38,6 +38,18 @@ const topic: HelpTopic = {
         solution: { fr: 'Le demandeur n’est peut-être pas rattaché à votre service, ou vous n’êtes suppléant que pour une autre période. L’administrateur le règle dans {{nav.services}}.', nl: 'De aanvrager is misschien niet aan uw dienst verbonden, of u bent enkel vervanger voor een andere periode. De beheerder regelt dat in {{nav.services}}.' },
       }],
     },
+    // 0.18.0 (point 5 ; IMP-03) : export de la liste.
+    {
+      title: { fr: 'Exporter la liste en Excel ou en CSV', nl: 'De lijst exporteren naar Excel of CSV' },
+      when: { fr: 'Pour garder, trier ou transmettre les demandes qui attendent votre accord dans un tableur.', nl: 'Om de aanvragen die op uw akkoord wachten in een rekenblad te bewaren, te sorteren of door te geven.' },
+      steps: [
+        { fr: 'Réglez les filtres et la recherche : le fichier reprend exactement ce que la liste montre.', nl: 'Stel de filters en de zoekopdracht in: het bestand neemt precies over wat de lijst toont.' },
+        { fr: 'Cliquez sur {{export.bouton}}, puis sur {{export.xlsx}} ou {{export.csv}}.', nl: 'Klik op {{export.bouton}} en dan op {{export.xlsx}} of {{export.csv}}.' },
+        { fr: 'Ouvrez le fichier téléchargé ; sur iPhone, il est dans Fichiers, sur Android dans Téléchargements.', nl: 'Open het gedownloade bestand; op iPhone staat het in Bestanden, op Android in Downloads.' },
+      ],
+      result: { fr: 'Un fichier au nom de la liste, de l’entité et du jour, colonnes dans votre langue, 5 000 lignes au plus. L’export est noté au journal, sans son contenu.', nl: 'Een bestand met de naam van de lijst, de entiteit en de dag, kolommen in uw taal, hoogstens 5 000 regels. De export wordt in het logboek genoteerd, zonder de inhoud.' },
+      errors: [{ problem: { fr: 'Message « Plus de 5 000 lignes ».', nl: 'Melding « Meer dan 5 000 regels ».' }, solution: { fr: 'Ajoutez un filtre ou une recherche, puis exportez de nouveau.', nl: 'Voeg een filter of een zoekopdracht toe en exporteer opnieuw.' } }],
+    },
   ],
   faq: [
     {

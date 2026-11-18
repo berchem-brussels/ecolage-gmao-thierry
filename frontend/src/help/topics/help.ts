@@ -14,6 +14,28 @@ const topic: HelpTopic = {
   ],
   overviewShot: 'help-overview',
   procedures: [
+    // 0.18.0 (point 5 ; AID-02, AID-03, ERG-07) : assistant et visite guidée.
+    {
+      title: { fr: 'Demander à l’assistant où en est ma demande', nl: 'De assistent vragen hoever mijn aanvraag staat' },
+      when: { fr: 'Pour une réponse rapide sans chercher l’écran.', nl: 'Voor een snel antwoord zonder het scherm te zoeken.' },
+      steps: [
+        { fr: 'Cliquez sur la bulle ronde en bas à droite ({{chat.open}}).', nl: 'Klik op de ronde bel rechtsonder ({{chat.open}}).' },
+        { fr: 'Écrivez « où en est ma demande », ou son numéro, puis {{chat.send}}.', nl: 'Schrijf « waar staat mijn aanvraag », of haar nummer, en dan {{chat.send}}.' },
+        { fr: 'Cliquez sur une demande pour ouvrir sa fiche.', nl: 'Klik op een aanvraag om haar fiche te openen.' },
+      ],
+      result: { fr: 'L’assistant montre vos demandes ouvertes les plus récentes avec leur état, ou celle dont vous avez donné le numéro. Il ne montre que vos demandes, et ne propose que les écrans que vous pouvez ouvrir.', nl: 'De assistent toont uw meest recente lopende aanvragen met hun status, of die waarvan u het nummer gaf. Hij toont alleen uw aanvragen en stelt alleen de schermen voor die u kunt openen.' },
+      acces: { entite: true, module: 'demandes' },
+      shots: ['help-assistant'],
+    },
+    {
+      title: { fr: 'Revoir la visite guidée', nl: 'De rondleiding opnieuw bekijken' },
+      when: { fr: 'Pour retrouver où sont les boutons principaux, ou pour les montrer à un collègue.', nl: 'Om terug te vinden waar de belangrijkste knoppen staan, of om ze aan een collega te tonen.' },
+      steps: [
+        { fr: 'Cliquez sur {{visite.revoir}} en haut de cet écran.', nl: 'Klik op {{visite.revoir}} bovenaan dit scherm.' },
+        { fr: 'Avancez par « Suivant » ; la croix ferme la visite à tout moment.', nl: 'Ga verder met « Volgende »; het kruisje sluit de rondleiding op elk moment.' },
+      ],
+      result: { fr: 'La visite présente ce que vous faites selon vos rôles, puis les boutons du haut de l’écran : nouvelle demande, recherche, cloche, aide, signaler, assistant.', nl: 'De rondleiding stelt voor wat u doet volgens uw rollen, daarna de knoppen bovenaan het scherm: nieuwe aanvraag, zoeken, bel, help, melden, assistent.' },
+    },
     {
       title: { fr: 'Trouver comment faire', nl: 'Vinden hoe iets moet' },
       when: { fr: 'Quand vous ne savez pas où trouver une fonction.', nl: 'Wanneer u niet weet waar een functie staat.' },
@@ -45,8 +67,14 @@ const topic: HelpTopic = {
       result: { fr: "Le service technique écrit pour son entité active ; l'administrateur aussi pour les deux entités à la fois. Rien n'est supprimé.", nl: 'De technische dienst schrijft voor zijn actieve entiteit; de beheerder ook voor beide entiteiten tegelijk. Niets wordt verwijderd.' },
     },
   ],
-  faq: [],
+  faq: [
+    // 0.18.0 (point 5 ; AID-02, AID-03).
+    { q: { fr: 'L’assistant ne comprend pas ma question.', nl: 'De assistent begrijpt mijn vraag niet.' }, a: { fr: 'Il reconnaît des mots, pas des phrases : essayez deux ou trois mots, par exemple « exporter », « où en est », « fuite ». Sans réponse, il propose les fiches du mode d’emploi qui en parlent.', nl: 'Hij herkent woorden, geen zinnen: probeer twee of drie woorden, bijvoorbeeld « exporteren », « waar staat », « lek ». Zonder antwoord stelt hij de fiches van de handleiding voor die erover gaan.' } },
+  ],
   seeAlso: ['tickets'],
-  shots: [{ id: 'help-overview', path: '/help', marks: [{ sel: '.help-search' }, { sel: '.ant-tabs-nav' }, { sel: '.help-topics' }], caption: { fr: "Mode d'emploi", nl: 'Handleiding' } }],
+  shots: [
+    // 0.18.0 (point 5) : assistant ouvert, question de suivi posée ; sans repère (fenêtre fixe, les repères sont posés dans la page).
+    { id: 'help-assistant', path: '/help', assistant: true, actions: [{ clickSel: '.chatbot-widget button' }, { wait: 400 }, { fill: { sel: '.chatbot-widget input', value: 'où en est ma demande' } }, { clickSel: '.chatbot-widget .ant-space-compact .ant-btn-primary' }, { wait: 1200 }], caption: { fr: 'L’assistant et vos demandes', nl: 'De assistent en uw aanvragen' } },
+    { id: 'help-overview', path: '/help', marks: [{ sel: '.help-search' }, { sel: '.ant-tabs-nav' }, { sel: '.help-topics' }], caption: { fr: "Mode d'emploi", nl: 'Handleiding' } }],
 };
 export default topic;

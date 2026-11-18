@@ -286,6 +286,9 @@ import ReferentielPage from '../pages/ReferentielPage';
 import TicketsPage from '../pages/TicketsPage';
 import ServicesPage from '../pages/ServicesPage';
 import { reloadModules } from '../moduleMap';
+import { sansDoublons } from '../components/RechercheGlobale';
+import { adresseExport } from '../components/BoutonExport';
+import { answer } from '../components/Chatbot';
 
 const PAGES: [string, React.ComponentType][] = [
   ['Home', HomePage], ['Entites', EntitesPage], ['Users', UsersPage], ['Help', HelpPage], ['Accessibility', AccessibilityPage], ['Login', LoginPage],
@@ -1464,6 +1467,8 @@ describe('journal d’audit sans code brut (0.13.0, point 2 ; défauts D2, D3, D
     // 0.16.0 (point 4) : fusion de doublons.
     fusion: 'principale_id principale_numero personnes_reportees',
     decoupage: 'issue_de nouvelles',
+    // 0.18.0 (point 2) : export d'une liste (jamais le contenu).
+    exports: 'liste format lignes',
   };
   it('chaque champ écrit au journal a son libellé, en FR et en NL', () => {
     const manquants = [...new Set(Object.values(CHAMPS_ECRITS).join(' ').split(' '))]
@@ -1910,5 +1915,319 @@ describe('Paramètres › Courriel › Modèles de courriel (0.17.0, étape 13, 
     fireEvent.click(await within(d).findByRole('button', { name: /Rétablir le texte livré/ }));
     fireEvent.click(await screen.findByRole('button', { name: 'Rétablir le texte livré' }));
     await waitFor(() => expect(appels().some((a) => a.url === '/api/modeles-courriel/demande.recue/retablir' || a.url === '/api/modeles-courriel/demande.retard/retablir')).toBe(true));
+  });
+});
+
+// Recherche globale de l'en-tête (0.18.0, point 1, ERG-04) : listes existantes interrogées selon les droits, sans route nouvelle.
+describe('recherche globale (0.18.0, point 1 ; ERG-04)', () => {
+  const dem = (id: number, numero: string, etat: string, extra: Record<string, unknown> = {}) => ({ id, entite_id: 1, numero, etat, lieu_code: 'AA-B1-L02',
+    lieu_nom_fr: 'Salle du conseil', lieu_nom_nl: 'Raadzaal', etat_libelle_fr: null, etat_libelle_nl: null, ...extra });
+  const miennes = [dem(12, 'AA-DI-2026-00012', 'a_qualifier')];
+  const entiteListe = [dem(12, 'AA-DI-2026-00012', 'a_qualifier'), dem(14, 'AA-DI-2026-00014', 'qualifiee')];
+  const urls = () => (fetch as unknown as { mock: { calls: [string][] } }).mock.calls.map(([u]) => u);
+  const avecRecherche = () => {
+    const base = fetch as unknown as (u: string, i?: RequestInit) => Promise<unknown>;
+    vi.stubGlobal('fetch', vi.fn(async (url: string, init?: RequestInit) => {
+      const rep = (data: unknown[]) => ({ ok: true, status: 200, statusText: 'OK', json: async () => page(data) });
+      if (url.startsWith('/api/demandes?') && url.includes('q=')) {
+        if (url.includes('q=rien')) return rep([]);
+        return rep(url.includes('perimetre=entite') ? entiteListe : miennes);
+      }
+      if (url.startsWith('/api/lieux?') && url.includes('q=')) return rep(url.includes('q=rien') ? [] : [local]);
+      return base(url, init);
+    }));
+  };
+  const Ici = () => { const l = useLocation(); return <p data-testid="adresse-recherche">{`${l.pathname}${l.search}`}</p>; };
+  const rendre = (lang: 'fr' | 'nl') => render(
+    <SettingsProvider value={{ settings: FALLBACK_SETTINGS, reload: async () => {} }}>
+      <I18nProvider defaultLang={lang}><MemoryRouter initialEntries={['/']}>
+        <Routes><Route element={<AppLayout />}><Route path="*" element={<Ici />} /></Route></Routes>
+      </MemoryRouter></I18nProvider>
+    </SettingsProvider>,
+  );
+
+  it('sansDoublons : une demande de « Mes demandes » n’est pas répétée dans celles de l’entité', () => {
+    const r = sansDoublons({ miennes: miennes as never, entite: entiteListe as never, lieux: [] });
+    expect(r.entite.map((d) => d.id)).toEqual([14]);
+  });
+
+  it('avec « demandes:entite » : trois groupes, doublon retiré, un résultat ouvre sa fiche et ferme la fenêtre ; sans violation axe-core', async () => {
+    const gestionnaire = roles.find((r) => r.code === 'gestionnaire')!;
+    gestionnaire.permissions.push('demandes:entite');
+    try {
+      avecRecherche();
+      const { container } = rendre('fr');
+      fireEvent.click(await screen.findByRole('button', { name: 'Rechercher' }));
+      const d = await screen.findByRole('dialog', { name: 'Rechercher une demande ou un lieu' });
+      const champ = within(d).getByRole('textbox', { name: 'Rechercher une demande ou un lieu' });
+      fireEvent.change(champ, { target: { value: 'f' } });
+      expect(within(d).getByText('Tapez au moins 2 caractères.')).toBeInTheDocument();
+      await new Promise((ok) => setTimeout(ok, 400));
+      expect(urls().some((u) => u.startsWith('/api/demandes?') && u.includes('q=')), 'rien sous 2 caractères').toBe(false);
+      fireEvent.change(champ, { target: { value: 'conseil' } });
+      const mes = await within(d).findByRole('region', { name: 'Mes demandes' });
+      expect(within(mes).getByText('AA-DI-2026-00012')).toBeInTheDocument();
+      expect(within(mes).getByText('Reçue par le service technique')).toBeInTheDocument();
+      const ent = within(d).getByRole('region', { name: "Demandes de l'entité" });
+      expect(within(ent).queryByText('AA-DI-2026-00012'), 'doublon retiré').toBeNull();
+      expect(within(ent).getByText('AA-DI-2026-00014')).toBeInTheDocument();
+      expect(within(ent).getByText('Qualifiée')).toBeInTheDocument();
+      const pat = within(d).getByRole('region', { name: 'Patrimoine' });
+      expect(within(pat).getByText('AA-B1-L02 · Salle du conseil')).toBeInTheDocument();
+      expect(urls().some((u) => u.includes('perimetre=miennes') && u.includes('q=conseil') && u.includes('limit=5'))).toBe(true);
+      expect(urls().some((u) => u.includes('perimetre=entite') && u.includes('q=conseil'))).toBe(true);
+      expect(urls().some((u) => u.startsWith('/api/lieux?') && u.includes('q=conseil'))).toBe(true);
+      const r = await axe.run(container.ownerDocument.body, { rules: { 'color-contrast': { enabled: false }, region: { enabled: false } } });
+      expect(r.violations.map((v) => `${v.id}: ${v.nodes.length} ${v.nodes.map((n) => n.html.slice(0, 200)).join(' | ')}`)).toEqual([]);
+      fireEvent.click(within(ent).getByRole('button', { name: /AA-DI-2026-00014/ }));
+      await waitFor(() => expect(screen.getByTestId('adresse-recherche').textContent).toBe('/demandes-entite?demande=14'));
+            // Fenêtre fermée et remise à zéro : rouverte, elle est vide (dans jsdom, rc-dialog garde le contenu figé pendant
+      // l'animation de fermeture, qui ne se termine pas).
+      fireEvent.click(screen.getByRole('button', { name: 'Rechercher' }));
+      await waitFor(() => expect(within(dernierDialogue()).getByRole('textbox', { name: 'Rechercher une demande ou un lieu' })).toHaveValue(''));
+      expect(within(dernierDialogue()).getByText('Tapez au moins 2 caractères.')).toBeInTheDocument();
+    } finally {
+      gestionnaire.permissions.splice(gestionnaire.permissions.indexOf('demandes:entite'), 1);
+    }
+  });
+
+  it('sous 360 px : pas de loupe dans l’en-tête, « Rechercher » en tête du menu latéral ouvre la même fenêtre', async () => {
+    const avant = window.matchMedia;
+    window.matchMedia = ((query: string) => ({ ...avant(query), matches: query === '(max-width: 359px)' })) as typeof window.matchMedia;
+    try {
+      avecRecherche();
+      rendre('fr');
+      fireEvent.click(await screen.findByRole('button', { name: 'Ouvrir ou fermer le menu' }));
+      const bouton = await screen.findByRole('button', { name: 'Rechercher' });
+      expect(bouton.closest('header'), 'hors de l’en-tête').toBeNull();
+      expect(bouton.closest('.ant-drawer'), 'dans le menu latéral').not.toBeNull();
+      fireEvent.click(bouton);
+      const d = await screen.findByRole('dialog', { name: 'Rechercher une demande ou un lieu' });
+      fireEvent.change(within(d).getByRole('textbox', { name: 'Rechercher une demande ou un lieu' }), { target: { value: 'conseil' } });
+      expect(await within(d).findByRole('region', { name: 'Mes demandes' })).toBeInTheDocument();
+    } finally { window.matchMedia = avant; }
+  });
+
+  it('en néerlandais, sans « demandes:entite » ni Patrimoine : la liste de l’entité et les lieux ne sont pas interrogés ; Entrée ouvre le premier résultat', async () => {
+    modules = modulesActifs.map((m) => (m.code === 'patrimoine' ? { ...m, actif: false } : m));
+    reloadModules();
+    try {
+      avecRecherche();
+      rendre('nl');
+      fireEvent.click(await screen.findByRole('button', { name: 'Zoeken' }));
+      const d = await screen.findByRole('dialog', { name: 'Een aanvraag of een plaats zoeken' });
+      const champ = within(d).getByRole('textbox', { name: 'Een aanvraag of een plaats zoeken' });
+      fireEvent.change(champ, { target: { value: 'rien' } });
+      expect(await within(d).findByText('Geen resultaten')).toBeInTheDocument();
+      fireEvent.change(champ, { target: { value: 'raad' } });
+      expect(await within(d).findByRole('region', { name: 'Mijn aanvragen' })).toBeInTheDocument();
+      expect(urls().some((u) => u.includes('perimetre=entite')), 'liste de l’entité non interrogée').toBe(false);
+      expect(urls().some((u) => u.startsWith('/api/lieux?') && u.includes('q=')), 'lieux non interrogés').toBe(false);
+      fireEvent.keyDown(champ, { key: 'Enter' });
+      await waitFor(() => expect(screen.getByTestId('adresse-recherche').textContent).toBe('/demandes?demande=12'));
+    } finally {
+      reloadModules();
+    }
+  });
+});
+
+// Export des listes (0.18.0, point 2, IMP-03) : fichier produit par le serveur avec les filtres affichés.
+describe('bouton « Exporter » (0.18.0, point 2 ; IMP-03)', () => {
+  it('adresseExport : filtres gardés, pagination retirée, format ajouté', () => {
+    expect(adresseExport('/demandes/export', { perimetre: 'entite', etats: 'a_qualifier,rouverte', q: undefined, limit: 20, offset: 40 }, 'csv'))
+      .toBe('/demandes/export?perimetre=entite&etats=a_qualifier%2Crouverte&format=csv');
+  });
+
+  it('Excel : appelle l’export avec les filtres, remet le fichier sous le nom du serveur ; une erreur s’affiche', async () => {
+    const base = fetch as unknown as (u: string, i?: RequestInit) => Promise<unknown>;
+    const appelsExport: string[] = [];
+    let reponse: 'ok' | 'trop' = 'ok';
+    vi.stubGlobal('fetch', vi.fn(async (url: string, init?: RequestInit) => {
+      if (!url.includes('/export')) return base(url, init);
+      appelsExport.push(url);
+      return reponse === 'ok'
+        ? { ok: true, status: 200, headers: new Headers({ 'Content-Disposition': 'attachment; filename="tickets-AA-2026-11-17.xlsx"' }), blob: async () => new Blob(['x']) }
+        : { ok: false, status: 400, statusText: 'Bad Request', headers: new Headers(), json: async () => ({ error: true, code: 'EXPORT_TROP', message: 'Plus de 5 000 lignes : affinez les filtres avant d’exporter.' }) };
+    }));
+    const creer = vi.fn(() => 'blob:fictif');
+    const revoquer = vi.fn();
+    Object.assign(URL, { createObjectURL: creer, revokeObjectURL: revoquer });
+    const cliques: string[] = [];
+    const clic = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(function (this: HTMLAnchorElement) { cliques.push(this.download); });
+    try {
+      render(wrap(TicketsPage, 'fr'));
+      fireEvent.click(await screen.findByRole('button', { name: /Exporter/ }));
+      fireEvent.click(await screen.findByText('Excel (.xlsx)'));
+      await waitFor(() => expect(cliques).toEqual(['tickets-AA-2026-11-17.xlsx']));
+      expect(appelsExport[0]).toBe('/api/tickets/export?open_only=true&format=xlsx');
+      expect(creer).toHaveBeenCalled();
+      reponse = 'trop';
+      fireEvent.click(screen.getByRole('button', { name: /Exporter/ }));
+      fireEvent.click(await screen.findByText('CSV (texte, séparé par « ; »)'));
+      expect(await screen.findByText('Plus de 5 000 lignes : affinez les filtres avant d’exporter.')).toBeInTheDocument();
+      expect(appelsExport[1]).toBe('/api/tickets/export?open_only=true&format=csv');
+      expect(cliques).toHaveLength(1);
+    } finally { clic.mockRestore(); }
+  });
+});
+
+// Chatbot (0.18.0, point 3 ; AID-02, AID-03, DV-150) : suivi lu par l'API, écrans selon le rôle, fiches d'aide citées.
+describe('chatbot (0.18.0, point 3 ; AID-02, AID-03)', () => {
+  const dem = (id: number, numero: string, etat: string) => ({ id, numero, etat, etat_libelle_fr: null, etat_libelle_nl: null });
+  const urls = () => (fetch as unknown as { mock: { calls: [string][] } }).mock.calls.map(([u]) => u);
+  const Ici = () => { const l = useLocation(); return <p data-testid="adresse-chat">{`${l.pathname}${l.search}`}</p>; };
+  const rendre = () => {
+    const base = fetch as unknown as (u: string, i?: RequestInit) => Promise<unknown>;
+    vi.stubGlobal('fetch', vi.fn(async (url: string, init?: RequestInit) => {
+      if (url.startsWith('/api/demandes?') && url.includes('perimetre=miennes') && url.includes('limit=3')) {
+        const data = url.includes('q=00099') ? [] : url.includes('q=') ? [dem(12, 'AA-DI-2026-00012', 'qualifiee')] : [dem(12, 'AA-DI-2026-00012', 'qualifiee'), dem(10, 'AA-DI-2026-00010', 'a_qualifier')];
+        return { ok: true, status: 200, statusText: 'OK', json: async () => page(data) };
+      }
+      return base(url, init);
+    }));
+    return render(
+      <SettingsProvider value={{ settings: FALLBACK_SETTINGS, reload: async () => {} }}>
+        <I18nProvider defaultLang="fr"><MemoryRouter initialEntries={['/']}>
+          <Routes><Route element={<AppLayout />}><Route path="*" element={<Ici />} /></Route></Routes>
+        </MemoryRouter></I18nProvider>
+      </SettingsProvider>,
+    );
+  };
+  const demander = async (texte: string) => {
+    const d = screen.getByRole('dialog', { name: 'Assistant' });
+    fireEvent.change(within(d).getByRole('textbox', { name: 'Votre question' }), { target: { value: texte } });
+    fireEvent.click(within(d).getByRole('button', { name: 'Envoyer' }));
+    return d;
+  };
+
+  it('« où en est ma demande » : demandes ouvertes lues par l’API, lien vers la fiche ; numéro introuvable dit tel quel ; sans violation axe-core', async () => {
+    const { container } = rendre();
+    fireEvent.click(await screen.findByRole('button', { name: "Ouvrir l'assistant" }));
+    const d = await demander('où en est ma demande ?');
+    expect(await within(d).findByText('Vos demandes ouvertes les plus récentes :')).toBeInTheDocument();
+    expect(within(d).getByRole('button', { name: 'AA-DI-2026-00012 : Prise en charge' })).toBeInTheDocument();
+    expect(within(d).getByRole('button', { name: 'AA-DI-2026-00010 : Reçue par le service technique' })).toBeInTheDocument();
+    expect(urls().some((u) => u.includes('perimetre=miennes') && u.includes('ouvertes=1') && u.includes('limit=3'))).toBe(true);
+    await demander('où en est la 00099 ?');
+    expect(await within(d).findByText('Je ne trouve pas la demande 00099 parmi les vôtres. Toutes vos demandes sont dans « Mes demandes ».')).toBeInTheDocument();
+    const r = await axe.run(container.ownerDocument.body, { rules: { 'color-contrast': { enabled: false }, region: { enabled: false } } });
+    expect(r.violations.map((v) => `${v.id}: ${v.nodes.length} ${v.nodes.map((n) => n.html.slice(0, 200)).join(' | ')}`)).toEqual([]);
+    expect(answer('fuite au local 104').key).toBe('chat.intent.demande');
+    // Numéro complet avec une autre intention (« demande ») : le suivi l'emporte.
+    expect(answer('ma demande AA-DI-2026-00012').key).toBe('chat.intent.demande');
+    await demander('ma demande AA-DI-2026-00012');
+    await waitFor(() => expect(urls().some((u) => u.includes('perimetre=miennes') && u.includes('q=AA-DI-2026-00012'))).toBe(true));
+    const trouvees = await within(d).findAllByRole('button', { name: 'AA-DI-2026-00012 : Prise en charge' });
+    fireEvent.click(trouvees[trouvees.length - 1]);
+    await waitFor(() => expect(screen.getByTestId('adresse-chat').textContent).toBe('/demandes?demande=12'));
+  });
+
+  it('écran proposé selon le rôle : pas de bouton vers « Demandes de l’entité » sans « demandes:entite », bouton avec', async () => {
+    rendre();
+    fireEvent.click(await screen.findByRole('button', { name: "Ouvrir l'assistant" }));
+    let d = await demander('comment qualifier une demande');
+    expect(await within(d).findByText(/cliquez sur le numéro de la demande puis sur « Qualifier »/)).toBeInTheDocument();
+    expect(within(d).queryByRole('button', { name: "Ouvrir l'écran" }), 'écran non ouvert à la personne').toBeNull();
+    cleanupAll();
+    const gestionnaire = roles.find((r) => r.code === 'gestionnaire')!;
+    gestionnaire.permissions.push('demandes:entite');
+    try {
+      rendre();
+      fireEvent.click(await screen.findByRole('button', { name: "Ouvrir l'assistant" }));
+      d = await demander('comment qualifier une demande');
+      fireEvent.click(await within(d).findByRole('button', { name: "Ouvrir l'écran" }));
+      await waitFor(() => expect(screen.getByTestId('adresse-chat').textContent).toBe('/demandes-entite'));
+    } finally { gestionnaire.permissions.splice(gestionnaire.permissions.indexOf('demandes:entite'), 1); }
+  });
+
+  it('question sans intention : fiches d’aide proposées par leur titre, lien vers la fiche', async () => {
+    rendre();
+    fireEvent.click(await screen.findByRole('button', { name: "Ouvrir l'assistant" }));
+    const d = await demander('imprimer');
+    expect(await within(d).findByText("Je n'ai pas de réponse directe, mais le mode d'emploi en parle ici :")).toBeInTheDocument();
+    const liens = within(d).getAllByRole('button', { name: /^Mode d’emploi : / });
+    expect(liens.length).toBeGreaterThan(0);
+    expect(liens.length).toBeLessThanOrEqual(3);
+    fireEvent.click(liens[0]);
+    await waitFor(() => expect(screen.getByTestId('adresse-chat').textContent).toMatch(/^\/help\?fiche=/));
+  });
+
+  it('une fiche d’aide que la personne ne voit pas n’est pas proposée (Catégories et délais sans « categories:gerer »)', async () => {
+    rendre();
+    fireEvent.click(await screen.findByRole('button', { name: "Ouvrir l'assistant" }));
+    const d = await demander('simulateur');
+    expect(await within(d).findByText("Je n'ai pas trouvé de réponse. Consultez le mode d'emploi ou contactez le support.")).toBeInTheDocument();
+    expect(within(d).queryByRole('button', { name: /^Mode d’emploi : / })).toBeNull();
+  });
+});
+
+// Visite guidée (0.18.0, point 4 ; ERG-07 ; DV-151) : première ouverture propre aux rôles, revue depuis l'Aide.
+describe('visite guidée (0.18.0, point 4 ; ERG-07)', () => {
+  const cle = 'gmao.visite.v1.1.demandeur+admin';
+  const rendre = (entree = '/') => render(
+    <SettingsProvider value={{ settings: FALLBACK_SETTINGS, reload: async () => {} }}>
+      <I18nProvider defaultLang="fr"><MemoryRouter initialEntries={[entree]}>
+        <Routes><Route element={<AppLayout />}><Route path="/help" element={<HelpPage />} /><Route path="*" element={<p>écran</p>} /></Route></Routes>
+      </MemoryRouter></I18nProvider>
+    </SettingsProvider>,
+  );
+  const titre = () => document.querySelector('.visite-guidee .ant-tour-title')?.textContent;
+  const suivant = () => fireEvent.click(document.querySelector('.visite-guidee .ant-tour-next-btn')!);
+
+  it('première ouverture : accueil, une étape par profil, éléments de l’en-tête ; « déjà vue » retenue ; sans violation axe-core', async () => {
+    window.localStorage.removeItem('gmao.visite.auto');
+    window.localStorage.removeItem(cle);
+    try {
+      const { container, unmount } = rendre();
+      await waitFor(() => expect(titre()).toBe('Bienvenue'), { timeout: 3000 });
+      const r = await axe.run(container.ownerDocument.body, { rules: { 'color-contrast': { enabled: false }, region: { enabled: false } } });
+      expect(r.violations.map((v) => `${v.id}: ${v.nodes.length} ${v.nodes.map((n) => n.html.slice(0, 200)).join(' | ')}`)).toEqual([]);
+      const vus: string[] = [titre()!];
+      for (let i = 0; i < 7; i += 1) { suivant(); await waitFor(() => expect(titre()).not.toBe(vus[vus.length - 1])); vus.push(titre()!); }
+      // Profils du compte des tests : demandeur et administrateur (pas « demandes:entite » ni « demandes:valider »).
+      expect(vus).toEqual(['Bienvenue', 'Vos demandes', 'Administration', 'Nouvelle demande', 'Rechercher', 'Notifications', 'Aide', 'Signaler']);
+      suivant();
+      await waitFor(() => expect(titre()).toBe('Assistant'));
+      fireEvent.click(document.querySelector('.visite-guidee .ant-tour-next-btn')!); // « Terminer »
+      await waitFor(() => expect(window.localStorage.getItem(cle)).toBeTruthy());
+      unmount();
+      rendre();
+      await new Promise((ok) => setTimeout(ok, 900));
+      expect(document.querySelector('.visite-guidee .ant-tour-title'), 'déjà vue : pas d’ouverture').toBeNull();
+    } finally {
+      window.localStorage.setItem('gmao.visite.auto', '0');
+      window.localStorage.removeItem(cle);
+    }
+  });
+
+  it('un rôle nouveau la relance ; elle attend la fenêtre « Nouveautés »', async () => {
+    window.localStorage.removeItem('gmao.visite.auto');
+    window.localStorage.setItem('gmao.visite.v1.1.demandeur', 'vue avec un seul profil');
+    const avant = user.nouveautes;
+    user.nouveautes = [{ version: '0.18.0', lignes: [{ fr: 'Recherche', nl: 'Zoeken' }] }];
+    try {
+      rendre();
+      await new Promise((ok) => setTimeout(ok, 900));
+      expect(titre(), 'pas pendant les nouveautés').toBeUndefined();
+      cleanupAll();
+      user.nouveautes = [];
+      rendre();
+      await waitFor(() => expect(titre()).toBe('Bienvenue'), { timeout: 3000 });
+    } finally {
+      user.nouveautes = avant;
+      window.localStorage.setItem('gmao.visite.auto', '0');
+      window.localStorage.removeItem('gmao.visite.v1.1.demandeur');
+    }
+  });
+
+  it('ouverture automatique coupée (contrôles automatiques) : rien ne s’ouvre seul ; l’Aide l’ouvre quand même', async () => {
+    window.localStorage.removeItem(cle);
+    try {
+      rendre('/help');
+      await new Promise((ok) => setTimeout(ok, 900));
+      expect(titre(), 'jamais vue, mais « gmao.visite.auto » = 0').toBeUndefined();
+      fireEvent.click(await screen.findByRole('button', { name: /Revoir la visite guidée/ }));
+      await waitFor(() => expect(titre()).toBe('Bienvenue'));
+    } finally { window.localStorage.removeItem(cle); }
   });
 });

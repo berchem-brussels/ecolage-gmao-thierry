@@ -17,6 +17,7 @@ import { type Demande, type Transition, cheminTexte, dateDepot, extrait } from '
 import { EtatTag, FicheDemande } from './DemandesPage';
 import HistoriqueDemande from '../components/demandes/HistoriqueDemande';
 import { ActionsDemande, ChangerEtatForm } from '../components/demandes/ChangerEtat';
+import BoutonExport from '../components/BoutonExport';
 
 export default function AValiderPage() {
   const { t, lang, tField } = useI18n();
@@ -62,8 +63,10 @@ export default function AValiderPage() {
 
   return (
     <div>
-      <div className="page-header" style={{ marginBottom: 8 }}>
+      <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8, gap: 12, flexWrap: 'wrap' }}>
         <Typography.Title level={1} style={{ fontSize: 22, margin: 0 }}>{t('nav.avalider')}</Typography.Title>
+        {/* 0.18.0 (point 2, IMP-03) : export avec la recherche affichée. */}
+        <BoutonExport chemin="/demandes/a-valider/export" filtres={{ q: q.trim() || undefined }} />
       </div>
       <Typography.Paragraph type="secondary">{t('avalider.intro')}</Typography.Paragraph>
       <Input.Search allowClear aria-label={t('demande.chercher')} placeholder={t('avalider.chercher')} style={{ width: mobile ? '100%' : 320, marginBottom: 12 }}

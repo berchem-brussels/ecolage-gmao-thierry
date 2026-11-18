@@ -9,6 +9,13 @@
  *   5. il déplace une demande d'une colonne à l'autre (« Déplacer », puis le passage confirmé dans la fiche).
  * 0.17.0 (point 7) : à l'étape 2, le chef ouvre la demande depuis la cloche ; étape 2 bis, l'agent apprend la validation
  * par la cloche et arrive sur sa demande.
+ * 0.18.0 (point 6) : étape 6, le service technique retrouve la demande par la recherche globale (loupe, ou menu sous
+ * 360 px) et ouvre sa fiche ; étape 7, il exporte la liste de l'entité en Excel (fichier téléchargé, nom contrôlé) ;
+ * étape 8, l'agent demande à l'assistant où en est sa demande et ouvre la fiche depuis la réponse.
+ * 0.18.0 (point 0) : toute ouverture d'écran (goto, reload) attend que la page ait fini de charger ses modules (réseau au
+ * repos) avant la suite. Sans cela, une ouverture faite aussitôt après une autre coupait les modules encore en chargement,
+ * et WebKit, lui seul, l'écrivait en erreur de console (« Importing a module script failed ») : défaut du contrôle, pas de
+ * l'application, vu un passage sur quatre environ, reproduit à coup sûr en retardant les modules de 400 ms.
  * À chaque étape : défilement horizontal, texte hors de l'écran, image qui ne s'affiche pas, erreur de la console, appel
  * refusé de l'API ; le résultat est relu par l'API.
  * Ces parcours ÉCRIVENT dans la base : ils ne tournent que sur une copie locale jetable (adresse localhost ou 127.0.0.1),
@@ -42,6 +49,21 @@ export function hoteLocal(base) {
 }
 
 /**
+ * 0.18.0 (point 0) : attend la fin du chargement d'un écran (modules et premiers appels de l'API). La cloche relit son
+ * compteur toutes les 60 secondes : le réseau passe bien au repos. Au-delà de 15 secondes, on continue : les contrôles de
+ * l'écran disent alors ce qui ne va pas.
+ */
+export async function charge(page) {
+  await page.waitForLoadState('networkidle', { timeout: 15000 }).catch(() => {});
+}
+
+/** Ouvre un écran et attend la fin de son chargement (0.18.0, point 0). */
+export async function ouvrir(page, url) {
+  await page.goto(url);
+  await charge(page);
+}
+
+/**
  * Lance les parcours sur un moteur. outils : { B, connecter(navigateur, appareil, user, password) → { ctx, page, erreurs },
  * controler(page, quoi) → défauts de l'écran }. Rend la liste des défauts.
  */
@@ -58,7 +80,7 @@ export async function parcours(navigateur, moteur, appareil, comptes, outils) {
   /** Les libellés cherchés sont en français : compte mis en FR pour le parcours, sa langue lui est rendue à la fin. */
   const enFrancais = async (page) => {
     const avant = (await api(page, '/api/auth/me')).body?.data?.preferred_lang;
-    if (avant !== 'fr') { await api(page, '/api/auth/preferences', { method: 'PUT', body: { preferred_lang: 'fr' } }); await page.reload(); }
+    if (avant !== 'fr') { await api(page, '/api/auth/preferences', { method: 'PUT', body: { preferred_lang: 'fr' } }); await page.reload(); await charge(page); }
     return async () => { if (avant && avant !== 'fr') await api(page, '/api/auth/preferences', { method: 'PUT', body: { preferred_lang: avant } }); };
   };
   const tap = async (loc, quoi) => {
@@ -100,7 +122,7 @@ export async function parcours(navigateur, moteur, appareil, comptes, outils) {
     suivi.connecte = true; // erreurs de la console et appels refusés comptés dès la connexion
     suivi.sansNouveautes = true; // fenêtre « Nouveautés » retirée, rien n'est marqué lu
     try {
-      await page.goto(`${B}/demandes/nouvelle`);
+      await ouvrir(page, `${B}/demandes/nouvelle`);
       await attendre(page, 1500);
       if (await page.getByLabel('Chercher un lieu').count()) {
         await page.getByLabel('Chercher un lieu').fill('bureau');
@@ -139,10 +161,10 @@ export async function parcours(navigateur, moteur, appareil, comptes, outils) {
     suivi.sansNouveautes = true;
     try {
       // 0.17.0 (point 7) : le chef ouvre la demande depuis la cloche (« La demande … attend votre accord »).
-      await page.goto(`${B}/`);
+      await ouvrir(page, `${B}/`);
       await attendre(page, 1500);
       await ouvrirDepuisCloche(2, page, erreurs, numeroDemande, `/a-valider?demande=${demandeId}`);
-      if (!(await page.locator('.ant-drawer-open').filter({ hasText: /Valider et transmettre/ }).count())) await page.goto(`${B}/a-valider?demande=${demandeId}`);
+      if (!(await page.locator('.ant-drawer-open').filter({ hasText: /Valider et transmettre/ }).count())) await ouvrir(page, `${B}/a-valider?demande=${demandeId}`);
       await page.locator('.ant-drawer-open').waitFor({ timeout: 10000 });
       await attendre(page, 2500);
       const photos = await page.evaluate(() => [...document.querySelectorAll('.ant-drawer-open img')].map((i) => ({ ok: i.complete && i.naturalWidth > 0, src: i.getAttribute('src') || '' })));
@@ -163,7 +185,7 @@ export async function parcours(navigateur, moteur, appareil, comptes, outils) {
     suivi.connecte = true;
     suivi.sansNouveautes = true;
     try {
-      await page.goto(`${B}/`);
+      await ouvrir(page, `${B}/`);
       await attendre(page, 1500);
       await ouvrirDepuisCloche('2 bis', page, erreurs, numeroDemande, `/demandes?demande=${demandeId}`, /a validé la demande/);
       await page.locator('.ant-drawer-open').waitFor({ timeout: 10000 });
@@ -185,7 +207,7 @@ export async function parcours(navigateur, moteur, appareil, comptes, outils) {
       const cat = (await api(page, '/api/categories?niveau=nature&q=eclairage')).body?.data?.[0];
       const doublon = (await api(page, '/api/demandes', { method: 'POST', body: { lieu_id: lieuId, categorie_id: cat?.id, description: `Parcours ${moteur} : même demande, en double.`, langue: 'fr', demandeur_id: d?.demandeur_id, canal: 'telephone' } })).body?.data;
       if (!doublon?.id) throw new Error('doublon non créé');
-      await page.goto(`${B}/demandes-entite?demande=${doublon.id}`);
+      await ouvrir(page, `${B}/demandes-entite?demande=${doublon.id}`);
       await page.locator('.ant-drawer-open').waitFor({ timeout: 10000 });
       await attendre(page, 1200);
       await tap(page.locator('.ant-drawer-open button').filter({ hasText: /Regrouper avec/ }), '« Regrouper avec une autre demande »');
@@ -200,7 +222,7 @@ export async function parcours(navigateur, moteur, appareil, comptes, outils) {
       if (r3?.etat !== 'fusionnee') defauts.push(etape(3, `doublon ${doublon.numero} pas regroupé (${r3?.etat})`));
 
       // 4. Découpage de la demande validée.
-      await page.goto(`${B}/demandes-entite?demande=${demandeId}`);
+      await ouvrir(page, `${B}/demandes-entite?demande=${demandeId}`);
       await page.locator('.ant-drawer-open').waitFor({ timeout: 10000 });
       await attendre(page, 1200);
       await tap(page.locator('.ant-drawer-open button:has(.anticon-scissor)'), '« Découper »');
@@ -216,7 +238,7 @@ export async function parcours(navigateur, moteur, appareil, comptes, outils) {
       if (!nouvelles) defauts.push(etape(4, 'aucune demande nouvelle issue du découpage'));
 
       // 5. « Déplacer » dans les colonnes : la carte de la demande validée, vers le premier état permis.
-      await page.goto(`${B}/demandes-entite?affichage=colonnes`);
+      await ouvrir(page, `${B}/demandes-entite?affichage=colonnes`);
       await attendre(page, 2000);
       const carte = page.locator('.col-carte').filter({ hasText: d.numero });
       await tap(carte.locator('button:has(.anticon-drag)'), `« Déplacer » de ${d.numero}`);
@@ -233,7 +255,67 @@ export async function parcours(navigateur, moteur, appareil, comptes, outils) {
       await verifier(5, 'passage fait', page, erreurs);
       const apres = (await api(page, `/api/demandes/${demandeId}`)).body?.data?.etat;
       if (apres === avant) defauts.push(etape(5, `état inchangé (${avant})`));
-    } catch (e) { defauts.push(etape('3-5', `parcours du service interrompu : ${e.message.split('\n')[0]}`)); } finally { await rendre().catch(() => {}); await ctx.close(); }
+
+      // 6 (0.18.0, point 6) : la recherche globale retrouve la demande par son numéro et ouvre sa fiche. Sous 360 px, la
+      // loupe est en tête du menu latéral.
+      await ouvrir(page, `${B}/`);
+      await attendre(page, 800);
+      const loupe = page.locator('header .recherche-globale');
+      if (await loupe.count()) await tap(loupe, 'loupe de la recherche');
+      else {
+        await tap(page.locator('header button').first(), 'menu');
+        await attendre(page, 600);
+        await tap(page.locator('.ant-drawer-open .recherche-menu'), '« Rechercher » du menu');
+      }
+      await attendre(page, 500);
+      await page.locator('.ant-modal-wrap input').first().fill(d.numero);
+      await page.locator('.ant-modal-wrap .recherche-resultat').filter({ hasText: d.numero }).first().waitFor({ timeout: 8000 });
+      await verifier(6, 'résultats de la recherche', page, erreurs);
+      await tap(page.locator('.ant-modal-wrap .recherche-resultat').filter({ hasText: d.numero }), `résultat ${d.numero}`);
+      await page.locator('.ant-drawer-open').waitFor({ timeout: 10000 });
+      await attendre(page, 1200);
+      const ici6 = new URL(page.url());
+      if (`${ici6.pathname}${ici6.search}` !== `/demandes-entite?demande=${demandeId}`) defauts.push(etape(6, `la recherche mène à ${ici6.pathname}${ici6.search}`));
+      await verifier(6, 'fiche ouverte depuis la recherche', page, erreurs);
+
+      // 7 (0.18.0, point 6) : export Excel de la liste de l'entité, téléchargé au doigt.
+      await ouvrir(page, `${B}/demandes-entite`);
+      await attendre(page, 800);
+      await tap(page.locator('.bouton-export'), '« Exporter »');
+      await attendre(page, 400);
+      const [fichier] = await Promise.all([
+        page.waitForEvent('download', { timeout: 15000 }),
+        tap(page.locator('.ant-dropdown:not(.ant-dropdown-hidden) .ant-dropdown-menu-item').first(), 'Excel'),
+      ]);
+      if (!/^demandes-entite-[A-Z]+-\d{4}-\d{2}-\d{2}\.xlsx$/.test(fichier.suggestedFilename())) defauts.push(etape(7, `nom du fichier exporté : ${fichier.suggestedFilename()}`));
+      await attendre(page, 500);
+      await verifier(7, 'liste après l’export', page, erreurs);
+    } catch (e) { defauts.push(etape('3-7', `parcours du service interrompu : ${e.message.split('\n')[0]}`)); } finally { await rendre().catch(() => {}); await ctx.close(); }
+  }
+
+  // 8 (0.18.0, point 6) : l'agent demande à l'assistant où en est sa demande et ouvre la fiche depuis la réponse.
+  {
+    const { ctx, page, erreurs, suivi } = await connecter(navigateur, appareil, comptes.agent.user, comptes.agent.password);
+    const rendre = await enFrancais(page);
+    suivi.connecte = true;
+    suivi.sansNouveautes = true;
+    try {
+      await ouvrir(page, `${B}/`);
+      await attendre(page, 800);
+      await tap(page.locator('.chatbot-widget button[aria-label="Ouvrir l\'assistant"]'), 'bouton de l’assistant');
+      await attendre(page, 400);
+      await page.locator('.chatbot-widget input').first().fill(`où en est ${numeroDemande}`);
+      await tap(page.locator('.chatbot-widget .ant-space-compact .ant-btn-primary'), '« Envoyer »');
+      const lien = page.locator('.chatbot-messages li button').filter({ hasText: numeroDemande });
+      await lien.first().waitFor({ timeout: 8000 });
+      await verifier(8, 'réponse de l’assistant', page, erreurs);
+      await tap(lien, `demande ${numeroDemande} dans la réponse`);
+      await page.locator('.ant-drawer-open').waitFor({ timeout: 10000 });
+      await attendre(page, 1200);
+      const ici8 = new URL(page.url());
+      if (`${ici8.pathname}${ici8.search}` !== `/demandes?demande=${demandeId}`) defauts.push(etape(8, `l’assistant mène à ${ici8.pathname}${ici8.search}`));
+      await verifier(8, 'fiche ouverte depuis l’assistant', page, erreurs);
+    } catch (e) { defauts.push(etape(8, `assistant de l'agent : ${e.message.split('\n')[0]}`)); } finally { await rendre().catch(() => {}); await ctx.close(); }
   }
   return defauts;
 }

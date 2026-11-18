@@ -1,6 +1,22 @@
 # Journal des versions
 
-Version de l'application : **0.17.0** · Mis à jour le 17/11/2026
+Version de l'application : **0.18.0** · Mis à jour le 18/11/2026
+
+## 0.18.0 (18/11/2026)
+
+Étape 14 : recherche globale (ERG-04), exports Excel et CSV (IMP-03), assistant (AID-02, AID-03), visite guidée (ERG-07), aide du lot, protocole de la recette d'usage chronométrée (REC-03, ERG-02) ; DV-147 à DV-151. Version de démonstration : la solution la plus simple dans le stack (DV-148). Aucune migration, aucune permission nouvelle, aucun réglage nouveau. Dépendance nouvelle : `exceljs` ^4.4.0 (stack, TEC-03 ; écart E-50 pour `uuid` 8.3.2 qu'elle apporte).
+
+- Point 0 (DV-147) : `mobile:check` attend la fin du chargement réseau après chaque ouverture d'écran (`charge`, `ouvrir` de `parcours.mjs`) au lieu d'une seconde ouverture, qui faisait échouer WebKit par moments.
+- Recherche globale (`RechercheGlobale.tsx`) : loupe dans l'en-tête de chaque écran, sous 360 px « Rechercher » en tête du menu ; 2 caractères au moins ; numéro même partiel, lieu ou mot de la description ; groupes Mes demandes, Demandes de l'entité (service technique) et Patrimoine, cinq résultats chacun ; Entrée ouvre le premier ; listes existantes interrogées avec les droits de la personne, aucune route nouvelle.
+- Exports (`services/exports.js`, `GET /api/demandes/export`, `/api/demandes/a-valider/export`, `/api/tickets/export`, `BoutonExport.tsx`) : bouton « Exporter » sur Mes demandes, Demandes de l'entité, Demandes à valider et Tickets, filtres affichés repris ; Excel (titres en gras, ligne figée, filtre automatique) ou CSV (UTF-8 avec marque d'ordre, « ; », formules neutralisées) ; colonnes dans la langue de l'écran ; 5 000 lignes au plus (`EXPORT_TROP`) ; ligne `export.liste` au journal (liste, format, nombre de lignes, jamais le contenu), famille « Exports ». Trois routes binaires hors MCP (E-17, neuf routes).
+- Assistant (`Chatbot.tsx`) : suivi des trois demandes ouvertes les plus récentes ou de la demande citée par son numéro, avec lien vers la fiche ; jusqu'à trois fiches du mode d'emploi proposées pour une question sans réponse prévue (étapes des procédures comprises) ; « Ouvrir l'écran » seulement vers un écran permis (`ACCES_ECRANS`) ; intentions export, recherche et visite guidée ; toujours sans modèle de langage ni appel sortant.
+- Visite guidée (`VisiteGuidee.tsx`, `Tour` d'Ant Design) : à la première ouverture, après « Nouveautés » ; accueil, une étape par rôle, boutons de l'en-tête ; une fois par personne, jeu de profils et appareil ; « Revoir la visite guidée » dans l'Aide ; sans masque, 520 px au plus.
+- Aide : Accueil (recherche), Mes demandes, Demandes de l'entité, Demandes à valider et Tickets (export), Mode d'emploi (assistant, visite guidée) ; trois questions nouvelles ; trente-trois captures par langue refaites sur une base de démonstration propre, dont trois nouvelles (`accueil-recherche`, `demandes-entite-export`, `help-assistant`) ; `help-capture` coupe la visite et montre l'assistant pour une capture marquée `assistant`.
+- Recette d'usage : `docs/fr/RECETTE-USAGE.md` (protocole complet : O1 dépôt en moins de 60 s, O2 suivi en deux clics au plus, O3 sur téléphone, grille, consignes FR et NL, seuils proposés), résumés en `docs/nl` et `docs/en`.
+- `mobile:check` : écrans de la recherche, de l'assistant et de la visite guidée (49 écrans) ; parcours : recherche puis fiche, export téléchargé, assistant puis fiche ; visite coupée dans le navigateur du contrôle (`gmao.visite.auto`).
+- Documentation : `docs/fonctionnel/recherche-exports-assistant.md` ; sections 0.18.0 d'EXPLOITATION, ARCHITECTURE, MCP, SECURITE, ACCESSIBILITE et APRES-DEPLOIEMENT (FR, NL, EN) ; `recette.sh` contrôle 3 (capture `accueil-recherche` en néerlandais) ; `src/recette-api.js` contrôle 6 (trois exports refusés sans session).
+- Note de version : quatre lignes pour tous (recherche, assistant, visite guidée, exports).
+- Tests : serveur 605 (594), interface 349 (332) et un contrôle des captures ; preuves d'échec dans `docs/fr/SECURITE.md`.
 
 ## 0.17.0 (17/11/2026)
 

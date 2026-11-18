@@ -44,6 +44,7 @@ import {
   cheminTexte, cleAction, dateDepot, extrait, filtresDepuisUrl, instant, qualifiable,
 } from '../demandes';
 import { DangerTag, EtatTag, FicheDemande, NonLusTag } from './DemandesPage';
+import BoutonExport from '../components/BoutonExport';
 
 const TAILLE = 20;
 const COULEUR_PRIO: Record<string, string> = { P1: 'red', P2: 'volcano', P3: 'blue', P4: 'default' };
@@ -272,10 +273,14 @@ export default function GestionDemandesPage() {
     <div>
       <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8, gap: 12, flexWrap: 'wrap' }}>
         <Typography.Title level={1} style={{ fontSize: 22, margin: 0 }}>{t('demande.entite.title')}</Typography.Title>
-        {/* 0.16.0 (étape 12, GES-05) : demande reçue par téléphone ou par courriel, encodée pour un agent. */}
-        {hasPermission(catalogue, roles, 'demandes:traiter') && (
-          <Link to="/demandes/encoder"><Button type="primary" icon={<PhoneOutlined />}>{t('encoder.bouton')}</Button></Link>
-        )}
+        <Space wrap>
+          {/* 0.18.0 (point 2, IMP-03) : export avec les filtres affichés. */}
+          <BoutonExport chemin="/demandes/export" filtres={{ perimetre: 'entite', ...f } as Record<string, string | number | undefined>} />
+          {/* 0.16.0 (étape 12, GES-05) : demande reçue par téléphone ou par courriel, encodée pour un agent. */}
+          {hasPermission(catalogue, roles, 'demandes:traiter') && (
+            <Link to="/demandes/encoder"><Button type="primary" icon={<PhoneOutlined />}>{t('encoder.bouton')}</Button></Link>
+          )}
+        </Space>
       </div>
       <Typography.Paragraph type="secondary">{t('gest.intro')}</Typography.Paragraph>
       <div style={{ marginBottom: 16 }}><TableauBord titre={false} rafraichir={bordAJour} /></div>

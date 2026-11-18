@@ -2,6 +2,10 @@
 
 De Franse tekst (`docs/fr/SECURITE.md`) is rechtsgeldig en bevat het volledige rooster per versie.
 
+## 0.18.0 (18/11/2026)
+
+Globaal zoeken, export naar Excel en CSV, assistent, rondleiding. Exports via de bestaande lijstfuncties: entiteit BB exporteert niets van AA, een aanvrager zonder `demandes:entite` 403, zonder sessie 401, onbekende parameter 400; CSV-formules geneutraliseerd, Excel als tekst; maximum 5 000 regels vóór het laden; logboek zonder inhoud; bestand nooit bewaard. Assistent lokaal, zonder taalmodel of uitgaande oproep; stelt alleen schermen voor die de persoon kan openen. Geen nieuwe MCP-tool. `npm audit` server: 2 matige (`uuid` onder `exceljs`, E-50). Bewijs van falen: veertien beschermingen apart weggenomen, telkens minstens één test faalt (details in de Franse tekst).
+
 ## 0.17.0 (17/11/2026)
 
 Meldingen (bel), e-mail (testmodus of SMTP, verzendwachtrij), e-mailmodellen, berichten over aanvragen, de draad en tickets, termijnwaarschuwingen. Melding van een andere entiteit 403, van een andere persoon 404, ook via MCP; e-mail en modellen alleen voor de beheerder; geen bericht over de eigen handeling, behalve de ontvangstbevestiging per e-mail (DEM-12); geen vrije tekst in een melding of e-mail (NOT-06); SMTP-wachtwoord versleuteld; `nodemailer` zonder toegang tot bestanden of webadressen. Migratie `015_notifications`; nieuwe afhankelijkheid `nodemailer` 10.6.0 (afwijking E-48). Faalbewijs: zestien beschermingen, elk afzonderlijk weggenomen, doen minstens één test falen.

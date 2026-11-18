@@ -13,7 +13,8 @@
  */
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Button, Card, Collapse, Descriptions, Empty, Input, List, Space, Switch, Tabs, Tag, Typography, message } from 'antd';
-import { EditOutlined, PlusOutlined, PrinterOutlined, StopOutlined, UndoOutlined } from '@ant-design/icons';
+import { EditOutlined, PlusOutlined, CompassOutlined, PrinterOutlined, StopOutlined, UndoOutlined } from '@ant-design/icons';
+import { ouvrirVisite } from '../components/VisiteGuidee';
 import { useSearchParams } from 'react-router-dom';
 import dayjs from 'dayjs';
 import api, { ApiError, qs } from '../api';
@@ -259,6 +260,8 @@ export default function HelpPage() {
         <Typography.Title level={1} style={{ fontSize: 22, margin: 0, minWidth: 0 }}>{t('help.title')}</Typography.Title>
         {!printMode && (
           <Space wrap className="page-header-actions">
+            {/* 0.18.0 (point 4, ERG-07) : la visite guidée se revoit ici. */}
+            <Button icon={<CompassOutlined />} onClick={ouvrirVisite}>{t('visite.revoir')}</Button>
             <Button icon={<PrinterOutlined />} onClick={() => window.open(`/help?print=1&t=${Date.now()}`, '_blank')}>{t('help.print')}</Button>
           </Space>
         )}

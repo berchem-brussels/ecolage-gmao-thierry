@@ -1,6 +1,6 @@
 # Architecture
 
-Version 0.17.0 · Le français fait foi.
+Version 0.18.0 · Le français fait foi.
 
 ## Services
 
@@ -275,6 +275,13 @@ Vues (`services/vues-demandes.js`, DV-93) : d'une personne dans une entité ; vu
 Permission nouvelle `demandes:qualifier` (gestionnaire et responsable) dans `config/roles.json`.
 
 Interface : `pages/GestionDemandesPage.tsx` (liste du service ; filtres dans l'adresse, repliés sous « Filtres et vues » sur téléphone ; vues ; fiche latérale et « Qualifier »), `components/demandes/TableauBord.tsx` (accueil et liste), `components/demandes/QualificationForm.tsx`, `FicheDemande` de `DemandesPage.tsx` (lignes du service : priorité et motif, échéances, durée, consignes, qualifiée le). Libellés des états pour le service : `demande.etat_service.*`. `ReglagesEntitePage.tsx` affiche le groupe `pieces` (contrôle 7 de la 0.8.0) ; un test compare ses groupes au catalogue.
+
+## Recherche, exports, assistant et visite guidée (0.18.0)
+
+- Aucune migration. Serveur : `services/exports.js` (`produire()` : total lu d'abord, refus `EXPORT_TROP` au-delà de 5 000 lignes, colonnes par liste dans la langue de la personne, dates à l'heure de Bruxelles, Excel par `exceljs` — une feuille, titres en gras, ligne figée, filtre automatique —, CSV UTF-8 avec BOM, « ; », CRLF, `celluleCsv()` qui neutralise une formule ; `logAudit('export.liste')` ; `envoyer()` : pièce à télécharger, `no-store`). Routes `GET /api/demandes/export` (`perimetre` miennes ou entite et filtres de la liste), `GET /api/demandes/a-valider/export`, `GET /api/tickets/export` : elles appellent `demandes.list`, `demandes.aValider` et `tickets.list`, donc les mêmes droits et la même cloison. Schémas `demandeExport`, `demandeAValiderExport`, `ticketExport` (format obligatoire, pas de pagination). Hors MCP (fichiers binaires, écart E-17).
+- Interface : `components/RechercheGlobale.tsx` (loupe et fenêtre ; listes existantes selon les droits ; événement `app-recherche` depuis le menu sous 360 px, `useEtroit()` d'`AppLayout.tsx`) ; `components/BoutonExport.tsx` et `api.telecharger()` (fichier rendu par le serveur, nom de `Content-Disposition`, erreur JSON en message) ; `components/Chatbot.tsx` (`ACCES_ECRANS` et `accesEcran()` : écran proposé selon module, permission et administrateur par `useHelpAccess` ; `numeroCite()` ; suivi par `GET /api/demandes?perimetre=miennes` ; `fichesPour()` dans les fiches d'aide visibles) ; `components/VisiteGuidee.tsx` (`Tour` d'Ant Design sans masque ; profils, éléments marqués `data-visite`, événement `app-visite`, clé `localStorage` par personne et profils) ; bouton « Revoir la visite guidée » de `HelpPage.tsx`.
+- Aide : procédures et questions nouvelles (Accueil, Mes demandes, Demandes de l'entité, Demandes à valider, Tickets, Mode d'emploi) ; captures `accueil-recherche`, `demandes-entite-export`, `help-assistant` ; option `assistant` d'une capture (`help/types.ts`, `help-capture/capture.spec.ts`).
+- Contrôle des téléphones : `charge()` et `ouvrir()` de `parcours.mjs` attendent la fin du chargement de chaque écran ; écrans `#recherche`, `#chatbot`, `#visite` ; parcours 6 à 8 (recherche, export, assistant).
 
 ## Notifications, courriel et alertes (0.17.0)
 

@@ -8,3 +8,5 @@ window.matchMedia = window.matchMedia || ((query: string) => ({
 class RO { observe() {} unobserve() {} disconnect() {} }
 (window as unknown as { ResizeObserver: unknown }).ResizeObserver = (window as unknown as { ResizeObserver?: unknown }).ResizeObserver || RO;
 window.scrollTo = window.scrollTo || (() => {});
+// 0.18.0 (point 4) : pas de visite guidée automatique pendant les tests (VisiteGuidee.tsx) ; les tests de la visite l'ouvrent eux-mêmes.
+window.localStorage.setItem('gmao.visite.auto', '0');
