@@ -44,6 +44,8 @@ export interface Demande {
   /** 0.13.0 : photo de l'endroit, pour le service technique (absente pour le demandeur). */
   photo_lieu?: PhotoLieu | null;
   categorie_id: number; categorie_code: string; categorie_libelle_fr: string; categorie_libelle_nl: string; categorie_icone: string;
+  /** 0.19.0 (GES-04) : corps de métier noté à la qualification ; service technique seulement. */
+  corps_metier_id?: number | null; corps_metier_libelle_fr?: string | null; corps_metier_libelle_nl?: string | null;
   domaine_libelle_fr: string | null; domaine_libelle_nl: string | null;
   /** Nuls pour une personne qui suit la demande d'un autre (« Moi aussi », 0.7.0) : le nom du demandeur ne lui est pas rendu. */
   demandeur_id: number | null; demandeur_prenom: string | null; demandeur_nom: string | null;

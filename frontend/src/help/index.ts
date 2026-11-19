@@ -26,11 +26,12 @@ import journal from './topics/journal';
 import aValider from './topics/a-valider';
 import encoderDemande from './topics/encoder-demande';
 import services from './topics/services';
+import equipes from './topics/equipes';
 
 /** Fiches dans l'ordre du menu : demandeur, service technique, administration, aide. */
 export const TOPICS: HelpTopic[] = [
   accueil, nouvelleDemande, mesDemandes, aValider, tickets,
-  demandesEntite, encoderDemande, patrimoine, referentiel, listes, reglagesEntite,
+  demandesEntite, encoderDemande, equipes, patrimoine, referentiel, listes, reglagesEntite,
   entites, users, services, parametres, journal,
   help, accessibilite, connexion,
 ];

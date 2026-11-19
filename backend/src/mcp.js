@@ -13,6 +13,8 @@ const S = require('./schemas');
 const users = require('./services/users');
 const messages = require('./services/messages');
 const modeles = require('./services/modeles-reponse');
+const equipes = require('./services/equipes');
+const prestataires = require('./services/prestataires');
 const servicesEntite = require('./services/services');
 const entites = require('./services/entites');
 const rolesUtilisateurs = require('./services/roles-utilisateurs');
@@ -160,6 +162,49 @@ const TOOLS = [
     fr: "Désactive un modèle de réponse avec un motif (responsable) : il n'est plus proposé ; rien n'est supprimé. Deux appels : prepare_deactivate_modele_reponse puis confirm_deactivate_modele_reponse.", nl: 'Deactiveert een antwoordmodel met een reden (verantwoordelijke): het wordt niet meer voorgesteld; niets wordt verwijderd. Twee oproepen: prepare_deactivate_modele_reponse en dan confirm_deactivate_modele_reponse.',
     summary: (u, a) => modeles.resumeDesactivation(u, a.id, a.motif),
     run: (u, a) => modeles.deactivate(u, a.id, a.motif, 'mcp') },
+  // Équipes et ouvriers (0.19.0, étape 15, point 2 ; ROL-05, DV-28).
+  { name: 'list_equipes', route: 'GET /api/equipes', read: true, schema: S.equipeList,
+    fr: "Équipes du service technique de l'entité active (gestionnaire, responsable, chef d'équipe) : code, nom FR et NL, chef, membres (identifiant, prénom, nom), horaire (jour 1 = lundi … 7 = dimanche, début et fin « HH:MM » ; vide : horaire de l'entité), actif ou non, trace.", nl: 'Ploegen van de technische dienst van de actieve entiteit (beheerder, verantwoordelijke, ploegbaas): code, naam FR en NL, ploegbaas, leden (id, voornaam, naam), uurrooster (dag 1 = maandag … 7 = zondag, begin en einde « HH:MM »; leeg: uurrooster van de entiteit), actief of niet, spoor.',
+    run: (u, a) => { const { rows, pagination } = equipes.list(u, { limit: 50, offset: 0, ...a }); return { rows, pagination }; } },
+  { name: 'get_equipe', route: 'GET /api/equipes/:id', read: true, schema: idSchema,
+    fr: "Lit une équipe de l'entité active, avec ses membres et son horaire.", nl: 'Leest een ploeg van de actieve entiteit, met haar leden en haar uurrooster.',
+    run: (u, a) => equipes.get(u, a.id) },
+  { name: 'create_equipe', route: 'POST /api/equipes', schema: S.equipeCreate,
+    fr: "Crée une équipe (responsable) : code unique dans l'entité, nom_fr et nom_nl, chef_id facultatif (compte qui a le rôle de chef d'équipe dans l'entité), membres (identifiants d'ouvriers de l'entité : list_ouvriers), horaire facultatif (un créneau par jour au plus).", nl: 'Maakt een ploeg aan (verantwoordelijke): unieke code in de entiteit, nom_fr en nom_nl, facultatieve chef_id (account met de rol van ploegbaas in de entiteit), leden (id’s van arbeiders van de entiteit: list_ouvriers), facultatief uurrooster (hoogstens één tijdvak per dag).',
+    run: (u, a) => equipes.create(u, a, 'mcp') },
+  { name: 'update_equipe', route: 'PUT /api/equipes/:id', schema: withId(S.equipeUpdate),
+    fr: "Modifie une équipe (responsable) ; membres et horaire envoyés remplacent les précédents en entier (horaire [] : horaire de l'entité) ; is_active = 1 la réactive.", nl: 'Wijzigt een ploeg (verantwoordelijke); verzonden leden en uurrooster vervangen de vorige volledig (uurrooster []: uurrooster van de entiteit); is_active = 1 heractiveert ze.',
+    run: (u, { id, ...a }) => equipes.update(u, id, a, 'mcp') },
+  { name: 'deactivate_equipe', route: 'DELETE /api/equipes/:id', confirm: true, schema: withId(S.equipeDeactivate),
+    fr: "Désactive une équipe avec un motif (responsable) : elle garde ses membres et son horaire ; rien n'est supprimé. Deux appels : prepare_deactivate_equipe puis confirm_deactivate_equipe.", nl: 'Deactiveert een ploeg met een reden (verantwoordelijke): ze behoudt haar leden en haar uurrooster; niets wordt verwijderd. Twee oproepen: prepare_deactivate_equipe en dan confirm_deactivate_equipe.',
+    summary: (u, a) => equipes.resumeDesactivation(u, a.id, a.motif),
+    run: (u, a) => equipes.deactivate(u, a.id, a.motif, 'mcp') },
+  { name: 'list_ouvriers', route: 'GET /api/ouvriers', read: true, schema: S.ouvrierList,
+    fr: "Ouvriers de l'entité active (comptes qui ont le rôle d'ouvrier ou de chef d'équipe) : prénom, nom, corps de métier, compétences, équipes, équipes dirigées, peut_diriger (1 : peut être chef d'une équipe) ; filtres equipe_id, corps_metier_id, competence_id (valeurs de list_listes_valeurs).", nl: 'Arbeiders van de actieve entiteit (accounts met de rol van arbeider of ploegbaas): voornaam, naam, vakgebied, bekwaamheden, ploegen, geleide ploegen, peut_diriger (1: kan ploegbaas zijn); filters equipe_id, corps_metier_id, competence_id (waarden van list_listes_valeurs).',
+    run: (u, a) => { const { rows, pagination } = equipes.listOuvriers(u, { limit: 50, offset: 0, ...a }); return { rows, pagination }; } },
+  { name: 'get_ouvrier', route: 'GET /api/ouvriers/:id', read: true, schema: idSchema,
+    fr: "Lit le profil d'un ouvrier de l'entité active.", nl: 'Leest het profiel van een arbeider van de actieve entiteit.',
+    run: (u, a) => equipes.getOuvrier(u, a.id) },
+  { name: 'update_ouvrier', route: 'PUT /api/ouvriers/:id', schema: withId(S.ouvrierUpdate),
+    fr: "Règle le profil d'un ouvrier (responsable) : corps_metier_id (valeur active de la liste corps_metier, null pour retirer) et competences (liste complète d'identifiants de la liste competence).", nl: 'Stelt het profiel van een arbeider in (verantwoordelijke): corps_metier_id (actieve waarde van de lijst corps_metier, null om te verwijderen) en competences (volledige lijst van id’s van de lijst competence).',
+    run: (u, { id, ...a }) => equipes.updateOuvrier(u, id, a, 'mcp') },
+  // Prestataires externes (0.19.0, point 3 ; REF-07, EXT-03).
+  { name: 'list_prestataires', route: 'GET /api/prestataires', read: true, schema: S.prestataireList,
+    fr: "Prestataires externes de l'entité active (gestionnaire, responsable) : nom, numéro d'entreprise, langue de correspondance, contact, téléphone, courriel, adresse, référence du marché ou du contrat (texte libre), corps de métier ; filtre corps_metier_id (list_listes_valeurs, liste corps_metier).", nl: 'Externe aannemers van de actieve entiteit (beheerder, verantwoordelijke): naam, ondernemingsnummer, correspondentietaal, contactpersoon, telefoon, e-mail, adres, referentie van de opdracht of het contract (vrije tekst), vakgebieden; filter corps_metier_id (list_listes_valeurs, lijst corps_metier).',
+    run: (u, a) => { const { rows, pagination } = prestataires.list(u, { limit: 50, offset: 0, ...a }); return { rows, pagination }; } },
+  { name: 'get_prestataire', route: 'GET /api/prestataires/:id', read: true, schema: idSchema,
+    fr: "Lit un prestataire de l'entité active.", nl: 'Leest een aannemer van de actieve entiteit.',
+    run: (u, a) => prestataires.get(u, a.id) },
+  { name: 'create_prestataire', route: 'POST /api/prestataires', schema: S.prestataireCreate,
+    fr: "Ajoute un prestataire (responsable) : nom ; numéro d'entreprise belge facultatif (contrôlé, unique dans l'entité) ; langue fr ou nl ; coordonnées ; reference_marche libre ; corps_metier (identifiants de la liste corps_metier).", nl: 'Voegt een aannemer toe (verantwoordelijke): naam; facultatief Belgisch ondernemingsnummer (gecontroleerd, uniek in de entiteit); taal fr of nl; contactgegevens; vrije reference_marche; corps_metier (id’s van de lijst corps_metier).',
+    run: (u, a) => prestataires.create(u, a, 'mcp') },
+  { name: 'update_prestataire', route: 'PUT /api/prestataires/:id', schema: withId(S.prestataireUpdate),
+    fr: 'Modifie un prestataire (responsable) ; corps_metier envoyé remplace la liste ; is_active = 1 le réactive.', nl: 'Wijzigt een aannemer (verantwoordelijke); verzonden corps_metier vervangt de lijst; is_active = 1 heractiveert hem.',
+    run: (u, { id, ...a }) => prestataires.update(u, id, a, 'mcp') },
+  { name: 'deactivate_prestataire', route: 'DELETE /api/prestataires/:id', confirm: true, schema: withId(S.prestataireDeactivate),
+    fr: "Désactive un prestataire avec un motif (responsable) : il n'est plus proposé ; rien n'est supprimé. Deux appels : prepare_deactivate_prestataire puis confirm_deactivate_prestataire.", nl: 'Deactiveert een aannemer met een reden (verantwoordelijke): hij wordt niet meer voorgesteld; niets wordt verwijderd. Twee oproepen: prepare_deactivate_prestataire en dan confirm_deactivate_prestataire.',
+    summary: (u, a) => prestataires.resumeDesactivation(u, a.id, a.motif),
+    run: (u, a) => prestataires.deactivate(u, a.id, a.motif, 'mcp') },
   { name: 'list_etats_demande', route: 'GET /api/etats-demande', read: true, schema: { type: 'object', properties: {}, additionalProperties: false },
     fr: "États d'une demande dans l'entité active, dans l'ordre du cycle : code, libellé vu par le demandeur et libellé envoyé à la GRC en FR et en NL (réglés par l'entité), libellés livrés, état fermé ou non, compte ou non pour le retard, suspension du délai.", nl: 'Statussen van een aanvraag in de actieve entiteit, in de volgorde van de cyclus: code, benaming voor de aanvrager en benaming voor het KRM in het FR en het NL (ingesteld door de entiteit), geleverde benamingen, gesloten status of niet, telt al dan niet voor de vertraging, opschorting van de termijn.',
     run: (u) => cycle.listEtats(u) },

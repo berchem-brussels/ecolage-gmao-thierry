@@ -1,6 +1,26 @@
 # Journal des versions
 
-Version de l'application : **0.18.0** · Mis à jour le 18/11/2026
+Version de l'application : **0.19.0** · Mis à jour le 18/11/2026
+
+## 0.19.0 (18/11/2026)
+
+Étape 15 : équipes, corps de métier, compétences, prestataires (ROL-05, REF-06, REF-07, GES-04, EXT-03 ; DV-153 à DV-157), avec les deux défauts de la recette de la 0.18.0 (DV-152). Migration `016_equipes_prestataires`. Aucune dépendance nouvelle. Permissions nouvelles : `equipes:lire`, `equipes:gerer`, `equipes:diriger`, `prestataires:lire`, `prestataires:gerer`, `interventions:realiser`.
+
+- Point 0 (DV-152) : l'export Excel des tickets ne donne plus d'erreur 500 (`exports.js` ne met en forme la colonne « Description » que si la liste l'a) ; un test exporte chaque liste dans chaque format. Visite guidée sur téléphone : compteur « n / total » au lieu des points, libellés courts (« Précédent », « Suivant », « Terminer »), panneau à 12 px des bords sous 544 px, boutons sur une ligne. `mobile:check` mesure chaque étape de la visite, signale un écran renvoyé ailleurs faute de droit et accepte un filtre `MOBILE_ROUTES`.
+- Corps de métier et compétences (DV-154) : listes de valeurs `corps_metier` (onze valeurs) et `competence` (onze : BA4, BA5, VCA, travail en hauteur, nacelle, chariot, permis C, soudure, tronçonneuse, phytolicence, secourisme), livrées à chaque entité, réglées par le responsable dans Listes de valeurs.
+- Équipes (DV-155, `services/equipes.js`, `/api/equipes`, `/api/ouvriers`) : code unique dans l'entité, noms FR et NL, chef (rôle « Chef d'équipe », `CHEF_SANS_ROLE`), membres (« Ouvrier » ou « Chef d'équipe », `MEMBRE_SANS_ROLE`), horaire de l'entité ou propre, un créneau par jour du lundi au dimanche (`HORAIRE_INVALIDE`) ; désactivation avec motif et réactivation. Profil des ouvriers : corps de métier, compétences, équipes, filtre par équipe. L'horaire d'une équipe ne change pas le calcul des délais.
+- Prestataires (DV-156, `services/prestataires.js`, `/api/prestataires`) : nom, numéro d'entreprise facultatif (dix chiffres, 0 ou 1 en tête, clé modulo 97, `NUMERO_ENTREPRISE_INVALIDE` ; unique dans l'entité, `PRESTATAIRE_EXISTE`), langue, corps de métier, référence du marché ou du contrat, contact ; recherche, filtre par corps de métier ; désactivation avec motif.
+- Écran « Équipes et prestataires » (`EquipesPage.tsx`, `PrestatairesOnglet.tsx`), onglets Équipes, Ouvriers, Prestataires ; entrée du menu pour qui a `equipes:lire`.
+- Corps de métier des catégories et des demandes (DV-157) : `categories.corps_metier_id` (une nature hérite de son domaine, `corps_metier_effectif_id`), corps livrés par `config/categories.json`, complétés par la migration pour les catégories livrées jamais modifiées ; `demandes.corps_metier_id` choisi à la qualification (proposé par la catégorie, gardé ou changé), jamais rendu au demandeur ; colonne « Corps de métier » de Catégories et délais en mode Complet.
+- Défaut ancien corrigé : la fiche d'une catégorie débordait à 320 px (étiquette du circuit de validation sur une ligne).
+- Journal d'audit : `equipe.create`, `equipe.update` (membres ajoutés et retirés, horaire avant et après), `equipe.deactivate`, `ouvrier.update`, `prestataire.*` ; chef, membres, corps de métier et compétences nommés à la lecture ; coordonnées du contact jamais au journal à la création.
+- MCP : treize outils (`list_equipes`, `get_equipe`, `create_equipe`, `update_equipe`, `deactivate_equipe`, `list_ouvriers`, `get_ouvrier`, `update_ouvrier`, `list_prestataires`, `get_prestataire`, `create_prestataire`, `update_prestataire`, `deactivate_prestataire`) ; `qualifier_demande` et les outils des catégories portent le corps de métier ; 167 outils.
+- Données de démonstration : deux ouvriers de plus par entité (25 comptes), deux équipes (Bâtiment ; Propreté du week-end, samedi et dimanche de 07:00 à 13:00), profils des ouvriers, deux prestataires fictifs sans numéro d'entreprise par entité ; `--retirer` les désactive.
+- Aide : fiche « Équipes et prestataires », Listes de valeurs, Catégories et délais, Demandes de l'entité (qualification, corps de métier) ; question 14 corrigée ; trois intentions de l'assistant ; captures `equipes-overview`, `equipes-ouvriers`, `equipes-prestataires` (nouvelles), `listes-overview`, `referentiel-overview`, `demandes-entite-qualifier` refaites en FR et NL (36 par langue).
+- `mobile:check` : huit écrans de plus (57). `recette.sh` : contrôle 3 (capture `equipes-overview` en néerlandais), contrôle 5 (`016_equipes_prestataires`, sept tables, corps de métier livrés), contrôle 6 (équipes, ouvriers et prestataires refusés sans session).
+- Documentation : `docs/fonctionnel/equipes-prestataires.md` (registre RGPD) ; règles ajoutées à `referentiel-demandes.md` et `service-technique.md` ; sections 0.19.0 d'ARCHITECTURE, EXPLOITATION, MCP, SECURITE et APRES-DEPLOIEMENT (FR, NL, EN).
+- Note de version : quatre lignes (tous ; `equipes:lire` ; `prestataires:lire` ; `demandes:qualifier`).
+- Tests : serveur 637 (605), interface 359 (349) et un contrôle des captures ; dix-neuf preuves d'échec dans `docs/fr/SECURITE.md`.
 
 ## 0.18.0 (18/11/2026)
 

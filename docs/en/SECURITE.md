@@ -2,6 +2,10 @@
 
 The French text (`docs/fr/SECURITE.md`) prevails and holds the full grid per version.
 
+## 0.19.0 (18/11/2026)
+
+Fixes from the 0.18.0 acceptance test; trades and skills; teams, members and schedules; worker profiles; external contractors; trade of categories and at qualification. Tested: a team, contractor or worker of another entity refused (403, 404 for a worker not in the entity), through the API and MCP; reading and writing per the new permissions; team leader and members with the right role (409 otherwise); schedule (one slot per day, start before end); company number (modulo 97 check digits, unique in the entity); values from the entity's lists only; a request's trade hidden from the requester; audit log with ids named on reading; migration on a 0.18.0 database. Nineteen protections removed one by one: at least one failing test each (`docs/fr/SECURITE.md`). `npm audit`: unchanged (E-50, E-09).
+
 ## 0.18.0 (18/11/2026)
 
 Global search, Excel and CSV export, assistant, guided tour. Exports through the existing list functions: entity BB exports nothing of AA, a requester without `demandes:entite` 403, no session 401, unknown parameter 400; CSV formulas neutralised, Excel written as text; 5,000-row ceiling checked before loading; log without content; file never kept. Assistant local, with no language model or outgoing call; offers only screens the person can open. No new MCP tool. Server `npm audit`: 2 moderate (`uuid` under `exceljs`, E-50). Proof of failure: fourteen protections removed one at a time, each makes at least one test fail (details in the French text).

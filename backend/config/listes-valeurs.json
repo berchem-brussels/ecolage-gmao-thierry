@@ -1,5 +1,5 @@
 {
-  "_description": "Catalogue des listes de valeurs réglables dans l'application (cahier des charges REF-08, LNG-02 ; standard v3.2, section 11.3, niveau Métier). Chaque liste existe une fois par entité. Les valeurs « defauts » sont créées pour chaque entité active au démarrage du serveur si leur code manque ; une valeur désactivée n'est jamais recréée. « gestion » : permission qui écrit dans la liste. 0.14.0 : motifs d'attente, motifs de refus et causes de panne du cycle de vie d'une demande.",
+  "_description": "Catalogue des listes de valeurs réglables dans l'application (cahier des charges REF-08, LNG-02 ; standard v3.2, section 11.3, niveau Métier). Chaque liste existe une fois par entité. Les valeurs « defauts » sont créées pour chaque entité active au démarrage du serveur si leur code manque ; une valeur désactivée n'est jamais recréée. « gestion » : permission qui écrit dans la liste. 0.14.0 : motifs d'attente, motifs de refus et causes de panne du cycle de vie d'une demande. 0.19.0 (étape 15, ROL-05) : corps de métier et compétences des ouvriers, réglés par le responsable ; valeurs livrées en attendant l'atelier (DV-154), affectées aux ouvriers avec les équipes.",
   "listes": {
     "type_lieu": {
       "label_fr": "Types de lieux",
@@ -53,6 +53,42 @@
         { "code": "intemperies", "libelle_fr": "Intempéries", "libelle_nl": "Slecht weer" },
         { "code": "amenagement", "libelle_fr": "Sans panne (aménagement, demande de service)", "libelle_nl": "Zonder defect (inrichting, dienstverzoek)" },
         { "code": "inconnue", "libelle_fr": "Cause inconnue", "libelle_nl": "Onbekende oorzaak" }
+      ]
+    },
+    "corps_metier": {
+      "label_fr": "Corps de métier",
+      "label_nl": "Vakgebieden",
+      "gestion": "listes:gerer",
+      "defauts": [
+        { "code": "electricite", "libelle_fr": "Électricité", "libelle_nl": "Elektriciteit" },
+        { "code": "plomberie", "libelle_fr": "Plomberie et sanitaires", "libelle_nl": "Loodgieterij en sanitair" },
+        { "code": "chauffage", "libelle_fr": "Chauffage et ventilation", "libelle_nl": "Verwarming en ventilatie" },
+        { "code": "menuiserie", "libelle_fr": "Menuiserie", "libelle_nl": "Schrijnwerkerij" },
+        { "code": "maconnerie", "libelle_fr": "Maçonnerie et carrelage", "libelle_nl": "Metsel- en tegelwerk" },
+        { "code": "peinture", "libelle_fr": "Peinture", "libelle_nl": "Schilderwerk" },
+        { "code": "serrurerie", "libelle_fr": "Serrurerie", "libelle_nl": "Slotenmakerij" },
+        { "code": "espaces_verts", "libelle_fr": "Espaces verts", "libelle_nl": "Groenvoorziening" },
+        { "code": "proprete", "libelle_fr": "Propreté", "libelle_nl": "Netheid" },
+        { "code": "manutention", "libelle_fr": "Manutention et déménagement", "libelle_nl": "Behandeling en verhuizing" },
+        { "code": "polyvalent", "libelle_fr": "Polyvalent", "libelle_nl": "Polyvalent" }
+      ]
+    },
+    "competence": {
+      "label_fr": "Compétences",
+      "label_nl": "Bekwaamheden",
+      "gestion": "listes:gerer",
+      "defauts": [
+        { "code": "ba4", "libelle_fr": "BA4 : personne avertie (électricité)", "libelle_nl": "BA4: gewaarschuwd persoon (elektriciteit)" },
+        { "code": "ba5", "libelle_fr": "BA5 : personne qualifiée (électricité)", "libelle_nl": "BA5: vakbekwaam persoon (elektriciteit)" },
+        { "code": "vca", "libelle_fr": "VCA (sécurité sur chantier)", "libelle_nl": "VCA (veiligheid op de werf)" },
+        { "code": "hauteur", "libelle_fr": "Travail en hauteur", "libelle_nl": "Werken op hoogte" },
+        { "code": "nacelle", "libelle_fr": "Nacelle élévatrice", "libelle_nl": "Hoogwerker" },
+        { "code": "chariot", "libelle_fr": "Chariot élévateur", "libelle_nl": "Heftruck" },
+        { "code": "permis_c", "libelle_fr": "Permis C (camion)", "libelle_nl": "Rijbewijs C (vrachtwagen)" },
+        { "code": "soudure", "libelle_fr": "Soudure", "libelle_nl": "Lassen" },
+        { "code": "tronconneuse", "libelle_fr": "Tronçonneuse", "libelle_nl": "Kettingzaag" },
+        { "code": "phytolicence", "libelle_fr": "Phytolicence", "libelle_nl": "Fytolicentie" },
+        { "code": "secourisme", "libelle_fr": "Secourisme", "libelle_nl": "Eerste hulp" }
       ]
     }
   }

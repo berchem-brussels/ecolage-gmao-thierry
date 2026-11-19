@@ -39,6 +39,10 @@ const arbreCategories = { total: 4, domaines: [
   cat(10, null, 'Électricité et éclairage', 'Elektriciteit en verlichting', 'eclair', [cat(11, 10, 'Lampe ou éclairage en panne', 'Lamp of verlichting defect', 'ampoule')]),
   cat(20, null, 'Divers', 'Diversen', 'autre', []),
 ] };
+// 0.19.0 (REF-06, GES-04) : corps de métier en vigueur des catégories (la nature 11 prend celui de son domaine).
+Object.assign(arbreCategories.domaines[0], { corps_metier_effectif_id: 71 });
+Object.assign((arbreCategories.domaines[0] as { natures: Record<string, unknown>[] }).natures[0], { corps_metier_id: null, corps_metier_effectif_id: 71 });
+Object.assign(arbreCategories.domaines[1], { corps_metier_effectif_id: 72 });
 const demande = (id: number, numero: string, etat: string, extra: Record<string, unknown> = {}) => ({
   id, entite_id: 1, numero, annee: 2026, sequence: id, description: 'La lampe du bureau 12 ne s’allume plus.', langue: 'fr', etat,
   ouverte: ['cloturee', 'annulee', 'refusee'].includes(etat) ? 0 : 1, priorite: 'P3', canal: 'ecran',
@@ -93,6 +97,7 @@ const valeursData = [
   valeur(41, 'motif_attente', 'piece', 'Pièce à commander', 'Onderdeel te bestellen'), valeur(42, 'motif_attente', 'acces', 'Accès impossible', 'Toegang onmogelijk'),
   valeur(43, 'motif_attente', 'budget', 'Budget à obtenir', 'Budget te verkrijgen', 0),
   valeur(51, 'cause_panne', 'usure', 'Usure normale', 'Normale slijtage'), valeur(61, 'motif_refus', 'doublon', 'Déjà signalé dans une autre demande', 'Al gemeld in een andere aanvraag'),
+  valeur(71, 'corps_metier', 'electricite', 'Électricité', 'Elektriciteit'), valeur(72, 'corps_metier', 'polyvalent', 'Polyvalent', 'Polyvalent'),
 ];
 // 0.9.0 : tableau de bord, vues enregistrées et priorités de l'entité.
 const BORD = { a_qualifier: 4, en_retard: 2, p1_p2: 1, echeance_proche: 3, limite_proche: '2026-11-04 16:00:00', jours_proches: 2, attente_longue: 6, jours_attente: 8, a_cloturer: 5, messages_a_lire: 3, mentions: 1 };
@@ -1077,6 +1082,8 @@ describe('service technique (0.9.0, GES-01, GES-02, GES-04, PRI-01, PRI-03)', ()
       expect(await within(fiche).findByText('Échéances')).toBeInTheDocument();
       fireEvent.click(await screen.findByRole('button', { name: 'Qualifier' }));
       expect(await screen.findByText(/Priorité proposée : P3/)).toBeInTheDocument();
+      // 0.19.0 (GES-04) : corps de métier proposé par la catégorie (celui du domaine pour cette nature).
+      expect(await screen.findByText('Proposé par la catégorie : Électricité')).toBeInTheDocument();
       fireEvent.click(await screen.findByText('P2 · Urgente'));
       expect(await screen.findByLabelText(/Motif du changement de priorité/)).toBeInTheDocument();
       fireEvent.change(screen.getByLabelText(/Consignes à l’ouvrier|Consignes à l'ouvrier/), { target: { value: 'Prendre l’échelle.' } });
@@ -1087,7 +1094,7 @@ describe('service technique (0.9.0, GES-01, GES-02, GES-04, PRI-01, PRI-03)', ()
       fireEvent.click(screen.getAllByRole('button', { name: 'Qualifier' }).slice(-1)[0]);
       await waitFor(() => expect(posts.some((p) => p.url === '/api/demandes/2/qualifier')).toBe(true));
       expect(posts.find((p) => p.url === '/api/demandes/2/qualifier')!.body).toEqual({
-        categorie_id: 11, lieu_id: 3, priorite: 'P2', motif_priorite: 'Classe occupée', duree_estimee_minutes: null,
+        categorie_id: 11, lieu_id: 3, priorite: 'P2', corps_metier_id: 71, motif_priorite: 'Classe occupée', duree_estimee_minutes: null,
         consignes: 'Prendre l’échelle.', photos_visibles: 1, date_convenue: null,
       });
     } finally { remettre(); }

@@ -4,14 +4,15 @@
  * obligatoire quand la priorité diffère de la proposition, lieu précisé (même choix que le formulaire de demande),
  * durée estimée, date convenue pour une priorité sans délai de fin, consignes à l'ouvrier, photos du service visibles
  * ou non par le demandeur. Le serveur refait tous les contrôles (services/qualification.js) ; un refus s'affiche et la
- * saisie reste (ERG-09). Le corps de métier et les tâches arrivent aux étapes 15 et 21. Pas de compteur de caractères
+ * saisie reste (ERG-09). 0.19.0 (GES-04, REF-06) : corps de métier, proposé par la catégorie et changé avec elle tant
+ * que la personne suit la proposition ; vide : aucun. Les tâches arrivent à l'étape 21. Pas de compteur de caractères
  * sous les zones de texte : il recouvrirait l'explication (même choix que les Réglages de l'entité, 0.7.0).
  */
 import { useEffect, useMemo, useState } from 'react';
-import { Alert, Button, DatePicker, Form, Input, InputNumber, Radio, Space, Switch, TreeSelect, Typography, message } from 'antd';
+import { Alert, Button, DatePicker, Form, Input, InputNumber, Radio, Select, Space, Switch, TreeSelect, Typography, message } from 'antd';
 import PhotoLieu from './PhotoLieu';
 import dayjs, { type Dayjs } from 'dayjs';
-import api, { ApiError } from '../../api';
+import api, { ApiError, qs } from '../../api';
 import { useI18n } from '../../contexts/I18nContext';
 import type { ArbreCategories, Categorie, PrioriteFiche } from '../../referentiel';
 import { type Demande, type LieuChoisi } from '../../demandes';
@@ -21,7 +22,8 @@ import { obligatoire } from '../../validation';
 /** Rôle ARIA du groupe : Form.Item y pose aria-required, permis seulement sur un radiogroup (axe-core). */
 const GROUPE_RADIO = { role: 'radiogroup' } as Record<string, string>;
 
-interface Valeurs { priorite: string; motif_priorite?: string; duree_heures?: number | null; consignes?: string; photos_visibles: boolean; date_convenue?: Dayjs | null }
+interface ValeurListe { id: number; libelle_fr: string; libelle_nl: string; is_active: number }
+interface Valeurs { corps_metier_id?: number | null; priorite: string; motif_priorite?: string; duree_heures?: number | null; consignes?: string; photos_visibles: boolean; date_convenue?: Dayjs | null }
 
 export default function QualificationForm({ d, onDone, onCancel }: { d: Demande; onDone: (d: Demande) => void; onCancel: () => void }) {
   const { t, lang, hint } = useI18n();
@@ -34,7 +36,9 @@ export default function QualificationForm({ d, onDone, onCancel }: { d: Demande;
   const [erreur, setErreur] = useState<string | null>(null);
   const priorite = Form.useWatch('priorite', form);
 
+  const [corpsListe, setCorpsListe] = useState<ValeurListe[]>([]);
   useEffect(() => {
+    api.page<ValeurListe>(`/listes-valeurs${qs({ liste: 'corps_metier', limit: 200 })}`).then((r) => setCorpsListe(r.data)).catch(() => setCorpsListe([]));
     api.get<ArbreCategories>('/categories/arbre').then((r) => setArbre(r.domaines)).catch(() => setArbre([]));
     api.page<PrioriteFiche>('/priorites').then((r) => setPriorites(r.data)).catch(() => setPriorites([]));
   }, []);
@@ -53,9 +57,17 @@ export default function QualificationForm({ d, onDone, onCancel }: { d: Demande;
   const prio = priorites.find((p) => p.code === priorite);
   const sansFin = !!prio && prio.fin === null;
 
+  // Corps de métier proposé : celui de la catégorie (0.19.0). Une demande jamais qualifiée le reçoit quand l'arbre arrive.
+  const corpsPropose = cat?.corps_metier_effectif_id ?? null;
+  useEffect(() => {
+    if (arbre && d.corps_metier_id == null && !form.isFieldTouched('corps_metier_id') && d.etat === 'a_qualifier') form.setFieldsValue({ corps_metier_id: corpsPropose });
+  }, [arbre]);
+
   const choisirCategorie = (id: number) => {
     setCategorieId(id);
     const c = categories.find((x) => x.id === id);
+    // Tant que la personne suit la proposition, le corps de métier suit la nouvelle catégorie.
+    if (c && (form.getFieldValue('corps_metier_id') ?? null) === corpsPropose) form.setFieldsValue({ corps_metier_id: c.corps_metier_effectif_id ?? null });
     // Tant que la personne suit la proposition, la priorité suit la nouvelle catégorie.
     const actuelle = form.getFieldValue('priorite');
     if (c && d.danger !== 1 && actuelle === proposee) form.setFieldsValue({ priorite: c.priorite_effective });
@@ -67,7 +79,7 @@ export default function QualificationForm({ d, onDone, onCancel }: { d: Demande;
     setErreur(null);
     try {
       const corps: Record<string, unknown> = {
-        categorie_id: categorieId, lieu_id: lieu.id, priorite: v.priorite,
+        categorie_id: categorieId, lieu_id: lieu.id, priorite: v.priorite, corps_metier_id: v.corps_metier_id ?? null,
         motif_priorite: motifRequis ? v.motif_priorite?.trim() || null : null,
         duree_estimee_minutes: v.duree_heures ? Math.round(v.duree_heures * 60) : null,
         consignes: v.consignes?.trim() || null,
@@ -85,7 +97,7 @@ export default function QualificationForm({ d, onDone, onCancel }: { d: Demande;
   return (
     <Form<Valeurs> form={form} layout="vertical" onFinish={envoyer} requiredMark="optional"
       initialValues={{
-        priorite: d.priorite || proposee || 'P3', motif_priorite: d.motif_priorite || '', consignes: d.consignes || '',
+        corps_metier_id: d.corps_metier_id ?? null, priorite: d.priorite || proposee || 'P3', motif_priorite: d.motif_priorite || '', consignes: d.consignes || '',
         duree_heures: d.duree_estimee_minutes ? d.duree_estimee_minutes / 60 : null, photos_visibles: d.photos_visibles !== 0,
         date_convenue: d.date_convenue ? dayjs(d.date_convenue) : null,
       }}>
@@ -97,9 +109,14 @@ export default function QualificationForm({ d, onDone, onCancel }: { d: Demande;
           value={categorieId} onChange={choisirCategorie} treeData={arbreSelect} loading={arbre === null} style={{ width: '100%' }}
           placeholder={t('qualif.categorie.placeholder')} />
       </Form.Item>
+      <Form.Item name="corps_metier_id" label={t('qualif.corps')} tooltip={hint('qualif.corps')}
+        extra={corpsPropose ? `${t('qualif.corps.propose')} ${lbl(corpsListe.find((x) => x.id === corpsPropose) || { libelle_fr: '', libelle_nl: '' })}` : t('qualif.corps.aucun_propose')}>
+        <Select<number> className="qualif-corps" allowClear showSearch optionFilterProp="label" aria-label={t('qualif.corps')} placeholder={t('qualif.corps.aucun')}
+          options={corpsListe.filter((v) => v.is_active || v.id === d.corps_metier_id).map((v) => ({ value: v.id, label: lbl(v) }))} />
+      </Form.Item>
       <Form.Item name="priorite" label={t('qualif.priorite')} tooltip={hint('qualif.priorite')} rules={[obligatoire(t)]}
         extra={proposee ? `${t('qualif.proposee')} ${proposee}${d.danger === 1 ? ` (${t('qualif.proposee.danger')})` : ''}` : undefined}>
-        <Radio.Group {...GROUPE_RADIO} optionType="button" buttonStyle="solid" aria-label={t('qualif.priorite')}
+        <Radio.Group {...GROUPE_RADIO} className="qualif-priorite" optionType="button" buttonStyle="solid" aria-label={t('qualif.priorite')}
           options={(priorites.length ? priorites.map((p) => p.code) : ['P1', 'P2', 'P3', 'P4']).map((code) => {
             const p = priorites.find((x) => x.code === code);
             return { value: code, label: p ? `${code} · ${lbl(p)}` : code };

@@ -6,7 +6,7 @@ const topic: HelpTopic = {
   id: 'demandes-entite', path: '/demandes-entite', group: 'service', titleKey: 'nav.demandes.entite', roles: ['gestionnaire', 'responsable'],
   acces: { module: 'demandes', permission: 'demandes:entite' },
   purpose: {
-    fr: "L'écran de travail du service technique : toutes les demandes de l'entité active, le tableau de bord, et la qualification de chaque demande (catégorie, lieu, priorité, consignes).",
+    fr: "L'écran de travail du service technique : toutes les demandes de l'entité active, le tableau de bord, et la qualification de chaque demande (catégorie, corps de métier, lieu, priorité, consignes).",
     nl: 'Het werkscherm van de technische dienst: alle aanvragen van de actieve entiteit, het dashboard, en de kwalificatie van elke aanvraag (categorie, plaats, prioriteit, instructies).',
   },
   layout: [
@@ -45,6 +45,7 @@ const topic: HelpTopic = {
       steps: [
         { fr: 'Ouvrez la fiche et cliquez sur {{qualif.envoyer}}.', nl: 'Open de fiche en klik op {{qualif.envoyer}}.' },
         { fr: 'Vérifiez la catégorie et le lieu, avec la photo de l’endroit en tête du formulaire ; corrigez-les si le demandeur s’est trompé.', nl: 'Controleer de categorie en de plaats, met de foto van de plek bovenaan het formulier; verbeter ze als de aanvrager zich vergiste.' },
+        { fr: 'Gardez le {{qualif.corps}} proposé par la catégorie, ou choisissez-en un autre.', nl: 'Behoud het {{qualif.corps}} dat de categorie voorstelt, of kies een ander.' },
         { fr: 'Confirmez la priorité proposée, ou changez-la et écrivez {{qualif.motif}}.', nl: 'Bevestig de voorgestelde prioriteit, of wijzig ze en vul {{qualif.motif}} in.' },
         { fr: 'Estimez la durée et écrivez {{qualif.consignes}}, puis cliquez sur {{qualif.enregistrer}}.', nl: 'Schat de duur en vul {{qualif.consignes}} in, en klik daarna op {{qualif.enregistrer}}.' },
       ],
@@ -163,7 +164,9 @@ const topic: HelpTopic = {
     { id: 'demandes-entite-overview', path: '/demandes-entite', marks: [{ sel: '.bord-compteurs' }, { sel: '.gest-filtres' }, { sel: '.ant-table' }], caption: { fr: "Demandes de l'entité", nl: 'Aanvragen van de entiteit' } },
     { id: 'demandes-entite-fil', path: '/demandes-entite', actions: [{ clickSel: '.ant-table-row .ant-btn-link' }, { wait: 1000 }, { scrollSel: 'section.fil' }, { clickSel: '.fil-saisie .ant-radio-button-wrapper:nth-child(2)' }, { wait: 600 }, { scrollSel: '.fil-saisie' }],
       clip: 'drawer', marks: [{ sel: '.fil-bulle-interne' }, { sel: '.fil-saisie .ant-radio-group' }, { sel: '.fil-saisie .ant-select' }], caption: { fr: 'Note interne et collègue prévenu', nl: 'Interne nota en verwittigde collega' } },
-    { id: 'demandes-entite-qualifier', path: '/demandes-entite', actions: [{ clickSel: '.ant-table-row .ant-btn-link' }, { wait: 600 }], clip: 'drawer', caption: { fr: 'Fiche d’une demande : passages permis et historique', nl: 'Fiche van een aanvraag: toegestane overgangen en historiek' } },
+    // 0.19.0 (point 5) : le formulaire de qualification lui-même (corps de métier proposé, priorité), d'une demande « À qualifier ».
+    { id: 'demandes-entite-qualifier', path: '/demandes-entite?etats=a_qualifier', actions: [{ clickSel: '.ant-table-row .ant-btn-link' }, { wait: 600 }, { click: 'qualif.bouton' }, { wait: 800 }],
+      clip: 'drawer', marks: [{ sel: '.qualif-corps' }, { sel: '.qualif-priorite' }], caption: { fr: 'Qualifier la demande : corps de métier proposé et priorité', nl: 'De aanvraag kwalificeren: voorgesteld vakgebied en prioriteit' } },
     // 0.18.0 (point 5) : menu « Exporter » ouvert.
     { id: 'demandes-entite-export', path: '/demandes-entite', actions: [{ clickSel: '.bouton-export' }, { wait: 500 }], marks: [{ sel: '.bouton-export' }, { sel: '.ant-dropdown:not(.ant-dropdown-hidden) .ant-dropdown-menu' }], caption: { fr: 'Exporter la liste', nl: 'De lijst exporteren' } },
     // 0.16.0 : colonnes, regrouper, découper (la première carte de la colonne « À qualifier » est ouverte).

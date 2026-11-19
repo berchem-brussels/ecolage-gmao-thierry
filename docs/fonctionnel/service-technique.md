@@ -1,6 +1,6 @@
 # Service technique : tableau de bord, liste, qualification et cycle de vie des demandes
 
-Version 0.16.0 · Fiche fonctionnelle (modèle du standard, section 17.8).
+Version 0.19.0 · Fiche fonctionnelle (modèle du standard, section 17.8).
 
 ## Objet
 
@@ -50,6 +50,7 @@ Donner au gestionnaire technique et au responsable du service technique de chaqu
 | 22 | Découper (0.16.0) : une demande ouverte (sauf « Terminée ») se découpe en une à cinq demandes nouvelles (problème, catégorie et lieu facultatifs), au nom du même demandeur, « À qualifier », délais depuis la réception de l'origine ; l'origine garde son premier problème ; tout ou rien | GES-06, DV-131 |
 | 23 | Colonnes par état (0.16.0) : six colonnes (À qualifier, Qualifiée, En attente, En cours, Travaux terminés, Rouverte), filtres de la liste appliqués, 200 demandes au plus ; une carte ne se déplace que vers un état permis depuis le sien pour la personne ; déplacer ouvre la fiche sur le formulaire du passage, rien ne change sans confirmation ; sur téléphone, une colonne à la fois et le bouton « Déplacer » | GES-03, DV-132 |
 | 24 | Une demande « En validation » attend le chef de service : le service technique la voit, mais ne la qualifie, ne la regroupe ni ne la valide à sa place | DEM-15, DV-128 |
+| 25 | Corps de métier à la qualification (0.19.0) : proposé par la catégorie, gardé, changé ou retiré par le gestionnaire ; il suit un changement de catégorie tant que la proposition est gardée ; interne au service (le demandeur ne le voit pas) ; un défaut désactivé dans la liste n'est pas proposé | GES-04, DV-157 |
 
 ## Écrans
 

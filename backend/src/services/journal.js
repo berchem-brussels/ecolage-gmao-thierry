@@ -69,6 +69,25 @@ const REFERENCES = [
   { chemin: 'apres.valideur_id', type: 'personne', entity: 'service' },
   { chemin: 'avant.suppleant_id', type: 'personne', entity: 'service' },
   { chemin: 'apres.suppleant_id', type: 'personne', entity: 'service' },
+  // 0.19.0 (étape 15) : chef d'une équipe.
+  { chemin: 'chef_id', type: 'personne', entity: 'equipe' },
+  { chemin: 'avant.chef_id', type: 'personne', entity: 'equipe' },
+  { chemin: 'apres.chef_id', type: 'personne', entity: 'equipe' },
+  // 0.19.0 : membres d'une équipe (listes d'identifiants) ; corps de métier et compétences d'un ouvrier.
+  { chemin: 'membres', type: 'personne', entity: 'equipe' },
+  { chemin: 'membres_ajoutes', type: 'personne', entity: 'equipe' },
+  { chemin: 'membres_retires', type: 'personne', entity: 'equipe' },
+  { chemin: 'corps_metier.avant', type: 'valeur', entity: 'ouvrier' },
+  { chemin: 'corps_metier.apres', type: 'valeur', entity: 'ouvrier' },
+  { chemin: 'competences.avant', type: 'valeur', entity: 'ouvrier' },
+  { chemin: 'competences.apres', type: 'valeur', entity: 'ouvrier' },
+  // Point 3 : corps de métier d'un prestataire (à la création, puis avant et après une modification).
+  { chemin: 'corps_metier', type: 'valeur', entity: 'prestataire' },
+  { chemin: 'corps_metier.avant', type: 'valeur', entity: 'prestataire' },
+  { chemin: 'corps_metier.apres', type: 'valeur', entity: 'prestataire' },
+  // Point 4 : corps de métier d'une catégorie et d'une demande qualifiée.
+  { chemin: 'avant.corps_metier_id', type: 'valeur' },
+  { chemin: 'apres.corps_metier_id', type: 'valeur' },
 ];
 const NOMS = {
   lieu: `SELECT l.id, l.code, l.nom_fr, l.nom_nl, e.code AS entite_code FROM lieux l LEFT JOIN entites e ON e.id = l.entite_id
@@ -101,12 +120,18 @@ function nomReglage(ligne) {
 
 const lire = (details, chemin) => chemin.split('.').reduce((o, k) => (o && typeof o === 'object' ? o[k] : undefined), details);
 
-/** Identifiants de lieu et de catégorie désignés par le détail d'une ligne : [{ chemin, type, id }]. */
+/**
+ * Identifiants de lieu et de catégorie désignés par le détail d'une ligne : [{ chemin, type, id }]. 0.19.0 : une liste
+ * d'identifiants (membres, compétences) donne un nom par élément, au chemin « liste.0 », « liste.1 »…
+ */
 function references(ligne) {
   if (!ligne.details || typeof ligne.details !== 'object') return [];
   return REFERENCES
     .filter((r) => (!r.action || r.action === ligne.action) && (!r.entity || r.entity === ligne.entity_type))
-    .map((r) => ({ chemin: r.chemin, type: r.type, id: lire(ligne.details, r.chemin) }))
+    .flatMap((r) => {
+      const v = lire(ligne.details, r.chemin);
+      return Array.isArray(v) ? v.map((id, i) => ({ chemin: `${r.chemin}.${i}`, type: r.type, id })) : [{ chemin: r.chemin, type: r.type, id: v }];
+    })
     .filter((r) => Number.isInteger(r.id) && r.id > 0);
 }
 

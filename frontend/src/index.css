@@ -234,3 +234,12 @@ body.app-dark .fil-bulle-interne { border-color: #ffa940; }
    (bouton « Suivant » hors d'atteinte à 320 px, vu dans WebKit). Il prend au plus la largeur de l'écran moins 24 px. */
 .visite-guidee.ant-tour, .visite-guidee .ant-tour { width: min(520px, calc(100vw - 24px)) !important; max-width: calc(100vw - 24px); }
 .visite-guidee .ant-tour-description { overflow-wrap: anywhere; }
+/* 0.19.0 (point 0, défaut 2 de la recette de la 0.18.0) : le placement d'Ant Design ramène le panneau dans l'écran sans
+   marge (collé au bord droit sur l'étape « Assistant », iPhone). Sous 544 px (520 + 2 × 12), le conteneur prend toute la
+   largeur et garde 12 px de chaque côté au panneau ; la flèche, placée dans le conteneur, vise toujours l'élément. */
+@media (max-width: 544px) {
+  .visite-guidee.ant-tour, .visite-guidee .ant-tour { width: 100vw !important; max-width: 100vw; padding-inline: 12px; box-sizing: border-box; }
+}
+.visite-guidee .ant-tour-footer { flex-wrap: nowrap; gap: 8px; }
+.visite-guidee .ant-tour-buttons { flex-shrink: 0; }
+.visite-compteur { white-space: nowrap; color: var(--app-text-secondary); font-size: 14px; }

@@ -8,7 +8,7 @@
  *   2. Échéance qui compte (DV-89) : la prise en charge tant que la demande est « À qualifier », ensuite la fin.
  *      Une demande est en retard quand cette échéance est passée et qu'elle est encore en cours de traitement
  *      (ni fermée, ni « Travaux terminés »). La suspension pendant « En attente » viendra avec cet état (étape 9).
- *   3. Qualification (GES-04, DV-90) : catégorie, priorité, lieu précisé, durée estimée, consignes à l'ouvrier, photos
+ *   3. Qualification (GES-04, DV-90) : catégorie, corps de métier (0.19.0 : proposé par la catégorie, REF-06), priorité, lieu précisé, durée estimée, consignes à l'ouvrier, photos
  *      du service visibles ou non par le demandeur, date convenue. Permission « demandes:qualifier » (gestionnaire et
  *      responsable). Une demande « À qualifier » passe « Qualifiée » ; une demande « Qualifiée » se qualifie à nouveau
  *      sans changer d'état. Les autres états attendent le cycle de vie (étape 9) : 409 DEMANDE_ETAT.
@@ -225,8 +225,17 @@ function qualifier(user, id, data, channel = 'api') {
     const max = jourBruxelles(new Date(maintenant.getTime() + 2 * 366 * 86400000));
     if (data.date_convenue < auj || data.date_convenue > max) throw new AppError(409, 'DATE_CONVENUE_INVALIDE');
   }
+  // 0.19.0 (GES-04, REF-06) : corps de métier envoyé (null : aucun) ; absent, celui déjà noté, sinon celui de la catégorie.
+  let corps = data.corps_metier_id !== undefined ? data.corps_metier_id : d.corps_metier_id ?? cat.corps_metier_effectif_id ?? null;
+  if (data.corps_metier_id) require('./listes-valeurs').assertUsable(entiteId, 'corps_metier', data.corps_metier_id, d.corps_metier_id);
+  else if (corps && data.corps_metier_id === undefined && corps !== d.corps_metier_id) {
+    // Défaut de la catégorie désactivé entre-temps dans la liste : aucun corps de métier plutôt qu'un refus.
+    const v = db.prepare("SELECT is_active FROM listes_valeurs WHERE id = ? AND entite_id = ? AND liste = 'corps_metier'").get(corps, entiteId);
+    if (!v || !v.is_active) corps = null;
+  }
   const champs = {
     categorie_id: data.categorie_id,
+    corps_metier_id: corps,
     lieu_id: data.lieu_id,
     priorite: data.priorite,
     priorite_proposee: proposee,
@@ -241,10 +250,10 @@ function qualifier(user, id, data, channel = 'api') {
   };
   const maintenant = versSql(new Date());
   db.transaction(() => {
-    db.prepare(`UPDATE demandes SET categorie_id = ?, lieu_id = ?, priorite = ?, priorite_proposee = ?, motif_priorite = ?,
+    db.prepare(`UPDATE demandes SET categorie_id = ?, corps_metier_id = ?, lieu_id = ?, priorite = ?, priorite_proposee = ?, motif_priorite = ?,
       duree_estimee_minutes = ?, consignes = ?, photos_visibles = ?, date_convenue = ?, prise_en_charge_le = ?, echeance_le = ?,
       etat = ?, etat_depuis = CASE WHEN etat = ? THEN etat_depuis ELSE ? END, qualifiee_par = ?, qualifiee_le = ?, updated_by = ?, updated_at = ? WHERE id = ?`)
-      .run(champs.categorie_id, champs.lieu_id, champs.priorite, champs.priorite_proposee, champs.motif_priorite,
+      .run(champs.categorie_id, champs.corps_metier_id, champs.lieu_id, champs.priorite, champs.priorite_proposee, champs.motif_priorite,
         champs.duree_estimee_minutes, champs.consignes, champs.photos_visibles, champs.date_convenue, champs.prise_en_charge_le,
         champs.echeance_le, champs.etat, champs.etat, maintenant, user.id, maintenant, user.id, maintenant, d.id);
     // Historique de la fiche (0.14.0, CYC-02) : la qualification qui fait changer d'état s'y inscrit.

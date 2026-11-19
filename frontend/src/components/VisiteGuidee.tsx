@@ -10,6 +10,8 @@
  *   - « Revoir la visite guidée » (Aide) l'ouvre à la demande par l'événement « app-visite ».
  *   - Sans masque : le masque SVG du Tour (rect en calc()) fait des erreurs de console dans WebKit (Safari, Edge sur
  *     iPhone) ; le panneau et sa flèche montrent l'élément. Panneau limité à la largeur de l'écran (index.css).
+ *   - 0.19.0 (point 0, défaut 2 de la recette de la 0.18.0, DV-152) : compteur « 4 / 8 » au lieu des points d'avancement,
+ *     qui passaient sur deux lignes sur iPhone ; libellés courts des boutons (Précédent, Suivant, Terminer) ; sous 544 px, marge de 12 px des deux côtés du panneau (index.css).
  *   - Contrôles automatiques (tests, captures de l'aide, mobile:check) : localStorage « gmao.visite.auto » = « 0 » coupe
  *     l'ouverture automatique, jamais l'ouverture à la demande.
  */
@@ -53,11 +55,17 @@ export default function VisiteGuidee() {
 
   const ouvrir = useCallback(() => {
     const cibles = CIBLES.map((c) => ({ c, el: document.querySelector<HTMLElement>(`[data-visite="${c}"]`) })).filter((x) => x.el);
-    setEtapes([
+    // 0.19.0 (point 0) : libellés courts ; ceux d'Ant Design (« Fin de la visite guidée ») sortaient du panneau à 320 px.
+    const boutons = (dernier: boolean) => ({
+      prevButtonProps: { children: t('visite.precedent') },
+      nextButtonProps: { children: t(dernier ? 'visite.terminer' : 'visite.suivant') },
+    });
+    const liste = [
       { title: t('visite.accueil.titre'), description: t('visite.accueil.texte') },
       ...profils.map((p) => ({ title: t(`visite.profil.${p}.titre`), description: t(`visite.profil.${p}.texte`) })),
       ...cibles.map(({ c, el }) => ({ title: t(`visite.cible.${c}.titre`), description: t(`visite.cible.${c}.texte`), target: () => el! })),
-    ]);
+    ];
+    setEtapes(liste.map((e, k) => ({ ...e, ...boutons(k === liste.length - 1) })));
     setCourante(0);
     setOuverte(true);
   }, [profils, t]);
@@ -80,6 +88,11 @@ export default function VisiteGuidee() {
   const fermer = () => { setOuverte(false); if (cle) ecrire(cle, new Date().toISOString()); };
   return (
     <Tour open={ouverte} steps={etapes} current={courante} onChange={setCourante} onClose={fermer} onFinish={fermer}
-      rootClassName="visite-guidee" scrollIntoViewOptions={false} mask={false} />
+      rootClassName="visite-guidee" scrollIntoViewOptions={false} mask={false}
+      indicatorsRender={(n, total) => (
+        <span className="visite-compteur" aria-label={t('visite.etape').replace('{n}', String(n + 1)).replace('{total}', String(total))}>
+          {n + 1} / {total}
+        </span>
+      )} />
   );
 }

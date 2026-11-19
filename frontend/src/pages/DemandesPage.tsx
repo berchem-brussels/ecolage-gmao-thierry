@@ -140,6 +140,8 @@ export function FicheDemande({ d, avecDemandeur, service = false, onChange }: { 
       )}
       {d.danger === 1 && <Descriptions.Item label={t('demande.champ.danger')}><Typography.Text type="danger" strong>{t('demande.danger.oui')}</Typography.Text></Descriptions.Item>}
       <Descriptions.Item label={t('demande.champ.quoi')}>{dom ? `${dom} › ${cat}` : cat}</Descriptions.Item>
+      {/* 0.19.0 (GES-04) : corps de métier noté à la qualification, pour le service technique. */}
+      {service && d.corps_metier_libelle_fr && <Descriptions.Item label={t('qualif.corps')}>{lang === 'nl' ? d.corps_metier_libelle_nl : d.corps_metier_libelle_fr}</Descriptions.Item>}
       <Descriptions.Item label={t('demande.champ.ou')}>{cheminTexte(d.lieu_chemin, lang)}</Descriptions.Item>
       {service && d.photo_lieu && <Descriptions.Item label={t('demande.photo_lieu')}><PhotoLieu photo={d.photo_lieu} /></Descriptions.Item>}
       {(d.reponses || []).length > 0 && (

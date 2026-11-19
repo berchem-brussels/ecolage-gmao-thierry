@@ -2,6 +2,48 @@
 
 Le français fait foi. Grille de la section 10.2 du standard, rejouée à chaque version. « Non joué » veut dire que le contrôle n'a pas tourné.
 
+## 0.19.0 (18/11/2026)
+
+Étape 15 : correctifs de la recette 0.18.0 ; corps de métier et compétences ; équipes, membres et horaires ; profil des ouvriers ; prestataires externes ; corps de métier des catégories et à la qualification. Environnement : bac à sable de Claude, Node 22 ; copie locale (API Node et relais HTTPS) partie d'une base de la 0.18.0.
+
+| Famille | Contrôle | Résultat |
+| --- | --- | --- |
+| Autorisation (cloison) | Équipe, prestataire et ouvrier d'une autre entité : lecture, modification, désactivation refusées (403 ; 404 pour un ouvrier qui n'est pas de l'entité), par l'API et par le MCP ; listes séparées ; valeurs de liste (corps de métier, compétences) de l'entité seulement (409 `VALEUR_INVALIDE`) | Conforme (`equipes.test.js`, `prestataires.test.js`, `corps-categories.test.js`) |
+| Autorisation | Lecture : `equipes:lire`, `prestataires:lire` ; écriture : `equipes:gerer`, `prestataires:gerer` (responsable) ; demandeur, ouvrier et chef d'équipe refusés selon le cas ; chef d'une équipe : `equipes:diriger` ; membre : `interventions:realiser` (409 sinon) ; corps de métier d'une catégorie : `categories:gerer` | Conforme |
+| Validation | Schémas `equipeCreate/Update`, `ouvrierUpdate`, `prestataireCreate/Update` ; horaire : jour 1 à 7, « HH:MM », un créneau par jour, début avant la fin ; numéro d'entreprise : dix chiffres, 0 ou 1 en tête, clé modulo 97, unique dans l'entité ; courriel et téléphone au format ; nom fait d'espaces refusé | Conforme |
+| Injections | Requêtes à colonnes constantes (contrôle statique de `securite.test.js`) ; aucune interpolation de valeur | Conforme |
+| Données (RGPD) | Compétences des ouvriers (habilitations professionnelles) et contacts des prestataires : lus par le service technique seul ; corps de métier d'une demande retiré de la fiche du demandeur ; journal : identifiants seulement, nommés à la lecture par l'administrateur ; coordonnées du contact jamais au journal à la création ; démonstration sans numéro d'entreprise ni adresse réelle | Conforme |
+| LLM et MCP | Treize outils nouveaux, mêmes fonctions de service que les routes ; parité testée ; désactivations en deux appels | Conforme (`mcp.test.js`) |
+| Interface | Écran Équipes et prestataires, champ « Corps de métier » ; `mobile:check` : 57 écrans, six appareils, FR et NL, parcours sur deux moteurs ; défaut ancien corrigé (fiche d'une catégorie trop large à 320 px) | Conforme |
+| Secrets commités | Aucun secret ni valeur de NIXUS ; captures sur une base de démonstration propre | Conforme |
+| Infrastructure | Dockerfile, compose, `nginx.conf`, `backup.sh`, `.env`, `ci.yml` inchangés | Conforme |
+| Dépendances | `npm audit --omit=dev` serveur et interface | 2 modérées (E-50) et 3 modérées (E-09), inchangées ; aucune dépendance nouvelle |
+| Migration | `016_equipes_prestataires` sur une base 0.18.0 : tables, colonnes, catégories livrées complétées, catégorie créée par le responsable intacte | Conforme (`corps-categories.test.js`, copie locale) |
+
+Preuves d'échec (chaque protection retirée seule, au moins un test échoue ; code de la 0.19.0 : tout réussi) :
+
+| Protection retirée | Échec constaté |
+| --- | --- |
+| `exports.js` : mise en forme seulement si la colonne existe (code de la 0.18.0) | `exports.test.js` (tickets en Excel : 500) |
+| `exports.js` : retour à la ligne de la Description | `exports.test.js` (« passe à la ligne ») |
+| `VisiteGuidee.tsx` de la 0.18.0 | `pages.test.tsx` (visite guidée : compteur absent) |
+| `mobile:check` : marges et libellés courts de la visite retirés | Défauts signalés sur les six appareils |
+| `mobile:check` : compte sans le droit sur `/listes` | « écran non ouvert, renvoyé vers / » |
+| Catalogue des listes de la 0.18.0 | `metiers.test.js` (4 échecs) |
+| `equipes.js` : cloison de `load()` | `equipes.test.js` (2) |
+| `equipes.js` : contrôle des membres | `equipes.test.js` (3) |
+| `equipes.js` : droit `equipes:gerer` | `equipes.test.js` (7) |
+| `equipes.js` : « est un ouvrier de l'entité » | `equipes.test.js` (2) |
+| `EquipesPage.tsx` : début avant la fin | `pages.test.tsx` (horaire invalide) |
+| `prestataires.js` : cloison de `load()` | `prestataires.test.js` (2) |
+| `prestataires.js` : droit `prestataires:gerer` | `prestataires.test.js` (6) |
+| `prestataires.js` : clé modulo 97 | `prestataires.test.js` (2) |
+| `prestataires.js` : unicité du numéro | `prestataires.test.js` (1) |
+| `categories.js` : étape de migration `corpsLivres()` | `corps-categories.test.js` (migration) |
+| `categories.js` : valeur de la liste de l'entité | `corps-categories.test.js` (réglage) |
+| `qualification.js` : corps de métier de la catégorie proposé | `corps-categories.test.js` (qualification) |
+| `QualificationForm.tsx` : proposition de la catégorie | `demandes.test.tsx` (qualification) |
+
 ## 0.18.0 (18/11/2026)
 
 Étape 14 : recherche globale, exports Excel et CSV des listes (tickets compris), assistant (suivi lu par l'API, liens selon le rôle, fiches d'aide citées), visite guidée par rôle ; aide, FAQ et captures. Environnement : bac à sable de Claude, Node 22 ; copie locale servie par `vite preview` (nginx et sa CSP non exercés dans le bac à sable).

@@ -32,6 +32,7 @@ export const ACCES_ECRANS: [string, Acces][] = [
   ['/patrimoine', { permission: 'lieux:lire', module: 'patrimoine' }],
   ['/referentiel', { permission: 'categories:gerer' }],
   ['/listes', { permission: 'listes:gerer' }],
+  ['/equipes', { permission: 'equipes:lire' }],
   ['/reglages-entite', { permission: 'parametres:gerer' }],
   ['/services', { admin: true }], ['/parametres', { admin: true }], ['/journal', { admin: true }], ['/entites', { admin: true }], ['/users', { admin: true }],
 ];
