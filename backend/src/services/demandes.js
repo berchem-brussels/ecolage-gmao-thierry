@@ -77,6 +77,7 @@ const COLUMNS = `d.id, d.entite_id, d.numero, d.annee, d.sequence, d.description
   d.beneficiaire_id, b.first_name AS beneficiaire_prenom, b.last_name AS beneficiaire_nom, d.beneficiaire_texte,
   d.date_souhaitee, d.creneau,
   d.priorite_proposee, d.motif_priorite, d.prise_en_charge_le, d.echeance_le, d.date_convenue, d.duree_estimee_minutes,
+  d.corps_metier_id, cmd.code AS corps_metier_code, cmd.libelle_fr AS corps_metier_libelle_fr, cmd.libelle_nl AS corps_metier_libelle_nl,
   d.consignes, d.photos_visibles, d.qualifiee_par, qp.first_name AS qualifiee_par_prenom, qp.last_name AS qualifiee_par_nom, d.qualifiee_le,
   (SELECT COUNT(*) FROM demande_suiveurs s WHERE s.demande_id = d.id) AS nb_suiveurs,
   d.etat_depuis, ee.libelle_fr AS etat_libelle_fr, ee.libelle_nl AS etat_libelle_nl,
@@ -89,13 +90,16 @@ const COLUMNS = `d.id, d.entite_id, d.numero, d.annee, d.sequence, d.description
 const FROM = `FROM demandes d JOIN lieux l ON l.id = d.lieu_id JOIN categories c ON c.id = d.categorie_id
   LEFT JOIN categories p ON p.id = c.parent_id JOIN users u ON u.id = d.demandeur_id LEFT JOIN users b ON b.id = d.beneficiaire_id
   LEFT JOIN users qp ON qp.id = d.qualifiee_par LEFT JOIN demande_etats ee ON ee.entite_id = d.entite_id AND ee.code = d.etat
-  LEFT JOIN listes_valeurs cp ON cp.id = d.cause_id LEFT JOIN services sv ON sv.id = d.service_id
+  LEFT JOIN listes_valeurs cp ON cp.id = d.cause_id LEFT JOIN listes_valeurs cmd ON cmd.id = d.corps_metier_id
+  LEFT JOIN services sv ON sv.id = d.service_id
   LEFT JOIN users cb ON cb.id = d.created_by AND d.created_by <> d.demandeur_id
   LEFT JOIN demandes fm ON fm.id = d.fusionnee_dans LEFT JOIN demandes io ON io.id = d.issue_de`;
 /** Champs internes au service technique (0.9.0) : retirés de la fiche rendue au demandeur et à qui suit la demande. */
 const INTERNES = ['priorite_proposee', 'motif_priorite', 'duree_estimee_minutes', 'consignes', 'qualifiee_par', 'qualifiee_par_prenom', 'qualifiee_par_nom', 'qualifiee_le',
   'cause_id', 'cause_code', 'cause_libelle_fr', 'cause_libelle_nl', 'compte_rendu', 'attente_suspend', 'suspendu_ouvrable_min', 'suspendu_calendaire_min',
-  'created_by', 'encodee_par_prenom', 'encodee_par_nom'];
+  'created_by', 'encodee_par_prenom', 'encodee_par_nom',
+  // 0.19.0 (GES-04) : corps de métier noté à la qualification.
+  'corps_metier_id', 'corps_metier_code', 'corps_metier_libelle_fr', 'corps_metier_libelle_nl'];
 const LIEU = 'SELECT id, entite_id, parent_id, nature, code, nom_fr, nom_nl, is_active FROM lieux WHERE id = ?';
 const ETATS_FERMES = ['cloturee', 'refusee', 'refusee_validation', 'fusionnee', 'annulee'];
 const SUIVIE = 'SELECT 1 FROM demande_suiveurs WHERE demande_id = ? AND user_id = ?';
@@ -450,7 +454,8 @@ function lieuDeDemande(entiteId, lieuId) {
 function categorieDeDemande(entiteId, categorieId) {
   const db = getDb();
   const c = db.prepare(`SELECT c.id, c.entite_id, c.parent_id, c.code, c.is_active, p.is_active AS parent_actif,
-    COALESCE(c.priorite_defaut, p.priorite_defaut) AS priorite_effective, COALESCE(c.validation, p.validation) AS validation_effective
+    COALESCE(c.priorite_defaut, p.priorite_defaut) AS priorite_effective, COALESCE(c.validation, p.validation) AS validation_effective,
+    COALESCE(c.corps_metier_id, p.corps_metier_id) AS corps_metier_effectif_id
     FROM categories c LEFT JOIN categories p ON p.id = c.parent_id WHERE c.id = ?`).get(categorieId);
   if (!c) throw new AppError(404, 'NOT_FOUND');
   if (c.entite_id !== entiteId) throw new AppError(403, 'FORBIDDEN');

@@ -1,6 +1,10 @@
 # Architecture
 
-Application version: **0.18.0** · The French text prevails (`docs/fr/ARCHITECTURE.md`); this file summarises each version.
+Application version: **0.19.0** · The French text prevails (`docs/fr/ARCHITECTURE.md`); this file summarises each version.
+
+## Teams, workers, contractors and trades (0.19.0)
+
+Migration `016_equipes_prestataires`: `equipes`, `equipe_membres`, `equipe_horaires` (one slot per day, 1 = Monday … 7 = Sunday; no slot = the entity's schedule), `ouvrier_profils`, `ouvrier_competences`, `prestataires` (company number 0123.456.789, unique in the entity), `prestataire_corps`; columns `categories.corps_metier_id` and `demandes.corps_metier_id`; a JavaScript step completes the delivered categories that have no trade. Value lists `corps_metier` and `competence`. New permissions `equipes:lire`, `equipes:gerer`, `equipes:diriger`, `interventions:realiser`, `prestataires:lire`, `prestataires:gerer`. Services `equipes.js` and `prestataires.js` (modulo 97 check digits); routes `/api/equipes`, `/api/ouvriers`, `/api/prestataires`; thirteen MCP tools. `categories.js` and `qualification.js`: the category's trade (the domain's for a nature), proposed at qualification, internal to the department. Audit log: lists of ids named element by element, schedule by day. Interface: `EquipesPage.tsx`, `PrestatairesOnglet.tsx`, « Trade » field in `CategoriesTab.tsx` and `QualificationForm.tsx`. Fixes from the 0.18.0 acceptance test (`exports.js`, `VisiteGuidee.tsx`). Phone check: 57 screens.
 
 ## Search, exports, assistant and guided tour (0.18.0)
 

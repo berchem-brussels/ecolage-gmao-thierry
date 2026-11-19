@@ -103,11 +103,14 @@ export const CODES_FAMILLE: Record<string, Record<string, string>> = {
   install: { langue: 'audit.langue' },
   valeur: { liste: 'audit.liste' },
   module: { module: 'audit.module' },
+  // 0.19.0 (point 3) : langue de correspondance d'un prestataire.
+  prestataire: { langue: 'audit.langue' },
 };
 /** Libellé d'un champ propre à une famille, quand le même nom veut dire autre chose ailleurs (« fin » d'une priorité ou de l'horaire). */
 export const CHAMPS_FAMILLE: Record<string, Record<string, string>> = {
   priorite: { prise_en_charge: 'audit.detail.delai_prise_en_charge', fin: 'audit.detail.delai_fin' },
   horaire: { debut: 'audit.detail.heure_debut', fin: 'audit.detail.heure_fin' },
+  prestataire: { langue: 'audit.detail.langue_correspondance' },
 };
 /** Champs qui portent un code de rôle, nommé par le catalogue des rôles. */
 const ROLES_CHAMPS = new Set(['role', 'from', 'to', 'user_role']);
@@ -206,6 +209,12 @@ export default function JournalPage() {
   const valeur = (l: Ligne, chemin: string, v: unknown): string => {
     const n = l.noms?.[chemin];
     if (n) return nomme(n);
+    // 0.19.0 : liste d'identifiants nommés par le serveur élément par élément (membres d'une équipe, compétences).
+    if (Array.isArray(v) && v.length && v.every((_, i) => l.noms?.[`${chemin}.${i}`])) return v.map((_, i) => nomme(l.noms![`${chemin}.${i}`])).join(', ');
+    // 0.19.0 : horaire d'une équipe, créneaux par jour ; liste vide : horaire de l'entité.
+    if (Array.isArray(v) && chemin.split('.')[0] === 'horaire') {
+      return v.length ? (v as { jour: number; debut: string; fin: string }[]).map((c) => `${t(`ref.jour.${c.jour}`)} ${c.debut}–${c.fin}`).join(', ') : t('equipes.horaire.entite');
+    }
     if (v && typeof v === 'object' && !Array.isArray(v)) {
       return Object.entries(v as Record<string, unknown>).map(([k, x]) => `${cleDetail(k, l.action)} : ${valeur(l, `${chemin}.${k}`, x)}`).join(' · ');
     }

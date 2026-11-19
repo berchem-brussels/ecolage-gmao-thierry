@@ -29,6 +29,9 @@ export interface Categorie {
   libelle_fr: string; libelle_nl: string; icone: string;
   priorite_defaut: Priorite | null; validation: 0 | 1 | null; delai_fin_jours: number | null; ordre: number;
   priorite_effective: Priorite; validation_effective: 0 | 1; delai_fin_jours_effectif: number | null;
+  /** 0.19.0 (REF-06) : corps de métier propre (ou null) et celui en vigueur, repris du domaine pour une nature. */
+  corps_metier_id?: number | null; corps_metier_effectif_id?: number | null; corps_metier_code?: string | null;
+  corps_metier_libelle_fr?: string | null; corps_metier_libelle_nl?: string | null;
   parent_code: string | null; parent_libelle_fr: string | null; parent_libelle_nl: string | null;
   is_active: number; motif_desactivation: string | null; created_at: string; updated_at: string;
   natures?: Categorie[]; trace?: Trace;

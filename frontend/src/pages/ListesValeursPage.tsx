@@ -15,7 +15,8 @@ import { seulementEspaces, texteObligatoire } from '../validation';
 
 /** Listes réglables dans cet écran ; leur catalogue serveur est config/listes-valeurs.json. */
 // 0.14.0 : motifs d'attente, motifs de refus et causes de panne du cycle de vie d'une demande.
-const LISTES = ['type_lieu', 'motif_attente', 'motif_refus', 'cause_panne'];
+// 0.19.0 (étape 15, ROL-05) : corps de métier et compétences des ouvriers.
+const LISTES = ['type_lieu', 'motif_attente', 'motif_refus', 'cause_panne', 'corps_metier', 'competence'];
 
 interface FormValues { libelle_fr: string; libelle_nl: string; ordre?: number; code?: string }
 
@@ -78,7 +79,7 @@ export default function ListesValeursPage() {
       </div>
       <Typography.Paragraph type="secondary">{t('listes.intro')}</Typography.Paragraph>
       {LISTES.length > 1 && (
-        // Boutons qui passent à la ligne sur un téléphone (quatre listes depuis la 0.14.0 ; 320 px, FR et NL).
+        // Boutons qui passent à la ligne sur un téléphone (quatre listes depuis la 0.14.0, six depuis la 0.19.0 ; 320 px, FR et NL).
         <Radio.Group aria-label={t('listes.choose')} value={liste} onChange={(e) => setListe(String(e.target.value))} optionType="button" buttonStyle="solid"
           style={{ marginBottom: 16, display: 'flex', flexWrap: 'wrap', gap: 8 }}
           options={LISTES.map((l) => ({ value: l, label: t(`listes.liste.${l}`) }))} />

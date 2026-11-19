@@ -8,6 +8,9 @@
  *      service). Une nature les reprend de son domaine quand elle n'en a pas en propre (valeur NULL) : la réponse donne
  *      la valeur propre et la valeur en vigueur (priorite_effective, validation_effective, delai_fin_jours_effectif).
  *   4. Le délai propre (delai_fin_jours, jours ouvrables) est facultatif ; sans lui, le délai de la priorité s'applique.
+ *   4 bis (0.19.0, REF-06) : corps de métier par défaut (valeur active de la liste « corps_metier » de l'entité, ou NULL) ;
+ *      une nature sans le sien prend celui de son domaine (corps_metier_effectif_id et ses libellés). Proposé à la
+ *      qualification d'une demande (GES-04).
  *   5. L'icône vient du catalogue fermé de config/categories.json.
  *   6. Un domaine qui a encore des natures actives ne se désactive pas ; une nature ne se réactive pas sous un
  *      domaine désactivé.
@@ -23,6 +26,7 @@ const { AppError } = require('../envelope');
 const { logAudit, changements } = require('../audit');
 const { avecTrace } = require('./trace');
 const { rolesWith } = require('../roles');
+const listes = require('./listes-valeurs');
 
 const CATALOGUE = JSON.parse(fs.readFileSync(path.join(__dirname, '..', '..', 'config', 'categories.json'), 'utf8'));
 const ICONES = CATALOGUE.icones.map((i) => i.code);
@@ -34,9 +38,12 @@ const COLUMNS = `c.id, c.entite_id, c.parent_id, CASE WHEN c.parent_id IS NULL T
   COALESCE(c.priorite_defaut, p.priorite_defaut) AS priorite_effective,
   COALESCE(c.validation, p.validation) AS validation_effective,
   COALESCE(c.delai_fin_jours, p.delai_fin_jours) AS delai_fin_jours_effectif,
+  c.corps_metier_id, COALESCE(c.corps_metier_id, p.corps_metier_id) AS corps_metier_effectif_id,
+  cm.code AS corps_metier_code, cm.libelle_fr AS corps_metier_libelle_fr, cm.libelle_nl AS corps_metier_libelle_nl,
   p.code AS parent_code, p.libelle_fr AS parent_libelle_fr, p.libelle_nl AS parent_libelle_nl,
   c.is_active, c.motif_desactivation, c.created_at, c.updated_at, c.created_by, c.updated_by`;
-const FROM = 'FROM categories c LEFT JOIN categories p ON p.id = c.parent_id';
+const FROM = `FROM categories c LEFT JOIN categories p ON p.id = c.parent_id
+  LEFT JOIN listes_valeurs cm ON cm.id = COALESCE(c.corps_metier_id, p.corps_metier_id)`;
 // Ordre de lecture (écrit en clair dans chaque requête) : domaines dans leur ordre, chacun suivi de ses natures dans le leur.
 
 function entiteActive(user) {
@@ -139,10 +146,11 @@ function create(user, data, channel = 'api') {
   const priorite = data.priorite_defaut !== undefined ? data.priorite_defaut : (parentId ? null : 'P3');
   const validation = data.validation !== undefined ? data.validation : (parentId ? null : 0);
   const ordre = data.ordre !== undefined ? data.ordre : nextOrdre(entiteId, parentId);
+  if (data.corps_metier_id) listes.assertUsable(entiteId, 'corps_metier', data.corps_metier_id);
   const r = getDb().prepare(`INSERT INTO categories (entite_id, parent_id, code, libelle_fr, libelle_nl, icone, priorite_defaut, validation,
-      delai_fin_jours, ordre, created_by, updated_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
+      delai_fin_jours, corps_metier_id, ordre, created_by, updated_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
     .run(entiteId, parentId, data.code, data.libelle_fr, data.libelle_nl, data.icone || 'autre', priorite, validation,
-      data.delai_fin_jours ?? null, ordre, user.id, user.id);
+      data.delai_fin_jours ?? null, data.corps_metier_id ?? null, ordre, user.id, user.id);
   logAudit(user.id, 'categorie.create', 'categorie', r.lastInsertRowid,
     { code: data.code, niveau: parentId ? 'nature' : 'domaine' }, channel, entiteId);
   return avecTrace(user, load(user, r.lastInsertRowid));
@@ -159,6 +167,7 @@ function update(user, id, data, channel = 'api') {
     assertDomaine(c.entite_id, data.parent_id);
   }
   if (c.niveau === 'domaine' && (data.priorite_defaut === null || data.validation === null)) throw new AppError(409, 'CATEGORIE_DOMAINE');
+  if (data.corps_metier_id) listes.assertUsable(c.entite_id, 'corps_metier', data.corps_metier_id, c.corps_metier_id);
   if (data.is_active === 1 && !c.is_active && c.parent_id) {
     const p = getDb().prepare('SELECT is_active FROM categories WHERE id = ?').get(data.parent_id || c.parent_id);
     if (!p.is_active) throw new AppError(409, 'CATEGORIE_PARENT_INACTIF');
@@ -192,21 +201,44 @@ function deactivate(user, id, motif, channel = 'api') {
  * Arbre livré d'une entité : un domaine ou une nature est créé si son code manque ; rien n'est modifié ni réactivé.
  * Les natures d'un domaine désactivé par le responsable ne sont pas recréées.
  */
+/** Identifiant de la valeur active de la liste « corps_metier » de l'entité pour un code du catalogue, ou null. */
+function corpsDuCode(entiteId, code) {
+  if (!code) return null;
+  const v = getDb().prepare("SELECT id FROM listes_valeurs WHERE entite_id = ? AND liste = 'corps_metier' AND code = ? AND is_active = 1").get(entiteId, code);
+  return v ? v.id : null;
+}
+
+/**
+ * 0.19.0 (migration 016) : corps de métier du catalogue donné aux catégories livrées d'une installation existante,
+ * seulement quand la catégorie n'en a pas ; une catégorie créée ou modifiée par le responsable garde son réglage.
+ */
+function corpsLivres(entiteId) {
+  const db = getDb();
+  for (const d of CATALOGUE.defauts) {
+    for (const x of [d, ...d.natures]) {
+      const v = corpsDuCode(entiteId, x.corps_metier);
+      if (v) db.prepare('UPDATE categories SET corps_metier_id = ? WHERE entite_id = ? AND code = ? AND corps_metier_id IS NULL').run(v, entiteId, x.code);
+    }
+  }
+}
+
 function seedEntite(entiteId) {
   const db = getDb();
   const find = (code) => db.prepare('SELECT id, is_active FROM categories WHERE entite_id = ? AND code = ?').get(entiteId, code);
   CATALOGUE.defauts.forEach((d, i) => {
     let dom = find(d.code);
     if (!dom) {
-      const r = db.prepare(`INSERT INTO categories (entite_id, parent_id, code, libelle_fr, libelle_nl, icone, priorite_defaut, validation, ordre)
-        VALUES (?, NULL, ?, ?, ?, ?, ?, ?, ?)`).run(entiteId, d.code, d.libelle_fr, d.libelle_nl, d.icone, d.priorite_defaut, d.validation, (i + 1) * 10);
+      const r = db.prepare(`INSERT INTO categories (entite_id, parent_id, code, libelle_fr, libelle_nl, icone, priorite_defaut, validation, corps_metier_id, ordre)
+        VALUES (?, NULL, ?, ?, ?, ?, ?, ?, ?, ?)`).run(entiteId, d.code, d.libelle_fr, d.libelle_nl, d.icone, d.priorite_defaut, d.validation,
+        corpsDuCode(entiteId, d.corps_metier), (i + 1) * 10);
       dom = { id: r.lastInsertRowid, is_active: 1 };
     }
     if (!dom.is_active) return;
     d.natures.forEach((n, j) => {
       if (find(n.code)) return;
-      db.prepare(`INSERT INTO categories (entite_id, parent_id, code, libelle_fr, libelle_nl, icone, priorite_defaut, validation, ordre)
-        VALUES (?, ?, ?, ?, ?, ?, ?, NULL, ?)`).run(entiteId, dom.id, n.code, n.libelle_fr, n.libelle_nl, n.icone, n.priorite_defaut || null, (j + 1) * 10);
+      db.prepare(`INSERT INTO categories (entite_id, parent_id, code, libelle_fr, libelle_nl, icone, priorite_defaut, validation, corps_metier_id, ordre)
+        VALUES (?, ?, ?, ?, ?, ?, ?, NULL, ?, ?)`).run(entiteId, dom.id, n.code, n.libelle_fr, n.libelle_nl, n.icone, n.priorite_defaut || null,
+        corpsDuCode(entiteId, n.corps_metier), (j + 1) * 10);
     });
   });
 }
@@ -215,4 +247,4 @@ function seedAll() {
   for (const e of getDb().prepare('SELECT id FROM entites WHERE is_active = 1').all()) seedEntite(e.id);
 }
 
-module.exports = { ICONES, PRIORITES, list, arbre, get, create, update, deactivate, gestion, seedEntite, seedAll };
+module.exports = { ICONES, PRIORITES, list, arbre, get, create, update, deactivate, gestion, seedEntite, seedAll, corpsLivres };

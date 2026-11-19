@@ -387,7 +387,7 @@ test('migration 013 sur une base 0.14.0 : table des messages, colonnes des pièc
   assert.equal(up.status, 0, up.stderr);
   assert.match(up.stdout, /\[DB\] Migration 013_messages appliquée/);
   const out = JSON.parse(up.stdout.trim().split('\n').pop());
-  assert.equal(out.migration, '015_notifications', 'les migrations suivantes passent aussi (0.17.0)');
+  assert.equal(out.migration, '016_equipes_prestataires', 'les migrations suivantes passent aussi (0.17.0, 0.19.0)');
   assert.deepEqual(out.piece, { demande_id: 1, message_id: null, attente_message: 0 });
   assert.equal(out.messages, 0);
   const again = run("require('./src/database').initDb().then((db) => console.log(db.prepare('SELECT COUNT(*) AS n FROM schema_migrations').get().n))");

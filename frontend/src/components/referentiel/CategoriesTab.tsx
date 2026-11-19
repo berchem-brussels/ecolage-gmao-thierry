@@ -6,6 +6,8 @@
  * Choix exclusifs en boutons (standard section 12.4) ; la liste des domaines, catalogue, en liste déroulante.
  * 0.7.0 (DEM-05) : la fiche porte les questions du formulaire (QuestionsFiche) ; dans l'aperçu, une tuile de nature (ou
  * d'un domaine sans nature) montre les questions telles que le demandeur les verra.
+ * 0.19.0 (REF-06) : corps de métier par défaut, choisi dans la liste « Corps de métier » de l'entité ; vide, une nature
+ * prend celui de son domaine. Il est proposé à la qualification d'une demande (GES-04).
  */
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Button, Card, Descriptions, Drawer, Form, Input, InputNumber, Popconfirm, Radio, Select, Space, Switch, Table, Tag, Typography, message } from 'antd';
@@ -24,8 +26,9 @@ import { seulementEspaces, texteObligatoire } from '../../validation';
 
 interface FormValues {
   libelle_fr: string; libelle_nl: string; code?: string; icone: string; parent_id?: number;
-  priorite_defaut: string; validation: string; delai_fin_jours?: number | null; ordre?: number;
+  priorite_defaut: string; validation: string; delai_fin_jours?: number | null; ordre?: number; corps_metier_id?: number | null;
 }
+interface ValeurListe { id: number; libelle_fr: string; libelle_nl: string; is_active: number }
 
 const HERITE = 'herite';
 
@@ -96,6 +99,12 @@ export default function CategoriesTab({ priorites }: { priorites: PrioriteFiche[
     try { setArbre((await api.get<ArbreCategories>(`/categories/arbre${qs({ inclure_inactifs: inactifs ? 1 : 0 })}`)).domaines); } catch (e) { fail(e); } finally { setLoading(false); }
   }, [inactifs, t]);
   useEffect(() => { load(); }, [load, user?.entite_active_id]);
+  const [corpsListe, setCorpsListe] = useState<ValeurListe[]>([]);
+  useEffect(() => {
+    api.page<ValeurListe>(`/listes-valeurs${qs({ liste: 'corps_metier', limit: 200 })}`).then((r) => setCorpsListe(r.data)).catch(() => setCorpsListe([]));
+  }, [user?.entite_active_id]);
+  const corpsDe = (c: { corps_metier_libelle_fr?: string | null; corps_metier_libelle_nl?: string | null }) => (c.corps_metier_libelle_fr
+    ? tField({ libelle_fr: c.corps_metier_libelle_fr, libelle_nl: c.corps_metier_libelle_nl } as unknown as Record<string, unknown>, 'libelle') : '');
 
   const actifs = useMemo(() => arbre.filter((d) => d.is_active).map((d) => ({ ...d, natures: (d.natures || []).filter((n) => n.is_active) })), [arbre]);
   const domainesActifs = actifs;
@@ -105,10 +114,10 @@ export default function CategoriesTab({ priorites }: { priorites: PrioriteFiche[
   const valeurs = (c: Categorie | null, parent: Categorie | null): FormValues => (c ? {
     libelle_fr: c.libelle_fr, libelle_nl: c.libelle_nl, icone: c.icone, parent_id: c.parent_id ?? undefined,
     priorite_defaut: c.priorite_defaut || HERITE, validation: c.validation === null ? HERITE : String(c.validation),
-    delai_fin_jours: c.delai_fin_jours, ordre: c.ordre,
+    delai_fin_jours: c.delai_fin_jours, ordre: c.ordre, corps_metier_id: c.corps_metier_id ?? null,
   } : {
     libelle_fr: '', libelle_nl: '', icone: parent ? parent.icone : 'autre', parent_id: parent?.id,
-    priorite_defaut: parent ? HERITE : 'P3', validation: parent ? HERITE : '0', delai_fin_jours: null,
+    priorite_defaut: parent ? HERITE : 'P3', validation: parent ? HERITE : '0', delai_fin_jours: null, corps_metier_id: null,
   });
 
   const corps = (v: FormValues, nature: boolean) => ({
@@ -116,6 +125,7 @@ export default function CategoriesTab({ priorites }: { priorites: PrioriteFiche[
     priorite_defaut: v.priorite_defaut === HERITE ? null : v.priorite_defaut,
     validation: v.validation === HERITE ? null : Number(v.validation),
     delai_fin_jours: v.delai_fin_jours ?? null,
+    corps_metier_id: v.corps_metier_id ?? null,
     ...(v.ordre !== undefined && v.ordre !== null ? { ordre: v.ordre } : {}),
     ...(nature && v.parent_id ? { parent_id: v.parent_id } : {}),
   });
@@ -148,7 +158,10 @@ export default function CategoriesTab({ priorites }: { priorites: PrioriteFiche[
   const nature = creation ? !!creation.parent : current?.niveau === 'nature';
   const ouvert = !!current || !!creation;
   const statut = (c: Categorie) => (c.is_active ? <Tag color="green">{t('common.active')}</Tag> : <Tag>{t('common.inactive')}</Tag>);
-  const validationTag = (v: number) => (v ? <Tag color="purple">{t('ref.cat.validation.chef')}</Tag> : <Tag>{t('ref.cat.validation.directe')}</Tag>);
+  // 0.19.0 (point 4) : pastille qui passe à la ligne ; à 320 px, « Rechtstreeks naar de technische dienst » faisait déborder
+  // la fiche de 7 à 27 px (défaut de la 0.18.0, vu quand mobile:check a ouvert la fiche d'une catégorie).
+  const ALaLigne = { whiteSpace: 'normal', marginInlineEnd: 0 } as const;
+  const validationTag = (v: number) => (v ? <Tag color="purple" style={ALaLigne}>{t('ref.cat.validation.chef')}</Tag> : <Tag style={ALaLigne}>{t('ref.cat.validation.directe')}</Tag>);
 
   const lignes = arbre.map((d) => ({ ...d, children: d.natures && d.natures.length ? d.natures : undefined }));
 
@@ -171,6 +184,8 @@ export default function CategoriesTab({ priorites }: { priorites: PrioriteFiche[
             { title: t('ref.cat.priorite'), key: 'prio', render: (_, c) => <PrioriteTag code={c.priorite_effective} priorites={priorites} /> },
             ...(simple ? [] : [
               { title: t('ref.cat.validation'), key: 'validation', render: (_: unknown, c: Categorie) => validationTag(c.validation_effective) },
+              // 0.19.0 : en mode Complet seulement (en Simple, la colonne Statut sortait du cadre à 1280 px) ; toujours dans la fiche.
+              { title: t('ref.cat.corps'), key: 'corps', render: (_: unknown, c: Categorie) => corpsDe(c) || <Typography.Text type="secondary">{t('ref.cat.corps.aucun')}</Typography.Text> },
               { title: t('ref.cat.delai'), key: 'delai', render: (_: unknown, c: Categorie) => (c.delai_fin_jours_effectif ? `${c.delai_fin_jours_effectif} ${t('ref.unite.jours_ouvrables')}` : '') },
               { title: t('ref.cat.code'), dataIndex: 'code', key: 'code' },
             ]),
@@ -186,7 +201,8 @@ export default function CategoriesTab({ priorites }: { priorites: PrioriteFiche[
             <Descriptions.Item label={t('ref.cat.niveau')}>{t(`ref.cat.niveau.${current.niveau}`)}</Descriptions.Item>
             <Descriptions.Item label={t('common.status')}>{statut(current)}</Descriptions.Item>
             <Descriptions.Item label={t('ref.cat.en_vigueur')}>
-              <Space wrap><PrioriteTag code={current.priorite_effective} priorites={priorites} />{validationTag(current.validation_effective)}</Space>
+              <Space wrap><PrioriteTag code={current.priorite_effective} priorites={priorites} />{validationTag(current.validation_effective)}
+                {corpsDe(current) && <Tag>{corpsDe(current)}</Tag>}</Space>
             </Descriptions.Item>
             <Descriptions.Item label={t('ref.cat.code')}>{current.code}</Descriptions.Item>
             {current.motif_desactivation && <Descriptions.Item label={t('common.reason')}>{current.motif_desactivation}</Descriptions.Item>}
@@ -227,6 +243,12 @@ export default function CategoriesTab({ priorites }: { priorites: PrioriteFiche[
             </Form.Item>
             <Form.Item name="delai_fin_jours" label={t('ref.cat.delai')} tooltip={hint('ref.cat.delai')} extra={t('ref.cat.delai.help')}>
               <InputNumber min={1} max={365} style={{ width: 160 }} />
+            </Form.Item>
+            {/* 0.19.0 (REF-06) : vide, une nature prend le corps de métier de son domaine ; un domaine n'en a alors aucun. */}
+            <Form.Item name="corps_metier_id" label={t('ref.cat.corps')} tooltip={hint('ref.cat.corps')} extra={t(nature ? 'ref.cat.corps.help.nature' : 'ref.cat.corps.help.domaine')}>
+              <Select<number> allowClear showSearch optionFilterProp="label" aria-label={t('ref.cat.corps')}
+                placeholder={nature ? t('ref.cat.herite') : t('ref.cat.corps.aucun')}
+                options={corpsListe.filter((v) => v.is_active || v.id === current?.corps_metier_id).map((v) => ({ value: v.id, label: tField(v as unknown as Record<string, unknown>, 'libelle') }))} />
             </Form.Item>
             {!simple && <Form.Item name="ordre" label={t('listes.field.ordre')} tooltip={hint('ref.ordre')} extra={t('listes.field.ordre.help')}><InputNumber min={0} max={100000} step={10} /></Form.Item>}
             <Space wrap>

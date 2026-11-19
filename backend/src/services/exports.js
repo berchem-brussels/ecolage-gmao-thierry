@@ -77,7 +77,11 @@ async function xlsx(colonnes, lignes, lang, titreFeuille) {
   for (const l of lignes) ws.addRow(Object.fromEntries(colonnes.map((c) => [c.cle, c.valeur(l) ?? ''])));
   ws.getRow(1).font = { bold: true };
   ws.autoFilter = { from: { row: 1, column: 1 }, to: { row: 1, column: colonnes.length } };
-  ws.getColumn('description')?.eachCell?.((cell) => { cell.alignment = { wrapText: true, vertical: 'top' }; });
+  // 0.19.0 (défaut 1 de la recette de la 0.18.0) : exceljs lève une erreur pour une clé absente (tickets) ; la colonne
+  // Description ne se met en forme que dans les listes qui l'ont.
+  if (colonnes.some((c) => c.cle === 'description')) {
+    ws.getColumn('description').eachCell((cell) => { cell.alignment = { wrapText: true, vertical: 'top' }; });
+  }
   return Buffer.from(await wb.xlsx.writeBuffer());
 }
 

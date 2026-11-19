@@ -1,6 +1,6 @@
 # Serveur MCP
 
-Version de l'application : **0.18.0** · Mis à jour le 18/11/2026 · Le français fait foi.
+Version de l'application : **0.19.0** · Mis à jour le 18/11/2026 · Le français fait foi.
 
 ## Accès
 
@@ -19,6 +19,16 @@ Version de l'application : **0.18.0** · Mis à jour le 18/11/2026 · Le frança
 - Depuis la 0.4.1, les fiches de catégorie, de priorité, de jour de l'horaire et de jour non ouvré portent `trace` (`etat`, `le`, `par`) : qui les a modifiées en dernier et quand, ou « livrée ». Le nom n'est rendu qu'aux personnes de l'entité. Aucun outil nouveau.
 - Depuis la 0.5.0, le serveur retire les espaces de début et de fin de tout texte reçu, par le MCP comme par l'API, sauf les mots de passe ; un champ obligatoire fait seulement d'espaces est refusé (`VALIDATION`), avant tout jeton de confirmation.
 - Les instructions envoyées au client demandent de commencer par `get_profile` : les données métier sont celles de l'entité active ; `select_entite` la change. Elles disent aussi que le MCP ne transporte aucun fichier, et qu'une demande se dépose par `create_demande`, le lieu proposé d'office étant `lieu_propose` dans `get_profile`, et les derniers lieux de ses demandes `lieux_recents` (0.7.5). Depuis la 0.8.0, elles disent que les pièces du brouillon partent avec la demande suivante, même déposée par `create_demande`, et qu'il faut le dire à la personne.
+
+## 0.19.0
+
+Treize outils nouveaux (étape 15) :
+
+- Équipes de l'entité active : `list_equipes`, `get_equipe` (gestionnaire, responsable, chef d'équipe), `create_equipe`, `update_equipe` (membres et horaire envoyés remplacent les précédents ; horaire `[]` : celui de l'entité), `deactivate_equipe` (deux appels) — responsable.
+- Ouvriers : `list_ouvriers` (filtres équipe, corps de métier, compétence ; `peut_diriger`), `get_ouvrier`, `update_ouvrier` (corps de métier et compétences, responsable).
+- Prestataires externes : `list_prestataires`, `get_prestataire` (gestionnaire, responsable), `create_prestataire`, `update_prestataire`, `deactivate_prestataire` (deux appels) — responsable ; numéro d'entreprise contrôlé.
+
+Outils changés : `qualifier_demande` reçoit `corps_metier_id` (absent : celui déjà noté, sinon celui de la catégorie ; `null` : aucun) ; `list_categories`, `get_categories_arbre`, `get_categorie`, `create_categorie`, `update_categorie` portent `corps_metier_id` et `corps_metier_effectif_id` ; `list_listes_valeurs` connaît les listes `corps_metier` et `competence`. Aucune route hors MCP de plus.
 
 ## 0.18.0
 

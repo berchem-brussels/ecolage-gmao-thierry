@@ -2,6 +2,32 @@
   "_description": "Notes de version pour les utilisateurs, en FR et en NL, sans terme technique (standard v3.2, sections 13.1 et 17.8 ; écart E-07). Une note par version, de la plus récente à la plus ancienne. Chaque ligne a un public : « tous », « admin » (administrateur de l'application) ou une permission du catalogue des rôles (par exemple « parametres:gerer »), lue dans l'entité active. La note de la version installée s'affiche une fois à la première connexion qui suit la mise à jour ; toutes restent relisibles dans Aide, Nouveautés.",
   "notes": [
     {
+      "version": "0.19.0",
+      "date": "2026-11-18",
+      "lignes": [
+        {
+          "public": "tous",
+          "fr": "La visite guidée tient sur l'écran d'un téléphone, et l'export Excel des tickets fonctionne.",
+          "nl": "De rondleiding past op het scherm van een telefoon, en de Excel-export van de tickets werkt."
+        },
+        {
+          "public": "equipes:lire",
+          "fr": "Nouvel écran « Équipes et prestataires » : les équipes du service technique, leur chef, leurs membres et leur horaire, week-end compris ; le métier et les compétences de chaque ouvrier.",
+          "nl": "Nieuw scherm « Ploegen en aannemers »: de ploegen van de technische dienst, hun ploegbaas, hun leden en hun uurrooster, weekend inbegrepen; het vak en de bekwaamheden van elke arbeider."
+        },
+        {
+          "public": "prestataires:lire",
+          "fr": "Onglet « Prestataires » : les sociétés extérieures, leur contact, leurs métiers et la référence de leur marché ou de leur contrat.",
+          "nl": "Tabblad « Aannemers »: de externe ondernemingen, hun contactpersoon, hun vakken en de referentie van hun opdracht of contract."
+        },
+        {
+          "public": "demandes:qualifier",
+          "fr": "À la qualification, la catégorie propose un corps de métier ; vous le gardez ou le changez. Le responsable le règle dans Catégories et délais.",
+          "nl": "Bij de kwalificatie stelt de categorie een vakgebied voor; u behoudt of wijzigt het. De verantwoordelijke stelt het in bij Categorieën en termijnen."
+        }
+      ]
+    },
+    {
       "version": "0.18.0",
       "date": "2026-11-18",
       "lignes": [

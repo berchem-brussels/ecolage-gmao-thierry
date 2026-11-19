@@ -2,6 +2,10 @@
 
 De Franse tekst (`docs/fr/SECURITE.md`) is rechtsgeldig en bevat het volledige rooster per versie.
 
+## 0.19.0 (18/11/2026)
+
+Correcties van de test van 0.18.0; vakgebieden en bekwaamheden; ploegen, leden en uurroosters; profiel van de arbeiders; externe aannemers; vakgebied van de categorieën en bij de kwalificatie. Getest: ploeg, aannemer en arbeider van een andere entiteit geweigerd (403, 404 voor een arbeider die niet van de entiteit is), via API en MCP; lezen en schrijven volgens de nieuwe permissies; ploegbaas en leden met de juiste rol (anders 409); uurrooster (één tijdvak per dag, begin vóór einde); ondernemingsnummer (controlegetal modulo 97, uniek in de entiteit); waarden van de lijsten van de entiteit alleen; vakgebied van een aanvraag niet zichtbaar voor de aanvrager; logboek met id’s, bij het lezen benoemd; migratie op een basis van 0.18.0. Negentien beschermingen één voor één verwijderd: telkens minstens één mislukte test (`docs/fr/SECURITE.md`). `npm audit`: ongewijzigd (E-50, E-09).
+
 ## 0.18.0 (18/11/2026)
 
 Globaal zoeken, export naar Excel en CSV, assistent, rondleiding. Exports via de bestaande lijstfuncties: entiteit BB exporteert niets van AA, een aanvrager zonder `demandes:entite` 403, zonder sessie 401, onbekende parameter 400; CSV-formules geneutraliseerd, Excel als tekst; maximum 5 000 regels vóór het laden; logboek zonder inhoud; bestand nooit bewaard. Assistent lokaal, zonder taalmodel of uitgaande oproep; stelt alleen schermen voor die de persoon kan openen. Geen nieuwe MCP-tool. `npm audit` server: 2 matige (`uuid` onder `exceljs`, E-50). Bewijs van falen: veertien beschermingen apart weggenomen, telkens minstens één test faalt (details in de Franse tekst).

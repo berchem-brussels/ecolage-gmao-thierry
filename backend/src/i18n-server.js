@@ -70,6 +70,13 @@ const MESSAGES = {
   SUPPLEANT_SANS_VALIDEUR: { fr: 'Désignez d’abord le valideur du service, puis son suppléant.', nl: 'Duid eerst de goedkeurder van de dienst aan, daarna zijn vervanger.' },
   SUPPLEANT_EGAL_VALIDEUR: { fr: 'Le suppléant doit être une autre personne que le valideur.', nl: 'De vervanger moet een andere persoon zijn dan de goedkeurder.' },
   SERVICE_CODE_EXISTE: { fr: 'Ce code de service existe déjà dans cette entité.', nl: 'Deze dienstcode bestaat al in deze entiteit.' },
+  // 0.19.0 (étape 15) : équipes et ouvriers.
+  EQUIPE_CODE_EXISTE: { fr: 'Ce code d’équipe existe déjà dans cette entité.', nl: 'Deze ploegcode bestaat al in deze entiteit.' },
+  CHEF_SANS_ROLE: { fr: 'Cette personne ne peut pas diriger l’équipe : elle doit avoir le rôle « Chef d’équipe » dans l’entité.', nl: 'Deze persoon kan de ploeg niet leiden: ze moet de rol « Ploegbaas » hebben in de entiteit.' },
+  MEMBRE_SANS_ROLE: { fr: 'Seuls les ouvriers et les chefs d’équipe de l’entité peuvent être membres d’une équipe.', nl: 'Alleen de arbeiders en de ploegbazen van de entiteit kunnen lid zijn van een ploeg.' },
+  NUMERO_ENTREPRISE_INVALIDE: { fr: 'Numéro d’entreprise invalide : dix chiffres commençant par 0 ou 1, par exemple 0123.456.749 (vérifiez la clé de contrôle).', nl: 'Ongeldig ondernemingsnummer: tien cijfers die beginnen met 0 of 1, bijvoorbeeld 0123.456.749 (controleer het controlegetal).' },
+  PRESTATAIRE_EXISTE: { fr: 'Un prestataire de cette entité a déjà ce numéro d’entreprise.', nl: 'Een aannemer van deze entiteit heeft dit ondernemingsnummer al.' },
+  HORAIRE_INVALIDE: { fr: 'Horaire invalide : un seul créneau par jour, avec un début avant la fin.', nl: 'Ongeldig uurrooster: één tijdvak per dag, met een begin vóór het einde.' },
   SERVICE_INCONNU: { fr: 'Service introuvable.', nl: 'Dienst niet gevonden.' },
   SERVICE_AUTRE_ENTITE: { fr: 'Ce service appartient à une autre entité que celle du compte.', nl: 'Deze dienst behoort tot een andere entiteit dan die van de account.' },
   SERVICE_INACTIF: { fr: 'Ce service est désactivé.', nl: 'Deze dienst is gedeactiveerd.' },

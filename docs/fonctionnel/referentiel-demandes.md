@@ -1,6 +1,6 @@
 # Référentiel des demandes : catégories, priorités, délais et calendrier
 
-Version 0.16.0 · Fiche fonctionnelle (modèle du standard, section 17.8).
+Version 0.19.0 · Fiche fonctionnelle (modèle du standard, section 17.8).
 
 ## Objet
 
@@ -38,6 +38,7 @@ Préparer ce dont la demande d'intervention aura besoin dès l'étape 5 : les ca
 | 18 | Questions du formulaire (0.7.0) : sur la fiche d'un domaine ou d'une nature, « Oui ou non » ou un choix parmi 2 à 6 réponses, FR et NL, facultatives sauf « Obligatoire », dix actives au plus, rangées par flèches, désactivées avec un motif ; une nature pose d'abord celles de son domaine ; l'aperçu des tuiles les montre ; trois questions livrées (plomberie, prises, chauffage), à adapter en atelier | DEM-05, DV-62, D-11 |
 | 19 | Libellés des états par entité (0.14.0) : le responsable règle, pour chaque état en usage, le texte lu par le demandeur et le texte envoyé à la GRC, en FR et en NL (100 caractères) ; « Revenir aux libellés livrés » ; les états à venir (validation, planification, prestataire, fusion) arrivent avec leur étape | CYC-04 |
 | 20 | Modèles de réponse au demandeur (0.15.0) : par entité, titre (100) et texte (4 000) en FR et en NL, variables `{numero}`, `{lieu}`, `{etat}`, `{prenom}` seulement (une autre est refusée en la nommant) ; réglés par le responsable, lus par le service ; désactivés avec un motif, réactivés ; quatre modèles livrés, jamais recréés | GES-09, D-11 |
+| 21 | Corps de métier par défaut d'une catégorie (0.19.0) : valeur de la liste « Corps de métier » de l'entité, réglée par le responsable ; une nature sans la sienne prend celle de son domaine ; proposé à la qualification. Valeurs livrées en attendant l'atelier ; à la mise à jour, une catégorie livrée sans corps de métier reçoit celui du catalogue, une catégorie réglée ou créée par le responsable n'est pas touchée | REF-06, DV-154, DV-157 |
 
 ## Écrans
 

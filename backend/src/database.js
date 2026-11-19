@@ -884,6 +884,102 @@ const MIGRATIONS = [
     // nouveaux retards font une alerte (services/avis.js, règle 8).
     require('./services/avis').rattraper(db);
   }],
+  // 0.19.0 (étape 15, point 2 ; ROL-05, DV-28, DV-155) : équipes de l'entité, leurs membres et leur horaire, corps de
+  // métier et compétences de chaque ouvrier. Un horaire d'équipe a au plus un créneau par jour (1 = lundi … 7 = dimanche,
+  // heures de Bruxelles « HH:MM ») ; une équipe sans créneau suit l'horaire de l'entité. Profil d'un ouvrier propre à
+  // chaque entité (les listes de valeurs le sont) ; corps de métier et compétences sont des valeurs de listes_valeurs
+  // (listes corps_metier et competence), contrôlées par le service.
+  // Point 4 (REF-06, GES-04) : corps de métier par défaut d'une catégorie (une nature sans le sien prend celui de son
+  // domaine) et corps de métier noté à la qualification d'une demande. Étape JavaScript : sur une installation existante,
+  // les catégories livrées reçoivent le corps de métier du catalogue (config/categories.json), seulement s'il est vide.
+  // Point 3 (REF-07) : prestataires externes de l'entité, leurs coordonnées, la référence libre de leur marché ou contrat
+  // de maintenance (EXT-03 : aucun échange avec 3P Procura) et leurs corps de métier. Numéro d'entreprise belge rangé
+  // sous la forme 0123.456.789, unique dans l'entité quand il est donné.
+  ['016_equipes_prestataires', `
+    CREATE TABLE equipes (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      entite_id INTEGER NOT NULL REFERENCES entites(id) ON DELETE RESTRICT,
+      code TEXT NOT NULL CHECK (length(code) BETWEEN 2 AND 20),
+      nom_fr TEXT NOT NULL CHECK (length(nom_fr) BETWEEN 1 AND 100),
+      nom_nl TEXT NOT NULL CHECK (length(nom_nl) BETWEEN 1 AND 100),
+      chef_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+      ordre INTEGER NOT NULL DEFAULT 0,
+      is_active INTEGER NOT NULL DEFAULT 1 CHECK (is_active IN (0, 1)),
+      motif_desactivation TEXT,
+      is_demo INTEGER NOT NULL DEFAULT 0 CHECK (is_demo IN (0, 1)),
+      created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+      updated_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+      UNIQUE (entite_id, code)
+    );
+    CREATE TABLE equipe_membres (
+      equipe_id INTEGER NOT NULL REFERENCES equipes(id) ON DELETE CASCADE,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      PRIMARY KEY (equipe_id, user_id)
+    );
+    CREATE INDEX idx_equipe_membres_user ON equipe_membres(user_id);
+    CREATE TABLE equipe_horaires (
+      equipe_id INTEGER NOT NULL REFERENCES equipes(id) ON DELETE CASCADE,
+      jour INTEGER NOT NULL CHECK (jour BETWEEN 1 AND 7),
+      debut TEXT NOT NULL CHECK (length(debut) = 5 AND debut GLOB '[0-2][0-9]:[0-5][0-9]'),
+      fin TEXT NOT NULL CHECK (length(fin) = 5 AND fin GLOB '[0-2][0-9]:[0-5][0-9]'),
+      PRIMARY KEY (equipe_id, jour),
+      CHECK (debut < fin)
+    );
+    CREATE TABLE ouvrier_profils (
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      entite_id INTEGER NOT NULL REFERENCES entites(id) ON DELETE RESTRICT,
+      corps_metier_id INTEGER REFERENCES listes_valeurs(id) ON DELETE RESTRICT,
+      updated_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+      updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+      PRIMARY KEY (user_id, entite_id)
+    );
+    CREATE TABLE ouvrier_competences (
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      entite_id INTEGER NOT NULL REFERENCES entites(id) ON DELETE RESTRICT,
+      valeur_id INTEGER NOT NULL REFERENCES listes_valeurs(id) ON DELETE RESTRICT,
+      PRIMARY KEY (user_id, entite_id, valeur_id)
+    );
+    CREATE TABLE prestataires (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      entite_id INTEGER NOT NULL REFERENCES entites(id) ON DELETE RESTRICT,
+      nom TEXT NOT NULL CHECK (length(nom) BETWEEN 1 AND 150),
+      numero_entreprise TEXT CHECK (numero_entreprise IS NULL OR (length(numero_entreprise) = 12 AND numero_entreprise GLOB '[01][0-9][0-9][0-9].[0-9][0-9][0-9].[0-9][0-9][0-9]')),
+      langue TEXT NOT NULL DEFAULT 'fr' CHECK (langue IN ('fr', 'nl')),
+      contact_nom TEXT CHECK (contact_nom IS NULL OR length(contact_nom) <= 100),
+      telephone TEXT CHECK (telephone IS NULL OR length(telephone) <= 30),
+      courriel TEXT CHECK (courriel IS NULL OR length(courriel) BETWEEN 3 AND 254),
+      adresse TEXT CHECK (adresse IS NULL OR length(adresse) <= 200),
+      code_postal TEXT CHECK (code_postal IS NULL OR length(code_postal) <= 10),
+      commune TEXT CHECK (commune IS NULL OR length(commune) <= 100),
+      reference_marche TEXT CHECK (reference_marche IS NULL OR length(reference_marche) <= 100),
+      is_active INTEGER NOT NULL DEFAULT 1 CHECK (is_active IN (0, 1)),
+      motif_desactivation TEXT,
+      is_demo INTEGER NOT NULL DEFAULT 0 CHECK (is_demo IN (0, 1)),
+      created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+      updated_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+    CREATE UNIQUE INDEX idx_prestataires_numero ON prestataires(entite_id, numero_entreprise) WHERE numero_entreprise IS NOT NULL;
+    CREATE TABLE prestataire_corps (
+      prestataire_id INTEGER NOT NULL REFERENCES prestataires(id) ON DELETE CASCADE,
+      valeur_id INTEGER NOT NULL REFERENCES listes_valeurs(id) ON DELETE RESTRICT,
+      PRIMARY KEY (prestataire_id, valeur_id)
+    );
+    ALTER TABLE categories ADD COLUMN corps_metier_id INTEGER REFERENCES listes_valeurs(id) ON DELETE RESTRICT;
+    ALTER TABLE demandes ADD COLUMN corps_metier_id INTEGER REFERENCES listes_valeurs(id) ON DELETE RESTRICT
+  `, () => {
+    const listes = require('./services/listes-valeurs');
+    const categories = require('./services/categories');
+    for (const e of wrapped.prepare('SELECT id FROM entites WHERE is_active = 1').all()) {
+      listes.seedEntite(e.id);
+      categories.corpsLivres(e.id);
+    }
+  }],
 ];
 
 function migrate() {

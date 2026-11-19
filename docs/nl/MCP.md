@@ -1,6 +1,10 @@
 # MCP-server
 
-Versie van de toepassing: **0.18.0** · Bijgewerkt op 18/11/2026 · De Franse tekst is rechtsgeldig (`docs/fr/MCP.md`).
+Versie van de toepassing: **0.19.0** · Bijgewerkt op 18/11/2026 · De Franse tekst is rechtsgeldig (`docs/fr/MCP.md`).
+
+## 0.19.0
+
+Dertien nieuwe tools: `list_equipes`, `get_equipe`, `create_equipe`, `update_equipe`, `deactivate_equipe` (twee oproepen); `list_ouvriers`, `get_ouvrier`, `update_ouvrier`; `list_prestataires`, `get_prestataire`, `create_prestataire`, `update_prestataire`, `deactivate_prestataire` (twee oproepen). `qualifier_demande` ontvangt `corps_metier_id`; de categorieën dragen `corps_metier_id` en `corps_metier_effectif_id`.
 
 ## 0.18.0
 

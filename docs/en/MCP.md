@@ -1,6 +1,10 @@
 # MCP server
 
-Application version: **0.18.0** · Updated on 18/11/2026 · The French text prevails (`docs/fr/MCP.md`).
+Application version: **0.19.0** · Updated on 18/11/2026 · The French text prevails (`docs/fr/MCP.md`).
+
+## 0.19.0
+
+Thirteen new tools: `list_equipes`, `get_equipe`, `create_equipe`, `update_equipe`, `deactivate_equipe` (two calls); `list_ouvriers`, `get_ouvrier`, `update_ouvrier`; `list_prestataires`, `get_prestataire`, `create_prestataire`, `update_prestataire`, `deactivate_prestataire` (two calls). `qualifier_demande` accepts `corps_metier_id`; categories carry `corps_metier_id` and `corps_metier_effectif_id`.
 
 ## 0.18.0
 

@@ -142,6 +142,31 @@ test('tickets : ceux que la personne voit, libellés traduits', async () => {
   assert.equal(filtre.length, 1, 'filtre de statut appliqué');
 });
 
+// 0.19.0, point 0 (défaut 1 de la recette de la 0.18.0, DV-152) : l'export Excel des tickets rendait 500 (mise en forme
+// d'une colonne « description » absente de cette liste). Chaque liste s'exporte dans chaque format, avec ses colonnes.
+test('chaque liste dans chaque format : 200, fichier lisible, titres et lignes attendus', async () => {
+  const cas = [
+    { liste: 'mes demandes', qui: () => agent, url: '/api/demandes/export', titres: 6, lignes: 3 },
+    { liste: 'demandes de l’entité', qui: () => gest, url: '/api/demandes/export?perimetre=entite', titres: 9, lignes: 3 },
+    { liste: 'demandes à valider', qui: () => chef, url: '/api/demandes/a-valider/export', titres: 6, lignes: 1 },
+    { liste: 'tickets', qui: () => agent, url: '/api/tickets/export', titres: 10, lignes: 1 },
+  ];
+  for (const c of cas) {
+    for (const format of ['xlsx', 'csv']) {
+      const r = await telecharger(c.qui(), `${c.url}${c.url.includes('?') ? '&' : '?'}format=${format}`);
+      assert.equal(r.status, 200, `${c.liste} en ${format} : ${r.buffer.toString('utf8').slice(0, 200)}`);
+      const rows = format === 'csv' ? lignesCsv(r.buffer).map((l) => l.split(';')) : (await feuille(r.buffer)).rows;
+      assert.equal(rows[0].length, c.titres, `${c.liste} en ${format} : colonnes`);
+      assert.equal(rows.length, c.lignes + 1, `${c.liste} en ${format} : lignes`);
+    }
+  }
+});
+
+test('Excel : la colonne Description passe à la ligne là où elle existe', async () => {
+  const { ws } = await feuille((await telecharger(gest, '/api/demandes/export?format=xlsx&perimetre=entite')).buffer);
+  assert.equal(ws.getCell('I2').alignment?.wrapText, true);
+});
+
 test('contrôles : session, format obligatoire, paramètre inconnu', async () => {
   const anonyme = await fetch(`${srv.base}/api/demandes/export?format=csv`);
   assert.equal(anonyme.status, 401);

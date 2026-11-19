@@ -33,6 +33,14 @@
  *   47 écrans avec les trois comptes.
  * 0.18.0 (point 3) : assistant ouvert avec une réponse de suivi (service technique) : 48 écrans.
  * 0.18.0 (point 4) : visite guidée à sa dernière étape (service technique) : 49 écrans ; ouverture automatique coupée.
+ * 0.19.0 (point 2) : Équipes (liste, fiche d'une équipe à horaire propre, onglet Ouvriers et fiche d'un ouvrier) : 53 écrans.
+ * 0.19.0 (point 3) : onglet Prestataires et fiche d'un prestataire : 55 écrans.
+ * 0.19.0 (point 4) : formulaire de qualification d'une demande « À qualifier » et fiche d'une catégorie : 57 écrans.
+ * 0.19.0 (point 1) : un écran qui renvoie ailleurs (compte sans le droit) est un défaut, jamais mesuré à la place de
+ *   l'écran voulu. Compte du service technique (MOBILE_USER) : administrateur avec le rôle de responsable dans l'entité,
+ *   comme pour les captures de l'aide (écrans du responsable et de l'administrateur compris).
+ * 0.19.0 (point 0) : chaque étape de la visite est mesurée (marges du panneau, pied sur une ligne, boutons dans le panneau),
+ *   sur les six appareils, dont 320 et 390 px dans WebKit.
  * 0.17.0 (point 7) : volet de la cloche ouvert (service technique et chef de service), onglet Courriel de Paramètres et
  *   fiche d'un modèle de courriel avec son aperçu (administrateur) : 45 écrans avec les trois comptes.
  */
@@ -50,7 +58,11 @@ const ROUTES = ['/', '/demandes/nouvelle', '/demandes', '/demandes-entite', '/pa
   '/patrimoine?photo=sans', '/reglages-entite', '/entites', '/users', '/parametres', '/parametres?onglet=modules', '/parametres?onglet=connexion',
   '/parametres?onglet=tickets', '/journal', '/tickets', '/help', '/help?fiche=journal', '/accessibility',
   // 0.16.0 : encodage, colonnes par état, « Déplacer » (le formulaire du passage s'ouvre, rien n'est envoyé).
-  '/demandes/encoder', '/demandes-entite?affichage=colonnes', '/demandes-entite?affichage=colonnes#deplacer'];
+  '/demandes/encoder', '/demandes-entite?affichage=colonnes', '/demandes-entite?affichage=colonnes#deplacer',
+  // 0.19.0 (étape 15) : équipes, fiche d'une équipe à horaire propre (jours et heures), ouvriers et fiche d'un ouvrier.
+  '/equipes', '/equipes#equipe', '/equipes?onglet=ouvriers', '/equipes?onglet=ouvriers#ouvrier',
+  // 0.19.0 (point 3) : prestataires externes et fiche d'un prestataire.
+  '/equipes?onglet=prestataires', '/equipes?onglet=prestataires#prestataire'];
 const MOTEURS = (process.env.MOBILE_MOTEURS || 'chromium,webkit').split(',').map((m) => m.trim()).filter(Boolean);
 const TOUS = [
   ['iPhone SE (320 px)', devices['iPhone SE'], 'chromium'],
@@ -74,7 +86,11 @@ const COMPTES = [
   { nom: 'service technique', user: USER, password: PASSWORD, routes: (f) => [...ROUTES, '/#cloche', '/#recherche', '/#chatbot', '/#visite',
     ...(f.mienne ? [`/demandes?demande=${f.mienne}`] : []),
     ...(f.entite ? [`/demandes-entite?demande=${f.entite}`, `/demandes-entite?demande=${f.entite}#note-interne`] : []),
-    ...(f.aQualifier ? [`/demandes-entite?demande=${f.aQualifier}#regrouper`, `/demandes-entite?demande=${f.aQualifier}#decouper`] : [])] },
+    ...(f.aQualifier ? [`/demandes-entite?demande=${f.aQualifier}#regrouper`, `/demandes-entite?demande=${f.aQualifier}#decouper`,
+      // 0.19.0 (point 4) : formulaire de qualification (corps de métier proposé) ; rien n'est envoyé.
+      `/demandes-entite?demande=${f.aQualifier}#qualifier`] : []),
+    // 0.19.0 (point 4) : fiche d'une catégorie (corps de métier par défaut).
+    '/referentiel#categorie'] },
   { nom: 'chef de service', user: process.env.MOBILE_VALIDEUR_USER, password: process.env.MOBILE_VALIDEUR_PASSWORD || PASSWORD,
     routes: (f) => ['/', '/#cloche', '/#recherche', '/a-valider', '/demandes', ...(f.aValider ? [`/a-valider?demande=${f.aValider}`, `/a-valider?demande=${f.aValider}#refuser`] : [])] },
   { nom: 'administrateur', user: process.env.MOBILE_ADMIN_USER, password: process.env.MOBILE_ADMIN_PASSWORD || PASSWORD,
@@ -121,6 +137,22 @@ async function agir(page, action) {
       const pb = await cliquer(page.locator('.col-carte button:has(.anticon-drag)'), '« Déplacer »');
       return pb || cliquer(page.locator('.ant-dropdown:not(.ant-dropdown-hidden) .ant-dropdown-menu-item'), 'état permis');
     }
+    // 0.19.0 : fiche de l'équipe qui a le plus de jours (horaire propre affiché), et fiche du premier ouvrier.
+    case 'equipe': {
+      const lignes = page.locator('.ant-table-row');
+      const n = await lignes.count();
+      let choix = -1; let max = -1;
+      for (let i = 0; i < n; i += 1) {
+        const jours = ((await lignes.nth(i).innerText()).match(/\d{2}:\d{2}–\d{2}:\d{2}/g) || []).length;
+        if (jours > max) { max = jours; choix = i; }
+      }
+      if (choix < 0) return 'équipe introuvable';
+      return cliquer(lignes.nth(choix).locator('.ant-btn-link'), 'équipe');
+    }
+    case 'ouvrier': return cliquer(page.locator('.ant-table-row .ant-btn-link'), 'ouvrier');
+    case 'prestataire': return cliquer(page.locator('.ant-table-row .ant-btn-link'), 'prestataire');
+    case 'qualifier': return cliquer(page.locator('.ant-drawer-open button').filter({ hasText: /^Qualifier$|^Kwalificeren$/ }), '« Qualifier »');
+    case 'categorie': return cliquer(page.locator('.ant-table-row').first(), 'catégorie');
     case 'ouvrir': return cliquer(page.locator('.ant-table-row .ant-btn-link, .ant-table-row .ant-btn:not(.ant-btn-dangerous)'), 'ligne à ouvrir');
     // 0.17.0 (point 7) : volet de la cloche (en-tête) ; fiche d'un modèle de courriel et son aperçu (Paramètres › Courriel).
     case 'cloche': return cliquer(page.locator('header button[aria-label^="Notifications"], header button[aria-label^="Meldingen"]'), 'cloche');
@@ -151,17 +183,40 @@ async function agir(page, action) {
     }
     // 0.18.0 (point 4) : visite guidée ouverte (comme « Revoir la visite guidée ») et menée jusqu'à sa dernière étape,
     // l'assistant en bas à droite, la plus exposée au débordement.
+    // 0.19.0 (point 0, défaut 2 de la recette de la 0.18.0) : CHAQUE étape est mesurée : panneau à 8 px au moins des deux
+    // bords, compteur et boutons sur une seule ligne, chaque bouton dans le panneau. La dernière reste ouverte pour la
+    // mesure commune de l'écran. Passage d'une étape à l'autre attendu sur le compteur, sans attente fixe.
     case 'visite': {
       await page.evaluate(() => window.dispatchEvent(new Event('app-visite')));
-      try { await page.locator('.visite-guidee .ant-tour-title').first().waitFor({ timeout: 5000 }); } catch { return 'visite guidée non ouverte'; }
+      try { await page.locator('.visite-guidee .visite-compteur').first().waitFor({ timeout: 5000 }); } catch { return 'visite guidée non ouverte'; }
+      const defautsVisite = [];
       for (let i = 0; i < 15; i += 1) {
-        const etat = await page.evaluate(() => { const ind = [...document.querySelectorAll('.visite-guidee .ant-tour-indicator')];
-          return { n: ind.length, active: ind.findIndex((e) => e.classList.contains('ant-tour-indicator-active')) }; });
-        if (etat.n === 0 || etat.active >= etat.n - 1) break;
-        const pb = await cliquer(page.locator('.visite-guidee .ant-tour-next-btn'), '« Suivant » de la visite');
-        if (pb) return pb;
+        await stable(page);
+        const m = await page.evaluate(() => {
+          const W = window.innerWidth;
+          const panneau = document.querySelector('.visite-guidee .ant-tour-content').getBoundingClientRect();
+          const pied = [...document.querySelector('.visite-guidee .ant-tour-footer').querySelectorAll('.visite-compteur, .ant-btn')];
+          // Une ligne de plus dès qu'un élément commence sous le bas du plus haut (aucun recouvrement vertical).
+          const rects = pied.map((e) => e.getBoundingClientRect());
+          const basHaut = Math.min(...rects.map((r) => r.bottom));
+          const lignes = rects.some((r) => r.top >= basHaut - 1) ? 2 : 1;
+          const dehors = pied.filter((e) => { const r = e.getBoundingClientRect(); return r.left < panneau.left - 1 || r.right > panneau.right + 1; })
+            .map((e) => e.textContent.trim());
+          const [n, total] = document.querySelector('.visite-guidee .visite-compteur').textContent.split('/').map((x) => Number(x.trim()));
+          return { n, total, titre: document.querySelector('.visite-guidee .ant-tour-title')?.textContent,
+            gauche: Math.round(panneau.left), droite: Math.round(W - panneau.right), lignes, dehors };
+        });
+        const ou = `visite, étape ${m.n}/${m.total} « ${m.titre} »`;
+        if (m.gauche < 8 || m.droite < 8) defautsVisite.push(`${ou} : panneau à ${m.gauche} px du bord gauche et ${m.droite} px du bord droit (8 px au moins)`);
+        if (m.lignes > 1) defautsVisite.push(`${ou} : compteur et boutons sur ${m.lignes} lignes`);
+        if (m.dehors.length) defautsVisite.push(`${ou} : bouton hors du panneau (${m.dehors.join(', ')})`);
+        if (!m.n || m.n >= m.total) break;
+        try {
+          await page.locator('.visite-guidee .ant-tour-next-btn').first().click({ timeout: 5000 });
+          await page.waitForFunction((k) => document.querySelector('.visite-guidee .visite-compteur')?.textContent.trim().startsWith(`${k} /`), m.n + 1, { timeout: 5000 });
+        } catch { defautsVisite.push(`${ou} : « Suivant » sans effet`); break; }
       }
-      return null;
+      return defautsVisite.length ? defautsVisite.join(' ; ') : null;
     }
     default: return null;
   }
@@ -242,6 +297,9 @@ let nbEcrans = 0;
 const nonControles = COMPTES.filter((c) => !c.user).map((c) => c.nom);
 // MOBILE_ECRANS=0 : parcours seuls, sans le tour des écrans (mise au point des parcours).
 const ECRANS = process.env.MOBILE_ECRANS !== '0';
+// 0.19.0 (point 0) : MOBILE_ROUTES=/#visite,/demandes (liste exacte, séparée par des virgules) ne joue que ces écrans,
+// pour rejouer vite un contrôle ; le passage de référence se fait toujours sans ce filtre (le résumé le signale).
+const FILTRE = (process.env.MOBILE_ROUTES || '').split(',').map((r) => r.trim()).filter(Boolean);
 for (const compte of COMPTES.filter((c) => c.user && ECRANS)) {
   let langueInitiale = null;
   // Une seule connexion par compte, reprise par chaque appareil et chaque moteur (0.16.0, 0.16.1).
@@ -272,12 +330,16 @@ for (const compte of COMPTES.filter((c) => c.user && ECRANS)) {
       // Les erreurs comptent à partir d'ici : la lecture des fiches ci-dessus essaie des listes que le compte n'a pas
       // toujours le droit de lire (le chef de service n'a pas les demandes de l'entité).
       suivi.connecte = true;
-      const routes = compte.routes(fiches);
+      const routes = compte.routes(fiches).filter((r) => !FILTRE.length || FILTRE.includes(r));
       if (nom === APPAREILS[0][0] && lang === 'fr') nbEcrans += routes.length;
       for (const r of routes) {
         const [adresse, action] = r.split('#');
         await ouvrir(page, B + adresse);
         await page.waitForTimeout(1200);
+        // 0.19.0 (point 1) : un écran refusé au compte renvoie ailleurs (accueil) ; il n'est pas compté comme contrôlé.
+        const voulu = new URL(B + adresse).pathname;
+        const arrive = new URL(page.url()).pathname;
+        if (arrive !== voulu) { defauts.push(`${quoi} · ${r} : écran non ouvert, renvoyé vers ${arrive} (compte sans le droit ?)`); continue; }
         const manque = action ? await agir(page, action) : null;
         const fige = await stable(page);
         const m = await page.evaluate(mesurer);
@@ -313,6 +375,6 @@ if (PARCOURS) {
 for (const n of Object.values(navigateurs)) await n.close();
 const moteurs = [...new Set(APPAREILS.map(([, , m]) => m))].join(' et ');
 console.log(defauts.length ? defauts.join('\n')
-  : `Aucun défaut : ${nbEcrans} écrans, ${APPAREILS.length} appareils (${moteurs}), FR et NL${nbParcours ? ` ; parcours complets sur ${nbParcours} moteur(s)` : ''}.`);
+  : `Aucun défaut : ${nbEcrans} écrans, ${APPAREILS.length} appareils (${moteurs}), FR et NL${nbParcours ? ` ; parcours complets sur ${nbParcours} moteur(s)` : ''}${FILTRE.length ? ` (filtre MOBILE_ROUTES : passage partiel)` : ''}.`);
 if (nonControles.length) console.log(`Non contrôlé (compte non fourni) : ${nonControles.join(', ')}.`);
 process.exit(defauts.length ? 1 : 0);

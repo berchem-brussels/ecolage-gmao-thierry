@@ -20,7 +20,7 @@ import type { MenuProps } from 'antd';
 import {
   HomeOutlined, ApartmentOutlined, TeamOutlined, QuestionCircleOutlined, EyeOutlined, MenuFoldOutlined, MenuUnfoldOutlined,
   LogoutOutlined, LockOutlined, SunOutlined, MoonOutlined, ControlOutlined, BankOutlined, UnorderedListOutlined, SettingOutlined, AuditOutlined, FieldTimeOutlined,
-  PlusOutlined, SearchOutlined, ProfileOutlined, InboxOutlined, EnvironmentOutlined, AlertOutlined, FlagOutlined, GlobalOutlined, CheckSquareOutlined, ClusterOutlined,
+  PlusOutlined, SearchOutlined, ProfileOutlined, InboxOutlined, EnvironmentOutlined, AlertOutlined, FlagOutlined, GlobalOutlined, CheckSquareOutlined, ClusterOutlined, ToolOutlined,
 } from '@ant-design/icons';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -88,6 +88,8 @@ export default function AppLayout() {
       // 0.16.0 (étape 11) : le chef de service (rôle « Valideur ») et ses demandes à valider.
       ...(can('demandes:valider') ? [{ key: '/a-valider', icon: <CheckSquareOutlined />, label: t('nav.avalider') }] : []),
       ...(can('demandes:entite') ? [{ key: '/demandes-entite', icon: <InboxOutlined />, label: t('nav.demandes.entite') }] : []),
+      // 0.19.0 (étape 15) : équipes et ouvriers du service technique (lecture : gestionnaire, responsable, chef d'équipe).
+      ...(can('equipes:lire') ? [{ key: '/equipes', icon: <ToolOutlined />, label: t('nav.equipes') }] : []),
       ...(can('lieux:lire') && on('/patrimoine') ? [{ key: '/patrimoine', icon: <BankOutlined />, label: t('nav.patrimoine') }] : []),
     ] },
     ...(can('listes:gerer') || can('parametres:gerer') || can('categories:gerer') ? [{ type: 'group' as const, label: t('nav.group.reglages'), children: [

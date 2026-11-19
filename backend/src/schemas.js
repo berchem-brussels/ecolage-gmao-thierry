@@ -37,11 +37,27 @@ const lieuFields = {
 const heure = { type: ['string', 'null'], pattern: '^([01][0-9]|2[0-3]):[0-5][0-9]$' };
 const moisJour = { type: 'string', pattern: '^(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])$' };
 const jourIso = { type: 'string', format: 'date' };
+// 0.19.0 : code d'équipe (lettres, chiffres, . _ + -) et créneaux de l'horaire d'une équipe (fin « 24:00 » admise).
+const equipeCode = { type: 'string', pattern: '^[A-Za-z0-9][A-Za-z0-9._+-]{1,19}$' };
+const heureCreneau = { type: 'string', pattern: '^(([01][0-9]|2[0-3]):[0-5][0-9]|24:00)$' };
+const prestataireChamps = {
+  nom: T.reqStr(150), numero_entreprise: { type: ['string', 'null'], pattern: '^[01][0-9. ]{9,13}$' }, langue: T.en('fr', 'nl'),
+  contact_nom: T.str(100), telephone: { type: ['string', 'null'], maxLength: 30, pattern: '^[0-9+ ./()-]*$' },
+  courriel: { type: ['string', 'null'], maxLength: 254, pattern: '^$|^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$' },
+  adresse: T.str(200), code_postal: { type: ['string', 'null'], maxLength: 10 }, commune: T.str(100), reference_marche: T.str(100),
+  corps_metier: { type: 'array', uniqueItems: true, maxItems: 30, items: T.int(1) },
+};
+const horaireEquipe = {
+  type: 'array', maxItems: 7,
+  items: obj({ jour: T.int(1, 7), debut: heureCreneau, fin: heureCreneau }, ['jour', 'debut', 'fin']),
+};
 
 const categorieFields = {
   code: valeurCode, libelle_fr: T.reqStr(200), libelle_nl: T.reqStr(200), icone: T.en(...ICONES),
   priorite_defaut: { enum: [...PRIORITES, null] }, validation: { enum: [0, 1, null] },
   delai_fin_jours: { type: ['integer', 'null'], minimum: 1, maximum: 365 }, ordre: T.int(0, 100000),
+  // 0.19.0 (REF-06) : corps de métier par défaut (liste corps_metier de l'entité) ; null : celui du domaine, ou aucun.
+  corps_metier_id: { type: ['integer', 'null'], minimum: 1 },
 };
 
 // Questions propres à la catégorie (DEM-05, 0.7.0) : « oui_non » sans réponses, « choix » avec 2 à 6 réponses FR et NL
@@ -238,6 +254,31 @@ module.exports = {
     is_active: { type: 'integer', enum: [1] },
   }),
   serviceDeactivate: obj({ motif }, ['motif']),
+
+  // Équipes et ouvriers (0.19.0, étape 15, point 2 ; ROL-05, DV-28). Horaire : un créneau par jour au plus (contrôlé par le
+  // service), 1 = lundi … 7 = dimanche ; [] = horaire de l'entité. Membres et horaire remplacent les précédents en entier.
+  equipeList: listQuery({ is_active: flag }),
+  equipeCreate: obj({
+    code: equipeCode, nom_fr: T.reqStr(100), nom_nl: T.reqStr(100), chef_id: { type: ['integer', 'null'], minimum: 1 },
+    membres: { type: 'array', uniqueItems: true, maxItems: 100, items: T.int(1) }, horaire: horaireEquipe, ordre: T.int(0, 100000),
+  }, ['code', 'nom_fr', 'nom_nl']),
+  equipeUpdate: obj({
+    code: equipeCode, nom_fr: T.reqStr(100), nom_nl: T.reqStr(100), chef_id: { type: ['integer', 'null'], minimum: 1 },
+    membres: { type: 'array', uniqueItems: true, maxItems: 100, items: T.int(1) }, horaire: horaireEquipe, ordre: T.int(0, 100000),
+    is_active: { type: 'integer', enum: [1] },
+  }),
+  equipeDeactivate: obj({ motif }, ['motif']),
+  ouvrierList: listQuery({ equipe_id: T.int(1), corps_metier_id: T.int(1), competence_id: T.int(1) }),
+  // Prestataires externes (0.19.0, point 3 ; REF-07, EXT-03). Numéro d'entreprise : chiffres et points, contrôlé (modulo 97)
+  // et normalisé par le service ; corps_metier : liste complète des identifiants.
+  prestataireList: listQuery({ is_active: flag, corps_metier_id: T.int(1) }),
+  prestataireCreate: obj(prestataireChamps, ['nom']),
+  prestataireUpdate: obj({ ...prestataireChamps, is_active: { type: 'integer', enum: [1] } }),
+  prestataireDeactivate: obj({ motif }, ['motif']),
+  ouvrierUpdate: obj({
+    corps_metier_id: { type: ['integer', 'null'], minimum: 1 },
+    competences: { type: 'array', uniqueItems: true, maxItems: 50, items: T.int(1) },
+  }),
   demandeAValider: listQuery({}),
 
   // Réglages de la connexion Microsoft (gabarit 1.3.0, section 8.6) ; le secret est chiffré et jamais renvoyé.
@@ -290,6 +331,8 @@ module.exports = {
     duree_estimee_minutes: { type: ['integer', 'null'], minimum: 15, maximum: 10080 },
     consignes: T.str(2000), photos_visibles: flag,
     date_convenue: { type: ['string', 'null'], format: 'date' },
+    // 0.19.0 (GES-04) : corps de métier ; absent, celui déjà noté ou, à défaut, celui de la catégorie ; null : aucun.
+    corps_metier_id: { type: ['integer', 'null'], minimum: 1 },
   }, ['categorie_id', 'lieu_id', 'priorite']),
   // Vues enregistrées de la liste du service technique (0.9.0, GES-02) : un nom et les filtres de la liste.
   vueList: listQuery(),

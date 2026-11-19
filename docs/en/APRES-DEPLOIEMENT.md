@@ -2,6 +2,10 @@
 
 The French text prevails. Update procedure: upload the archive, `cd <folder>`, `ls -l` the archive, `sudo bash backup.sh`, `sudo rm -rf backend frontend docs`, `sudo tar xzf … --strip-components=1`, `ls backend frontend`, `sudo docker compose build`, `sudo docker compose up -d`, `sudo docker compose ps`, `curl -sk https://localhost:<https>/api/version`, checklist from the delivery message. `.env` and the volumes are never touched.
 
+## 0.19.0 (18/11/2026)
+
+Teams, trades, skills, contractors; fixes from the 0.18.0 acceptance test (step 15). Update through section 3, **with migration, no new dependency**. `sudo docker logs gmao-api --tail 30`: `[DB] Migration 016_equipes_prestataires appliquée`, then `[APP] API 0.19.0`. Then reload the demonstration data (`demo.js`, new shared password), before `sudo bash recette.sh`: nine `OK` lines. Back to 0.18.0 with the backup of the day.
+
 ## 0.18.0 (18/11/2026)
 
 Global search, Excel and CSV export, assistant, guided tour, help, usability test protocol (step 14). Update through section 3, **without migration, with a new dependency** (`exceljs`, downloaded when building the `api` image). `sudo docker logs gmao-api --tail 30`: `[APP] API 0.18.0`, no « Migration » line. `sudo bash recette.sh`: nine `OK` lines. Back to 0.17.0 without restoring the database.

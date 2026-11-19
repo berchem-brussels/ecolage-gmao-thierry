@@ -1,6 +1,10 @@
 # Architectuur
 
-Versie van de toepassing: **0.18.0** · De Franse tekst is rechtsgeldig (`docs/fr/ARCHITECTURE.md`); dit bestand vat elke versie samen.
+Versie van de toepassing: **0.19.0** · De Franse tekst is rechtsgeldig (`docs/fr/ARCHITECTURE.md`); dit bestand vat elke versie samen.
+
+## Ploegen, arbeiders, aannemers en vakgebieden (0.19.0)
+
+Migratie `016_equipes_prestataires`: `equipes`, `equipe_membres`, `equipe_horaires` (één tijdvak per dag, 1 = maandag … 7 = zondag; geen tijdvak = uurrooster van de entiteit), `ouvrier_profils`, `ouvrier_competences`, `prestataires` (ondernemingsnummer 0123.456.789, uniek in de entiteit), `prestataire_corps`; kolommen `categories.corps_metier_id` en `demandes.corps_metier_id`; JavaScript-stap die de geleverde categorieën zonder vakgebied aanvult. Waardelijsten `corps_metier` en `competence`. Nieuwe permissies `equipes:lire`, `equipes:gerer`, `equipes:diriger`, `interventions:realiser`, `prestataires:lire`, `prestataires:gerer`. Diensten `equipes.js` en `prestataires.js` (controlegetal modulo 97); routes `/api/equipes`, `/api/ouvriers`, `/api/prestataires`; dertien MCP-tools. `categories.js` en `qualification.js`: vakgebied van de categorie (van het domein voor een aard), voorgesteld bij de kwalificatie, intern voor de dienst. Logboek: lijsten van id’s per element benoemd, uurrooster per dag. Interface: `EquipesPage.tsx`, `PrestatairesOnglet.tsx`, veld « Vakgebied » in `CategoriesTab.tsx` en `QualificationForm.tsx`. Correcties van de test van 0.18.0 (`exports.js`, `VisiteGuidee.tsx`). Controle van de telefoons: 57 schermen.
 
 ## Zoeken, exports, assistent en rondleiding (0.18.0)
 

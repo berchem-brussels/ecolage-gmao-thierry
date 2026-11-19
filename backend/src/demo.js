@@ -22,6 +22,14 @@
  * dont le valideur est le compte « valideur.<entité> » et dont « agent.<entité> » est membre (s'il n'a pas déjà un
  * service) : une demande d'aménagement de l'agent passe ainsi par la validation. Un service déjà présent n'est jamais
  * modifié ; --retirer le désactive avec les comptes.
+ *
+ * Équipes (version 0.19.0, étape 15) : pour chaque entité active, deux ouvriers de plus (« ouvrier-2 » et « ouvrier-3 »)
+ * et deux équipes fictives, marquées is_demo = 1 : « Bâtiment » (chef « chef-equipe », membres « ouvrier » et
+ * « ouvrier-2 », horaire de l'entité) et « Propreté du week-end » (membre « ouvrier-3 », samedi et dimanche de 07:00 à
+ * 13:00). Corps de métier et compétences donnés aux ouvriers qui n'en ont pas encore. Une équipe ou un profil déjà
+ * présent n'est jamais modifié ; --retirer désactive les équipes avec les comptes.
+ * Prestataires (version 0.19.0, point 3) : deux prestataires fictifs par entité, sans numéro d'entreprise (aucune société
+ * réelle visée), courriel en .invalid ; créés s'ils manquent (nom), jamais modifiés ; --retirer les désactive.
  */
 const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
@@ -29,6 +37,7 @@ const { initDb, getDb, saveNow } = require('./database');
 const { logAudit } = require('./audit');
 const { ROLES, ENTITE_ROLES, DEFAULT_ROLE } = require('./roles');
 const { VERSION } = require('./config');
+const listes = require('./services/listes-valeurs');
 
 const DOMAIN = 'demo.invalid';
 
@@ -129,7 +138,11 @@ async function main() {
       .run(MOTIF_RETRAIT);
     const sv = db.prepare("UPDATE services SET is_active = 0, motif_desactivation = ?, updated_at = datetime('now') WHERE is_demo = 1 AND is_active = 1")
       .run(MOTIF_RETRAIT);
-    logAudit(null, 'demo.retrait', 'user', null, { comptes: r.changes, lieux: l.changes, services: sv.changes }, 'cli');
+    const eq = db.prepare("UPDATE equipes SET is_active = 0, motif_desactivation = ?, updated_at = datetime('now') WHERE is_demo = 1 AND is_active = 1")
+      .run(MOTIF_RETRAIT);
+    const pr = db.prepare("UPDATE prestataires SET is_active = 0, motif_desactivation = ?, updated_at = datetime('now') WHERE is_demo = 1 AND is_active = 1")
+      .run(MOTIF_RETRAIT);
+    logAudit(null, 'demo.retrait', 'user', null, { comptes: r.changes, lieux: l.changes, services: sv.changes, equipes: eq.changes, prestataires: pr.changes }, 'cli');
     saveNow();
     console.log(`[DEMO] ${r.changes} compte(s) et ${l.changes} lieu(x) de démonstration désactivé(s).`);
     return;
@@ -145,6 +158,8 @@ async function main() {
   const created = [];
   let lieux = 0;
   let services = 0;
+  let equipes = 0;
+  let prestataires = 0;
 
   db.transaction(() => {
     for (const e of entites) {
@@ -182,7 +197,69 @@ async function main() {
       }
       db.prepare('UPDATE users SET service_id = ? WHERE id = ? AND service_id IS NULL').run(sv.id, compte('agent'));
     }
-    logAudit(null, 'demo.chargement', 'user', null, { comptes: created.length, lieux, services }, 'cli');
+    // Équipes (0.19.0) : deux ouvriers de plus, deux équipes, profils des ouvriers ; équipes retirées par --retirer réactivées.
+    db.prepare("UPDATE equipes SET is_active = 1, motif_desactivation = NULL, updated_at = datetime('now') WHERE is_demo = 1 AND is_active = 0 AND motif_desactivation = ?")
+      .run(MOTIF_RETRAIT);
+    for (const e of entites) {
+      listes.seedEntite(e.id);
+      const bas = e.code.toLowerCase();
+      for (const n of [2, 3]) {
+        const email = `ouvrier-${n}.${bas}@${DOMAIN}`;
+        const id = upsertAccount(db, { email, first: 'Démo', last: `Ouvrier ${n} ${e.code}`, entiteId: e.id, hash });
+        ensureRole(db, id, e.id, DEFAULT_ROLE);
+        ensureRole(db, id, e.id, 'ouvrier');
+        created.push(email);
+      }
+      const compte = (nom) => db.prepare('SELECT id FROM users WHERE email = ?').get(`${nom}.${bas}@${DOMAIN}`).id;
+      const valeur = (liste, code) => db.prepare('SELECT id FROM listes_valeurs WHERE entite_id = ? AND liste = ? AND code = ? AND is_active = 1')
+        .get(e.id, liste, code)?.id;
+      const EQUIPES = [
+        { code: `${e.code}-BAT`, nom_fr: 'Bâtiment (démo)', nom_nl: 'Gebouwen (demo)', chef: 'chef-equipe', membres: ['ouvrier', 'ouvrier-2'], horaire: [], ordre: 10 },
+        { code: `${e.code}-PROP`, nom_fr: 'Propreté du week-end (démo)', nom_nl: 'Netheid in het weekend (demo)', chef: null, membres: ['ouvrier-3'],
+          horaire: [[6, '07:00', '13:00'], [7, '07:00', '13:00']], ordre: 20 },
+      ];
+      for (const q of EQUIPES) {
+        if (db.prepare('SELECT 1 FROM equipes WHERE entite_id = ? AND code = ?').get(e.id, q.code)) continue;
+        const id = db.prepare('INSERT INTO equipes (entite_id, code, nom_fr, nom_nl, chef_id, ordre, is_demo) VALUES (?, ?, ?, ?, ?, ?, 1)')
+          .run(e.id, q.code, q.nom_fr, q.nom_nl, q.chef ? compte(q.chef) : null, q.ordre).lastInsertRowid;
+        for (const m of q.membres) db.prepare('INSERT INTO equipe_membres (equipe_id, user_id) VALUES (?, ?)').run(id, compte(m));
+        for (const [jour, debut, fin] of q.horaire) db.prepare('INSERT INTO equipe_horaires (equipe_id, jour, debut, fin) VALUES (?, ?, ?, ?)').run(id, jour, debut, fin);
+        equipes += 1;
+      }
+      const PROFILS = [['ouvrier', 'electricite', ['ba4']], ['ouvrier-2', 'plomberie', ['vca']], ['ouvrier-3', 'proprete', ['permis_c']],
+        ['chef-equipe', 'polyvalent', ['vca', 'hauteur']]];
+      for (const [nom, corps, comps] of PROFILS) {
+        const uid = compte(nom);
+        if (db.prepare('SELECT 1 FROM ouvrier_profils WHERE user_id = ? AND entite_id = ?').get(uid, e.id)) continue;
+        db.prepare('INSERT INTO ouvrier_profils (user_id, entite_id, corps_metier_id) VALUES (?, ?, ?)').run(uid, e.id, valeur('corps_metier', corps) ?? null);
+        for (const c of comps) {
+          const v = valeur('competence', c);
+          if (v) db.prepare('INSERT OR IGNORE INTO ouvrier_competences (user_id, entite_id, valeur_id) VALUES (?, ?, ?)').run(uid, e.id, v);
+        }
+      }
+    }
+    // Prestataires (0.19.0, point 3) : réactivés s'ils ont été retirés par --retirer ; créés s'ils manquent.
+    db.prepare("UPDATE prestataires SET is_active = 1, motif_desactivation = NULL, updated_at = datetime('now') WHERE is_demo = 1 AND is_active = 0 AND motif_desactivation = ?")
+      .run(MOTIF_RETRAIT);
+    const PRESTATAIRES = [
+      { nom: 'Chauffagiste fictif (démo)', langue: 'fr', contact: 'Claire Fictive', ref: 'Contrat d’entretien des chaudières (démo)', corps: ['chauffage', 'plomberie'] },
+      { nom: 'Fictieve elektriciens (demo)', langue: 'nl', contact: 'Jan Fictief', ref: 'Raamovereenkomst elektriciteit (demo)', corps: ['electricite'] },
+    ];
+    for (const e of entites) {
+      for (const p of PRESTATAIRES) {
+        if (db.prepare('SELECT 1 FROM prestataires WHERE entite_id = ? AND nom = ?').get(e.id, p.nom)) continue;
+        const courriel = `${p.langue === 'nl' ? 'elektriciens' : 'chauffagiste'}.${e.code.toLowerCase()}@${DOMAIN}`;
+        const id = db.prepare(`INSERT INTO prestataires (entite_id, nom, langue, contact_nom, telephone, courriel, adresse, code_postal, commune, reference_marche, is_demo)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)`).run(e.id, p.nom, p.langue, p.contact, '02 000 00 00', courriel, ADRESSE.adresse, ADRESSE.code_postal,
+          ADRESSE.commune, p.ref).lastInsertRowid;
+        for (const c of p.corps) {
+          const v = db.prepare("SELECT id FROM listes_valeurs WHERE entite_id = ? AND liste = 'corps_metier' AND code = ? AND is_active = 1").get(e.id, c);
+          if (v) db.prepare('INSERT INTO prestataire_corps (prestataire_id, valeur_id) VALUES (?, ?)').run(id, v.id);
+        }
+        prestataires += 1;
+      }
+    }
+    logAudit(null, 'demo.chargement', 'user', null, { comptes: created.length, lieux, services, equipes, prestataires }, 'cli');
   })();
   saveNow();
 
@@ -190,6 +267,8 @@ async function main() {
   for (const email of created) console.log(`  ${email}`);
   console.log(`[DEMO] ${lieux} lieu(x) de démonstration créé(s) ; les lieux déjà présents sont gardés tels quels.`);
   console.log(`[DEMO] ${services} service(s) de démonstration créé(s) (valideur : valideur.<entité>, membre : agent.<entité>).`);
+  console.log(`[DEMO] ${equipes} équipe(s) de démonstration créée(s) (Bâtiment, et Propreté du week-end le samedi et le dimanche).`);
+  console.log(`[DEMO] ${prestataires} prestataire(s) de démonstration créé(s), sans numéro d'entreprise.`);
   console.log(`[DEMO] Mot de passe commun, affiché une seule fois : ${password}`);
   console.log('[DEMO] Relancer la commande donne un nouveau mot de passe ; --retirer désactive ces comptes et ces lieux.');
 }

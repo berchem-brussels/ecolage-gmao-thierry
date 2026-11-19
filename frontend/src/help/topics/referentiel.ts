@@ -18,7 +18,7 @@ const topic: HelpTopic = {
       title: { fr: 'Adapter une catégorie', nl: 'Een categorie aanpassen' },
       when: { fr: 'Quand une tuile manque, est mal nommée ou propose une mauvaise priorité.', nl: 'Wanneer een tegel ontbreekt, slecht benoemd is of een verkeerde prioriteit voorstelt.' },
       steps: [
-        { fr: 'Onglet catégories : cliquez sur un domaine ou une nature pour changer ses libellés, son pictogramme, sa priorité, son circuit ou son délai propre.', nl: 'Tabblad categorieën: klik op een domein of een soort om de labels, het pictogram, de prioriteit, het circuit of de eigen termijn te wijzigen.' },
+        { fr: 'Onglet catégories : cliquez sur un domaine ou une nature pour changer ses libellés, son pictogramme, sa priorité, son circuit, son délai propre ou son corps de métier (proposé à la qualification).', nl: 'Tabblad categorieën: klik op een domein of een soort om de labels, het pictogram, de prioriteit, het circuit, de eigen termijn of het vakgebied (voorgesteld bij de kwalificatie) te wijzigen.' },
         { fr: '{{ref.cat.nouveau_domaine}} crée un domaine ; {{ref.cat.nouvelle_nature}}, dans la fiche d’un domaine, ajoute une nature.', nl: '{{ref.cat.nouveau_domaine}} maakt een domein aan; {{ref.cat.nouvelle_nature}}, in de fiche van een domein, voegt een soort toe.' },
       ],
       result: { fr: 'L’aperçu montre aussitôt les tuiles du demandeur. Chaque fiche dit qui l’a modifiée et quand.', nl: 'Het voorbeeld toont meteen de tegels van de aanvrager. Elke fiche zegt wie ze wijzigde en wanneer.' },

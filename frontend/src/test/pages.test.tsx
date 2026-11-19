@@ -28,10 +28,33 @@ const user: Record<string, unknown> & { nouveautes?: unknown[] } = {
 };
 const roles = [
   { code: 'agent', portee: 'entite', defaut: true, label_fr: 'Demandeur', label_nl: 'Aanvrager', description_fr: 'd', description_nl: 'd', permissions: ['lieux:lire', 'listes:lire'] },
-  { code: 'gestionnaire', portee: 'entite', defaut: false, label_fr: 'Gestionnaire technique', label_nl: 'Technisch beheerder', description_fr: 'd', description_nl: 'd', permissions: ['entites:membres', 'lieux:lire', 'lieux:gerer', 'listes:lire'] },
-  { code: 'responsable', portee: 'entite', defaut: false, label_fr: 'Responsable du service technique', label_nl: 'Verantwoordelijke technische dienst', description_fr: 'd', description_nl: 'd', permissions: ['entites:membres', 'lieux:lire', 'lieux:gerer', 'listes:lire', 'listes:gerer'] },
+  { code: 'gestionnaire', portee: 'entite', defaut: false, label_fr: 'Gestionnaire technique', label_nl: 'Technisch beheerder', description_fr: 'd', description_nl: 'd', permissions: ['entites:membres', 'lieux:lire', 'lieux:gerer', 'listes:lire', 'equipes:lire', 'prestataires:lire'] },
+  { code: 'responsable', portee: 'entite', defaut: false, label_fr: 'Responsable du service technique', label_nl: 'Verantwoordelijke technische dienst', description_fr: 'd', description_nl: 'd', permissions: ['entites:membres', 'lieux:lire', 'lieux:gerer', 'listes:lire', 'listes:gerer', 'equipes:lire', 'equipes:gerer', 'prestataires:lire', 'prestataires:gerer'] },
   { code: 'valideur', portee: 'entite', defaut: false, label_fr: 'Valideur', label_nl: 'Goedkeurder', description_fr: 'd', description_nl: 'd', permissions: ['demandes:creer', 'demandes:valider'] },
   { code: 'admin', portee: 'instance', defaut: false, label_fr: 'Administrateur', label_nl: 'Beheerder', description_fr: 'd', description_nl: 'd', permissions: [] },
+];
+// 0.19.0 (étape 15) : équipes et ouvriers de l'entité AA.
+const equipesListe = [
+  { id: 4, code: 'BAT', nom_fr: 'Bâtiment', nom_nl: 'Gebouwen', chef_id: 21, chef_prenom: 'Charles', chef_nom: 'Chef', ordre: 10, is_active: 1, motif_desactivation: null, is_demo: 0,
+    nb_membres: 2, membres: [{ id: 22, prenom: 'Oscar', nom: 'Ouvrier' }, { id: 23, prenom: 'Olga', nom: 'Ouvrière' }], horaire: [], trace: null },
+  { id: 5, code: 'PROP-WE', nom_fr: 'Propreté du week-end', nom_nl: 'Netheid in het weekend', chef_id: null, chef_prenom: null, chef_nom: null, ordre: 20, is_active: 1,
+    motif_desactivation: null, is_demo: 1, nb_membres: 1, membres: [{ id: 24, prenom: 'Paul', nom: 'Propre' }],
+    horaire: [{ jour: 6, debut: '07:00', fin: '13:00' }, { jour: 7, debut: '07:00', fin: '13:00' }], trace: null },
+];
+const prestatairesListe = [
+  { id: 8, nom: 'Chauffagiste fictif', numero_entreprise: '0123.456.749', langue: 'fr', contact_nom: 'Claire Fictive', telephone: '02 000 00 00', courriel: 'c@fictif.invalid',
+    adresse: null, code_postal: null, commune: null, reference_marche: 'Contrat d’entretien des chaudières', is_active: 1, motif_desactivation: null, is_demo: 0,
+    corps_metier: [{ id: 62, code: 'chauffage', libelle_fr: 'Chauffage et ventilation', libelle_nl: 'Verwarming en ventilatie', is_active: 1 }], trace: null },
+];
+const ouvriersListe = [
+  { id: 21, prenom: 'Charles', nom: 'Chef', corps_metier: { id: 61, code: 'polyvalent', libelle_fr: 'Polyvalent', libelle_nl: 'Polyvalent', is_active: 1 },
+    competences: [{ id: 72, code: 'vca', libelle_fr: 'VCA (sécurité sur chantier)', libelle_nl: 'VCA (veiligheid op de werf)', is_active: 1 }],
+    equipes: [], chef_de: [{ id: 4, code: 'BAT', nom_fr: 'Bâtiment', nom_nl: 'Gebouwen' }], peut_diriger: 1 },
+  { id: 22, prenom: 'Oscar', nom: 'Ouvrier', corps_metier: { id: 60, code: 'electricite', libelle_fr: 'Électricité', libelle_nl: 'Elektriciteit', is_active: 1 },
+    competences: [{ id: 71, code: 'ba4', libelle_fr: 'BA4 : personne avertie (électricité)', libelle_nl: 'BA4: gewaarschuwd persoon (elektriciteit)', is_active: 1 }],
+    equipes: [{ id: 4, code: 'BAT', nom_fr: 'Bâtiment', nom_nl: 'Gebouwen' }], chef_de: [], peut_diriger: 0 },
+  { id: 24, prenom: 'Paul', nom: 'Propre', corps_metier: null, competences: [], equipes: [{ id: 5, code: 'PROP-WE', nom_fr: 'Propreté du week-end', nom_nl: 'Netheid in het weekend' }],
+    chef_de: [], peut_diriger: 0 },
 ];
 // 0.16.0 : services de l'entité AA et chef de service (rôle « Valideur » dans AA).
 const servicesListe = [
@@ -262,6 +285,12 @@ beforeEach(() => {
       : url.startsWith('/api/audit') ? { ...page(journal), meta: { envelope: 1, actions: ['action.nouvelle', 'lieu.update'] } }
       : url.startsWith('/api/entites') ? page(entites)
       : url.startsWith('/api/services') ? page(servicesListe)
+      : url.startsWith('/api/equipes') && init?.method && init.method !== 'GET' ? { data: equipesListe[0], meta: { envelope: 1 } }
+      : url.startsWith('/api/equipes') ? page(equipesListe)
+      : url.startsWith('/api/ouvriers') && init?.method === 'PUT' ? { data: ouvriersListe[2], meta: { envelope: 1 } }
+      : url.startsWith('/api/ouvriers') ? page(ouvriersListe)
+      : url.startsWith('/api/prestataires') && init?.method && init.method !== 'GET' ? { data: prestatairesListe[0], meta: { envelope: 1 } }
+      : url.startsWith('/api/prestataires') ? page(prestatairesListe)
       : url.startsWith('/api/users') ? page(users)
       : url.startsWith('/api/roles') ? page(roles)
       : { data: {}, meta: { envelope: 1 } }),
@@ -285,6 +314,7 @@ import JournalPage from '../pages/JournalPage';
 import ReferentielPage from '../pages/ReferentielPage';
 import TicketsPage from '../pages/TicketsPage';
 import ServicesPage from '../pages/ServicesPage';
+import EquipesPage from '../pages/EquipesPage';
 import { reloadModules } from '../moduleMap';
 import { sansDoublons } from '../components/RechercheGlobale';
 import { adresseExport } from '../components/BoutonExport';
@@ -293,7 +323,7 @@ import { answer } from '../components/Chatbot';
 const PAGES: [string, React.ComponentType][] = [
   ['Home', HomePage], ['Entites', EntitesPage], ['Users', UsersPage], ['Help', HelpPage], ['Accessibility', AccessibilityPage], ['Login', LoginPage],
   ['Patrimoine', PatrimoinePage], ['ListesValeurs', ListesValeursPage], ['Parametres', ParametresPage], ['ReglagesEntite', ReglagesEntitePage], ['Journal', JournalPage], ['Referentiel', ReferentielPage],
-  ['Tickets', TicketsPage], ['Services', ServicesPage],
+  ['Tickets', TicketsPage], ['Services', ServicesPage], ['Equipes', EquipesPage],
 ];
 
 function wrap(C: React.ComponentType, lang: 'fr' | 'nl', settings = FALLBACK_SETTINGS, entries: string[] = ['/']) {
@@ -379,10 +409,10 @@ describe('écrans', () => {
     expect(screen.getByText('Désactivée')).toBeInTheDocument();
   });
 
-  it('0.14.0 : quatre listes au choix, en boutons (types de lieux, motifs d’attente, motifs de refus, causes de panne)', async () => {
+  it('0.14.0 et 0.19.0 : six listes au choix, en boutons (dont corps de métier et compétences)', async () => {
     render(wrap(ListesValeursPage, 'fr'));
     await screen.findByText('Bureau');
-    for (const l of ['Types de lieux', "Motifs d'attente", 'Motifs de refus', 'Causes de panne']) expect(screen.getByRole('radio', { name: l })).toBeInTheDocument();
+    for (const l of ['Types de lieux', "Motifs d'attente", 'Motifs de refus', 'Causes de panne', 'Corps de métier', 'Compétences']) expect(screen.getByRole('radio', { name: l })).toBeInTheDocument();
     expect(screen.getByRole('radio', { name: 'Types de lieux' })).toBeChecked();
   });
 
@@ -1462,6 +1492,8 @@ describe('journal d’audit sans code brut (0.13.0, point 2 ; défauts D2, D3, D
     // 0.16.0 (point 1) : services des entités et leur valideur ; service d'un compte ; circuit noté au dépôt.
     services_entite: 'code nom_fr nom_nl valideur_id suppleant_id suppleant_du suppleant_au ordre is_active motif_desactivation',
     validation: 'service_id validation services',
+    // 0.19.0 (point 4) : corps de métier d'une catégorie et d'une demande qualifiée.
+    corps_categorie: 'corps_metier_id',
     // 0.16.0 (point 3) : demande encodée pour un agent.
     encodage: 'demandeur_id canal',
     // 0.16.0 (point 4) : fusion de doublons.
@@ -1469,6 +1501,12 @@ describe('journal d’audit sans code brut (0.13.0, point 2 ; défauts D2, D3, D
     decoupage: 'issue_de nouvelles',
     // 0.18.0 (point 2) : export d'une liste (jamais le contenu).
     exports: 'liste format lignes',
+    // 0.19.0 (étape 15) : équipes (création, champs changés, membres, horaire) et profil d'un ouvrier ; chargement de démonstration.
+    equipes: 'code nom_fr nom_nl chef_id ordre is_active motif_desactivation membres horaire membres_ajoutes membres_retires',
+    ouvriers: 'corps_metier competences',
+    demo: 'equipes prestataires',
+    // 0.19.0 (point 3) : prestataires externes (création, champs changés, corps de métier).
+    prestataires: 'nom numero_entreprise langue contact_nom telephone courriel adresse code_postal commune reference_marche is_active motif_desactivation corps_metier',
   };
   it('chaque champ écrit au journal a son libellé, en FR et en NL', () => {
     const manquants = [...new Set(Object.values(CHAMPS_ECRITS).join(' ').split(' '))]
@@ -2182,12 +2220,21 @@ describe('visite guidée (0.18.0, point 4 ; ERG-07)', () => {
       await waitFor(() => expect(titre()).toBe('Bienvenue'), { timeout: 3000 });
       const r = await axe.run(container.ownerDocument.body, { rules: { 'color-contrast': { enabled: false }, region: { enabled: false } } });
       expect(r.violations.map((v) => `${v.id}: ${v.nodes.length} ${v.nodes.map((n) => n.html.slice(0, 200)).join(' | ')}`)).toEqual([]);
+      // 0.19.0 (point 0) : compteur au lieu des points, libellés courts (défaut 2 de la recette de la 0.18.0).
+      const compteur = () => document.querySelector('.visite-guidee .visite-compteur');
+      const bouton = (c: string) => document.querySelector(`.visite-guidee .ant-tour-${c}-btn`)?.textContent;
+      expect(compteur()?.textContent).toBe('1 / 9');
+      expect(compteur()?.getAttribute('aria-label')).toBe('Étape 1 sur 9');
+      expect(document.querySelector('.visite-guidee .ant-tour-indicator'), 'plus de points d’avancement').toBeNull();
+      expect(bouton('next')).toBe('Suivant');
       const vus: string[] = [titre()!];
       for (let i = 0; i < 7; i += 1) { suivant(); await waitFor(() => expect(titre()).not.toBe(vus[vus.length - 1])); vus.push(titre()!); }
       // Profils du compte des tests : demandeur et administrateur (pas « demandes:entite » ni « demandes:valider »).
       expect(vus).toEqual(['Bienvenue', 'Vos demandes', 'Administration', 'Nouvelle demande', 'Rechercher', 'Notifications', 'Aide', 'Signaler']);
       suivant();
       await waitFor(() => expect(titre()).toBe('Assistant'));
+      expect(compteur()?.textContent).toBe('9 / 9');
+      expect([bouton('prev'), bouton('next')]).toEqual(['Précédent', 'Terminer']);
       fireEvent.click(document.querySelector('.visite-guidee .ant-tour-next-btn')!); // « Terminer »
       await waitFor(() => expect(window.localStorage.getItem(cle)).toBeTruthy());
       unmount();
@@ -2229,5 +2276,141 @@ describe('visite guidée (0.18.0, point 4 ; ERG-07)', () => {
       fireEvent.click(await screen.findByRole('button', { name: /Revoir la visite guidée/ }));
       await waitFor(() => expect(titre()).toBe('Bienvenue'));
     } finally { window.localStorage.removeItem(cle); }
+  });
+});
+
+describe('équipes et ouvriers (0.19.0, point 2 ; ROL-05, DV-28)', () => {
+  const rendre = (entree = '/equipes') => render(
+    <SettingsProvider value={{ settings: FALLBACK_SETTINGS, reload: async () => {} }}>
+      <I18nProvider defaultLang="fr"><MemoryRouter initialEntries={[entree]}><EquipesPage /></MemoryRouter></I18nProvider>
+    </SettingsProvider>,
+  );
+  const ent = () => (user.entites as { roles: string[] }[])[0];
+  const appels = () => (fetch as unknown as { mock: { calls: [string, RequestInit?][] } }).mock.calls;
+
+  it('liste : chef, membres, horaire de l’entité ou du week-end ; lecture seule pour le gestionnaire', async () => {
+    rendre();
+    expect(await screen.findByText('Propreté du week-end')).toBeInTheDocument();
+    expect(screen.getByText('Sam. 07:00–13:00 · Dim. 07:00–13:00')).toBeInTheDocument();
+    expect(screen.getByText("Horaire de l'entité")).toBeInTheDocument();
+    expect(screen.getByText('Oscar Ouvrier, Olga Ouvrière')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Nouvelle équipe/ }), 'le gestionnaire ne crée pas').toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Bâtiment' }));
+    expect(await screen.findByText(/Lecture seule/)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Enregistrer' })).toBeNull();
+  });
+
+  it('responsable : nouvelle équipe avec un horaire propre (samedi), envoyé au serveur', async () => {
+    const avant = ent().roles;
+    ent().roles = ['responsable'];
+    try {
+      rendre();
+      fireEvent.click(await screen.findByRole('button', { name: /Nouvelle équipe/ }));
+      const volet = await screen.findByRole('dialog');
+      fireEvent.change(within(volet).getByLabelText('Code'), { target: { value: 'VOIRIE' } });
+      fireEvent.change(within(volet).getByLabelText('Nom en français'), { target: { value: 'Voirie' } });
+      fireEvent.change(within(volet).getByLabelText('Nom en néerlandais'), { target: { value: 'Wegen' } });
+      fireEvent.click(within(volet).getByLabelText('Horaire propre à l’équipe'));
+      fireEvent.click(within(volet).getByRole('checkbox', { name: 'Samedi' }));
+      fireEvent.change(within(volet).getByLabelText('Samedi : fin'), { target: { value: '12:00' } });
+      fireEvent.click(within(volet).getByRole('button', { name: 'Enregistrer' }));
+      await waitFor(() => expect(appels().some(([u, i]) => u === '/api/equipes' && i?.method === 'POST')).toBe(true));
+      const [, init] = appels().find(([u, i]) => u === '/api/equipes' && i?.method === 'POST')!;
+      expect(JSON.parse(String(init!.body))).toEqual({ code: 'VOIRIE', nom_fr: 'Voirie', nom_nl: 'Wegen', chef_id: null, membres: [], horaire: [{ jour: 6, debut: '07:00', fin: '12:00' }] });
+    } finally { ent().roles = avant; }
+  });
+
+  it('responsable : un créneau dont la fin précède le début est refusé avant l’envoi', async () => {
+    const avant = ent().roles;
+    ent().roles = ['responsable'];
+    try {
+      rendre();
+      fireEvent.click(await screen.findByRole('button', { name: 'Propreté du week-end' }));
+      const volet = await screen.findByRole('dialog');
+      fireEvent.change(within(volet).getByLabelText('Dimanche : début'), { target: { value: '14:00' } });
+      fireEvent.click(within(volet).getByRole('button', { name: 'Enregistrer' }));
+      expect(await within(volet).findByText(/Horaire invalide/)).toBeInTheDocument();
+      expect(appels().some(([u, i]) => u.startsWith('/api/equipes/') && i?.method === 'PUT')).toBe(false);
+    } finally { ent().roles = avant; }
+  });
+
+  it('onglet Ouvriers : métier, compétences, équipes et chef ; filtre par équipe ; sans violation axe-core', async () => {
+    const { container } = rendre('/equipes?onglet=ouvriers');
+    expect(await screen.findByText('Électricité')).toBeInTheDocument();
+    expect(screen.getByText('BA4 : personne avertie (électricité)')).toBeInTheDocument();
+    expect(screen.getByText('Bâtiment (chef)')).toBeInTheDocument();
+    expect(screen.getByText('Non précisé')).toBeInTheDocument();
+    const r = await axe.run(container, { rules: { 'color-contrast': { enabled: false }, region: { enabled: false } } });
+    expect(r.violations.map((v) => `${v.id}: ${v.nodes.map((n) => n.html.slice(0, 120)).join(' | ')}`)).toEqual([]);
+  });
+});
+
+describe('prestataires externes (0.19.0, point 3 ; REF-07, EXT-03)', () => {
+  const rendre = (entree = '/equipes?onglet=prestataires') => render(
+    <SettingsProvider value={{ settings: FALLBACK_SETTINGS, reload: async () => {} }}>
+      <I18nProvider defaultLang="fr"><MemoryRouter initialEntries={[entree]}><EquipesPage /></MemoryRouter></I18nProvider>
+    </SettingsProvider>,
+  );
+  const ent = () => (user.entites as { roles: string[] }[])[0];
+  const appels = () => (fetch as unknown as { mock: { calls: [string, RequestInit?][] } }).mock.calls;
+
+  it('onglet : nom, numéro, langue, métiers, contact et référence ; lecture seule pour le gestionnaire ; sans violation axe-core', async () => {
+    const { container } = rendre();
+    expect(await screen.findByText('Chauffagiste fictif')).toBeInTheDocument();
+    expect(screen.getByText('0123.456.749')).toBeInTheDocument();
+    expect(screen.getByText('Chauffage et ventilation')).toBeInTheDocument();
+    expect(screen.getByText('Claire Fictive · 02 000 00 00 · c@fictif.invalid')).toBeInTheDocument();
+    expect(screen.getByRole('radio', { name: 'Prestataires (1)' })).toBeChecked();
+    expect(screen.queryByRole('button', { name: /Nouveau prestataire/ })).toBeNull();
+    const r = await axe.run(container, { rules: { 'color-contrast': { enabled: false }, region: { enabled: false } } });
+    expect(r.violations.map((v) => `${v.id}: ${v.nodes.map((n) => n.html.slice(0, 120)).join(' | ')}`)).toEqual([]);
+    fireEvent.click(screen.getByRole('button', { name: 'Chauffagiste fictif' }));
+    expect(await screen.findByText(/Lecture seule : le responsable du service technique règle les prestataires/)).toBeInTheDocument();
+  });
+
+  it('responsable : nouveau prestataire, champs vides envoyés à null, langue néerlandaise', async () => {
+    const avant = ent().roles;
+    ent().roles = ['responsable'];
+    try {
+      rendre();
+      fireEvent.click(await screen.findByRole('button', { name: /Nouveau prestataire/ }));
+      const volet = await screen.findByRole('dialog');
+      fireEvent.change(within(volet).getByLabelText('Nom'), { target: { value: '  Elektriciens  ' } });
+      fireEvent.change(within(volet).getByLabelText("Numéro d'entreprise"), { target: { value: '0999.999.922' } });
+      fireEvent.click(within(volet).getByRole('radio', { name: 'Néerlandais' }));
+      fireEvent.click(within(volet).getByRole('button', { name: 'Enregistrer' }));
+      await waitFor(() => expect(appels().some(([u, i]) => u === '/api/prestataires' && i?.method === 'POST')).toBe(true));
+      const [, init] = appels().find(([u, i]) => u === '/api/prestataires' && i?.method === 'POST')!;
+      expect(JSON.parse(String(init!.body))).toEqual({ nom: 'Elektriciens', numero_entreprise: '0999.999.922', langue: 'nl', contact_nom: null, telephone: null,
+        courriel: null, adresse: null, code_postal: null, commune: null, reference_marche: null, corps_metier: [] });
+    } finally { ent().roles = avant; }
+  });
+
+  it('chef d’équipe : pas d’onglet Prestataires, même par l’adresse', async () => {
+    const avant = ent().roles;
+    ent().roles = ['chef_equipe'];
+    try {
+      rendre();
+      expect(await screen.findByText('Propreté du week-end')).toBeInTheDocument();
+      expect(screen.queryByRole('radio', { name: /Prestataires/ })).toBeNull();
+    } finally { ent().roles = avant; }
+  });
+});
+
+describe('assistant : équipes, métiers et prestataires (0.19.0, point 5)', () => {
+  it('chaque question trouve sa réponse et son écran, en FR et en NL ; les questions d’avant gardent la leur', () => {
+    for (const [q, key, route] of [
+      ['comment créer une équipe ?', 'chat.intent.equipes', '/equipes'],
+      ['hoe maak ik een ploeg aan?', 'chat.intent.equipes', '/equipes'],
+      ['où noter la compétence BA4 d’un ouvrier ?', 'chat.intent.metiers', '/equipes?onglet=ouvriers'],
+      ['welk vakgebied voor een arbeider?', 'chat.intent.metiers', '/equipes?onglet=ouvriers'],
+      ['ajouter un prestataire', 'chat.intent.prestataires', '/equipes?onglet=prestataires'],
+      ['ondernemingsnummer van een aannemer', 'chat.intent.prestataires', '/equipes?onglet=prestataires'],
+    ] as const) {
+      const r = answer(q);
+      expect(r.key, q).toBe(key);
+      expect((r as { route?: string }).route, q).toBe(route);
+    }
+    expect(answer('fuite au local 104').key).toBe('chat.intent.demande');
   });
 });
