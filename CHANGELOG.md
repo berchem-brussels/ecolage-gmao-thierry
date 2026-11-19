@@ -1,6 +1,6 @@
 # Journal des versions
 
-Version de l'application : **0.19.0** · Mis à jour le 18/11/2026
+Version de l'application : **0.19.0** · Mis à jour le 19/11/2026
 
 ## 0.19.0 (18/11/2026)
 
@@ -20,6 +20,7 @@ Version de l'application : **0.19.0** · Mis à jour le 18/11/2026
 - `mobile:check` : huit écrans de plus (57). `recette.sh` : contrôle 3 (capture `equipes-overview` en néerlandais), contrôle 5 (`016_equipes_prestataires`, sept tables, corps de métier livrés), contrôle 6 (équipes, ouvriers et prestataires refusés sans session).
 - Documentation : `docs/fonctionnel/equipes-prestataires.md` (registre RGPD) ; règles ajoutées à `referentiel-demandes.md` et `service-technique.md` ; sections 0.19.0 d'ARCHITECTURE, EXPLOITATION, MCP, SECURITE et APRES-DEPLOIEMENT (FR, NL, EN).
 - Note de version : quatre lignes (tous ; `equipes:lire` ; `prestataires:lire` ; `demandes:qualifier`).
+- Correctif avant la fusion (CodeQL, demande de fusion #20) : dans `equipes.test.js` et `lieux.test.js`, la requête SQL lue par le petit programme qui contrôle `demo.js` passe en argument du processus au lieu d'être recopiée dans le code exécuté (`JSON.stringify` inséré dans du code : « Improper code sanitization ») ; code de l'application inchangé.
 - Tests : serveur 637 (605), interface 359 (349) et un contrôle des captures ; dix-neuf preuves d'échec dans `docs/fr/SECURITE.md`.
 
 ## 0.18.0 (18/11/2026)

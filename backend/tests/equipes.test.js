@@ -192,7 +192,7 @@ test('démonstration : deux ouvriers, deux équipes et deux prestataires par ent
   const { spawnSync } = require('child_process');
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'gmao-demo-equipes-'));
   const env = { PATH: process.env.PATH, NODE_ENV: 'test', APP_TEST_MODE: '1', DB_PATH: path.join(dir, 'd.db'), DEMO_ALLOWED: '1' };
-  const run = (args = [], code = '') => spawnSync(process.execPath, code ? ['-e', code] : ['src/demo.js', ...args], { cwd: path.join(__dirname, '..'), env, encoding: 'utf8' });
+  const run = (args = [], code = '') => spawnSync(process.execPath, code ? ['-e', code, ...args] : ['src/demo.js', ...args], { cwd: path.join(__dirname, '..'), env, encoding: 'utf8' });
   // Installation de la 0.18.0 simulée : entités et administrateur, listes de valeurs sans corps de métier (demo.js les crée).
   const install = run([], `require('./src/database').initDb().then((db) => {
     const e1 = db.prepare("INSERT INTO entites (code, nom_fr, nom_nl) VALUES ('AC', 'A', 'A')").run().lastInsertRowid;
@@ -206,7 +206,8 @@ test('démonstration : deux ouvriers, deux équipes et deux prestataires par ent
   assert.match(r1.stdout, /4 équipe\(s\) de démonstration créée\(s\)/);
   assert.match(r1.stdout, /4 prestataire\(s\) de démonstration créé\(s\)/);
   assert.match(r1.stdout, /ouvrier-3\.cpas@demo\.invalid/);
-  const q = (sql) => JSON.parse(run([], `require('./src/database').initDb().then((db) => console.log(JSON.stringify(db.prepare(${JSON.stringify(sql)}).all())))`).stdout.trim().split('\n').pop());
+  // La requête passe en argument du processus (process.argv[1]), jamais recopiée dans le code exécuté (CodeQL, js/bad-code-sanitization).
+  const q = (sql) => JSON.parse(run([sql], "require('./src/database').initDb().then((db) => console.log(JSON.stringify(db.prepare(process.argv[1]).all())))").stdout.trim().split('\n').pop());
   const eq = q(`SELECT q.code, q.is_demo, c.email AS chef, (SELECT group_concat(u.email, ',') FROM equipe_membres m JOIN users u ON u.id = m.user_id WHERE m.equipe_id = q.id) AS membres,
     (SELECT group_concat(h.jour || ' ' || h.debut || '-' || h.fin, ',') FROM equipe_horaires h WHERE h.equipe_id = q.id) AS horaire FROM equipes q LEFT JOIN users c ON c.id = q.chef_id ORDER BY q.code`);
   assert.deepEqual(eq.map((x) => x.code), ['AC-BAT', 'AC-PROP', 'CPAS-BAT', 'CPAS-PROP']);

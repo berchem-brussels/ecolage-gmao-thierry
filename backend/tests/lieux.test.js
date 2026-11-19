@@ -332,7 +332,7 @@ test('MCP : arbre, création et effacement de photo en deux appels, sous les dro
 test('commande de démonstration : lieux fictifs par entité, rejouable sans écraser, retirés par --retirer', async () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'gmao-demo-lieux-'));
   const env = { PATH: process.env.PATH, NODE_ENV: 'test', APP_TEST_MODE: '1', DB_PATH: path.join(dir, 'd.db'), DEMO_ALLOWED: '1' };
-  const run = (args = [], code = '') => spawnSync(process.execPath, code ? ['-e', code] : ['src/demo.js', ...args], { cwd: path.join(__dirname, '..'), env, encoding: 'utf8' });
+  const run = (args = [], code = '') => spawnSync(process.execPath, code ? ['-e', code, ...args] : ['src/demo.js', ...args], { cwd: path.join(__dirname, '..'), env, encoding: 'utf8' });
   const install = run([], `require('./src/database').initDb().then((db) => {
     const e1 = db.prepare("INSERT INTO entites (code, nom_fr, nom_nl) VALUES ('AC', 'A', 'A')").run().lastInsertRowid;
     db.prepare("INSERT INTO entites (code, nom_fr, nom_nl) VALUES ('CPAS', 'C', 'C')").run();
@@ -344,7 +344,8 @@ test('commande de démonstration : lieux fictifs par entité, rejouable sans éc
   const r1 = run();
   assert.equal(r1.status, 0, r1.stderr);
   assert.match(r1.stdout, /31 lieu\(x\) de démonstration créé/);
-  const q = (sql) => JSON.parse(run([], `require('./src/database').initDb().then((db) => console.log(JSON.stringify(db.prepare(${JSON.stringify(sql)}).all())))`).stdout.trim().split('\n').pop());
+  // La requête passe en argument du processus (process.argv[1]), jamais recopiée dans le code exécuté (CodeQL, js/bad-code-sanitization).
+  const q = (sql) => JSON.parse(run([sql], "require('./src/database').initDb().then((db) => console.log(JSON.stringify(db.prepare(process.argv[1]).all())))").stdout.trim().split('\n').pop());
   const lieux = q('SELECT l.code, l.nature, l.is_demo, p.code AS parent, t.code AS type FROM lieux l LEFT JOIN lieux p ON p.id = l.parent_id LEFT JOIN listes_valeurs t ON t.id = l.type_id ORDER BY l.code');
   assert.ok(lieux.every((l) => l.is_demo === 1));
   const by = Object.fromEntries(lieux.map((l) => [l.code, l]));
