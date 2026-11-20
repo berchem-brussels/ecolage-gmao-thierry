@@ -12,7 +12,7 @@ import { Alert, Card, List, Space, Table, Tag, Typography } from 'antd';
 import { PlusOutlined, ProfileOutlined, InboxOutlined, MessageOutlined, CheckSquareOutlined } from '@ant-design/icons';
 import { Link } from 'react-router-dom';
 import api, { qs } from '../api';
-import { type Demande, dateDepot } from '../demandes';
+import { type Demande, COMPTEURS, dateDepot } from '../demandes';
 import { EtatTag, NonLusTag } from './DemandesPage';
 import TableauBord from '../components/demandes/TableauBord';
 import { useAuth } from '../contexts/AuthContext';
@@ -67,7 +67,10 @@ export default function HomePage() {
   useEffect(() => {
     setAQualifier(null);
     if (!entite || !voitEntite) return;
-    api.page<Demande>(`/demandes${qs({ perimetre: 'entite', etat: 'a_qualifier', limit: 1 })}`).then((r) => setAQualifier(r.pagination.total)).catch(() => setAQualifier(null));
+    // 0.20.0 (point 0, remarque 3 de la recette de la 0.19.0, DV-159) : même règle que le compteur « À qualifier » du tableau
+    // de bord (rouvertes comprises) ; le filtre vient de COMPTEURS, partagé avec le tableau de bord.
+    const etats = COMPTEURS.find((c) => c.cle === 'a_qualifier')!.filtres.etats;
+    api.page<Demande>(`/demandes${qs({ perimetre: 'entite', etats, limit: 1 })}`).then((r) => setAQualifier(r.pagination.total)).catch(() => setAQualifier(null));
   }, [entite?.id, voitEntite]);
 
   return (

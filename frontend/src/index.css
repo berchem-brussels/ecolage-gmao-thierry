@@ -243,3 +243,21 @@ body.app-dark .fil-bulle-interne { border-color: #ffa940; }
 .visite-guidee .ant-tour-footer { flex-wrap: nowrap; gap: 8px; }
 .visite-guidee .ant-tour-buttons { flex-shrink: 0; }
 .visite-compteur { white-space: nowrap; color: var(--app-text-secondary); font-size: 14px; }
+/* 0.20.0 (point 0, remarques 1 et 2 de la recette de la 0.19.0, DV-159) :
+ * - cadre à la couleur de l'institution et titre plus visible (couleur du texte principal de l'institution, qui garde le
+ *   contraste en clair comme en sombre) ;
+ * - le Tour d'Ant Design pose, même sans masque (mask={false}), un calque transparent plein écran (.ant-tour-mask,
+ *   z-index 1001, pointer-events: auto en style en ligne) qui captait chaque toucher : le menu (tiroir, z-index 1000) et
+ *   toute la page restaient inutilisables pendant la visite, dans WebKit comme dans Chromium. Le calque laisse passer les
+ *   touchers ; la visite se ferme à l'ouverture du menu (VisiteGuidee.tsx). */
+.visite-guidee.ant-tour-mask { pointer-events: none !important; }
+.visite-guidee .ant-tour-inner { border: 2px solid var(--app-primary); }
+.visite-guidee .ant-tour-title { font-size: 18px; font-weight: 700 !important; color: var(--app-primary-text); }
+/* 0.20.0 (point 5) : sur téléphone, le panneau du calendrier (288 px) se plaçait sous le champ et sortait de l'écran
+ * (320 px : −55 px à gauche dans Chromium, 5 px à droite dans WebKit avec défilement horizontal ; vu par mobile:check,
+ * écran « affecter »). Sous 480 px, le panneau occupe la largeur de l'écran moins 8 px de chaque côté et se centre ;
+ * vaut pour toutes les dates (affectation, qualification, compléments). */
+@media (max-width: 480px) {
+  .ant-picker-dropdown { left: 8px !important; right: 8px !important; }
+  .ant-picker-dropdown .ant-picker-panel-container { width: max-content; max-width: 100%; margin: 0 auto; overflow-x: auto; }
+}

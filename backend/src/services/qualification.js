@@ -55,7 +55,8 @@ const JOURS_PROCHES = 2;
  * (« À qualifier », « Rouverte »).
  */
 function qualifiable(db, etat) {
-  if (etat === 'qualifiee') return true;
+  // 0.20.0 (DV-161) : une demande « Planifiée » se requalifie aussi, sans changer d'état.
+  if (etat === 'qualifiee' || etat === 'planifiee') return true;
   return !!db.prepare("SELECT 1 FROM demande_transitions WHERE de_etat = ? AND vers_etat = 'qualifiee' AND via = 'qualifier' AND is_active = 1").get(etat);
 }
 
@@ -246,7 +247,7 @@ function qualifier(user, id, data, channel = 'api') {
     date_convenue: dateGardee,
     prise_en_charge_le: e.prise_en_charge_le,
     echeance_le: e.echeance_le,
-    etat: 'qualifiee',
+    etat: d.etat === 'planifiee' ? 'planifiee' : 'qualifiee',
   };
   const maintenant = versSql(new Date());
   db.transaction(() => {
@@ -272,7 +273,7 @@ function qualifier(user, id, data, channel = 'api') {
       const b = libre.has(k) ? (v ? 1 : 0) : v ?? null;
       if (a !== b) { avant[k] = a; apres[k] = b; }
     }
-    const premiere = d.etat !== 'qualifiee';
+    const premiere = d.etat !== 'qualifiee' && d.etat !== 'planifiee';
     logAudit(user.id, 'demande.qualifier', 'demande', d.id,
       { numero: d.numero, premiere: premiere ? 1 : 0, priorite: champs.priorite, priorite_confirmee: champs.priorite === proposee ? 1 : 0,
         ...(Object.keys(apres).length ? { avant, apres } : {}) }, channel, entiteId);

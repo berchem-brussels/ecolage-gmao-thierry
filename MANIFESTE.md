@@ -1,8 +1,26 @@
 # Manifeste
 
-Version de l'application : **0.19.0** · Mis à jour le 19/11/2026
+Version de l'application : **0.20.0** · Mis à jour le 19/11/2026
 
 Fichiers changés, dépendances et suites par version. Les décomptes sont recopiés de la sortie des commandes.
+
+## 0.20.0 (19/11/2026)
+
+Fichiers comparés à l'archive 0.19.0 (`gmao-v0_19_0.tar.gz`, SHA-256 `f03de8f4…b74fd0`) par `diff -rq` (hors `node_modules` et `dist`). Pour le contrôle du `git status` (`GITHUB.md`, section 5) : aucune ligne `D` attendue ; onze lignes `A`, les autres `M`.
+
+- Nouveaux (lignes `A`) : `NOTES_LIVRAISON_v0.20.0.md` ; serveur `src/routes/taches.js`, `src/services/taches.js`, `tests/taches.test.js` ; interface `src/components/demandes/TachesDemande.tsx` ; captures `public/aide-captures/fr/` et `nl/` : `demandes-entite-filtre-equipe.jpg`, `demandes-entite-taches.jpg`, `demandes-entite-affecter.jpg` (trois par langue).
+- Modifiés, serveur : `config/cycle-de-vie.json` (neuf passages, description), `config/notes-version.json` (note 0.20.0) ; `src/app.js` (route `/api/taches`), `src/database.js` (migration `017_taches`), `src/i18n-server.js` (onze codes), `src/mcp.js` (sept outils, `list_demandes`), `src/recette-api.js` (contrôles 5 et 6), `src/routes/demandes.js` (tâches d'une demande), `src/schemas.js` (tâches, filtres), `src/services/cycle.js` (`executer`, `passageAuto`, règles des tâches), `src/services/decoupage.js`, `src/services/demandes.js` (tâches de la fiche, date prévue, filtres), `src/services/echeances.js` (`jourOuvre`), `src/services/journal.js` (tâches, équipe), `src/services/qualification.js` (« Planifiée ») ; tests `categories`, `cloison`, `corps-categories`, `cycle`, `mcp`, `messages`, `notes-version`, `numerotation`, `parametres`, `validation` ; `package.json` (0.20.0, un fichier de test) et `package-lock.json` (numéro).
+- Modifiés, interface : `src/components/AppLayout.tsx` (menu qui ferme la visite), `VisiteGuidee.tsx`, `demandes/ChangerEtat.tsx` (passages de l'affectation retirés des boutons), `src/demandes.ts` (tâches, filtres), `src/help/topics/demandes-entite.ts`, `mes-demandes.ts`, `src/hints.ts`, `src/i18n.ts`, `src/index.css` (visite, calendrier sur téléphone), pages `DemandesPage` (date prévue), `GestionDemandesPage` (tâches, filtres), `HomePage` (compteur), `JournalPage` (listes vides, tâches) ; `mobile-check/verifier-mobile.mjs` (quatre écrans) ; tests `demandes.test.tsx`, `pages.test.tsx` ; `package.json` et `package-lock.json` (numéro) ; `dist/` reconstruit.
+- Modifiés, documentation et racine : `recette.sh` (contrôle 3 : `demandes-entite-taches.jpg`) ; `docs/fr`, `docs/nl`, `docs/en` (`APRES-DEPLOIEMENT.md`, `ARCHITECTURE.md`, `EXPLOITATION.md`, `MCP.md`, `SECURITE.md`) ; fichiers de suivi (`ETAT.md`, `CHANGELOG.md`, `ECARTS-CDC.md`, `MANIFESTE.md`).
+- Inchangés : les deux Dockerfile, `nginx.conf`, `docker-entrypoint.sh`, `docker-compose.yml`, `.env.example`, `backup.sh`, `verifier-ports.sh`, `ci.yml`, `.gitignore`, `src/demo.js`. La construction n'a pas besoin de `--no-cache`.
+- Retirés : aucun fichier.
+- Dépendances : aucune nouvelle ; verrous inchangés hors numéro de version. Aucun `npm audit fix`.
+- Contrôle DV-09 de la séance, avant toute modification : archive 0.19.0 conforme à `ETAT.md` (12 579 651 octets, 676 entrées, SHA-256 `f03de8f4…b74fd0`) ; serveur 637/637 ; interface 359 (+1 ignoré) ; `help:check` 11/11 ; typage, construction et accessibilité 0 erreur ; `mobile:check` 57 écrans, six appareils, FR et NL, parcours sur deux moteurs, sans défaut.
+- Suites de la 0.20.0 : serveur 667/667 ; interface 370 (+1 ignoré), 7 fichiers ; `help:check` 11/11 ; typage, construction et accessibilité 0 erreur ; `npm audit --omit=dev` serveur 2 modérées (E-50), interface 3 modérées (E-09) ; `mobile:check` : voir `ETAT.md`, section 2.
+- Preuves d'échec : `docs/fr/SECURITE.md`, section 0.20.0.
+- Navigateur réel : Chromium et WebKit du bac à sable (Playwright), serveur réel en production sur une base de démonstration passée de la 0.19.0 à la 0.20.0 ; captures sur cette base.
+- Migration et retour arrière : base 0.19.0 garnie passée en 0.20.0 (`[DB] Migration 017_taches appliquée`) ; la 0.19.0 démarre sur cette base (connexion, liste, fiche ; `/api/taches` absent) mais montrerait les passages de l'affectation comme des boutons : retour arrière avec restauration obligatoire de la sauvegarde du jour.
+- Images Docker : non reconstruites dans le bac à sable ; les deux images changent (code, `dist/`), sans dépendance nouvelle.
 
 ## 0.19.0 (18/11/2026)
 
@@ -526,4 +544,4 @@ Base : gabarit v3 1.1.0. Fichiers comparés au gabarit par `diff -rq`.
 
 ## Dépendances actuelles de la GMAO
 
-Identiques au gabarit 1.1.0 (aucune ajoutée jusqu'à la 0.5.2) ; depuis, `multer` 2.x (0.8.0) et `@playwright/test` en développement (0.12.0) ; aucune ajoutée en 0.16.0 ni en 0.16.1 (WebKit, utilisé par `mobile:check`, est un navigateur de `@playwright/test`) ; `nodemailer` 10.6.0 en 0.17.0 (E-48) ; `exceljs` 4.4.0 en 0.18.0 (E-50 pour `uuid` 8.3.2 qu'elle apporte) ; aucune ajoutée en 0.19.0. Dépendances du stack à ajouter plus tard et à citer ici au moment de l'ajout (cahier des charges, TEC-03) : `pdfkit` (étape 21), `recharts` (étape 31 ou 36), `jsonwebtoken` et `jwks-rsa` (étape 44), `@electric-sql/pglite` et `pg` (étape 43), `dompurify` si un texte riche est retenu. `multer` seulement si Renaud le retient pour l'étape 6 (écart E-16).
+Identiques au gabarit 1.1.0 (aucune ajoutée jusqu'à la 0.5.2) ; depuis, `multer` 2.x (0.8.0) et `@playwright/test` en développement (0.12.0) ; aucune ajoutée en 0.16.0 ni en 0.16.1 (WebKit, utilisé par `mobile:check`, est un navigateur de `@playwright/test`) ; `nodemailer` 10.6.0 en 0.17.0 (E-48) ; `exceljs` 4.4.0 en 0.18.0 (E-50 pour `uuid` 8.3.2 qu'elle apporte) ; aucune ajoutée en 0.19.0 ni en 0.20.0. Dépendances du stack à ajouter plus tard et à citer ici au moment de l'ajout (cahier des charges, TEC-03) : `pdfkit` (étape 21), `recharts` (étape 31 ou 36), `jsonwebtoken` et `jwks-rsa` (étape 44), `@electric-sql/pglite` et `pg` (étape 43), `dompurify` si un texte riche est retenu. `multer` seulement si Renaud le retient pour l'étape 6 (écart E-16).

@@ -1,6 +1,10 @@
 # Architecture
 
-Application version: **0.19.0** · The French text prevails (`docs/fr/ARCHITECTURE.md`); this file summarises each version.
+Application version: **0.20.0** · The French text prevails (`docs/fr/ARCHITECTURE.md`); this file summarises each version.
+
+## Tasks, assignment, suggestion and filters per team (0.20.0)
+
+Migration `017_taches`: `demande_taches` (rank within the request, title, instructions, trade, estimated duration, status `a_faire` / `en_cours` / `terminee` / `annulee`, cancellation reason, `annulation_auto`, `equipe_id`, `date_prevue`, `heure_debut`), `tache_ouvriers`; table `demande_transitions` rebuilt identically to accept `via = 'affecter'` (42 transitions, nine new from « Planned », DV-161). Service `services/taches.js` (rules 1 to 12), `cycle.passageAuto()` and `executer()`, `echeances.jourOuvre()`, list filters `equipe_id` and `ouvrier_id` (non-cancelled tasks, bounded to the active entity). Seven routes under `/api/demandes/:id/taches` and `/api/taches`, seven MCP tools (174). Interface: `TachesDemande.tsx`, « Team » and « Worker » lists in `GestionDemandesPage.tsx`, « Intervention planned on » for the requester; calendar panel centred below 480 px. Fixes from the 0.19.0 acceptance test (DV-159). Phone check: 61 screens.
 
 ## Teams, workers, contractors and trades (0.19.0)
 
@@ -24,7 +28,7 @@ Migration `013_messages`: tables `demande_messages` (author requester, beneficia
 
 ## Life cycle of requests (0.14.0)
 
-Catalogue `backend/config/cycle-de-vie.json` (15 statuses, 33 transitions; seven added in 0.16.0 for approval and merging), copied at start-up into `demande_transitions` and, per entity, into `demande_etats` (labels for the requester and for the CRM). Migration `012_cycle_de_vie`: tables `demande_transitions`, `demande_etats`, `demande_historique`, `demande_complements`, `demande_avis`, seven columns of `demandes`. Service `services/cycle.js`: order of checks (entity, request 404 or 403, permission 403, module, transition 409), new permission `demandes:traiter`, deadline suspended during a wait for a ticked reason. Nine routes (`/api/demandes/:id/historique`, `/transitions`, `PUT` and `DELETE /api/demandes/:id`, `/pieces`, `/avis`, `/api/etats-demande`), eight MCP tools. Interface: `ChangerEtat.tsx`, `HistoriqueDemande.tsx`, `ActionsDemandeur.tsx`, `EtatsTab.tsx`.
+Catalogue `backend/config/cycle-de-vie.json` (15 statuses, 42 transitions; seven added in 0.16.0 for approval and merging, nine in 0.20.0 for « Planned », DV-161), copied at start-up into `demande_transitions` and, per entity, into `demande_etats` (labels for the requester and for the CRM). Migration `012_cycle_de_vie`: tables `demande_transitions`, `demande_etats`, `demande_historique`, `demande_complements`, `demande_avis`, seven columns of `demandes`. Service `services/cycle.js`: order of checks (entity, request 404 or 403, permission 403, module, transition 409), new permission `demandes:traiter`, deadline suspended during a wait for a ticked reason. Nine routes (`/api/demandes/:id/historique`, `/transitions`, `PUT` and `DELETE /api/demandes/:id`, `/pieces`, `/avis`, `/api/etats-demande`), eight MCP tools. Interface: `ChangerEtat.tsx`, `HistoriqueDemande.tsx`, `ActionsDemandeur.tsx`, `EtatsTab.tsx`.
 
 ## Help per screen and local FAQ (0.12.0)
 

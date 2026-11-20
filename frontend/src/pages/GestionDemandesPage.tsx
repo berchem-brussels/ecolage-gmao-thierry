@@ -32,6 +32,7 @@ import DecoupageForm from '../components/demandes/DecoupageForm';
 import VueColonnes from '../components/demandes/VueColonnes';
 import HistoriqueDemande from '../components/demandes/HistoriqueDemande';
 import FilMessages from '../components/demandes/FilMessages';
+import TachesDemande from '../components/demandes/TachesDemande';
 import SuiviDemande from '../components/demandes/SuiviDemande';
 import { useAuth } from '../contexts/AuthContext';
 import { useI18n } from '../contexts/I18nContext';
@@ -95,6 +96,9 @@ export default function GestionDemandesPage() {
   const [histo, setHisto] = useState(0);
   const [arbre, setArbre] = useState<Categorie[]>([]);
   const [lieux, setLieux] = useState<Lieu[]>([]);
+  /** 0.20.0 (point 4, DV-163) : équipes et ouvriers de l'entité pour les filtres. */
+  const [equipesListe, setEquipesListe] = useState<{ id: number; code: string; nom_fr: string; nom_nl: string }[]>([]);
+  const [ouvriersListe, setOuvriersListe] = useState<{ id: number; prenom: string; nom: string }[]>([]);
   const [vues, setVues] = useState<VueDemandes[]>([]);
   const [nomVue, setNomVue] = useState<string | null>(null);
   const [q, setQ] = useState(f.q || '');
@@ -127,6 +131,8 @@ export default function GestionDemandesPage() {
     chargerVues();
     api.get<ArbreCategories>('/categories/arbre').then((r) => setArbre(r.domaines || [])).catch(() => setArbre([]));
     api.get<{ racines: Lieu[] }>('/lieux/arbre').then((r) => setLieux(flatten(r.racines || []))).catch(() => setLieux([]));
+    api.page<{ id: number; code: string; nom_fr: string; nom_nl: string }>(`/equipes${qs({ limit: 200 })}`).then((r) => setEquipesListe(r.data)).catch(() => setEquipesListe([]));
+    api.page<{ id: number; prenom: string; nom: string }>(`/ouvriers${qs({ limit: 200 })}`).then((r) => setOuvriersListe(r.data)).catch(() => setOuvriersListe([]));
   }, [user?.entite_active_id, chargerVues]);
 
   const ouverte = params.get('demande');
@@ -251,6 +257,12 @@ export default function GestionDemandesPage() {
             value={f.categorie_id} onChange={(v) => changer({ categorie_id: v })} treeData={arbreSelect} style={{ minWidth: 220 }} />
           <Select<number> allowClear showSearch optionFilterProp="label" aria-label={t('gest.filtre.batiment')} placeholder={t('gest.filtre.batiment')}
             value={f.batiment_id} onChange={(v) => changer({ batiment_id: v })} options={batiments} style={{ minWidth: 220 }} />
+          <Select<number> allowClear showSearch optionFilterProp="label" className="filtre-equipe" aria-label={t('gest.filtre.equipe')} placeholder={t('gest.filtre.equipe')}
+            value={f.equipe_id} onChange={(v) => changer({ equipe_id: v })} style={{ minWidth: 200 }}
+            options={equipesListe.map((e) => ({ value: e.id, label: `${lang === 'nl' ? e.nom_nl : e.nom_fr} (${e.code})` }))} />
+          <Select<number> allowClear showSearch optionFilterProp="label" className="filtre-ouvrier" aria-label={t('gest.filtre.ouvrier')} placeholder={t('gest.filtre.ouvrier')}
+            value={f.ouvrier_id} onChange={(v) => changer({ ouvrier_id: v })} style={{ minWidth: 200 }}
+            options={ouvriersListe.map((o) => ({ value: o.id, label: `${o.prenom} ${o.nom}` }))} />
         </div>
         <Collapse ghost size="small" items={[{ key: 'plus', label: t('gest.filtres.plus'), children: (
           <div className="gest-filtres">
@@ -375,6 +387,8 @@ export default function GestionDemandesPage() {
                 )}
                 <SuiviDemande d={fiche} onChange={(n) => { if (n) setFiche(n); else chargerFiche(); charger(); }} />
                 <FicheDemande d={fiche} avecDemandeur service onChange={chargerFiche} />
+                {/* 0.20.0 (point 1, CYC-03) : tâches de la demande ; un changement peut faire passer la demande. */}
+                <TachesDemande key={`t-${fiche.id}`} d={fiche} onChange={() => api.get<Demande>(`/demandes/${fiche.id}`).then(apresChangement).catch(chargerFiche)} />
                 <FilMessages key={`f-${fiche.id}`} d={fiche} service onLu={apresLecture} />
                 <HistoriqueDemande demandeId={fiche.id} service rafraichir={histo} />
               </>

@@ -767,6 +767,28 @@ describe('écrans', () => {
     });
   }
 
+  it('0.20.0 (DV-159) : une liste vide du détail est masquée (membres, corps de métier) ; « Avant » vide dit « aucun »', async () => {
+    const qui = { entite_id: 1, entite_code: 'AA', user_id: 1, user_email: 'a@exemple.test', user_first_name: 'Ada', user_last_name: 'Admin' };
+    const ajout = [
+      { id: 90, created_at: '2026-11-19 08:00:00', action: 'equipe.update', entity_type: 'equipe', entity_id: 3, channel: 'api', details: { membres_ajoutes: [9], membres_retires: [] }, ...qui,
+        noms: { 'membres_ajoutes.0': { type: 'user', id: 9, code: 'Olivier Ouvrier', nom_fr: 'Olivier Ouvrier', nom_nl: 'Olivier Ouvrier' } } },
+      { id: 91, created_at: '2026-11-19 08:10:00', action: 'prestataire.create', entity_type: 'prestataire', entity_id: 4, channel: 'api', details: { nom: 'Toiture fictive', numero_entreprise: null, corps_metier: [] }, ...qui },
+      { id: 92, created_at: '2026-11-19 08:20:00', action: 'ouvrier.update', entity_type: 'ouvrier', entity_id: 9, channel: 'api', details: { avant: { competences: [] }, apres: { competences: ['BA4'] } }, ...qui },
+    ];
+    (journal as unknown as Record<string, unknown>[]).push(...ajout);
+    try {
+      const { container } = render(wrap(JournalPage, 'fr'));
+      await screen.findByText(/Prestataire ajouté/);
+      container.querySelectorAll<HTMLButtonElement>('button.ant-table-row-expand-icon').forEach((b) => fireEvent.click(b));
+      expect(await screen.findByText('Membres ajoutés')).toBeInTheDocument();
+      expect(screen.queryByText('Membres retirés')).toBeNull();
+      expect(screen.getByText('Toiture fictive')).toBeInTheDocument();
+      expect(screen.queryByText('Corps de métier')).toBeNull();
+      expect(screen.getByText('Compétences : aucun')).toBeInTheDocument();
+      expect(screen.getByText('Compétences : BA4')).toBeInTheDocument();
+    } finally { journal.splice(journal.length - ajout.length, ajout.length); }
+  });
+
   it('le journal lit ses filtres dans l’adresse de la page et les envoie à l’API', async () => {
     render(wrap(JournalPage, 'nl', FALLBACK_SETTINGS, ['/journal?action=lieu&canal=mcp&du=2026-10-01']));
     expect(await screen.findByText('Plaats gewijzigd · AA')).toBeInTheDocument();
@@ -2265,6 +2287,19 @@ describe('visite guidée (0.18.0, point 4 ; ERG-07)', () => {
       window.localStorage.setItem('gmao.visite.auto', '0');
       window.localStorage.removeItem('gmao.visite.v1.1.demandeur');
     }
+  });
+
+  it('0.20.0 (DV-159) : le menu ouvert sur téléphone ferme la visite, notée vue', async () => {
+    window.localStorage.removeItem(cle);
+    try {
+      rendre('/help');
+      fireEvent.click(await screen.findByRole('button', { name: /Revoir la visite guidée/ }));
+      await waitFor(() => expect(titre()).toBe('Bienvenue'));
+      fireEvent.click(screen.getByRole('button', { name: 'Ouvrir ou fermer le menu' }));
+      await waitFor(() => expect(titre(), 'visite fermée par le menu').toBeUndefined());
+      expect(window.localStorage.getItem(cle), 'notée vue').toBeTruthy();
+      expect(document.querySelector('.ant-drawer-open'), 'menu ouvert').not.toBeNull();
+    } finally { window.localStorage.removeItem(cle); }
   });
 
   it('ouverture automatique coupée (contrôles automatiques) : rien ne s’ouvre seul ; l’Aide l’ouvre quand même', async () => {

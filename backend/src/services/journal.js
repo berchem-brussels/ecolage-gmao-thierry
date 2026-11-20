@@ -85,6 +85,13 @@ const REFERENCES = [
   { chemin: 'corps_metier', type: 'valeur', entity: 'prestataire' },
   { chemin: 'corps_metier.avant', type: 'valeur', entity: 'prestataire' },
   { chemin: 'corps_metier.apres', type: 'valeur', entity: 'prestataire' },
+  // 0.20.0 (point 1, CYC-03) : corps de métier d'une tâche à sa création (avant et après : règle générale ci-dessous).
+  { chemin: 'corps_metier_id', type: 'valeur', action: 'tache.create' },
+  // 0.20.0 (point 2, PLA-01) : ouvriers et équipe d'une tâche, avant et après l'affectation.
+  { chemin: 'avant.ouvriers', type: 'personne', action: 'tache.affecter' },
+  { chemin: 'apres.ouvriers', type: 'personne', action: 'tache.affecter' },
+  { chemin: 'avant.equipe_id', type: 'equipe', action: 'tache.affecter' },
+  { chemin: 'apres.equipe_id', type: 'equipe', action: 'tache.affecter' },
   // Point 4 : corps de métier d'une catégorie et d'une demande qualifiée.
   { chemin: 'avant.corps_metier_id', type: 'valeur' },
   { chemin: 'apres.corps_metier_id', type: 'valeur' },
@@ -100,6 +107,9 @@ const NOMS = {
     LEFT JOIN entites e ON e.id = s.entite_id WHERE s.id IN (SELECT value FROM json_each(?))`,
   demande: `SELECT d.id, d.numero AS code, d.numero AS nom_fr, d.numero AS nom_nl, e.code AS entite_code FROM demandes d
     LEFT JOIN entites e ON e.id = d.entite_id WHERE d.id IN (SELECT value FROM json_each(?))`,
+  // 0.20.0 (point 2) : équipe d'une tâche affectée.
+  equipe: `SELECT q.id, q.code, q.nom_fr, q.nom_nl, e.code AS entite_code FROM equipes q
+    LEFT JOIN entites e ON e.id = q.entite_id WHERE q.id IN (SELECT value FROM json_each(?))`,
   personne: `SELECT u.id, u.email AS code, (u.first_name || ' ' || u.last_name) AS nom_fr, (u.first_name || ' ' || u.last_name) AS nom_nl,
     NULL AS entite_code FROM users u WHERE u.id IN (SELECT value FROM json_each(?))`,
 };

@@ -980,6 +980,69 @@ const MIGRATIONS = [
       categories.corpsLivres(e.id);
     }
   }],
+  // 0.20.0 (étape 16, point 1 ; CYC-03, GES-04, DV-160) : tâches (ordres de travail) d'une demande, numérotées dans la
+  // demande ; corps de métier (liste corps_metier), durée estimée (comme à la qualification), état, motif d'annulation
+  // ou état de la demande qui les a annulées en se fermant. Aucune suppression : une tâche s'annule.
+  // Point 2 (PLA-01, DV-161) : affectation à une équipe (equipe_id) ou à un ou plusieurs ouvriers (tache_ouvriers), jamais
+  // les deux ; date prévue (AAAA-MM-JJ) et heure de début (HH:MM, heure de Bruxelles, seulement avec une date). La table
+  // des passages est refaite à l'identique (comme en 014) pour admettre via « affecter » (Qualifiée ↔ Planifiée, DV-161) ;
+  // les passages nouveaux sont ajoutés au démarrage par seedTransitions, un passage désactivé en base restant désactivé.
+  ['017_taches', `
+    CREATE TABLE demande_taches (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      demande_id INTEGER NOT NULL REFERENCES demandes(id) ON DELETE RESTRICT,
+      entite_id INTEGER NOT NULL REFERENCES entites(id) ON DELETE RESTRICT,
+      rang INTEGER NOT NULL CHECK (rang >= 1),
+      titre TEXT NOT NULL CHECK (length(titre) BETWEEN 3 AND 200),
+      consignes TEXT CHECK (consignes IS NULL OR length(consignes) <= 2000),
+      corps_metier_id INTEGER REFERENCES listes_valeurs(id) ON DELETE RESTRICT,
+      duree_estimee_min INTEGER CHECK (duree_estimee_min IS NULL OR duree_estimee_min BETWEEN 15 AND 10080),
+      etat TEXT NOT NULL DEFAULT 'a_faire' CHECK (etat IN ('a_faire', 'en_cours', 'terminee', 'annulee')),
+      motif_annulation TEXT CHECK (motif_annulation IS NULL OR length(motif_annulation) <= 500),
+      annulation_auto TEXT,
+      equipe_id INTEGER REFERENCES equipes(id) ON DELETE RESTRICT,
+      date_prevue TEXT CHECK (date_prevue IS NULL OR (length(date_prevue) = 10 AND date_prevue GLOB '[0-9][0-9][0-9][0-9]-[0-1][0-9]-[0-3][0-9]')),
+      heure_debut TEXT CHECK (heure_debut IS NULL OR (length(heure_debut) = 5 AND heure_debut GLOB '[0-2][0-9]:[0-5][0-9]')),
+      etat_depuis TEXT NOT NULL DEFAULT (datetime('now')),
+      created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+      updated_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+      UNIQUE (demande_id, rang),
+      CHECK (heure_debut IS NULL OR date_prevue IS NOT NULL)
+    );
+    CREATE INDEX idx_taches_entite_etat ON demande_taches(entite_id, etat);
+    CREATE INDEX idx_taches_date ON demande_taches(entite_id, date_prevue);
+    CREATE TABLE tache_ouvriers (
+      tache_id INTEGER NOT NULL REFERENCES demande_taches(id) ON DELETE CASCADE,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
+      created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      PRIMARY KEY (tache_id, user_id)
+    );
+    CREATE INDEX idx_tache_ouvriers_user ON tache_ouvriers(user_id);
+    CREATE TABLE demande_transitions_017 (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      de_etat TEXT NOT NULL CHECK (length(de_etat) BETWEEN 2 AND 30),
+      vers_etat TEXT NOT NULL CHECK (length(vers_etat) BETWEEN 2 AND 30),
+      permission TEXT NOT NULL CHECK (length(permission) BETWEEN 3 AND 60),
+      acteur TEXT NOT NULL DEFAULT 'service' CHECK (acteur IN ('service', 'demandeur', 'valideur')),
+      condition TEXT CHECK (condition IS NULL OR condition IN ('jamais_en_cours', 'delai_reouverture')),
+      via TEXT CHECK (via IS NULL OR via IN ('qualifier', 'fusionner', 'decouper', 'affecter')),
+      motif_liste TEXT CHECK (motif_liste IS NULL OR length(motif_liste) BETWEEN 2 AND 40),
+      commentaire TEXT NOT NULL DEFAULT 'interdit' CHECK (commentaire IN ('interdit', 'facultatif', 'obligatoire')),
+      commentaire_public INTEGER NOT NULL DEFAULT 0 CHECK (commentaire_public IN (0, 1)),
+      compte_rendu INTEGER NOT NULL DEFAULT 0 CHECK (compte_rendu IN (0, 1)),
+      ordre INTEGER NOT NULL DEFAULT 0,
+      is_active INTEGER NOT NULL DEFAULT 1 CHECK (is_active IN (0, 1)),
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      UNIQUE (de_etat, vers_etat, acteur)
+    );
+    INSERT INTO demande_transitions_017 (id, de_etat, vers_etat, permission, acteur, condition, via, motif_liste, commentaire, commentaire_public, compte_rendu, ordre, is_active, created_at)
+      SELECT id, de_etat, vers_etat, permission, acteur, condition, via, motif_liste, commentaire, commentaire_public, compte_rendu, ordre, is_active, created_at FROM demande_transitions;
+    DROP TABLE demande_transitions;
+    ALTER TABLE demande_transitions_017 RENAME TO demande_transitions
+  `],
 ];
 
 function migrate() {

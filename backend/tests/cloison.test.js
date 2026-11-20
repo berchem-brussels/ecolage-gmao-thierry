@@ -6,6 +6,9 @@
  */
 const { test, before, after } = require('node:test');
 const assert = require('node:assert/strict');
+// 0.20.0 : ce fichier essaie chaque route cloisonnée par l'API et par le MCP avec le même gestionnaire ; avec les tâches,
+// il dépasse le plafond de 60 appels MCP par minute et par personne (app.js), contrôlé à part dans mcp.test.js.
+process.env.MCP_RATE_MAX = '1000';
 const { startServer, setup, person } = require('./helpers');
 const { jpeg } = require('./fixtures');
 const { collectRoutes } = require('../src/openapi');
@@ -53,6 +56,11 @@ const RESSOURCES = [
   // 0.17.0 (étape 13) : notification de l'autre entité (accusé de réception de la demande encodée pour le demandeur).
   // Ressource personnelle : une autre personne habilitée dans l'entité reçoit 404 (personnel), jamais l'objet.
   { route: 'GET /api/notifications/:id', tool: 'get_notification', id: (ent) => objets[ent.code].notification, personnel: true },
+  // 0.20.0 (point 1, CYC-03) : tâches d'une demande de l'autre entité, et une tâche de l'autre entité.
+  { route: 'GET /api/demandes/:id/taches', tool: 'list_taches_demande', id: (ent) => objets[ent.code].demande },
+  { route: 'GET /api/taches/:id', tool: 'get_tache', id: (ent) => objets[ent.code].tache },
+  // 0.20.0 (point 3, PLA-02) : ouvriers proposés pour une tâche de l'autre entité.
+  { route: 'GET /api/taches/:id/suggestions', tool: 'suggerer_affectation_tache', id: (ent) => objets[ent.code].tache },
 ];
 
 /** Écritures cloisonnées : même attente, 403 depuis l'autre entité, et l'objet n'a pas bougé. */
@@ -100,6 +108,11 @@ const ECRITURES = [
   { route: 'DELETE /api/demandes/:id/suivre', body: {}, tool: 'prepare_ne_plus_suivre_demande', id: (ent) => objets[ent.code].demande },
   { route: 'POST /api/demandes/:id/messages/lu', body: {}, tool: 'mark_messages_lus', id: (ent) => objets[ent.code].demande },
   { route: 'PUT /api/notifications/:id/lue', body: {}, tool: 'marquer_notification_lue', id: (ent) => objets[ent.code].notification },
+  // 0.20.0 (point 1, CYC-03) : tâche ajoutée, modifiée ou passée sur une demande de l'autre entité.
+  { route: 'POST /api/demandes/:id/taches', body: { titre: 'Piraté' }, tool: 'create_tache', id: (ent) => objets[ent.code].demande },
+  { route: 'PUT /api/taches/:id', body: { titre: 'Piraté' }, tool: 'update_tache', id: (ent) => objets[ent.code].tache },
+  { route: 'POST /api/taches/:id/etat', body: { etat: 'annulee', motif: 'Piraté' }, tool: 'prepare_change_etat_tache', id: (ent) => objets[ent.code].tache },
+  { route: 'PUT /api/taches/:id/affectation', body: { date_prevue: '2099-01-01' }, tool: 'affecter_tache', id: (ent) => objets[ent.code].tache },
   { route: 'POST /api/tickets/:id/faq', body: { question_fr: 'Piraté', question_nl: 'Piraté', answer_fr: 'Piraté', answer_nl: 'Piraté' }, tool: 'create_faq_from_ticket', id: (ent) => objets[ent.code].ticket },
 ];
 
@@ -143,7 +156,10 @@ before(async () => {
     // 0.17.0 : accusé de réception de la demande, dans la cloche de qui l'a déposée.
     const notification = (await c.get('/api/notifications')).body.data.find((n) => n.objet_id === demande.body.data.id);
     assert.ok(notification, 'accusé de réception de la demande');
-    objets[ent.code] = { notification: notification.id, lieu: lieu.body.data.id, modele: modele.id, valeur: valeur.id, categorie: categorie.id, jour: jour.id, demande: demande.body.data.id, question: question.id, piece: piece.body.data.id, ticket: ticket.body.data.id, faq: faq.body.data.id };
+    // 0.20.0 (point 1, CYC-03) : une tâche sur la demande de l'entité.
+    const tache = await c.post(`/api/demandes/${demande.body.data.id}/taches`, { titre: `Tâche ${ent.code}` });
+    assert.equal(tache.status, 201, JSON.stringify(tache.body));
+    objets[ent.code] = { tache: tache.body.data.id, notification: notification.id, lieu: lieu.body.data.id, modele: modele.id, valeur: valeur.id, categorie: categorie.id, jour: jour.id, demande: demande.body.data.id, question: question.id, piece: piece.body.data.id, ticket: ticket.body.data.id, faq: faq.body.data.id };
   }
 });
 after(() => srv.stop());
@@ -210,6 +226,8 @@ for (const w of ECRITURES) {
     assert.equal(demande.etat, 'a_qualifier', 'la demande n’a pas été qualifiée');
     assert.equal(demande.qualifiee_par, null);
     assert.equal((await gestB.get(`/api/demandes/${objets.BB.demande}/messages`)).body.data.length, 0, 'aucun message ajouté');
+    const taches = (await gestB.get(`/api/demandes/${objets.BB.demande}/taches`)).body.data;
+    assert.deepEqual(taches.map((t) => [t.titre, t.etat, t.date_prevue]), [['Tâche BB', 'a_faire', null]], 'aucune tâche ajoutée, modifiée, annulée ni datée');
     const ticket = (await gestB.get(`/api/tickets/${objets.BB.ticket}`)).body.data;
     assert.equal(ticket.status, 'new', 'le ticket n’a pas été pris en charge');
     assert.equal(ticket.priority, 'P4');
@@ -331,6 +349,6 @@ test('toute route qui porte un identifiant d’entité figure dans la liste des 
     const key = `${r.method} ${r.path}`;
     if (/^\/api\/entites\/:id/.test(r.path) && !instance.has(key)) assert.ok(declared.has(key), `${key} hors de la liste`);
     // Ressources métier rattachées à une entité : toute route à identifiant est essayée depuis l'autre entité.
-    if (/^\/api\/(lieux|listes-valeurs|categories|questions-categorie|jours-non-ouvres|demandes|pieces|tickets|notifications)\/:id/.test(r.path)) assert.ok(declared.has(key) || ecritures.has(key), `${key} hors de la liste`);
+    if (/^\/api\/(lieux|listes-valeurs|categories|questions-categorie|jours-non-ouvres|demandes|pieces|tickets|notifications|taches)\/:id/.test(r.path)) assert.ok(declared.has(key) || ecritures.has(key), `${key} hors de la liste`);
   }
 });

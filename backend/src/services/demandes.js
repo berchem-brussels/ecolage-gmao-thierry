@@ -239,6 +239,13 @@ function get(user, id) {
     // 0.16.0 (GES-06) : demandes regroupées dans celle-ci (fusion).
     f.regroupees = getDb().prepare(`SELECT r.id, r.numero, r.created_at, u.first_name AS demandeur_prenom, u.last_name AS demandeur_nom
       FROM demandes r JOIN users u ON u.id = r.demandeur_id WHERE r.fusionnee_dans = ? ORDER BY r.id`).all(d.id);
+    // 0.20.0 (point 1 ; CYC-03, DV-160) : tâches de la fiche, jamais rendues au demandeur ; taches_modifiables : la
+    // personne peut en ajouter ou en changer dans l'état actuel de la demande.
+    const taches = require('./taches');
+    f.taches = taches.list(user, d.id);
+    f.taches_modifiables = peut(user, 'demandes:traiter') && taches.DEMANDE_MODIFIABLE.includes(d.etat) ? 1 : 0;
+    // Règle 6 des tâches : « Travaux terminés » n'est pas proposé tant qu'une tâche est ouverte (le serveur le refuse).
+    if (f.taches.some((t) => taches.OUVERTS.includes(t.etat))) f.transitions = f.transitions.filter((t) => t.vers !== 'terminee');
   }
   // 0.16.0 (règle 4) : le valideur du service lit la demande et ses pièces ; passages qu'il peut faire.
   const valideur = valideurDe(user, d);
@@ -251,6 +258,9 @@ function get(user, id) {
   // bénéficiaire, ce qu'ils peuvent encore faire (compléter tant que la demande est ouverte, annuler tant que les
   // travaux n'ont pas commencé).
   f.complements = complements(d.id);
+  // 0.20.0 (point 2, PLA-01, DV-161) : première date prévue des tâches ouvertes, lue par qui lit la demande (« Prévue le »),
+  // sans le nom des ouvriers.
+  f.intervention_prevue_le = require('./taches').interventionPrevue(d.id);
   const concerne = d.demandeur_id === user.id || (!!d.beneficiaire_id && d.beneficiaire_id === user.id);
   f.completable = concerne && !ETATS_FERMES.includes(d.etat) ? 1 : 0;
   const cycle = require('./cycle');
@@ -339,10 +349,12 @@ function valeurs(texte, admises, champ) {
  * Filtres du service technique (0.9.0, GES-02) : etats et priorites (listes séparées par des virgules), categorie_id
  * (un domaine compte ses natures), batiment_id (un lieu compte tout ce qu'il contient), echeance (retard, proche,
  * sans), canal, danger. La recherche q porte aussi sur le nom du demandeur dans le périmètre de l'entité.
+ * 0.20.0 (point 4, DV-163) : equipe_id (tâches non annulées confiées à l'équipe ou à l'un de ses membres) et ouvrier_id
+ * (tâches non annulées confiées à l'ouvrier ou à une de ses équipes) ; mêmes filtres pour l'export et les vues enregistrées.
  * 0.14.0 : attente=longue, demandes « En attente » depuis plus de N jours ouvrés (compteur du tableau de bord).
  */
 function list(user, { limit = 50, offset = 0, q, etat, etats, priorites, categorie_id: categorieId, batiment_id: batimentId,
-  echeance, attente, messages, mentions, canal, danger, ouvertes, tri, ordre, perimetre = 'miennes' } = {}) {
+  echeance, attente, messages, mentions, canal, danger, ouvertes, tri, ordre, perimetre = 'miennes', equipe_id: equipeId, ouvrier_id: ouvrierId } = {}) {
   const entiteId = entiteActive(user);
   const where = ['d.entite_id = ?'];
   const params = [entiteId];
@@ -391,6 +403,18 @@ function list(user, { limit = 50, offset = 0, q, etat, etats, priorites, categor
     where.push(f.sql); params.push(...f.params);
   }
   if (canal) { where.push('d.canal = ?'); params.push(canal); }
+  // 0.20.0 (point 4 ; GES-02, E-35, DV-163) : travail d'une équipe (tâches confiées à l'équipe ou à l'un de ses membres) ou
+  // d'un ouvrier (tâches confiées à lui ou à une de ses équipes) ; tâches annulées exclues. Les tâches sont de l'entité.
+  if (equipeId) {
+    where.push(`d.id IN (SELECT t.demande_id FROM demande_taches t WHERE t.entite_id = ? AND t.etat <> 'annulee' AND (t.equipe_id = ?
+      OR EXISTS (SELECT 1 FROM tache_ouvriers o JOIN equipe_membres m ON m.user_id = o.user_id WHERE o.tache_id = t.id AND m.equipe_id = ?)))`);
+    params.push(entiteId, equipeId, equipeId);
+  }
+  if (ouvrierId) {
+    where.push(`d.id IN (SELECT t.demande_id FROM demande_taches t WHERE t.entite_id = ? AND t.etat <> 'annulee' AND (
+      EXISTS (SELECT 1 FROM tache_ouvriers o WHERE o.tache_id = t.id AND o.user_id = ?) OR t.equipe_id IN (SELECT m.equipe_id FROM equipe_membres m WHERE m.user_id = ?)))`);
+    params.push(entiteId, ouvrierId, ouvrierId);
+  }
   if (danger === 1) where.push('d.danger = 1');
   if (danger === 0) where.push('d.danger = 0');
   if (ouvertes === 1) where.push(OUVERTE);

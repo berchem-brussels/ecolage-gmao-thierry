@@ -2,6 +2,39 @@
 
 Le français fait foi. Grille de la section 10.2 du standard, rejouée à chaque version. « Non joué » veut dire que le contrôle n'a pas tourné.
 
+## 0.20.0 (19/11/2026)
+
+Étape 16 : correctifs de la recette 0.19.0 ; tâches d'une demande ; affectation ; « Planifiée » ; suggestion d'affectation ; filtres par équipe et par ouvrier. Environnement : bac à sable de Claude, Node 22 ; copie locale (API Node en production et relais HTTPS) partie d'une base de la 0.19.0.
+
+| Famille | Contrôle | Résultat |
+| --- | --- | --- |
+| Autorisation (cloison) | Tâches d'une demande de l'autre entité, tâche de l'autre entité : lecture, création, modification, passage, affectation, suggestion refusés (403 ; 404 inconnue), par l'API et par le MCP ; corps de métier, ouvrier ou équipe d'une autre entité refusés (409) ; filtres `equipe_id` et `ouvrier_id` d'une autre entité : liste vide | Conforme (`cloison.test.js`, `taches.test.js`) |
+| Autorisation | Lecture `demandes:entite`, écriture `demandes:traiter` ; demandeur et ouvrier refusés (403) ; le demandeur ne reçoit ni les tâches ni le nom des ouvriers (seulement `intervention_prevue_le`) ; « Planifiée » jamais par la route des passages (`TRANSITION_PAR_ROUTE`) | Conforme |
+| Validation | Schémas `tacheCreate/Update/Etat/Affectation/Suggestions` ; titre 3–200, durée 15–10 080, motif d'annulation obligatoire et seulement pour annuler, dix ouvriers au plus, date réelle, heure HH:MM avec une date, date nouvelle jamais passée ; filtres entiers ≥ 1 | Conforme |
+| Injections | Requêtes à colonnes constantes ; filtres par paramètres liés | Conforme (`securite.test.js`) |
+| Données (RGPD) | Titre, consignes et motif d'une tâche jamais au journal (longueur ou « donné » seulement) ; ouvriers au journal par identifiant, nommés à la lecture ; demandeur sans nom d'ouvrier | Conforme |
+| LLM et MCP | Sept outils nouveaux, mêmes fonctions de service ; passage d'une tâche en deux appels ; plafond de 60 appels par minute désormais testé | Conforme (`mcp.test.js`) |
+| Interface | Visite guidée transparente aux touchers ; `mobile:check` : 61 écrans ; défaut trouvé et corrigé : panneau du calendrier hors de l'écran à 320 px | Conforme |
+| Secrets commités | Aucun secret ni valeur de NIXUS ; captures sur une base de démonstration | Conforme |
+| Infrastructure | Dockerfile, compose, `nginx.conf`, `backup.sh`, `.env`, `ci.yml` inchangés | Conforme |
+| Dépendances | Aucune dépendance nouvelle | E-50 et E-09 inchangés |
+| Migration | `017_taches` sur une base 0.19.0 : tables créées, demandes intactes, passage désactivé gardé désactivé, pas de relance | Conforme (`taches.test.js`, copie locale) |
+
+Preuves d'échec (chaque protection retirée seule, au moins un test échoue) :
+
+| Protection retirée | Échec constaté |
+| --- | --- |
+| Calque de la visite transparent aux touchers (`index.css`) | `mobile:check` « bouton du menu inutilisable pendant la visite » |
+| Cloison de `taches.load()` et de `demandeDe()` (ensemble) | `taches.test.js`, `cloison.test.js` |
+| Contrôle « Travaux terminés » avec une tâche ouverte | `taches.test.js` |
+| Contrôle des ouvriers de l'entité (`porteurs`) | `taches.test.js` (`OUVRIER_INVALIDE`) |
+| Plafond MCP relevé | `mcp.test.js` (61e appel accepté) |
+| Filtre équipe : clause des membres ; filtre ouvrier : clause de ses équipes ; tâches annulées (équipe, ouvrier) | `taches.test.js` (quatre échecs distincts) |
+| Clés `equipe_id`, `ouvrier_id` retirées du schéma, de `CLES_FILTRES`, de `NOMBRES` | `taches.test.js`, `demandes.test.tsx` |
+| Panneau du calendrier centré (`index.css`) | `mobile:check` « calendrier hors de l'écran » (320 px, deux moteurs) |
+
+Non prouvé : la borne à l'entité dans les sous-requêtes des filtres (redondante avec celle de la liste : la retirer ne change aucun résultat).
+
 ## 0.19.0 (18/11/2026)
 
 Étape 15 : correctifs de la recette 0.18.0 ; corps de métier et compétences ; équipes, membres et horaires ; profil des ouvriers ; prestataires externes ; corps de métier des catégories et à la qualification. Environnement : bac à sable de Claude, Node 22 ; copie locale (API Node et relais HTTPS) partie d'une base de la 0.18.0.

@@ -29,7 +29,8 @@ interface Saisie { motif_id?: number; commentaire?: string; compte_rendu?: strin
 export function ActionsDemande({ d, onChoisir, passages: donnes, titre = 'cycle.actions' }: { d: Demande; onChoisir: (t: Transition) => void; passages?: Transition[]; titre?: string }) {
   const { t } = useI18n();
   // La qualification garde son bouton ; la fusion (0.16.0) a son bouton ici et son propre formulaire.
-  const passages = (donnes || d.transitions || []).filter((x) => x.via !== 'qualifier');
+  // 0.20.0 (DV-161) : « Planifiée » et le retour à « Qualifiée » se font par l'affectation des tâches (via « affecter »).
+  const passages = (donnes || d.transitions || []).filter((x) => x.via !== 'qualifier' && x.via !== 'affecter');
   if (!passages.length) return null;
   return (
     <div role="group" aria-label={t(titre)} style={{ marginBottom: 16 }}>

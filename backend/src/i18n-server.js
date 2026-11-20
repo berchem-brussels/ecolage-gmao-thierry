@@ -72,6 +72,18 @@ const MESSAGES = {
   SERVICE_CODE_EXISTE: { fr: 'Ce code de service existe déjà dans cette entité.', nl: 'Deze dienstcode bestaat al in deze entiteit.' },
   // 0.19.0 (étape 15) : équipes et ouvriers.
   EQUIPE_CODE_EXISTE: { fr: 'Ce code d’équipe existe déjà dans cette entité.', nl: 'Deze ploegcode bestaat al in deze entiteit.' },
+  // 0.20.0 (point 1 ; CYC-03, DV-160) : tâches d'une demande.
+  TACHES_FIGEES: { fr: 'Les tâches de cette demande ne se modifient plus dans son état actuel. Après « Travaux terminés », repassez d’abord la demande « En cours ».', nl: 'De taken van deze aanvraag kunnen in haar huidige status niet meer gewijzigd worden. Na « Werken beëindigd » zet u de aanvraag eerst terug op « Bezig ».' },
+  TACHE_FERMEE: { fr: 'Cette tâche est terminée ou annulée : rouvrez-la pour la modifier.', nl: 'Deze taak is beëindigd of geannuleerd: heropen ze om ze te wijzigen.' },
+  TACHE_PASSAGE_INTERDIT: { fr: 'Ce changement d’état de la tâche n’est pas permis.', nl: 'Deze statuswijziging van de taak is niet toegestaan.' },
+  TACHE_MOTIF_REQUIS: { fr: 'Dites pourquoi la tâche est annulée.', nl: 'Zeg waarom de taak geannuleerd wordt.' },
+  TACHE_MOTIF_INUTILE: { fr: 'Seule l’annulation d’une tâche prend un motif.', nl: 'Enkel de annulering van een taak heeft een reden.' },
+  AFFECTATION_DOUBLE: { fr: 'Confiez la tâche soit à une équipe, soit à des ouvriers, pas aux deux.', nl: 'Wijs de taak toe aan een ploeg of aan arbeiders, niet aan beide.' },
+  OUVRIER_INVALIDE: { fr: 'Cette personne ne peut pas recevoir la tâche : elle doit avoir le rôle « Ouvrier » ou « Chef d’équipe » dans l’entité.', nl: 'Deze persoon kan de taak niet krijgen: ze moet de rol « Arbeider » of « Ploegbaas » hebben in de entiteit.' },
+  EQUIPE_INVALIDE: { fr: 'Choisissez une équipe active de l’entité.', nl: 'Kies een actieve ploeg van de entiteit.' },
+  HEURE_SANS_DATE: { fr: 'Une heure de début demande une date.', nl: 'Een beginuur vereist een datum.' },
+  DATE_PASSEE: { fr: 'La date prévue ne peut pas être dans le passé.', nl: 'De geplande datum kan niet in het verleden liggen.' },
+  TACHES_OUVERTES: { fr: 'Des tâches sont encore à faire ou en cours : terminez-les ou annulez-les avant « Travaux terminés ».', nl: 'Er zijn nog taken te doen of bezig: beëindig of annuleer ze vóór « Werken beëindigd ».' },
   CHEF_SANS_ROLE: { fr: 'Cette personne ne peut pas diriger l’équipe : elle doit avoir le rôle « Chef d’équipe » dans l’entité.', nl: 'Deze persoon kan de ploeg niet leiden: ze moet de rol « Ploegbaas » hebben in de entiteit.' },
   MEMBRE_SANS_ROLE: { fr: 'Seuls les ouvriers et les chefs d’équipe de l’entité peuvent être membres d’une équipe.', nl: 'Alleen de arbeiders en de ploegbazen van de entiteit kunnen lid zijn van een ploeg.' },
   NUMERO_ENTREPRISE_INVALIDE: { fr: 'Numéro d’entreprise invalide : dix chiffres commençant par 0 ou 1, par exemple 0123.456.749 (vérifiez la clé de contrôle).', nl: 'Ongeldig ondernemingsnummer: tien cijfers die beginnen met 0 of 1, bijvoorbeeld 0123.456.749 (controleer het controlegetal).' },

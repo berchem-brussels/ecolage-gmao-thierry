@@ -12,6 +12,9 @@
  *     iPhone) ; le panneau et sa flèche montrent l'élément. Panneau limité à la largeur de l'écran (index.css).
  *   - 0.19.0 (point 0, défaut 2 de la recette de la 0.18.0, DV-152) : compteur « 4 / 8 » au lieu des points d'avancement,
  *     qui passaient sur deux lignes sur iPhone ; libellés courts des boutons (Précédent, Suivant, Terminer) ; sous 544 px, marge de 12 px des deux côtés du panneau (index.css).
+ *   - 0.20.0 (point 0, remarques 1 et 2 de la recette de la 0.19.0, DV-159) : cadre à la couleur de l'institution et titre
+ *     plus visible (index.css) ; le calque transparent que le Tour pose même sans masque laisse passer les touchers
+ *     (index.css) ; la visite se ferme à l'ouverture du menu sur téléphone (événement EVENEMENT_MENU d'AppLayout), notée vue.
  *   - Contrôles automatiques (tests, captures de l'aide, mobile:check) : localStorage « gmao.visite.auto » = « 0 » coupe
  *     l'ouverture automatique, jamais l'ouverture à la demande.
  */
@@ -34,6 +37,8 @@ const ecrire = (k: string, v: string) => { try { window.localStorage.setItem(k, 
 
 /** Ouvre la visite depuis un autre endroit de l'application (Aide). */
 export const ouvrirVisite = () => window.dispatchEvent(new Event('app-visite'));
+/** Envoyé par AppLayout à l'ouverture du menu sur téléphone : la visite se ferme (0.20.0, DV-159). */
+export const EVENEMENT_MENU = 'app-menu-ouvert';
 
 export default function VisiteGuidee() {
   const { t } = useI18n();
@@ -85,7 +90,14 @@ export default function VisiteGuidee() {
     return () => window.clearTimeout(id);
   }, [pret, cle, ouvrir]);
 
-  const fermer = () => { setOuverte(false); if (cle) ecrire(cle, new Date().toISOString()); };
+  const fermer = useCallback(() => { setOuverte(false); if (cle) ecrire(cle, new Date().toISOString()); }, [cle]);
+
+  // 0.20.0 (DV-159) : le menu ouvert ferme la visite, qui ne le cache plus.
+  useEffect(() => {
+    if (!ouverte) return undefined;
+    window.addEventListener(EVENEMENT_MENU, fermer);
+    return () => window.removeEventListener(EVENEMENT_MENU, fermer);
+  }, [ouverte, fermer]);
   return (
     <Tour open={ouverte} steps={etapes} current={courante} onChange={setCourante} onClose={fermer} onFinish={fermer}
       rootClassName="visite-guidee" scrollIntoViewOptions={false} mask={false}

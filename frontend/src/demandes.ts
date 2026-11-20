@@ -46,6 +46,10 @@ export interface Demande {
   categorie_id: number; categorie_code: string; categorie_libelle_fr: string; categorie_libelle_nl: string; categorie_icone: string;
   /** 0.19.0 (GES-04) : corps de métier noté à la qualification ; service technique seulement. */
   corps_metier_id?: number | null; corps_metier_libelle_fr?: string | null; corps_metier_libelle_nl?: string | null;
+  /** 0.20.0 (point 1, CYC-03) : tâches de la fiche et droit d'en ajouter ou d'en changer ; service technique seulement. */
+  taches?: Tache[]; taches_modifiables?: 0 | 1;
+  /** 0.20.0 (point 2, DV-161) : première date prévue des tâches ouvertes (« Prévue le »), lue par tous ceux qui lisent la demande. */
+  intervention_prevue_le?: string | null;
   domaine_libelle_fr: string | null; domaine_libelle_nl: string | null;
   /** Nuls pour une personne qui suit la demande d'un autre (« Moi aussi », 0.7.0) : le nom du demandeur ne lui est pas rendu. */
   demandeur_id: number | null; demandeur_prenom: string | null; demandeur_nom: string | null;
@@ -107,7 +111,7 @@ export interface Complement { id: number; texte: string; langue: 'fr' | 'nl'; cr
 
 /** Passage permis d'un état à l'autre (0.14.0, table du serveur) : motif exigé, commentaire, compte rendu. */
 export interface Transition {
-  vers: Etat; via: 'qualifier' | 'fusionner' | 'decouper' | null; motif_liste: 'motif_attente' | 'motif_refus' | 'cause_panne' | null;
+  vers: Etat; via: 'qualifier' | 'fusionner' | 'decouper' | 'affecter' | null; motif_liste: 'motif_attente' | 'motif_refus' | 'cause_panne' | null;
   commentaire: 'interdit' | 'facultatif' | 'obligatoire'; commentaire_public: 0 | 1; compte_rendu: 0 | 1;
 }
 
@@ -132,7 +136,8 @@ export function cleAction(de: Etat, vers: Etat): string {
 }
 
 /** Qualification permise (0.14.0) : fiche « Qualifiée », ou passage vers « Qualifiée » fait par la qualification. */
-export const qualifiable = (d: Demande): boolean => d.etat === 'qualifiee' || (d.transitions || []).some((x) => x.via === 'qualifier');
+// 0.20.0 (DV-161) : une demande « Planifiée » se requalifie aussi, sans changer d'état.
+export const qualifiable = (d: Demande): boolean => d.etat === 'qualifiee' || d.etat === 'planifiee' || (d.transitions || []).some((x) => x.via === 'qualifier');
 
 /** Tableau de bord du service technique (0.9.0, GES-01). */
 export interface TableauBord {
@@ -155,11 +160,15 @@ export interface FiltresGestion {
   messages?: 'non_lus';
   /** 0.15.0 (point 3) : demandes où la personne est mentionnée dans une note qu'elle n'a pas lue. */
   mentions?: 'a_voir';
+  /** 0.20.0 (point 4, DV-163) : demandes dont une tâche non annulée est confiée à l'équipe (ou à l'un de ses membres). */
+  equipe_id?: number;
+  /** 0.20.0 (point 4, DV-163) : demandes dont une tâche non annulée est confiée à l'ouvrier (ou à une de ses équipes). */
+  ouvrier_id?: number;
 }
 export interface VueDemandes { id: number; nom: string; filtres: FiltresGestion; created_at: string; updated_at: string }
 
-const NOMBRES: (keyof FiltresGestion)[] = ['categorie_id', 'batiment_id', 'danger', 'ouvertes'];
-export const CLES_FILTRES: (keyof FiltresGestion)[] = ['etats', 'priorites', 'categorie_id', 'batiment_id', 'echeance', 'attente', 'messages', 'mentions', 'canal', 'danger', 'q', 'ouvertes', 'tri', 'ordre'];
+const NOMBRES: (keyof FiltresGestion)[] = ['categorie_id', 'batiment_id', 'danger', 'ouvertes', 'equipe_id', 'ouvrier_id'];
+export const CLES_FILTRES: (keyof FiltresGestion)[] = ['etats', 'priorites', 'categorie_id', 'batiment_id', 'equipe_id', 'ouvrier_id', 'echeance', 'attente', 'messages', 'mentions', 'canal', 'danger', 'q', 'ouvertes', 'tri', 'ordre'];
 export const CANAUX = ['ecran', 'telephone', 'courriel', 'grc', 'mcp', 'api', 'preventif'];
 
 /**
@@ -212,6 +221,19 @@ export function duree(minutes: number): string {
   if (!h) return `${m} min`;
   return m ? `${h} h ${String(m).padStart(2, '0')}` : `${h} h`;
 }
+
+/** 0.20.0 (point 1 ; CYC-03, DV-160) : tâche (ordre de travail) d'une demande, pour le service technique. */
+export type EtatTache = 'a_faire' | 'en_cours' | 'terminee' | 'annulee';
+export interface Tache {
+  id: number; demande_id: number; rang: number; titre: string; consignes: string | null;
+  corps_metier_id: number | null; corps_metier_code: string | null; corps_metier_libelle_fr: string | null; corps_metier_libelle_nl: string | null;
+  duree_estimee_min: number | null; etat: EtatTache; motif_annulation: string | null; annulation_auto: Etat | null; etat_depuis: string;
+  passages: EtatTache[]; trace?: import('./referentiel').Trace | null;
+  /** 0.20.0 (point 2, PLA-01) : affectation (une équipe ou des ouvriers), date prévue et heure de début. */
+  equipe_id: number | null; equipe_code: string | null; equipe_nom_fr: string | null; equipe_nom_nl: string | null;
+  ouvriers: { id: number; prenom: string; nom: string }[]; date_prevue: string | null; heure_debut: string | null;
+}
+export const COULEUR_TACHE: Record<EtatTache, string> = { a_faire: 'default', en_cours: 'processing', terminee: 'success', annulee: 'error' };
 
 /** Pièce jointe d'une demande ou du brouillon (0.8.0, DEM-09) ; le fichier se lit par /api/pieces/:id/fichier. */
 /** Ce que la personne peut faire du fil d'une demande (0.15.0) : lire, écrire, écrire une note interne (service). */
