@@ -2,6 +2,32 @@
   "_description": "Notes de version pour les utilisateurs, en FR et en NL, sans terme technique (standard v3.2, sections 13.1 et 17.8 ; écart E-07). Une note par version, de la plus récente à la plus ancienne. Chaque ligne a un public : « tous », « admin » (administrateur de l'application) ou une permission du catalogue des rôles (par exemple « parametres:gerer »), lue dans l'entité active. La note de la version installée s'affiche une fois à la première connexion qui suit la mise à jour ; toutes restent relisibles dans Aide, Nouveautés.",
   "notes": [
     {
+      "version": "0.20.0",
+      "date": "2026-11-19",
+      "lignes": [
+        {
+          "public": "tous",
+          "fr": "La visite guidée ne bloque plus le menu sur téléphone. Quand une intervention est prévue, votre demande affiche le jour où l'ouvrier viendra.",
+          "nl": "De rondleiding blokkeert het menu op de telefoon niet meer. Wanneer een interventie gepland is, toont uw aanvraag de dag waarop de arbeider komt."
+        },
+        {
+          "public": "demandes:traiter",
+          "fr": "Une demande se découpe en tâches, chacune avec ses consignes, son métier et sa durée. Une tâche démarrée met la demande « En cours » ; quand toutes sont finies, elle passe « Travaux terminés ».",
+          "nl": "Een aanvraag wordt opgedeeld in taken, elk met instructies, vakgebied en duur. Een gestarte taak zet de aanvraag op « Bezig »; wanneer alle taken klaar zijn, wordt ze « Werken beëindigd »."
+        },
+        {
+          "public": "demandes:traiter",
+          "fr": "Chaque tâche se confie à des ouvriers ou à une équipe, à une date et une heure ; l'application propose les ouvriers du bon métier qui travaillent ce jour-là. Une date met la demande « Planifiée ».",
+          "nl": "Elke taak wordt toevertrouwd aan arbeiders of aan een ploeg, op een datum en een uur; de toepassing stelt arbeiders van het juiste vak voor die die dag werken. Een datum zet de aanvraag op « Gepland »."
+        },
+        {
+          "public": "demandes:entite",
+          "fr": "Demandes de l'entité : deux filtres nouveaux, « Équipe » et « Ouvrier », pour voir le travail de chacun.",
+          "nl": "Aanvragen van de entiteit: twee nieuwe filters, « Ploeg » en « Arbeider », om het werk van elk te zien."
+        }
+      ]
+    },
+    {
       "version": "0.19.0",
       "date": "2026-11-18",
       "lignes": [

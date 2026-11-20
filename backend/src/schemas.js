@@ -91,6 +91,9 @@ const filtresGestion = {
   mentions: T.en('a_voir'),
   // 0.15.0 (point 2) : demandes dont le fil a des messages que la personne n'a pas encore lus.
   messages: T.en('non_lus'),
+  // 0.20.0 (point 4 ; GES-02, E-35, DV-163) : demandes dont une tâche non annulée est confiée à l'équipe (ou à l'un de ses
+  // membres), ou à l'ouvrier (directement ou par une de ses équipes).
+  equipe_id: T.int(1), ouvrier_id: T.int(1),
   tri: T.en(...TRIS_DEMANDE), ordre: T.en('asc', 'desc'),
 };
 const vueFiltres = obj({ ...filtresGestion, q: T.str(100), ouvertes: flag });
@@ -255,6 +258,24 @@ module.exports = {
   }),
   serviceDeactivate: obj({ motif }, ['motif']),
 
+  // 0.20.0 (point 1 ; CYC-03, DV-160) : tâches d'une demande. Durée estimée en minutes, bornes de la qualification.
+  tacheCreate: obj({
+    titre: { type: 'string', minLength: 3, maxLength: 200 }, consignes: T.str(2000),
+    corps_metier_id: { type: ['integer', 'null'], minimum: 1 }, duree_estimee_min: { type: ['integer', 'null'], minimum: 15, maximum: 10080 },
+  }, ['titre']),
+  tacheUpdate: obj({
+    titre: { type: 'string', minLength: 3, maxLength: 200 }, consignes: T.str(2000),
+    corps_metier_id: { type: ['integer', 'null'], minimum: 1 }, duree_estimee_min: { type: ['integer', 'null'], minimum: 15, maximum: 10080 },
+  }),
+  tacheEtat: obj({ etat: T.en('a_faire', 'en_cours', 'terminee', 'annulee'), motif: T.str(500) }, ['etat']),
+  // Point 2 (PLA-01, DV-161) : affectation complète (remplace la précédente) ; une équipe ou des ouvriers, pas les deux.
+  tacheAffectation: obj({
+    ouvriers: { type: 'array', uniqueItems: true, maxItems: 10, items: T.int(1) }, equipe_id: { type: ['integer', 'null'], minimum: 1 },
+    date_prevue: { type: ['string', 'null'], format: 'date' }, heure_debut: { type: ['string', 'null'], pattern: '^([01][0-9]|2[0-3]):[0-5][0-9]$' },
+    duree_estimee_min: { type: ['integer', 'null'], minimum: 15, maximum: 10080 },
+  }),
+  // Point 3 (PLA-02, DV-162) : suggestion d'affectation, jour (par défaut celui de la tâche, sinon aujourd'hui) et compétence.
+  tacheSuggestions: obj({ date: { type: 'string', format: 'date' }, competence_id: { type: 'integer', minimum: 1 } }),
   // Équipes et ouvriers (0.19.0, étape 15, point 2 ; ROL-05, DV-28). Horaire : un créneau par jour au plus (contrôlé par le
   // service), 1 = lundi … 7 = dimanche ; [] = horaire de l'entité. Membres et horaire remplacent les précédents en entier.
   equipeList: listQuery({ is_active: flag }),

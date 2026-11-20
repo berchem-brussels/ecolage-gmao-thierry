@@ -23,7 +23,8 @@ const cycle = require('./cycle');
 const numerotation = require('./numerotation');
 const qualification = require('./qualification');
 
-const ETATS_DECOUPABLES = ['a_qualifier', 'qualifiee', 'en_attente', 'en_cours', 'rouverte'];
+// 0.20.0 (DV-161) : une demande « Planifiée » se découpe aussi.
+const ETATS_DECOUPABLES = ['a_qualifier', 'qualifiee', 'planifiee', 'en_attente', 'en_cours', 'rouverte'];
 const versSql = (date) => date.toISOString().replace('T', ' ').slice(0, 19);
 
 function controler(user, id, { parties, commentaire, langue }) {

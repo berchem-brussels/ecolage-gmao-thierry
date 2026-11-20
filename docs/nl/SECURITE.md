@@ -2,6 +2,10 @@
 
 De Franse tekst (`docs/fr/SECURITE.md`) is rechtsgeldig en bevat het volledige rooster per versie.
 
+## 0.20.0 (19/11/2026)
+
+Taken, toewijzing, « Gepland », voorstel van arbeiders, filters per ploeg en arbeider, correcties van de test van 0.19.0. Getest: taken en taken van een aanvraag van een andere entiteit geweigerd (403, 404 onbekend), via de API en de MCP; vakgebied, arbeider of ploeg van een andere entiteit geweigerd (409); filters van een andere entiteit: lege lijst; aanvrager zonder taken noch namen van arbeiders; teksten van taken nooit in het logboek; MCP-plafond van 60 oproepen nu getest; migratie `017_taches` op een basis 0.19.0. Bewijzen van falen: zie de Franse tekst. Gevonden en verbeterd: kalenderpaneel buiten het scherm op 320 px. Geen nieuwe afhankelijkheid.
+
 ## 0.19.0 (18/11/2026)
 
 Correcties van de test van 0.18.0; vakgebieden en bekwaamheden; ploegen, leden en uurroosters; profiel van de arbeiders; externe aannemers; vakgebied van de categorieën en bij de kwalificatie. Getest: ploeg, aannemer en arbeider van een andere entiteit geweigerd (403, 404 voor een arbeider die niet van de entiteit is), via API en MCP; lezen en schrijven volgens de nieuwe permissies; ploegbaas en leden met de juiste rol (anders 409); uurrooster (één tijdvak per dag, begin vóór einde); ondernemingsnummer (controlegetal modulo 97, uniek in de entiteit); waarden van de lijsten van de entiteit alleen; vakgebied van een aanvraag niet zichtbaar voor de aanvrager; logboek met id’s, bij het lezen benoemd; migratie op een basis van 0.18.0. Negentien beschermingen één voor één verwijderd: telkens minstens één mislukte test (`docs/fr/SECURITE.md`). `npm audit`: ongewijzigd (E-50, E-09).

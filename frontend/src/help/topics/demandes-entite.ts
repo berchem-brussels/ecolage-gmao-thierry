@@ -1,5 +1,6 @@
 /** Fiche d'aide « Demandes de l'entité » : tableau de bord, liste du service et qualification (GES-01 à 04, PRI-01, 03 ; 0.12.0). 0.14.0 : cycle de vie (CYC-01, CLO-01, PRI-03, SUI-06).
- * 0.16.0 : encoder, regrouper, découper, colonnes par état (GES-03, GES-05, GES-06). */
+ * 0.16.0 : encoder, regrouper, découper, colonnes par état (GES-03, GES-05, GES-06).
+ * 0.20.0 : tâches d'une demande, affectation et ouvriers proposés, filtres Équipe et Ouvrier (CYC-03, PLA-01, PLA-02, GES-02). */
 import type { HelpTopic } from '../types';
 
 const topic: HelpTopic = {
@@ -16,6 +17,50 @@ const topic: HelpTopic = {
   ],
   overviewShot: 'demandes-entite-overview',
   procedures: [
+    // 0.20.0 (point 5 ; CYC-03, DV-160) : tâches d'une demande.
+    {
+      title: { fr: 'Découper le travail en tâches', nl: 'Het werk in taken opdelen' },
+      when: { fr: 'Quand une demande demande plusieurs métiers ou plusieurs passages (par exemple un électricien, puis un plafonneur).', nl: 'Wanneer een aanvraag meerdere vakgebieden of meerdere bezoeken vraagt (bijvoorbeeld een elektricien, dan een plafonneerder).' },
+      steps: [
+        { fr: 'Ouvrez la fiche de la demande ; la section « Tâches » est sous la description.', nl: 'Open de fiche van de aanvraag; de sectie « Taken » staat onder de beschrijving.' },
+        { fr: 'Cliquez sur {{tache.ajouter}} : dites ce qu’il faut faire, les consignes à l’ouvrier, le corps de métier (celui de la demande est proposé) et la durée estimée en heures.', nl: 'Klik op {{tache.ajouter}}: zeg wat er moet gebeuren, de instructies voor de arbeider, het vakgebied (dat van de aanvraag wordt voorgesteld) en de geschatte duur in uren.' },
+        { fr: 'Au fil du travail : {{tache.action.en_cours}}, puis {{tache.action.terminee}} ; {{tache.action.annulee}} demande un motif.', nl: 'Naarmate het werk vordert: {{tache.action.en_cours}}, dan {{tache.action.terminee}}; {{tache.action.annulee}} vraagt een reden.' },
+      ],
+      result: { fr: 'La demande passe « En cours » quand une tâche démarre, et « Travaux terminés » quand toutes ses tâches sont terminées ou annulées (au moins une terminée). Le demandeur ne voit jamais les tâches.', nl: 'De aanvraag wordt « Bezig » wanneer een taak start, en « Werken beëindigd » wanneer al haar taken beëindigd of geannuleerd zijn (minstens één beëindigd). De aanvrager ziet de taken nooit.' },
+      shots: ['demandes-entite-taches'],
+      errors: [
+        { problem: { fr: '« Travaux terminés » n’est pas proposé.', nl: '« Werken beëindigd » wordt niet voorgesteld.' }, solution: { fr: 'Une tâche est encore à faire ou en cours : terminez-la ou annulez-la.', nl: 'Een taak is nog te doen of bezig: beëindig of annuleer ze.' } },
+        { problem: { fr: 'Plus de bouton sur les tâches.', nl: 'Geen knoppen meer bij de taken.' }, solution: { fr: 'La demande est « Travaux terminés » ou fermée. Repassez-la « En cours » pour rouvrir ou ajouter une tâche.', nl: 'De aanvraag is « Werken beëindigd » of afgesloten. Zet ze terug op « Bezig » om een taak te heropenen of toe te voegen.' } },
+      ],
+    },
+    // 0.20.0 (point 5 ; PLA-01, PLA-02, DV-161, DV-162) : affectation et ouvriers proposés.
+    {
+      title: { fr: 'Affecter une tâche à des ouvriers ou à une équipe', nl: 'Een taak toewijzen aan arbeiders of aan een ploeg' },
+      when: { fr: 'Pour dire qui fait la tâche et quand.', nl: 'Om te zeggen wie de taak uitvoert en wanneer.' },
+      steps: [
+        { fr: 'Sur la tâche, cliquez sur {{tache.action.affecter}}.', nl: 'Klik bij de taak op {{tache.action.affecter}}.' },
+        { fr: 'Choisissez {{tache.qui.ouvriers}} (dix au plus) ou {{tache.qui.equipe}} ; {{tache.qui.personne}} retire l’affectation.', nl: 'Kies {{tache.qui.ouvriers}} (hoogstens tien) of {{tache.qui.equipe}}; {{tache.qui.personne}} verwijdert de toewijzing.' },
+        { fr: 'Choisissez la date, puis l’heure de début si besoin. La liste « Ouvriers proposés » se met à jour : même corps de métier d’abord, puis ceux qui travaillent ce jour, puis les moins chargés. {{tache.proposes.choisir}} ajoute l’ouvrier.', nl: 'Kies de datum, en zo nodig het beginuur. De lijst « Voorgestelde arbeiders » wordt bijgewerkt: eerst hetzelfde vakgebied, dan wie die dag werkt, dan de minst belasten. {{tache.proposes.choisir}} voegt de arbeider toe.' },
+        { fr: 'Cliquez sur {{common.save}}.', nl: 'Klik op {{common.save}}.' },
+      ],
+      result: { fr: 'Avec une date, la demande passe « Planifiée » ; le demandeur lit « Intervention prévue le … », jamais le nom des ouvriers. Sans plus aucune date, elle revient « Qualifiée ».', nl: 'Met een datum wordt de aanvraag « Gepland »; de aanvrager leest « Interventie gepland op … », nooit de naam van de arbeiders. Zonder enige datum wordt ze opnieuw « Gekwalificeerd ».' },
+      shots: ['demandes-entite-affecter'],
+      errors: [
+        { problem: { fr: 'Message « Cette personne ne peut pas recevoir la tâche ».', nl: 'Melding « Deze persoon kan de taak niet krijgen ».' }, solution: { fr: 'Elle doit avoir le rôle Ouvrier ou Chef d’équipe dans l’entité (Utilisateurs).', nl: 'Ze moet de rol Arbeider of Ploegbaas hebben in de entiteit (Gebruikers).' } },
+        { problem: { fr: 'Un ouvrier est marqué « Ne travaille pas ce jour ».', nl: 'Een arbeider is gemarkeerd « Werkt die dag niet ».' }, solution: { fr: 'Le jour est hors de l’horaire de son équipe ou de l’entité (week-end, jour férié, fermeture). Les congés et absences ne sont pas encore connus de l’application.', nl: 'De dag valt buiten het uurrooster van zijn ploeg of van de entiteit (weekend, feestdag, sluiting). Verloven en afwezigheden zijn nog niet gekend door de toepassing.' } },
+      ],
+    },
+    // 0.20.0 (point 5 ; GES-02, DV-163) : filtres Équipe et Ouvrier.
+    {
+      title: { fr: 'Voir le travail d’une équipe ou d’un ouvrier', nl: 'Het werk van een ploeg of een arbeider bekijken' },
+      when: { fr: 'Pour préparer la journée d’une équipe ou répondre à « qu’a-t-il à faire ? ».', nl: 'Om de dag van een ploeg voor te bereiden of te antwoorden op « wat moet hij doen? ».' },
+      steps: [
+        { fr: 'Dans les filtres, choisissez {{gest.filtre.equipe}} ou {{gest.filtre.ouvrier}}.', nl: 'Kies in de filters {{gest.filtre.equipe}} of {{gest.filtre.ouvrier}}.' },
+        { fr: 'Enregistrez la vue pour la retrouver demain ; l’export reprend le même filtre.', nl: 'Sla de weergave op om ze morgen terug te vinden; de export neemt dezelfde filter over.' },
+      ],
+      result: { fr: 'Équipe : les demandes dont une tâche non annulée est confiée à l’équipe ou à l’un de ses membres. Ouvrier : confiée à lui ou à une de ses équipes.', nl: 'Ploeg: de aanvragen waarvan een niet-geannuleerde taak is toevertrouwd aan de ploeg of aan een van haar leden. Arbeider: toevertrouwd aan hem of aan een van zijn ploegen.' },
+      shots: ['demandes-entite-filtre-equipe'],
+    },
     // 0.18.0 (point 5 ; IMP-03) : export de la liste.
     {
       title: { fr: 'Exporter la liste en Excel ou en CSV', nl: 'De lijst exporteren naar Excel of CSV' },
@@ -157,6 +202,9 @@ const topic: HelpTopic = {
     { q: { fr: 'Comment ajouter ou changer un modèle de réponse ?', nl: 'Hoe een antwoordmodel toevoegen of wijzigen?' }, a: { fr: 'Le responsable le fait dans {{nav.referentiel}}, onglet {{ref.tab.modeles}}.', nl: 'De verantwoordelijke doet het in {{nav.referentiel}}, tabblad {{ref.tab.modeles}}.' } },
     // 0.16.0.
     { q: { fr: 'Pourquoi une demande « En validation » ne bouge-t-elle pas ?', nl: 'Waarom beweegt een aanvraag « Ter goedkeuring » niet?' }, a: { fr: 'Elle attend l’accord du chef de service du demandeur ; ses délais ne comptent pas encore. Le service technique ne peut ni la qualifier ni la regrouper avant cet accord.', nl: 'Ze wacht op het akkoord van het diensthoofd van de aanvrager; haar termijnen tellen nog niet. De technische dienst kan ze niet kwalificeren of samenvoegen voor dat akkoord.' } },
+    // 0.20.0.
+    { q: { fr: 'Comment mettre une demande « Planifiée » ?', nl: 'Hoe zet ik een aanvraag op « Gepland »?' }, a: { fr: 'Pas à la main : donnez une date à une de ses tâches ({{tache.action.affecter}}). Sans plus aucune date, elle revient « Qualifiée ».', nl: 'Niet met de hand: geef een datum aan een van haar taken ({{tache.action.affecter}}). Zonder enige datum wordt ze opnieuw « Gekwalificeerd ».' } },
+    { q: { fr: 'Le chef d’équipe peut-il affecter les tâches ?', nl: 'Kan de ploegbaas de taken toewijzen?' }, a: { fr: 'Pas encore : le gestionnaire et le responsable affectent. Une tâche confiée à l’équipe entière laisse le chef répartir le travail sur le terrain.', nl: 'Nog niet: de beheerder en de verantwoordelijke wijzen toe. Een taak toevertrouwd aan de hele ploeg laat de ploegbaas het werk op het terrein verdelen.' } },
     { q: { fr: 'Je ne vois pas les demandes du CPAS.', nl: 'Ik zie de aanvragen van het OCMW niet.' }, a: { fr: 'La liste suit l’entité active ; si vous avez un rôle dans l’autre entité, changez d’entité dans l’en-tête.', nl: 'De lijst volgt de actieve entiteit; als u een rol hebt in de andere entiteit, wissel van entiteit in de kop.' } },
   ],
   seeAlso: ['referentiel', 'patrimoine'],
@@ -167,6 +215,12 @@ const topic: HelpTopic = {
     // 0.19.0 (point 5) : le formulaire de qualification lui-même (corps de métier proposé, priorité), d'une demande « À qualifier ».
     { id: 'demandes-entite-qualifier', path: '/demandes-entite?etats=a_qualifier', actions: [{ clickSel: '.ant-table-row .ant-btn-link' }, { wait: 600 }, { click: 'qualif.bouton' }, { wait: 800 }],
       clip: 'drawer', marks: [{ sel: '.qualif-corps' }, { sel: '.qualif-priorite' }], caption: { fr: 'Qualifier la demande : corps de métier proposé et priorité', nl: 'De aanvraag kwalificeren: voorgesteld vakgebied en prioriteit' } },
+    // 0.20.0 (point 5) : tâches d'une demande confiée à une équipe (filtre Équipe), affectation avec ouvriers proposés.
+    { id: 'demandes-entite-filtre-equipe', path: '/demandes-entite?equipe_id=1', marks: [{ sel: '.filtre-equipe' }, { sel: '.ant-table' }], caption: { fr: 'Demandes confiées à une équipe', nl: 'Aanvragen toevertrouwd aan een ploeg' } },
+    { id: 'demandes-entite-taches', path: '/demandes-entite?equipe_id=1', actions: [{ clickSel: '.ant-table-row .ant-btn-link' }, { wait: 1000 }, { scrollSel: 'section.taches' }, { wait: 400 }],
+      clip: 'drawer', marks: [{ sel: 'section.taches .tache-carte' }, { sel: 'section.taches .tache-carte [role="group"]' }], caption: { fr: 'Tâches de la demande', nl: 'Taken van de aanvraag' } },
+    { id: 'demandes-entite-affecter', path: '/demandes-entite?equipe_id=1', actions: [{ clickSel: '.ant-table-row .ant-btn-link' }, { wait: 1000 }, { scrollSel: 'section.taches' }, { click: 'tache.action.affecter' }, { wait: 800 }, { clickSel: '.tache-affectation .ant-radio-button-wrapper:first-child' }, { wait: 1200 }, { scrollSel: '.taches-proposes' }],
+      clip: 'drawer', marks: [{ sel: '.tache-affectation .ant-radio-group' }, { sel: '.taches-proposes' }], caption: { fr: 'Affecter : ouvriers proposés', nl: 'Toewijzen: voorgestelde arbeiders' } },
     // 0.18.0 (point 5) : menu « Exporter » ouvert.
     { id: 'demandes-entite-export', path: '/demandes-entite', actions: [{ clickSel: '.bouton-export' }, { wait: 500 }], marks: [{ sel: '.bouton-export' }, { sel: '.ant-dropdown:not(.ant-dropdown-hidden) .ant-dropdown-menu' }], caption: { fr: 'Exporter la liste', nl: 'De lijst exporteren' } },
     // 0.16.0 : colonnes, regrouper, découper (la première carte de la colonne « À qualifier » est ouverte).

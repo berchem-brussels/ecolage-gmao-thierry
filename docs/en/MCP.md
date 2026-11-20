@@ -1,6 +1,10 @@
 # MCP server
 
-Application version: **0.19.0** · Updated on 18/11/2026 · The French text prevails (`docs/fr/MCP.md`).
+Application version: **0.20.0** · Updated on 19/11/2026 · The French text prevails (`docs/fr/MCP.md`).
+
+## 0.20.0
+
+Seven new tools: `list_taches_demande`, `create_tache`, `get_tache`, `update_tache`, `change_etat_tache` (two calls), `affecter_tache`, `suggerer_affectation_tache` (read only). `list_demandes` accepts `equipe_id` and `ouvrier_id`; `get_demande` carries `taches`, `taches_modifiables` and `intervention_prevue_le`; `change_etat_demande` refuses « Works completed » with an open task. 174 tools.
 
 ## 0.19.0
 

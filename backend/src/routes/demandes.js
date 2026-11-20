@@ -168,6 +168,14 @@ router.post('/:id/messages/pieces', validateParams(idParam), avantPieceMessage, 
 router.get('/:id/historique', validateParams(idParam), handle((req, res) => {
   ok(res, cycle.historique(req.user, Number(req.params.id)), { resource: 'demandes' });
 }));
+// 0.20.0 (point 1 ; CYC-03, DV-160) : tâches d'une demande (service technique).
+router.get('/:id/taches', validateParams(idParam), handle((req, res) => {
+  ok(res, require('../services/taches').list(req.user, Number(req.params.id)), { resource: 'taches' });
+}));
+router.post('/:id/taches', validateParams(idParam), validate(S.tacheCreate), handle((req, res) => {
+  ok(res, require('../services/taches').create(req.user, Number(req.params.id), req.body), { resource: 'taches' }, null, 201);
+}));
+
 // 0.16.0 (étape 12, GES-06) : fusion dans une demande principale.
 router.post('/:id/fusionner', validateParams(idParam), validate(S.demandeFusion), handle((req, res) => {
   ok(res, require('../services/fusion').fusionner(req.user, Number(req.params.id), req.body), { resource: 'demandes' });

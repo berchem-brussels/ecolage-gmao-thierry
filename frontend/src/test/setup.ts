@@ -10,3 +10,7 @@ class RO { observe() {} unobserve() {} disconnect() {} }
 window.scrollTo = window.scrollTo || (() => {});
 // 0.18.0 (point 4) : pas de visite guidée automatique pendant les tests (VisiteGuidee.tsx) ; les tests de la visite l'ouvrent eux-mêmes.
 window.localStorage.setItem('gmao.visite.auto', '0');
+// 0.20.0 (livraison, travail `tests` de GitHub) : la machine de GitHub est plus lente que le bac à sable ; une attente
+// `findBy…`/`waitFor` de 1 s (défaut) y échouait (accueil du service, compteur « à qualifier »). Attente portée à 5 s.
+import { configure } from '@testing-library/react';
+configure({ asyncUtilTimeout: 5000 });

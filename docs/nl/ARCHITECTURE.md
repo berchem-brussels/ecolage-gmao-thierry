@@ -1,6 +1,10 @@
 # Architectuur
 
-Versie van de toepassing: **0.19.0** · De Franse tekst is rechtsgeldig (`docs/fr/ARCHITECTURE.md`); dit bestand vat elke versie samen.
+Versie van de toepassing: **0.20.0** · De Franse tekst is rechtsgeldig (`docs/fr/ARCHITECTURE.md`); dit bestand vat elke versie samen.
+
+## Taken, toewijzing, voorstel en filters per ploeg (0.20.0)
+
+Migratie `017_taches`: `demande_taches` (rang in de aanvraag, titel, instructies, vakgebied, geschatte duur, status `a_faire` / `en_cours` / `terminee` / `annulee`, reden van annulering, `annulation_auto`, `equipe_id`, `date_prevue`, `heure_debut`), `tache_ouvriers`; tabel `demande_transitions` identiek heropgebouwd voor `via = 'affecter'` (42 overgangen, negen nieuwe vanuit « Gepland », DV-161). Dienst `services/taches.js` (regels 1 tot 12), `cycle.passageAuto()` en `executer()`, `echeances.jourOuvre()`, filters `equipe_id` en `ouvrier_id` van de lijst (niet-geannuleerde taken, beperkt tot de actieve entiteit). Zeven routes onder `/api/demandes/:id/taches` en `/api/taches`, zeven MCP-tools (174). Interface: `TachesDemande.tsx`, lijsten « Ploeg » en « Arbeider » in `GestionDemandesPage.tsx`, « Interventie gepland op » voor de aanvrager; kalenderpaneel gecentreerd onder 480 px. Correcties van de test van 0.19.0 (DV-159). Telefooncontrole: 61 schermen.
 
 ## Ploegen, arbeiders, aannemers en vakgebieden (0.19.0)
 
@@ -24,7 +28,7 @@ Migratie `013_messages`: tabellen `demande_messages` (auteur aanvrager, begunsti
 
 ## Levenscyclus van de aanvragen (0.14.0)
 
-Catalogus `backend/config/cycle-de-vie.json` (15 statussen, 33 overgangen; zeven toegevoegd in 0.16.0 voor de goedkeuring en de samenvoeging), bij het opstarten gekopieerd naar `demande_transitions` en, per entiteit, naar `demande_etats` (benamingen voor de aanvrager en het KRM). Migratie `012_cycle_de_vie`: tabellen `demande_transitions`, `demande_etats`, `demande_historique`, `demande_complements`, `demande_avis`, zeven kolommen van `demandes`. Dienst `services/cycle.js`: volgorde van de controles (entiteit, aanvraag 404 of 403, toelating 403, module, overgang 409), nieuwe permissie `demandes:traiter`, opschorting van de termijn tijdens een wachttijd om een aangevinkte reden. Negen routes (`/api/demandes/:id/historique`, `/transitions`, `PUT` en `DELETE /api/demandes/:id`, `/pieces`, `/avis`, `/api/etats-demande`), acht MCP-tools. Interface: `ChangerEtat.tsx`, `HistoriqueDemande.tsx`, `ActionsDemandeur.tsx`, `EtatsTab.tsx`.
+Catalogus `backend/config/cycle-de-vie.json` (15 statussen, 42 overgangen; zeven toegevoegd in 0.16.0 voor de goedkeuring en de samenvoeging, negen in 0.20.0 voor « Gepland », DV-161), bij het opstarten gekopieerd naar `demande_transitions` en, per entiteit, naar `demande_etats` (benamingen voor de aanvrager en het KRM). Migratie `012_cycle_de_vie`: tabellen `demande_transitions`, `demande_etats`, `demande_historique`, `demande_complements`, `demande_avis`, zeven kolommen van `demandes`. Dienst `services/cycle.js`: volgorde van de controles (entiteit, aanvraag 404 of 403, toelating 403, module, overgang 409), nieuwe permissie `demandes:traiter`, opschorting van de termijn tijdens een wachttijd om een aangevinkte reden. Negen routes (`/api/demandes/:id/historique`, `/transitions`, `PUT` en `DELETE /api/demandes/:id`, `/pieces`, `/avis`, `/api/etats-demande`), acht MCP-tools. Interface: `ChangerEtat.tsx`, `HistoriqueDemande.tsx`, `ActionsDemandeur.tsx`, `EtatsTab.tsx`.
 
 ## Hulp per scherm en lokale FAQ (0.12.0)
 

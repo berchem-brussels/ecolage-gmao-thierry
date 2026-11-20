@@ -2,6 +2,10 @@
 
 The French text (`docs/fr/SECURITE.md`) prevails and holds the full grid per version.
 
+## 0.20.0 (19/11/2026)
+
+Tasks, assignment, « Planned », worker suggestions, filters per team and worker, fixes from the 0.19.0 acceptance test. Tested: tasks of a request of another entity refused (403, 404 unknown), through the API and MCP; trade, worker or team of another entity refused (409); filters of another entity: empty list; requester gets neither tasks nor worker names; task texts never in the log; MCP ceiling of 60 calls now tested; migration `017_taches` on a 0.19.0 base. Failure proofs: see the French text. Found and fixed: calendar panel off-screen at 320 px. No new dependency.
+
 ## 0.19.0 (18/11/2026)
 
 Fixes from the 0.18.0 acceptance test; trades and skills; teams, members and schedules; worker profiles; external contractors; trade of categories and at qualification. Tested: a team, contractor or worker of another entity refused (403, 404 for a worker not in the entity), through the API and MCP; reading and writing per the new permissions; team leader and members with the right role (409 otherwise); schedule (one slot per day, start before end); company number (modulo 97 check digits, unique in the entity); values from the entity's lists only; a request's trade hidden from the requester; audit log with ids named on reading; migration on a 0.18.0 database. Nineteen protections removed one by one: at least one failing test each (`docs/fr/SECURITE.md`). `npm audit`: unchanged (E-50, E-09).

@@ -203,6 +203,8 @@ function ecrire(db, { demandeId, entiteId, de, vers, userId, motifId = null, com
   // 0.17.0 (étape 13, point 4) : chaque changement d'état d'une demande existante passe par ici ; avis aux personnes
   // concernées (services/avis.js), dans la même transaction, après la mise à jour de la demande.
   if (de) require('./avis').changement(db, { demandeId, de, vers, auteurId: userId || null });
+  // 0.20.0 (point 1, CYC-03, DV-160) : une demande fermée (annulée, refusée, regroupée…) annule ses tâches encore ouvertes.
+  if (de && FERMES.includes(vers)) require('./taches').annulerOuvertes(db, { demandeId, entiteId, userId, vers, channel });
 }
 
 /** Demande de l'entité active, pour un passage : 404 inconnue, 403 autre entité. */
@@ -245,6 +247,8 @@ function controler(user, id, data) {
   if (t.commentaire === 'interdit' && commentaire) throw new AppError(409, 'COMMENTAIRE_INUTILE');
   const compteRendu = data.compte_rendu === undefined ? undefined : data.compte_rendu || null;
   if (!t.compte_rendu && compteRendu) throw new AppError(409, 'COMPTE_RENDU_INUTILE');
+  // 0.20.0 (point 1, CYC-03, DV-160) : « Travaux terminés » refusé tant qu'une tâche de la fiche est à faire ou en cours.
+  if (t.vers_etat === 'terminee') require('./taches').assertToutesFinies(d.id);
   return { d, t, motifId, commentaire, compteRendu };
 }
 
@@ -293,6 +297,15 @@ function suspension(db, d, t, motifId, instant) {
 function appliquer(user, id, data, channel = 'api') {
   const { d, t, motifId, commentaire, compteRendu } = controler(user, id, data);
   const db = getDb();
+  db.transaction(() => executer(db, user, d, t, { motifId, commentaire, compteRendu }, channel))();
+  return require('./demandes').get(user, d.id);
+}
+
+/**
+ * Écrit un passage déjà contrôlé (règles 4, 6, 8, 10, 11), sans ouvrir de transaction : appliquer() l'entoure de la
+ * sienne ; un passage automatique (tâches, 0.20.0) passe par passageAuto(), dans la transaction de la tâche.
+ */
+function executer(db, user, d, t, { motifId = null, commentaire = null, compteRendu, auto } = {}, channel = 'api') {
   const instant = new Date();
   const maintenant = versSql(instant);
   const cloture = t.compte_rendu === 1;
@@ -306,28 +319,44 @@ function appliquer(user, id, data, channel = 'api') {
     prise = e.prise_en_charge_le;
     s.echeance = e.echeance_le;
   }
-  db.transaction(() => {
-    if (reouverture) {
-      db.prepare('UPDATE demandes SET decompte_depuis = ?, prise_en_charge_le = ?, suspendu_ouvrable_min = 0, suspendu_calendaire_min = 0 WHERE id = ?')
-        .run(maintenant, prise, d.id);
-    }
-    db.prepare(`UPDATE demandes SET etat = ?, etat_depuis = ?, attente_suspend = ?, echeance_le = ?,
-      suspendu_ouvrable_min = suspendu_ouvrable_min + ?, suspendu_calendaire_min = suspendu_calendaire_min + ?,
-      cause_id = CASE WHEN ? = 1 THEN ? ELSE cause_id END,
-      compte_rendu = CASE WHEN ? = 1 THEN ? ELSE compte_rendu END,
-      updated_by = ?, updated_at = ? WHERE id = ?`)
-      .run(t.vers_etat, maintenant, s.attenteSuspend, s.echeance, s.ouvrables, s.calendaires, cloture ? 1 : 0, motifId, cloture && compteRendu !== undefined ? 1 : 0, compteRendu ?? null,
-        user.id, maintenant, d.id);
-    ecrire(db, { demandeId: d.id, entiteId: d.entite_id, de: d.etat, vers: t.vers_etat, userId: user.id, motifId, commentaire,
-      commentairePublic: commentaire ? t.commentaire_public : 0, channel, quand: maintenant });
-    logAudit(user.id, 'demande.transition', 'demande', d.id, {
-      numero: d.numero, de: d.etat, vers: t.vers_etat, ...(motifId ? { motif_id: motifId } : {}),
-      commentaire_donne: commentaire ? 1 : 0, ...(cloture ? { compte_rendu_donne: compteRendu ? 1 : 0 } : {}),
-      ...(t.vers_etat === 'en_attente' ? { suspendu: s.attenteSuspend } : {}),
-      ...(s.echeance !== d.echeance_le ? { avant: { echeance_le: d.echeance_le }, apres: { echeance_le: s.echeance } } : {}),
-    }, channel, d.entite_id);
-  })();
-  return require('./demandes').get(user, d.id);
+  if (reouverture) {
+    db.prepare('UPDATE demandes SET decompte_depuis = ?, prise_en_charge_le = ?, suspendu_ouvrable_min = 0, suspendu_calendaire_min = 0 WHERE id = ?')
+      .run(maintenant, prise, d.id);
+  }
+  db.prepare(`UPDATE demandes SET etat = ?, etat_depuis = ?, attente_suspend = ?, echeance_le = ?,
+    suspendu_ouvrable_min = suspendu_ouvrable_min + ?, suspendu_calendaire_min = suspendu_calendaire_min + ?,
+    cause_id = CASE WHEN ? = 1 THEN ? ELSE cause_id END,
+    compte_rendu = CASE WHEN ? = 1 THEN ? ELSE compte_rendu END,
+    updated_by = ?, updated_at = ? WHERE id = ?`)
+    .run(t.vers_etat, maintenant, s.attenteSuspend, s.echeance, s.ouvrables, s.calendaires, cloture ? 1 : 0, motifId, cloture && compteRendu !== undefined ? 1 : 0, compteRendu ?? null,
+      user.id, maintenant, d.id);
+  ecrire(db, { demandeId: d.id, entiteId: d.entite_id, de: d.etat, vers: t.vers_etat, userId: user.id, motifId, commentaire,
+    commentairePublic: commentaire ? t.commentaire_public : 0, channel, quand: maintenant });
+  logAudit(user.id, 'demande.transition', 'demande', d.id, {
+    numero: d.numero, de: d.etat, vers: t.vers_etat, ...(motifId ? { motif_id: motifId } : {}),
+    commentaire_donne: commentaire ? 1 : 0, ...(cloture ? { compte_rendu_donne: compteRendu ? 1 : 0 } : {}),
+    ...(t.vers_etat === 'en_attente' ? { suspendu: s.attenteSuspend } : {}),
+    ...(s.echeance !== d.echeance_le ? { avant: { echeance_le: d.echeance_le }, apres: { echeance_le: s.echeance } } : {}),
+    ...(auto ? { auto } : {}),
+  }, channel, d.entite_id);
+}
+
+/**
+ * 0.20.0 (point 1, CYC-03, DV-160) : passage automatique déclenché par les tâches d'une fiche (« En cours » quand une
+ * tâche démarre, « Travaux terminés » quand la dernière tâche ouverte se termine). Il n'a lieu que si la table des
+ * passages le permet depuis l'état courant (passage du service, actif) et que la personne en a la permission ; sinon
+ * rien ne change. Sans commentaire ni motif ; le journal note auto = « taches ». Rend l'état d'arrivée ou null.
+ */
+function passageAuto(db, user, demandeId, vers, channel = 'api', { seulementDepuis } = {}) {
+  const d = db.prepare(`SELECT id, entite_id, numero, etat, demandeur_id, beneficiaire_id, priorite, categorie_id, prise_en_charge_le,
+    echeance_le, date_convenue, etat_depuis, attente_suspend, service_id FROM demandes WHERE id = ?`).get(demandeId);
+  if (!d || d.etat === vers || (seulementDepuis && d.etat !== seulementDepuis)) return null;
+  // 0.20.0 (point 2, DV-161) : les passages « via affecter » (Qualifiée ↔ Planifiée) ne se font que par ici.
+  const t = db.prepare(`SELECT ${COLONNES_TRANSITION} FROM demande_transitions WHERE de_etat = ? AND vers_etat = ? AND acteur = 'service' AND is_active = 1
+    AND (via IS NULL OR via = 'affecter') AND motif_liste IS NULL AND (commentaire IS NULL OR commentaire <> 'obligatoire')`).get(d.etat, vers);
+  if (!t || !peut(user, t.permission)) return null;
+  executer(db, user, d, t, { auto: 'taches' }, channel);
+  return vers;
 }
 
 /**
@@ -398,5 +427,5 @@ function historique(user, id) {
 
 module.exports = {
   CONFIG, ETATS, FERMES, HORS_DELAI, seedTransitions, seedEntite, seedAll, listEtats, updateEtat, listTransitions, permises,
-  ecrire, decrire, appliquer, demandeDeLEntite, peut, annuler, decrireAnnulation, historique, donnerAvis, avisDe, avisPossible, limiteReouverture,
+  ecrire, decrire, appliquer, passageAuto, demandeDeLEntite, peut, annuler, decrireAnnulation, historique, donnerAvis, avisDe, avisPossible, limiteReouverture,
 };

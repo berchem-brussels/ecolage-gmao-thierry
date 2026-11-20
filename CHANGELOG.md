@@ -1,6 +1,24 @@
 # Journal des versions
 
-Version de l'application : **0.19.0** · Mis à jour le 19/11/2026
+Version de l'application : **0.20.0** · Mis à jour le 19/11/2026
+
+## 0.20.0 (19/11/2026)
+
+Étape 16 : tâches d'une demande, affectation, « Planifiée », suggestion d'affectation, filtres par équipe et par ouvrier (CYC-03, PLA-01, PLA-02, GES-02 ; DV-160 à DV-163), avec les quatre remarques de la recette de la 0.19.0 (DV-159). Migration `017_taches`. Aucune dépendance nouvelle, aucune permission nouvelle.
+
+- Point 0 (DV-159) : le `Tour` d'Ant Design 5.29.3 pose, même sans masque, un calque transparent plein écran qui captait chaque toucher (menu inutilisable pendant la visite sur iPhone) : calque transparent aux touchers (`index.css`), visite fermée à l'ouverture du menu (`EVENEMENT_MENU`) ; cadre de 2 px à la couleur de l'institution, titre en 18 px gras ; compteur « à qualifier » de l'accueil pris de `COMPTEURS` (rouvertes comprises, comme le tableau de bord) ; journal : liste vide masquée (sauf l'horaire d'une équipe, « Avant » et « Après » qui disent « aucun »). `mobile:check` : écran « visite et menu ».
+- Tâches (DV-160, `services/taches.js`, `/api/demandes/:id/taches`, `/api/taches`) : rang dans la demande, titre, consignes, corps de métier proposé par la demande, durée estimée ; à faire, en cours, terminée, annulée avec motif (`TACHE_MOTIF_REQUIS`) ; modifiables tant que la demande n'est pas « Travaux terminés » ni fermée (`TACHES_FIGEES`) ; effet sur la demande par la table des passages (`cycle.passageAuto`) : « En cours » au démarrage, « Travaux terminés » quand la dernière tâche ouverte se termine ; « Travaux terminés » à la main refusé avec une tâche ouverte (`TACHES_OUVERTES`) ; demande fermée : tâches ouvertes annulées.
+- Affectation et « Planifiée » (DV-161, qui remplace DV-118 pour cet état) : une équipe active ou un à dix ouvriers, jamais les deux (`AFFECTATION_DOUBLE`, `OUVRIER_INVALIDE`, `EQUIPE_INVALIDE`) ; date (jamais passée si nouvelle, `DATE_PASSEE`), heure de début avec la date (`HEURE_SANS_DATE`), durée ; neuf passages nouveaux (42) : Qualifiée ↔ Planifiée par l'affectation seulement (`via affecter`), depuis Planifiée les passages de Qualifiée ; requalification et découpage permis depuis Planifiée ; `intervention_prevue_le` lu par le demandeur, sans nom d'ouvrier.
+- Suggestion (DV-162, `GET /api/taches/:id/suggestions`) : ouvriers de l'entité triés par même corps de métier, disponibilité (horaire de l'équipe ou jour ouvré de l'entité, `echeances.jourOuvre`), charge du jour, nom ; filtre par compétence ; lecture seule.
+- Filtres (DV-163) : `equipe_id` et `ouvrier_id` dans la liste du service, l'export, les vues enregistrées et `list_demandes`.
+- Interface : `TachesDemande.tsx` (section « Tâches », formulaires, ouvriers proposés) ; listes « Équipe » et « Ouvrier » de Demandes de l'entité ; « Intervention prévue le » ; panneau du calendrier centré sous 480 px (défaut trouvé par `mobile:check` à 320 px).
+- Journal d'audit : `tache.create`, `tache.update`, `tache.etat`, `tache.affecter` (ouvriers et équipe nommés à la lecture) ; `demande.transition` porte `auto` pour un passage déclenché par les tâches ; textes jamais au journal.
+- MCP : sept outils (`list_taches_demande`, `create_tache`, `get_tache`, `update_tache`, `change_etat_tache`, `affecter_tache`, `suggerer_affectation_tache`) ; 174 outils ; plafond de 60 appels par minute testé (`mcp.test.js`).
+- Aide : trois procédures, trois questions, captures `demandes-entite-filtre-equipe`, `demandes-entite-taches`, `demandes-entite-affecter` en FR et NL (39 par langue).
+- `mobile:check` : 61 écrans. `recette.sh` : contrôle 3 (capture des tâches), contrôle 5 (`017_taches`, neuf tables, deux passages par l'affectation), contrôle 6 (tâches refusées sans session).
+- Documentation : sections 0.20.0 d'ARCHITECTURE, EXPLOITATION, MCP, SECURITE et APRES-DEPLOIEMENT (FR, NL, EN).
+- Note de version : quatre lignes (tous ; `demandes:traiter` deux fois ; `demandes:entite`).
+- Tests : serveur 667 (637), interface 370 (359) et un contrôle des captures ; preuves d'échec dans `docs/fr/SECURITE.md`.
 
 ## 0.19.0 (18/11/2026)
 

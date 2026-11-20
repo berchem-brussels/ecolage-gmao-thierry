@@ -34,7 +34,7 @@ import LieuHabituelModal from './LieuHabituelModal';
 import ReportTicketModal from './ReportTicketModal';
 import NotificationsCloche from './NotificationsCloche';
 import RechercheGlobale, { ouvrirRecherche } from './RechercheGlobale';
-import VisiteGuidee from './VisiteGuidee';
+import VisiteGuidee, { EVENEMENT_MENU } from './VisiteGuidee';
 import HelpButton from '../help/HelpButton';
 import { topicForPath } from '../help';
 import { hasPermission, useRoles } from '../useRoles';
@@ -117,6 +117,8 @@ export default function AppLayout() {
   const ecran = fiche ? t(fiche.titleKey) : entrees.filter((e) => e.key === location.pathname || (e.key !== '/' && location.pathname.startsWith(`${e.key}/`)))
     .sort((a, b) => b.key.length - a.key.length)[0]?.label || (location.pathname === '/' ? t('nav.home') : location.pathname);
 
+  // 0.20.0 (point 0, DV-159) : le menu prévient la visite guidée, qui se ferme (elle se revoit depuis l'Aide).
+  const ouvrirMenu = () => { setDrawerOpen(true); window.dispatchEvent(new Event(EVENEMENT_MENU)); };
   const go: MenuProps['onClick'] = ({ key }) => { navigate(key); setDrawerOpen(false); };
   const changeLang = (l: 'fr' | 'nl') => { setLang(l); savePreferences({ preferred_lang: l }); };
   const changeEntite = async (id: number) => {
@@ -214,7 +216,7 @@ export default function AppLayout() {
         <Header style={{ padding: isMobile ? '0 8px' : '0 16px', gap: 4, background: 'var(--app-bg-container)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid var(--app-border)', position: 'sticky', top: 0, zIndex: 9, boxShadow: '0 1px 4px rgba(0,0,0,0.04)', height: 56 }}>
           <Button type="text" aria-label={t('layout.menu')}
             icon={isMobile || collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
-            onClick={() => (isMobile ? setDrawerOpen(true) : setCollapsed(!collapsed))} />
+            onClick={() => (isMobile ? ouvrirMenu() : setCollapsed(!collapsed))} />
           <div className="entete-actions" style={{ display: 'flex', alignItems: 'center', gap: isMobile ? 4 : 12, minWidth: 0 }}>
             {/* Bouton « Nouvelle demande » sur chaque écran (DEM-01) ; sur téléphone, l'icône seule avec son nom accessible. */}
             {entite && location.pathname !== '/demandes/nouvelle' && (

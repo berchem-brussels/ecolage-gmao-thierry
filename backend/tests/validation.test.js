@@ -358,7 +358,7 @@ test('migration 014 sur une base 0.15.0 : services, colonnes, passages gardés (
   assert.equal(up.status, 0, up.stderr);
   assert.match(up.stdout, /\[DB\] Migration 014_validation appliquée/);
   const out = JSON.parse(up.stdout.trim().split('\n').pop());
-  assert.equal(out.migration, '016_equipes_prestataires', 'les migrations suivantes passent aussi (0.17.0, 0.19.0)');
+  assert.equal(out.migration, '017_taches', 'les migrations suivantes passent aussi (0.17.0, 0.19.0, 0.20.0)');
   assert.equal(out.desactive, 0, 'un passage désactivé en base n’est jamais réactivé');
   assert.equal(out.valideur, 2);
   assert.equal(out.total, require('../src/services/cycle').CONFIG.transitions.length);

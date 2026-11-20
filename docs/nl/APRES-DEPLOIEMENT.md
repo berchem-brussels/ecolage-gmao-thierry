@@ -2,6 +2,10 @@
 
 De Franse tekst is rechtsgeldig. Bijwerkingsprocedure: archief plaatsen, `cd <map>`, `ls -l` van het archief, `sudo bash backup.sh`, `sudo rm -rf backend frontend docs`, `sudo tar xzf … --strip-components=1`, `ls backend frontend`, `sudo docker compose build`, `sudo docker compose up -d`, `sudo docker compose ps`, `curl -sk https://localhost:<https>/api/version`, controlelijst van het leveringsbericht. `.env` en de volumes worden nooit aangeraakt.
 
+## 0.20.0 (19/11/2026)
+
+Taken van een aanvraag, toewijzing, « Gepland », voorgestelde arbeiders, filters per ploeg en per arbeider; opmerkingen van de test van 0.19.0 (stap 16). Update via sectie 3, **met migratie, zonder nieuwe afhankelijkheid**. `sudo docker logs gmao-api --tail 30`: `[DB] Migration 017_taches appliquée`, daarna `[APP] API 0.20.0 sur le port 3001`. Geen herstart van `demo.js`: het demowachtwoord blijft geldig. `sudo bash recette.sh`: negen regels `OK`. Terugkeer naar 0.19.0: altijd met herstel van de back-up van de dag.
+
 ## 0.19.0 (18/11/2026)
 
 Ploegen, vakgebieden, bekwaamheden, aannemers; correcties van de test van 0.18.0 (stap 15). Update via sectie 3, **met migratie, zonder nieuwe afhankelijkheid**. `sudo docker logs gmao-api --tail 30`: `[DB] Migration 016_equipes_prestataires appliquée`, daarna `[APP] API 0.19.0`. Daarna de demonstratiegegevens opnieuw laden (`demo.js`, nieuw gemeenschappelijk wachtwoord), vóór `sudo bash recette.sh`: negen regels `OK`. Terug naar 0.18.0 met de back-up van de dag.

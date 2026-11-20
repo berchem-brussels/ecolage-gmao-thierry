@@ -2,6 +2,10 @@
 
 The French text prevails. Update procedure: upload the archive, `cd <folder>`, `ls -l` the archive, `sudo bash backup.sh`, `sudo rm -rf backend frontend docs`, `sudo tar xzf … --strip-components=1`, `ls backend frontend`, `sudo docker compose build`, `sudo docker compose up -d`, `sudo docker compose ps`, `curl -sk https://localhost:<https>/api/version`, checklist from the delivery message. `.env` and the volumes are never touched.
 
+## 0.20.0 (19/11/2026)
+
+Tasks of a request, assignment, « Planned », suggested workers, filters per team and per worker; remarks from the 0.19.0 acceptance test (step 16). Update through section 3, **with migration, no new dependency**. `sudo docker logs gmao-api --tail 30`: `[DB] Migration 017_taches appliquée`, then `[APP] API 0.20.0 sur le port 3001`. No rerun of `demo.js`: the demo password stays valid. `sudo bash recette.sh`: nine `OK` lines. Rollback to 0.19.0: always with the day's backup restored.
+
 ## 0.19.0 (18/11/2026)
 
 Teams, trades, skills, contractors; fixes from the 0.18.0 acceptance test (step 15). Update through section 3, **with migration, no new dependency**. `sudo docker logs gmao-api --tail 30`: `[DB] Migration 016_equipes_prestataires appliquée`, then `[APP] API 0.19.0`. Then reload the demonstration data (`demo.js`, new shared password), before `sudo bash recette.sh`: nine `OK` lines. Back to 0.18.0 with the backup of the day.

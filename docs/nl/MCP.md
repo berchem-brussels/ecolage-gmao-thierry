@@ -1,6 +1,10 @@
 # MCP-server
 
-Versie van de toepassing: **0.19.0** · Bijgewerkt op 18/11/2026 · De Franse tekst is rechtsgeldig (`docs/fr/MCP.md`).
+Versie van de toepassing: **0.20.0** · Bijgewerkt op 19/11/2026 · De Franse tekst is rechtsgeldig (`docs/fr/MCP.md`).
+
+## 0.20.0
+
+Zeven nieuwe tools: `list_taches_demande`, `create_tache`, `get_tache`, `update_tache`, `change_etat_tache` (twee oproepen), `affecter_tache`, `suggerer_affectation_tache` (enkel lezen). `list_demandes` krijgt `equipe_id` en `ouvrier_id`; `get_demande` draagt `taches`, `taches_modifiables` en `intervention_prevue_le`; `change_etat_demande` weigert « Werken beëindigd » met een open taak. 174 tools.
 
 ## 0.19.0
 

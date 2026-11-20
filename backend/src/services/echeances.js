@@ -210,4 +210,9 @@ function simuler(user, { priorite, recu_le, categorie_id } = {}) {
   return { ...r, categorie: cat ? { id: cat.id, code: cat.code, libelle_fr: cat.libelle_fr, libelle_nl: cat.libelle_nl } : null };
 }
 
-module.exports = { calculer, simuler, texteLocal, versInstant, versLocal, minutesOuvrables, repousser, joursOuvresAvant };
+/** 0.20.0 (point 3, PLA-02) : le jour « AAAA-MM-JJ » est-il ouvré pour l'entité (horaire, jours fériés, congés, fermetures) ? */
+function jourOuvre(entiteId, iso) {
+  return !!ouverture(calendrier.charger(entiteId), Math.round(Date.parse(`${iso}T00:00:00Z`) / JOUR_MS));
+}
+
+module.exports = { calculer, simuler, texteLocal, versInstant, versLocal, minutesOuvrables, repousser, joursOuvresAvant, jourOuvre };

@@ -1,7 +1,8 @@
 /**
  * Contrôles automatiques après installation, partie « serveur » (0.12.0, DV-110 ; 0.14.0 : migration 012_cycle_de_vie ; 0.15.0 : migration 013_messages ; 0.16.0 : migration
  * 014_validation, table des services et passages du valideur ; 0.17.0 : migration 015_notifications et ses quatre tables ; 0.18.0 : aucune migration, exports refusés sans session ; 0.19.0 : migration 016_equipes_prestataires, ses sept tables,
- * corps de métier livrés, équipes et prestataires refusés sans session), lancés par recette.sh dans le
+ * corps de métier livrés, équipes et prestataires refusés sans session ; 0.20.0 : migration 017_taches, ses deux tables, passages
+ * « Planifiée » par l'affectation, tâches refusées sans session), lancés par recette.sh dans le
  * conteneur de l'API : `docker exec -i <app>-api node src/recette-api.js <version> <adresse>`.
  *
  * Lecture seule pour les données métier : rien n'est créé, modifié ni supprimé. Seules la connexion du compte de
@@ -67,22 +68,25 @@ async function main() {
 
   // 5. Migration de la version appliquée (lecture de schema_migrations et des tables nouvelles) ; 0.19.0 : migration
   // 016_equipes_prestataires, ses sept tables, corps de métier livrés dans chaque entité active, passages du valideur
-  // toujours là (0.16.0).
+  // toujours là (0.16.0). 0.20.0 : migration 017_taches, tables des tâches et des ouvriers d'une tâche, deux passages
+  // « via affecter » (Qualifiée ↔ Planifiée, DV-161), tables de la 0.19.0 toujours là.
   const db = await lireBase();
   const migr = db.exec("SELECT name FROM schema_migrations ORDER BY id DESC LIMIT 1")[0]?.values?.[0]?.[0];
-  const tables = db.exec("SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name IN ('equipes', 'equipe_membres', 'equipe_horaires', 'ouvrier_profils', 'ouvrier_competences', 'prestataires', 'prestataire_corps')")[0]?.values?.[0]?.[0];
+  const tables = db.exec("SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name IN ('equipes', 'equipe_membres', 'equipe_horaires', 'ouvrier_profils', 'ouvrier_competences', 'prestataires', 'prestataire_corps', 'demande_taches', 'tache_ouvriers')")[0]?.values?.[0]?.[0];
+  const affecter = db.exec("SELECT COUNT(*) FROM demande_transitions WHERE via = 'affecter'")[0]?.values?.[0]?.[0] || 0;
   const sansCorps = db.exec("SELECT COUNT(*) FROM entites e WHERE e.is_active = 1 AND NOT EXISTS (SELECT 1 FROM listes_valeurs v WHERE v.entite_id = e.id AND v.liste = 'corps_metier')")[0]?.values?.[0]?.[0];
   const passages = db.exec("SELECT COUNT(*) FROM demande_transitions WHERE acteur = 'valideur'")[0]?.values?.[0]?.[0] || 0;
-  note(migr === '016_equipes_prestataires' && tables === 7 && sansCorps === 0 && passages === 2, 5, 'migration 016_equipes_prestataires appliquée, tables des équipes et des prestataires présentes, corps de métier livrés, passages du valideur gardés',
-    `${migr}, ${tables ?? 0} table(s) sur 7, ${sansCorps ?? '?'} entité(s) sans corps de métier, ${passages} passage(s) du valideur sur 2`);
+  note(migr === '017_taches' && tables === 9 && affecter === 2 && sansCorps === 0 && passages === 2, 5, 'migration 017_taches appliquée, tables des tâches, des équipes et des prestataires présentes, passages « Planifiée » par l’affectation, corps de métier livrés, passages du valideur gardés',
+    `${migr}, ${tables ?? 0} table(s) sur 9, ${affecter} passage(s) par l’affectation sur 2, ${sansCorps ?? '?'} entité(s) sans corps de métier, ${passages} passage(s) du valideur sur 2`);
 
-  // 6. Refus sans session ; 0.18.0 : les trois exports Excel et CSV aussi ; 0.19.0 : équipes, ouvriers, prestataires.
+  // 6. Refus sans session ; 0.18.0 : les trois exports Excel et CSV aussi ; 0.19.0 : équipes, ouvriers, prestataires ;
+  // 0.20.0 : tâches (liste d'une demande, fiche, ouvriers proposés).
   const sans = await Promise.all(['/api/demandes', '/api/faq', '/api/tickets', '/api/audit',
     '/api/demandes/export?format=csv', '/api/demandes/a-valider/export?format=csv', '/api/tickets/export?format=csv',
-    '/api/equipes', '/api/ouvriers', '/api/prestataires'].map((u) => anonyme('GET', u)));
+    '/api/equipes', '/api/ouvriers', '/api/prestataires', '/api/demandes/1/taches', '/api/taches/1', '/api/taches/1/suggestions'].map((u) => anonyme('GET', u)));
   const pub = await anonyme('GET', '/api/settings/public');
   note(sans.every((r) => r.status === 401) && !/business_roles|tickets\./.test(JSON.stringify(pub.body)), 6,
-    'sans session : demandes, FAQ, tickets, journal, exports, équipes, ouvriers et prestataires refusés (401), réglages des tickets jamais servis', sans.map((r) => r.status).join(' '));
+    'sans session : demandes, FAQ, tickets, journal, exports, équipes, ouvriers, prestataires et tâches refusés (401), réglages des tickets jamais servis', sans.map((r) => r.status).join(' '));
 
   // 7. Connexion du compte de démonstration et entités.
   const c = client();

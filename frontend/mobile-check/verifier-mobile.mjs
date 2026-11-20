@@ -41,6 +41,9 @@
  *   comme pour les captures de l'aide (écrans du responsable et de l'administrateur compris).
  * 0.19.0 (point 0) : chaque étape de la visite est mesurée (marges du panneau, pied sur une ligne, boutons dans le panneau),
  *   sur les six appareils, dont 320 et 390 px dans WebKit.
+ * 0.20.0 (point 0, DV-159) : écran « visite et menu » (cadre et titre de la visite, menu touché pendant la visite) : 58 écrans.
+ * 0.20.0 (point 5) : tâches d'une fiche, formulaire d'affectation avec les ouvriers proposés et le calendrier ouvert (le
+ *   panneau du calendrier doit tenir dans l'écran), liste filtrée par équipe avec la liste « Équipe » ouverte : 61 écrans.
  * 0.17.0 (point 7) : volet de la cloche ouvert (service technique et chef de service), onglet Courriel de Paramètres et
  *   fiche d'un modèle de courriel avec son aperçu (administrateur) : 45 écrans avec les trois comptes.
  */
@@ -83,12 +86,15 @@ if (PARCOURS && !hoteLocal(B)) { console.error('MOBILE_PARCOURS=1 écrit dans la
  * faite avant la mesure (voir agir()).
  */
 const COMPTES = [
-  { nom: 'service technique', user: USER, password: PASSWORD, routes: (f) => [...ROUTES, '/#cloche', '/#recherche', '/#chatbot', '/#visite',
+  { nom: 'service technique', user: USER, password: PASSWORD, routes: (f) => [...ROUTES, '/#cloche', '/#recherche', '/#chatbot', '/#visite', '/#visite-menu',
     ...(f.mienne ? [`/demandes?demande=${f.mienne}`] : []),
     ...(f.entite ? [`/demandes-entite?demande=${f.entite}`, `/demandes-entite?demande=${f.entite}#note-interne`] : []),
     ...(f.aQualifier ? [`/demandes-entite?demande=${f.aQualifier}#regrouper`, `/demandes-entite?demande=${f.aQualifier}#decouper`,
       // 0.19.0 (point 4) : formulaire de qualification (corps de métier proposé) ; rien n'est envoyé.
       `/demandes-entite?demande=${f.aQualifier}#qualifier`] : []),
+    // 0.20.0 (point 5) : tâches, affectation (calendrier ouvert), filtre Équipe ; rien n'est envoyé.
+    ...(f.taches ? [`/demandes-entite?demande=${f.taches}#taches`, `/demandes-entite?demande=${f.taches}#affecter`] : []),
+    ...(f.equipe ? [`/demandes-entite?equipe_id=${f.equipe}#filtre-equipe`] : []),
     // 0.19.0 (point 4) : fiche d'une catégorie (corps de métier par défaut).
     '/referentiel#categorie'] },
   { nom: 'chef de service', user: process.env.MOBILE_VALIDEUR_USER, password: process.env.MOBILE_VALIDEUR_PASSWORD || PASSWORD,
@@ -151,6 +157,35 @@ async function agir(page, action) {
     }
     case 'ouvrier': return cliquer(page.locator('.ant-table-row .ant-btn-link'), 'ouvrier');
     case 'prestataire': return cliquer(page.locator('.ant-table-row .ant-btn-link'), 'prestataire');
+    // 0.20.0 (point 5) : section des tâches amenée à l'écran.
+    case 'taches': {
+      const sec = page.locator('.ant-drawer-open section.taches');
+      if (!(await sec.count())) return 'section « Tâches » introuvable';
+      await sec.first().scrollIntoViewIfNeeded(); await page.waitForTimeout(400); return null;
+    }
+    // Formulaire d'affectation de la première tâche ouverte, « Ouvriers » choisi (ouvriers proposés), calendrier ouvert :
+    // le panneau du calendrier doit tenir dans la largeur de l'écran.
+    case 'affecter': {
+      const e = await cliquer(page.locator('.ant-drawer-open section.taches button').filter({ hasText: /^Affecter$|^Toewijzen$/ }), '« Affecter »');
+      if (e) return e;
+      const r = await cliquer(page.locator('.tache-affectation .ant-radio-button-wrapper').first(), '« Ouvriers »');
+      if (r) return r;
+      try { await page.locator('.taches-proposes .ant-list-item').first().waitFor({ timeout: 5000 }); } catch { return 'ouvriers proposés absents'; }
+      const c = await cliquer(page.locator('.tache-affectation .ant-picker').first(), 'date prévue');
+      if (c) return c;
+      try { await page.locator('.ant-picker-dropdown:not(.ant-picker-dropdown-hidden) .ant-picker-panel').first().waitFor({ timeout: 5000 }); } catch { return 'calendrier non ouvert'; }
+      const b = await page.evaluate(() => { const r = document.querySelector('.ant-picker-dropdown:not(.ant-picker-dropdown-hidden) .ant-picker-panel').getBoundingClientRect(); return { g: r.left, d: r.right, W: innerWidth }; });
+      return b.g < 0 || b.d > b.W + 1 ? `calendrier hors de l'écran (${Math.round(b.g)} à ${Math.round(b.d)} px sur ${b.W})` : null;
+    }
+    // Liste filtrée par équipe : filtres dépliés (repliés sur téléphone), liste « Équipe » ouverte.
+    case 'filtre-equipe': {
+      const repli = page.locator('.ant-collapse-header').filter({ hasText: /Filtres et vues|Filters en weergaven/ });
+      if (await repli.count() && !(await page.locator('.filtre-equipe').first().isVisible())) { const e = await cliquer(repli, '« Filtres et vues »'); if (e) return e; }
+      const e = await cliquer(page.locator('.filtre-equipe'), 'liste « Équipe »');
+      if (e) return e;
+      try { await page.locator('.ant-select-dropdown:not(.ant-select-dropdown-hidden) .ant-select-item-option').first().waitFor({ timeout: 5000 }); } catch { return 'équipes non proposées'; }
+      return null;
+    }
     case 'qualifier': return cliquer(page.locator('.ant-drawer-open button').filter({ hasText: /^Qualifier$|^Kwalificeren$/ }), '« Qualifier »');
     case 'categorie': return cliquer(page.locator('.ant-table-row').first(), 'catégorie');
     case 'ouvrir': return cliquer(page.locator('.ant-table-row .ant-btn-link, .ant-table-row .ant-btn:not(.ant-btn-dangerous)'), 'ligne à ouvrir');
@@ -217,6 +252,41 @@ async function agir(page, action) {
         } catch { defautsVisite.push(`${ou} : « Suivant » sans effet`); break; }
       }
       return defautsVisite.length ? defautsVisite.join(' ; ') : null;
+    }
+    // 0.20.0 (point 0, remarques 1 et 2 de la recette de la 0.19.0, DV-159) : visite ouverte, cadre à la couleur de
+    // l'institution (2 px au moins) et titre en 18 px gras ; puis toucher du bouton du menu : un calque qui intercepte le
+    // toucher est un défaut (vu sur l'iPhone : .ant-tour-mask plein écran) ; le menu s'ouvre, la visite se ferme et chaque
+    // entrée du menu reçoit le toucher. Le menu reste ouvert pour la mesure commune de l'écran.
+    case 'visite-menu': {
+      await page.evaluate(() => window.dispatchEvent(new Event('app-visite')));
+      try { await page.locator('.visite-guidee .visite-compteur').first().waitFor({ timeout: 5000 }); } catch { return 'visite guidée non ouverte'; }
+      await stable(page);
+      const d = [];
+      const look = await page.evaluate(() => {
+        const inner = getComputedStyle(document.querySelector('.visite-guidee .ant-tour-inner'));
+        const titre = getComputedStyle(document.querySelector('.visite-guidee .ant-tour-title'));
+        const sonde = document.createElement('i'); sonde.style.color = 'var(--app-primary)'; document.body.appendChild(sonde);
+        const primaire = getComputedStyle(sonde).color; sonde.remove();
+        return { bord: parseFloat(inner.borderTopWidth), couleur: inner.borderTopColor, primaire, taille: parseFloat(titre.fontSize), gras: Number(titre.fontWeight) };
+      });
+      if (look.bord < 2 || look.couleur !== look.primaire) d.push(`visite : cadre ${look.bord} px ${look.couleur} (attendu 2 px ${look.primaire})`);
+      if (look.taille < 18 || look.gras < 700) d.push(`visite : titre en ${look.taille} px, graisse ${look.gras} (attendu 18 px gras)`);
+      const bouton = page.locator('header button').first();
+      try { await bouton.click({ timeout: 5000 }); } catch (e) { // Playwright refuse le clic si un autre élément le capterait
+        d.push(`visite : bouton du menu inutilisable pendant la visite (${(/intercepts pointer events/.test(String(e)) ? 'toucher capté par un calque' : 'clic impossible')})`);
+        return d.join(' ; ');
+      }
+      try { await page.locator('.ant-drawer-open .ant-menu-item').first().waitFor({ timeout: 5000 }); } catch { d.push('visite : menu non ouvert'); }
+      try { await page.waitForFunction(() => !document.querySelector('.visite-guidee .ant-tour-title'), null, { timeout: 5000 }); } catch { d.push('visite : toujours ouverte après l’ouverture du menu'); }
+      await stable(page);
+      const couverts = await page.evaluate(() => [...document.querySelectorAll('.ant-drawer-open .ant-menu-item')].filter((i) => {
+        const b = i.getBoundingClientRect(); if (!b.height || b.bottom > innerHeight) return false;
+        // Couvert par un élément hors du tiroir (calque, panneau) ; une entrée du bas sous le pied du tiroir, qui défile, ne compte pas.
+        const e = document.elementFromPoint(b.left + b.width / 2, b.top + b.height / 2);
+        return !!e && !e.closest('.ant-drawer-content');
+      }).map((i) => i.textContent.trim().slice(0, 25)));
+      if (couverts.length) d.push(`visite : entrées du menu couvertes (${couverts.join(', ')})`);
+      return d.length ? d.join(' ; ') : null;
     }
     default: return null;
   }
@@ -325,7 +395,16 @@ for (const compte of COMPTES.filter((c) => c.user && ECRANS)) {
         };
         return { mienne: await meilleure('/api/demandes?limit=20'), entite: await meilleure('/api/demandes?perimetre=entite&limit=20'),
           aQualifier: (await ids('/api/demandes?perimetre=entite&etats=a_qualifier&limit=1'))[0] ?? null,
-          aValider: (await ids('/api/demandes/a-valider?limit=1'))[0] ?? null };
+          aValider: (await ids('/api/demandes/a-valider?limit=1'))[0] ?? null,
+          // 0.20.0 (point 5) : une demande de l'entité avec une tâche ouverte ; une équipe de l'entité.
+          taches: await (async () => {
+            for (const id of await ids('/api/demandes?perimetre=entite&limit=50')) {
+              const r = await fetch(`/api/demandes/${id}/taches`);
+              if (r.ok && ((await r.json()).data || []).some((t) => t.etat === 'a_faire' || t.etat === 'en_cours')) return id;
+            }
+            return null;
+          })(),
+          equipe: (await ids('/api/equipes?limit=1'))[0] ?? null };
       });
       // Les erreurs comptent à partir d'ici : la lecture des fiches ci-dessus essaie des listes que le compte n'a pas
       // toujours le droit de lire (le chef de service n'a pas les demandes de l'entité).

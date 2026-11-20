@@ -8,6 +8,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { cleanup as cleanupAll, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import axe from 'axe-core';
+import dayjs from 'dayjs';
 import { I18nProvider } from '../contexts/I18nContext';
 import { SettingsProvider, FALLBACK_SETTINGS } from '../contexts/SettingsContext';
 import { translations } from '../i18n';
@@ -171,7 +172,12 @@ beforeEach(() => {
       : url.startsWith('/api/demandes?') && url.includes('messages=non_lus') ? page(nonLusData)
       : url.startsWith('/api/listes-valeurs') ? page(valeursData.filter((v) => url.includes(`liste=${v.liste}`)))
       : url.match(/^\/api\/demandes\/\d+/) ? { data: ficheData || demandes[0], meta: { envelope: 1 } }
-      : url.startsWith('/api/demandes') ? (url.includes('etat=a_qualifier') ? page([demandes[0]], 4) : page(demandes))
+      : url.startsWith('/api/demandes') ? (url.includes('etats=a_qualifier%2Crouverte') ? page([demandes[0]], 4) : page(demandes))
+      : url.includes('/suggestions') ? { data: { date: '2026-11-25', jour_ouvre_entite: 1, ouvriers: [
+        { id: 22, prenom: 'Odile', nom: 'Ouvrière', corps_metier: { libelle_fr: 'Électricité', libelle_nl: 'Elektriciteit' }, meme_corps: 1, disponible: 1, charge_min: 0, nb_taches: 0 },
+        { id: 21, prenom: 'Olivier', nom: 'Ouvrier', corps_metier: { libelle_fr: 'Plomberie', libelle_nl: 'Loodgieterij' }, meme_corps: 0, disponible: 0, charge_min: 120, nb_taches: 1 }] }, meta: { envelope: 1 } }
+      : url.startsWith('/api/ouvriers') ? page([{ id: 21, prenom: 'Olivier', nom: 'Ouvrier' }, { id: 22, prenom: 'Odile', nom: 'Ouvrière' }])
+      : url.startsWith('/api/equipes') ? page([{ id: 31, code: 'BAT', nom_fr: 'Bâtiment', nom_nl: 'Gebouw' }])
       : url.startsWith('/api/roles') ? { data: roles, meta: { envelope: 1 } }
       : url.includes('/membres') ? { data: [], meta: { envelope: 1 } }
       : { data: [], meta: { envelope: 1 }, pagination: { total: 0, limit: 20, offset: 0 } };
@@ -1036,6 +1042,16 @@ describe('service technique (0.9.0, GES-01, GES-02, GES-04, PRI-01, PRI-03)', ()
     } finally { remettre(); }
   });
 
+  it('0.20.0 (DV-159) : « Demandes de l’entité (n à qualifier) » de l’accueil compte comme le tableau de bord, rouvertes comprises', async () => {
+    try {
+      render(wrap(HomePage, 'fr'));
+      await screen.findByRole('link', { name: /4\s*À qualifier/ });
+      await waitFor(() => expect(calls().map((c) => c[0]).some((u) => u.startsWith('/api/demandes?') && u.includes('perimetre=entite')
+        && u.includes('etats=a_qualifier%2Crouverte') && u.includes('limit=1'))).toBe(true));
+      expect(calls().map((c) => c[0]).some((u) => u.startsWith('/api/demandes?') && /[?&]etat=a_qualifier(&|$)/.test(u))).toBe(false);
+    } finally { remettre(); }
+  });
+
   it('liste : filtres de l’adresse transmis au serveur ; en cours par défaut ; échéance et « En retard » en mots', async () => {
     try {
       render(wrap(DemandesEntite, 'fr', ['/demandes-entite?echeance=retard&tri=echeance&ordre=asc']));
@@ -1056,6 +1072,27 @@ describe('service technique (0.9.0, GES-01, GES-02, GES-04, PRI-01, PRI-03)', ()
       fireEvent.click(screen.getByText('Filtres et vues'));
       fireEvent.click(await screen.findByText('Dans les 2 jours ouvrés'));
       await waitFor(() => expect(calls().some((c) => c[0].includes('perimetre=entite') && c[0].includes('echeance=proche'))).toBe(true));
+    } finally { remettre(); }
+  });
+
+  it('liste : filtres équipe et ouvrier (0.20.0, DV-163) : lus dans l’adresse, envoyés au serveur, nommés, gardés dans la vue', async () => {
+    try {
+      render(wrap(DemandesEntite, 'fr', ['/demandes-entite?equipe_id=31&ouvrier_id=21']));
+      await screen.findByRole('button', { name: 'AA-DI-2026-00002' });
+      const u = calls().map((c) => c[0]).find((x) => x.startsWith('/api/demandes?') && x.includes('perimetre=entite'))!;
+      expect(u).toContain('equipe_id=31');
+      expect(u).toContain('ouvrier_id=21');
+      expect(calls().some((c) => c[0].includes('/api/demandes/export')), 'pas d’export sans clic').toBe(false);
+      fireEvent.click(screen.getByText(/Filtres et vues \(2\)/));
+      expect(await screen.findByText('Bâtiment (BAT)')).toBeInTheDocument();
+      expect(screen.getByText('Olivier Ouvrier')).toBeInTheDocument();
+      expect(screen.getByRole('combobox', { name: 'Équipe' })).toBeInTheDocument();
+      expect(screen.getByRole('combobox', { name: 'Ouvrier' })).toBeInTheDocument();
+      fireEvent.click(await screen.findByRole('button', { name: /Enregistrer la vue/ }));
+      fireEvent.change(await screen.findByLabelText('Nom de la vue'), { target: { value: 'Équipe bâtiment' } });
+      fireEvent.click(screen.getByRole('button', { name: 'Enregistrer' }));
+      await waitFor(() => expect(posts.some((p) => p.url === '/api/vues-demandes')).toBe(true));
+      expect(posts.find((x) => x.url === '/api/vues-demandes')!.body).toEqual({ nom: 'Équipe bâtiment', filtres: { equipe_id: 31, ouvrier_id: 21, ouvertes: 1 } });
     } finally { remettre(); }
   });
 
@@ -1152,6 +1189,139 @@ describe('service technique (0.9.0, GES-01, GES-02, GES-04, PRI-01, PRI-03)', ()
     expect(within(fiche).queryByText('Échéances')).toBeNull();
     expect(within(fiche).queryByText(/Consignes/)).toBeNull();
     expect(screen.queryByRole('button', { name: 'Qualifier' })).toBeNull();
+  });
+});
+
+describe('tâches d’une demande, fiche du service technique (0.20.0, point 1 ; CYC-03, DV-160)', () => {
+  const tache = (id: number, rang: number, etat: string, extra: Record<string, unknown> = {}) => ({
+    id, demande_id: 2, rang, titre: `Tâche ${rang}`, consignes: null, corps_metier_id: 71, corps_metier_code: 'electricite',
+    corps_metier_libelle_fr: 'Électricité', corps_metier_libelle_nl: 'Elektriciteit', duree_estimee_min: 90, etat, motif_annulation: null,
+    annulation_auto: null, etat_depuis: '2026-11-19 09:00:00', equipe_id: null, equipe_code: null, equipe_nom_fr: null, equipe_nom_nl: null, ouvriers: [],
+    date_prevue: null, heure_debut: null,
+    passages: ({ a_faire: ['en_cours', 'terminee', 'annulee'], en_cours: ['a_faire', 'terminee', 'annulee'], terminee: ['a_faire'], annulee: ['a_faire'] } as Record<string, string[]>)[etat], ...extra,
+  });
+  const fiche = (extra: Record<string, unknown> = {}) => demande(2, 'AA-DI-2026-00002', 'qualifiee', {
+    priorite_proposee: 'P3', transitions: [], etat_depuis: '2026-11-08 09:30:00', corps_metier_id: 71, taches_modifiables: 1, ...extra,
+  });
+  const ouvrir = async (lang: 'fr' | 'nl' = 'fr') => { render(wrap(DemandesEntite, lang, ['/demandes-entite?demande=2'])); return screen.findByRole('dialog'); };
+  afterEach(() => { ficheData = null; });
+
+  it('liste par rang : état, corps de métier, durée, motif d’annulation ou annulation avec la demande ; boutons par passage ; sans violation axe-core (FR, NL)', async () => {
+    ficheData = fiche({ taches: [tache(5, 1, 'en_cours', { consignes: 'Clé à l’accueil.' }), tache(6, 2, 'annulee', { motif_annulation: 'Fait par le concierge.' }), tache(7, 3, 'annulee', { annulation_auto: 'refusee' })] });
+    const d = await ouvrir();
+    const section = await within(d).findByRole('region', { name: 'Tâches (3)' });
+    expect(within(section).getByText('Tâche 1 · Tâche 1')).toBeInTheDocument();
+    expect(within(section).getByText('En cours')).toBeInTheDocument();
+    expect(within(section).getAllByText('Électricité')).toHaveLength(3);
+    expect(within(section).getAllByText('Durée estimée : 1 h 30')).toHaveLength(3);
+    expect(within(section).getByText('Clé à l’accueil.')).toBeInTheDocument();
+    expect(within(section).getByText('Motif : Fait par le concierge.')).toBeInTheDocument();
+    expect(within(section).getByText(/Annulée avec la demande : « Refusée/)).toBeInTheDocument();
+    const g1 = within(section).getByRole('group', { name: 'Tâche 1' });
+    expect(within(g1).getAllByRole('button').map((b) => b.textContent)).toEqual(['Remettre à faire', 'Terminer', 'Affecter', 'Modifier', 'Annuler la tâche']);
+    expect(within(within(section).getByRole('group', { name: 'Tâche 2' })).getAllByRole('button').map((b) => b.textContent)).toEqual(['Rouvrir']);
+    expect(within(section).getByText(/quand toutes ses tâches sont terminées ou annulées/)).toBeInTheDocument();
+    await audit(d as HTMLElement);
+    cleanupAll();
+    const n = await ouvrir('nl');
+    await within(n).findByRole('region', { name: 'Taken (3)' });
+    await audit(n as HTMLElement);
+  });
+
+  it('ajouter : corps de métier de la demande proposé, durée en heures envoyée en minutes ; titre exigé', async () => {
+    ficheData = fiche({ taches: [] });
+    reponsePost = { status: 201, json: { data: tache(8, 1, 'a_faire'), meta: { envelope: 1 } } };
+    const d = await ouvrir();
+    const section = await within(d).findByRole('region', { name: 'Tâches' });
+    expect(within(section).getByText(/Aucune tâche\. Découpez le travail/)).toBeInTheDocument();
+    fireEvent.click(within(section).getByRole('button', { name: /Ajouter une tâche/ }));
+    expect(await within(section).findByText('Électricité')).toBeInTheDocument();
+    fireEvent.click(within(section).getAllByRole('button', { name: /Ajouter une tâche/ }).slice(-1)[0]);
+    expect(await within(section).findByText('Dites ce qu’il faut faire (3 caractères au moins).')).toBeInTheDocument();
+    expect(posts.some((p) => p.url === '/api/demandes/2/taches')).toBe(false);
+    fireEvent.change(within(section).getByLabelText(/Ce qu’il faut faire/), { target: { value: 'Remplacer le luminaire' } });
+    fireEvent.change(within(section).getByLabelText(/Durée estimée/), { target: { value: '1,5' } });
+    fireEvent.click(within(section).getAllByRole('button', { name: /Ajouter une tâche/ }).slice(-1)[0]);
+    await waitFor(() => expect(posts.find((p) => p.url === '/api/demandes/2/taches')?.body).toEqual({ titre: 'Remplacer le luminaire', consignes: null, corps_metier_id: 71, duree_estimee_min: 90 }));
+    await waitFor(() => expect(gets.filter((u) => u === '/api/demandes/2').length).toBeGreaterThanOrEqual(2));
+  });
+
+  it('démarrer sans motif ; annuler avec un motif exigé ; le passage de la demande est dit', async () => {
+    ficheData = fiche({ taches: [tache(5, 1, 'a_faire')] });
+    reponsePost = { status: 200, json: { data: { ...tache(5, 1, 'en_cours'), demande_etat: 'en_cours', demande_passage_auto: 'en_cours' }, meta: { envelope: 1 } } };
+    const d = await ouvrir();
+    const section = await within(d).findByRole('region', { name: 'Tâches (1)' });
+    fireEvent.click(within(section).getByRole('button', { name: 'Démarrer' }));
+    await waitFor(() => expect(posts.find((p) => p.url === '/api/taches/5/etat')?.body).toEqual({ etat: 'en_cours' }));
+    expect(await screen.findByText(/demande passée « En cours/)).toBeInTheDocument();
+    posts.length = 0;
+    fireEvent.click(within(section).getByRole('button', { name: 'Annuler la tâche' }));
+    const confirmer = (await within(section).findAllByRole('button', { name: 'Annuler la tâche' })).slice(-1)[0];
+    expect(confirmer).toBeDisabled();
+    fireEvent.change(within(section).getByLabelText('Pourquoi annuler cette tâche ?'), { target: { value: '  Fait par le concierge.  ' } });
+    fireEvent.click(confirmer);
+    await waitFor(() => expect(posts.find((p) => p.url === '/api/taches/5/etat')?.body).toEqual({ etat: 'annulee', motif: 'Fait par le concierge.' }));
+  });
+
+  it('0.20.0 (point 2) : affectation résumée ; formulaire ouvriers ou équipe, date, heure ; envoi complet ; « Personne » retire tout', async () => {
+    const demain = dayjs().add(1, 'day').format('YYYY-MM-DD');
+    ficheData = fiche({ taches: [tache(5, 1, 'a_faire', { ouvriers: [{ id: 21, prenom: 'Olivier', nom: 'Ouvrier' }], date_prevue: demain, heure_debut: '08:30' }), tache(6, 2, 'a_faire', { equipe_id: 31, equipe_code: 'BAT', equipe_nom_fr: 'Bâtiment', equipe_nom_nl: 'Gebouw' })] });
+    const d = await ouvrir();
+    const section = await within(d).findByRole('region', { name: 'Tâches (2)' });
+    expect(within(section).getByText(new RegExp(`Olivier Ouvrier · .* à 08:30`))).toBeInTheDocument();
+    expect(within(section).getByText(/Équipe Bâtiment/)).toBeInTheDocument();
+    fireEvent.click(within(within(section).getByRole('group', { name: 'Tâche 1' })).getByRole('button', { name: 'Affecter' }));
+    expect((await within(section).findAllByText('Olivier Ouvrier')).length).toBeGreaterThan(0);
+    expect(within(section).getByRole('radio', { name: 'Ouvriers' })).toBeChecked();
+    fireEvent.click(within(section).getByRole('button', { name: 'Enregistrer' }));
+    await waitFor(() => expect(puts.find((p) => p.url === '/api/taches/5/affectation')?.body).toEqual({ ouvriers: [21], equipe_id: null, date_prevue: demain, heure_debut: '08:30', duree_estimee_min: 90 }));
+    await audit(d as HTMLElement);
+    puts.length = 0;
+    fireEvent.click(within(within(section).getByRole('group', { name: 'Tâche 2' })).getByRole('button', { name: 'Affecter' }));
+    expect(await within(section).findByRole('radio', { name: 'Équipe' })).toBeChecked();
+    fireEvent.click(within(section).getByRole('radio', { name: 'Personne' }));
+    fireEvent.click(within(section).getByRole('button', { name: 'Enregistrer' }));
+    await waitFor(() => expect(puts.find((p) => p.url === '/api/taches/6/affectation')?.body).toEqual({ ouvriers: [], equipe_id: null, date_prevue: null, heure_debut: null, duree_estimee_min: 90 }));
+  });
+
+  it('0.20.0 (point 3) : ouvriers proposés pour la date de la tâche ; « Choisir » ajoute à la sélection ; charge et disponibilité dites', async () => {
+    const demain = dayjs().add(1, 'day').format('YYYY-MM-DD');
+    ficheData = fiche({ taches: [tache(5, 1, 'a_faire', { ouvriers: [{ id: 21, prenom: 'Olivier', nom: 'Ouvrier' }], date_prevue: demain })] });
+    const d = await ouvrir();
+    const section = await within(d).findByRole('region', { name: 'Tâches (1)' });
+    fireEvent.click(within(section).getByRole('button', { name: 'Affecter' }));
+    expect(await within(section).findByText('Odile Ouvrière')).toBeInTheDocument();
+    await waitFor(() => expect(gets.some((u) => u === `/api/taches/5/suggestions?date=${demain}`)).toBe(true));
+    expect(within(section).getByText('Travaille ce jour')).toBeInTheDocument();
+    expect(within(section).getByText('Ne travaille pas ce jour')).toBeInTheDocument();
+    expect(within(section).getByText('Déjà prévu : 2 h')).toBeInTheDocument();
+    expect(within(section).getByRole('button', { name: 'Choisi' })).toHaveAttribute('aria-pressed', 'true');
+    fireEvent.click(within(section).getByRole('button', { name: 'Choisir' }));
+    fireEvent.click(within(section).getByRole('button', { name: 'Enregistrer' }));
+    await waitFor(() => expect(puts.find((p) => p.url === '/api/taches/5/affectation')?.body).toEqual({ ouvriers: [21, 22], equipe_id: null, date_prevue: demain, heure_debut: null, duree_estimee_min: 90 }));
+    await audit(d as HTMLElement);
+  });
+
+  it('0.20.0 (point 2) : le demandeur lit « Intervention prévue le », sans nom d’ouvrier', async () => {
+    ficheData = demande(2, 'AA-DI-2026-00002', 'planifiee', { intervention_prevue_le: '2026-11-26' });
+    render(wrap(MesDemandes, 'fr', ['/demandes?demande=2']));
+    const d = await screen.findByRole('dialog');
+    expect(await within(d).findByText('Intervention prévue le')).toBeInTheDocument();
+    expect(within(d).getByText(/jeudi 26 novembre 2026/)).toBeInTheDocument();
+  });
+
+  it('demande « Travaux terminés » (tâches figées) : ni ajout ni bouton ; refus du serveur affiché, saisie gardée', async () => {
+    ficheData = fiche({ etat: 'terminee', taches_modifiables: 0, taches: [tache(5, 1, 'terminee')] });
+    const d = await ouvrir();
+    const section = await within(d).findByRole('region', { name: 'Tâches (1)' });
+    expect(within(section).queryByRole('button')).toBeNull();
+    cleanupAll();
+    ficheData = fiche({ taches: [tache(5, 1, 'a_faire')] });
+    reponsePost = { status: 409, json: { error: true, code: 'TACHES_FIGEES', message: 'Les tâches de cette demande ne se modifient plus dans son état actuel.' } };
+    const e = await ouvrir();
+    const s2 = await within(e).findByRole('region', { name: 'Tâches (1)' });
+    fireEvent.click(within(s2).getByRole('button', { name: 'Terminer' }));
+    expect(await within(s2).findByRole('alert')).toHaveTextContent('ne se modifient plus');
   });
 });
 

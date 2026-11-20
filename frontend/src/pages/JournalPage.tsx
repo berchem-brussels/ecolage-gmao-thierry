@@ -53,7 +53,9 @@ const PAGE = 50;
 // 0.13.0 : validation d'une catégorie, comptes (mot de passe à changer, accès de secours), motif d'un ticket donné (D8).
 // 0.14.0 : commentaire et compte rendu donnés lors d'un changement d'état d'une demande (le texte reste sur la fiche).
 export const BOOLEENS = new Set(['commentaire_donne', 'compte_rendu_donne', 'suspendu', 'danger', 'beneficiaire_texte', 'is_active', 'obligatoire', 'remarque', 'brouillon', 'premiere', 'priorite_confirmee', 'photos_visibles', 'motif_priorite', 'consignes', 'internal', 'interne',
-  'validation', 'must_change_password', 'is_admin_local', 'motif_donne']);
+  'validation', 'must_change_password', 'is_admin_local', 'motif_donne',
+  // 0.20.0 (point 1) : tâches (textes jamais au journal : on note qu'ils sont donnés ou modifiés).
+  'consignes_donnees', 'titre_modifie', 'consignes_modifie']);
 const VIDE_DIT = new Set(['avant', 'apres']);
 /** Champs du détail qui portent un code traduit (R2, 0.9.1) : nom du champ → préfixe de la clé de traduction. */
 export const CODES: Record<string, string> = { etat: 'demande.etat_service' };
@@ -67,7 +69,10 @@ export const CODES_ACTION: Record<string, Record<string, string>> = {
   'login.success': { method: 'audit.methode' },
   'sso.refused': { reason: 'audit.raison' },
   // 0.14.0 : états de départ et d'arrivée d'un changement d'état ; état dont l'entité change les libellés.
-  'demande.transition': { de: 'demande.etat_service', vers: 'demande.etat_service' },
+  // 0.20.0 (point 1) : passage automatique déclenché par les tâches (auto = « taches »).
+  'demande.transition': { de: 'demande.etat_service', vers: 'demande.etat_service', auto: 'audit.auto' },
+  // 0.20.0 (point 1) : passage d'une tâche ; annulation automatique avec l'état de la demande qui se ferme.
+  'tache.etat': { de: 'tache.etat', vers: 'tache.etat', auto: 'demande.etat_service' },
   'etat_demande.update': { code: 'demande.etat_service' },
   // 0.15.0 (point 5) : façon de suivre une demande.
   'demande.suivre': { source: 'suivi.source' },
@@ -123,6 +128,12 @@ const LISTES_CHAMPS = new Set(['fields']);
 /** Valeur masquée par le serveur (secret client), dite en clair (R4). */
 const MASQUE = '***';
 const vide = (v: unknown) => v === null || v === undefined || v === '';
+/**
+ * 0.20.0 (point 0, remarque 4 de la recette de la 0.19.0, DV-159) : une liste vide (membres ajoutés ou retirés, corps de
+ * métier d'un prestataire) se masque comme un champ vide (règle de la 0.7.5) ; sauf l'horaire d'une équipe, dont la liste
+ * vide veut dire « horaire de l'entité », et « Avant » et « Après », où le vide se dit « aucun ».
+ */
+const masque = (chemin: string, v: unknown) => vide(v) || (Array.isArray(v) && !v.length && chemin.split('.')[0] !== 'horaire');
 /** Date de la base (UTC, « 2026-10-22 08:00:00 ») vers l'heure locale. */
 export const depuisBase = (d: string) => dayjs(`${d.replace(' ', 'T')}Z`);
 
@@ -216,12 +227,14 @@ export default function JournalPage() {
       return v.length ? (v as { jour: number; debut: string; fin: string }[]).map((c) => `${t(`ref.jour.${c.jour}`)} ${c.debut}–${c.fin}`).join(', ') : t('equipes.horaire.entite');
     }
     if (v && typeof v === 'object' && !Array.isArray(v)) {
-      return Object.entries(v as Record<string, unknown>).map(([k, x]) => `${cleDetail(k, l.action)} : ${valeur(l, `${chemin}.${k}`, x)}`).join(' · ');
+      return Object.entries(v as Record<string, unknown>).filter(([k, x]) => VIDE_DIT.has(chemin.split('.')[0]) || VIDE_DIT.has(k) || !masque(`${chemin}.${k}`, x))
+        .map(([k, x]) => `${cleDetail(k, l.action)} : ${valeur(l, `${chemin}.${k}`, x)}`).join(' · ');
     }
     const cle = chemin.split('.').pop() || '';
     if (BOOLEENS.has(cle) && (v === 0 || v === 1 || typeof v === 'boolean')) return t(v ? 'yes' : 'no');
     if (LISTES_CHAMPS.has(cle) && Array.isArray(v)) return v.map((x) => cleDetail(String(x), l.action)).join(', ');
     // 0.16.0 : liste de numéros (demandes créées par un découpage).
+    if (Array.isArray(v) && !v.length) return t('audit.aucun');
     if (Array.isArray(v) && v.every((x) => typeof x === 'string')) return v.join(', ');
     if (v === MASQUE) return t('audit.masque');
     const prefixe = CODES_ACTION[l.action]?.[cle] || CODES_FAMILLE[l.action.split('.')[0]]?.[cle] || CODES[cle];
@@ -244,7 +257,9 @@ export default function JournalPage() {
   const champs = (l: Ligne) => Object.entries(l.details || {}).filter(([k, v]) => {
     const nomme = REDONDANTS[l.action]?.[k];
     if (nomme && l.noms?.[nomme] && !l.noms[nomme].introuvable) return false;
-    return !vide(v) || VIDE_DIT.has(k);
+    if (VIDE_DIT.has(k)) return true;
+    if (v && typeof v === 'object' && !Array.isArray(v)) return Object.entries(v as Record<string, unknown>).some(([x, w]) => VIDE_DIT.has(x) || !masque(`${k}.${x}`, w));
+    return !masque(k, v);
   });
 
   return (

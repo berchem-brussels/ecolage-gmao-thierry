@@ -59,8 +59,10 @@ test('table des passages copiée de la configuration, lisible par tout rôle de 
   assert.equal(r.status, 200);
   assert.equal(r.body.data.length, cycle.CONFIG.transitions.length);
   assert.ok(r.body.data.every((t) => t.is_active === 1));
-  // DV-118 : « Planifiée » et « Confiée à un prestataire » restent fermés ; le gestionnaire démarre et termine.
-  assert.ok(!r.body.data.some((t) => ['planifiee', 'externe'].includes(t.vers_etat)));
+  // DV-118 : « Confiée à un prestataire » reste fermé ; le gestionnaire démarre et termine. 0.20.0 (DV-161) : « Planifiée »
+  // ne s'atteint que par l'affectation d'une tâche datée (via « affecter »).
+  assert.ok(!r.body.data.some((t) => t.vers_etat === 'externe'));
+  assert.ok(r.body.data.filter((t) => t.vers_etat === 'planifiee').every((t) => t.via === 'affecter'));
   assert.ok(r.body.data.some((t) => t.de_etat === 'qualifiee' && t.vers_etat === 'en_cours' && t.permission === 'demandes:traiter'));
   assert.ok(r.body.data.some((t) => t.de_etat === 'en_cours' && t.vers_etat === 'terminee'));
   for (const liste of ['motif_attente', 'motif_refus', 'cause_panne']) {
@@ -111,7 +113,7 @@ test('qualification : passage inscrit à l’historique, une seule fois ; état 
   assert.deepEqual(h.map((x) => `${x.de_etat}>${x.vers_etat}`), ['null>a_qualifier', 'a_qualifier>qualifiee']);
   assert.equal(h[1].user_id, gest.id);
   assert.ok(q.transitions.some((t) => t.vers === 'en_cours'), 'passages permis sur la fiche du service');
-  assert.ok(!q.transitions.some((t) => t.vers === 'planifiee'), 'Planifiée fermée (DV-118)');
+  assert.ok(q.transitions.filter((t) => t.vers === 'planifiee').every((t) => t.via === 'affecter'), 'Planifiée par l’affectation seulement (DV-161)');
 });
 
 test('parcours complet : attente avec motif, reprise, fin, retour, clôture avec cause et compte rendu', async () => {
@@ -293,7 +295,7 @@ test('migration 012 sur une base 0.13.0 : historique repris de la fiche, état d
   assert.equal(up.status, 0, up.stderr);
   assert.match(up.stdout, /\[DB\] Migration 012_cycle_de_vie appliquée/);
   const out = JSON.parse(up.stdout.trim().split('\n').pop());
-  assert.equal(out.migration, '016_equipes_prestataires', 'les migrations suivantes passent aussi (0.17.0, 0.19.0)');
+  assert.equal(out.migration, '017_taches', 'les migrations suivantes passent aussi (0.17.0, 0.19.0, 0.20.0)');
   assert.deepEqual(out.historique, [
     { demande_id: 1, de_etat: null, vers_etat: 'a_qualifier', canal: 'ecran', created_at: '2026-11-01 08:00:00' },
     { demande_id: 2, de_etat: null, vers_etat: 'a_qualifier', canal: 'mcp', created_at: '2026-11-02 08:00:00' },
@@ -463,6 +465,8 @@ test('réouverture : dans le délai, avec ce qui ne va pas ; délais repartis de
   assert.equal(b.suspendu_calendaire_min, 0);
   assert.equal((await gest.get('/api/demandes/tableau-bord')).body.data.a_qualifier, bord + 1);
   assert.ok((await gest.get('/api/demandes?perimetre=entite&etats=a_qualifier,rouverte&limit=200')).body.data.some((x) => x.id === d.id));
+  // 0.20.0 (point 0, DV-159) : la liste filtrée que lit l'accueil compte exactement comme le tableau de bord.
+  assert.equal((await gest.get('/api/demandes?perimetre=entite&etats=a_qualifier,rouverte&limit=1')).body.pagination.total, bord + 1, 'accueil et tableau de bord : même règle');
   const s = (await gest.get(`/api/demandes/${d.id}`)).body.data;
   assert.equal(s.retard, 0);
   assert.equal(s.echeance_type, 'prise_en_charge');
