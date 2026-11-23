@@ -66,8 +66,9 @@ test('catalogue (NOT-01) : événements en données, FR et NL ; émis ceux des d
   for (const code of ['demande.recue', 'demande.validation_demandee', 'demande.validee', 'demande.refusee_validation', 'demande.etat', 'demande.message',
     'demande.mention', 'demande.echeance_proche', 'demande.retard', 'demande.danger_sans_validation', 'reservation.confirmee', 'reservation.refusee',
     'materiel.rappel_retour', 'controle.echu', 'ticket.cree', 'ticket.reponse']) assert.ok(ev.find((e) => e.code === code), code);
+  // 0.21.0 (point 5, SUI-03) : date prévue modifiée.
   assert.deepEqual(ev.filter((e) => e.disponible).map((e) => e.code), ['demande.recue', 'demande.validation_demandee', 'demande.validee', 'demande.refusee_validation', 'demande.danger_sans_validation', 'demande.etat',
-    'demande.message', 'demande.mention', 'demande.echeance_proche', 'demande.retard', 'ticket.cree', 'ticket.reponse']);
+    'demande.date_prevue', 'demande.message', 'demande.mention', 'demande.echeance_proche', 'demande.retard', 'ticket.cree', 'ticket.reponse']);
   for (const e of ev) {
     assert.ok(e.libelle_fr && e.libelle_nl && e.destinataires_fr && e.destinataires_nl, e.code);
     assert.ok(e.variantes.find((v) => v.code === 'defaut'), `${e.code} : variante defaut`);

@@ -15,6 +15,7 @@ import api, { ApiError, qs } from '../api';
 import { useI18n } from '../contexts/I18nContext';
 import { useRoles } from '../useRoles';
 import { texteObligatoire } from '../validation';
+import { saisieDate } from '../saisieDate';
 
 /** Le choix de l'entité est vide pendant le chargement : sans rôle, son nom (`aria-label`) est interdit par axe (CI de la 0.17.0). */
 const GROUPE_RADIO = { role: 'radiogroup' } as Record<string, string>;
@@ -184,14 +185,14 @@ export default function ServicesPage() {
               {() => (form.getFieldValue('suppleant_id') ? (
                 <Space wrap size={12} align="start">
                   <Form.Item name="suppleant_du" label={t('services.field.du')} tooltip={hint('services.periode')} rules={[{ required: true, message: t('form.obligatoire') }]}>
-                    <DatePicker format="DD/MM/YYYY" inputReadOnly />
+                    <DatePicker format="DD/MM/YYYY" {...saisieDate()} />
                   </Form.Item>
                   <Form.Item name="suppleant_au" label={t('services.field.au')} tooltip={hint('services.periode')} dependencies={['suppleant_du']}
                     rules={[{ required: true, message: t('form.obligatoire') }, ({ getFieldValue }) => ({
                       validator: (_, v: Dayjs | null) => (!v || !getFieldValue('suppleant_du') || !v.isBefore(getFieldValue('suppleant_du'), 'day')
                         ? Promise.resolve() : Promise.reject(new Error(t('services.periode.ordre')))),
                     })]}>
-                    <DatePicker format="DD/MM/YYYY" inputReadOnly />
+                    <DatePicker format="DD/MM/YYYY" {...saisieDate()} />
                   </Form.Item>
                 </Space>
               ) : null)}

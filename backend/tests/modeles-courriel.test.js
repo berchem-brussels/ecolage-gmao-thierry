@@ -32,7 +32,8 @@ test('modèles livrés : un par événement de la demande et des tickets, varian
   const codes = r.body.data.map((m) => m.code);
   for (const e of EVENEMENTS.filter((x) => x.module === 'demandes' || x.module === null)) assert.ok(codes.includes(e.code), `modèle de ${e.code}`);
   for (const v of ['demande.recue.validation', 'demande.recue.beneficiaire']) assert.ok(codes.includes(v), v);
-  assert.deepEqual(r.body.meta.variables, ['numero', 'lieu', 'etat', 'delai', 'lien', 'entite', 'application']);
+  // 0.21.0 (point 5, SUI-03) : {date_prevue}.
+  assert.deepEqual(r.body.meta.variables, ['numero', 'lieu', 'etat', 'delai', 'date_prevue', 'lien', 'entite', 'application']);
   for (const m of r.body.data) {
     assert.equal(m.texte_livre, 1);
     assert.equal(m.trace.etat, 'livree');

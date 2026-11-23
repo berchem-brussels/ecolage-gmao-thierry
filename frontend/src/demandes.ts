@@ -50,6 +50,8 @@ export interface Demande {
   taches?: Tache[]; taches_modifiables?: 0 | 1;
   /** 0.20.0 (point 2, DV-161) : première date prévue des tâches ouvertes (« Prévue le »), lue par tous ceux qui lisent la demande. */
   intervention_prevue_le?: string | null;
+  /** 0.21.0 (point 5, SUI-03) : date annoncée avant le dernier changement et moment de ce changement (UTC). */
+  intervention_prevue_avant?: string | null; intervention_modifiee_le?: string | null;
   domaine_libelle_fr: string | null; domaine_libelle_nl: string | null;
   /** Nuls pour une personne qui suit la demande d'un autre (« Moi aussi », 0.7.0) : le nom du demandeur ne lui est pas rendu. */
   demandeur_id: number | null; demandeur_prenom: string | null; demandeur_nom: string | null;
@@ -138,6 +140,12 @@ export function cleAction(de: Etat, vers: Etat): string {
 /** Qualification permise (0.14.0) : fiche « Qualifiée », ou passage vers « Qualifiée » fait par la qualification. */
 // 0.20.0 (DV-161) : une demande « Planifiée » se requalifie aussi, sans changer d'état.
 export const qualifiable = (d: Demande): boolean => d.etat === 'qualifiee' || d.etat === 'planifiee' || (d.transitions || []).some((x) => x.via === 'qualifier');
+/**
+ * 0.21.0, point 0, R3 (DV-164) : « Modifier la qualification » dès que la demande est qualifiée, « Planifiée » comprise
+ * (la recette de la 0.20.0 montrait « Qualifier » sur une demande « Planifiée ») ; « Qualifier » pour une demande à qualifier
+ * ou rouverte.
+ */
+export const dejaQualifiee = (d: Demande): boolean => d.etat === 'qualifiee' || d.etat === 'planifiee';
 
 /** Tableau de bord du service technique (0.9.0, GES-01). */
 export interface TableauBord {
@@ -232,6 +240,8 @@ export interface Tache {
   /** 0.20.0 (point 2, PLA-01) : affectation (une équipe ou des ouvriers), date prévue et heure de début. */
   equipe_id: number | null; equipe_code: string | null; equipe_nom_fr: string | null; equipe_nom_nl: string | null;
   ouvriers: { id: number; prenom: string; nom: string }[]; date_prevue: string | null; heure_debut: string | null;
+  /** 0.21.0 (point 1, R5) : heures réelles en UTC (« AAAA-MM-JJ HH:MM:SS ») ; absentes d'une tâche terminée avant la 0.21.0. */
+  debut_reel?: string | null; fin_reelle?: string | null;
 }
 export const COULEUR_TACHE: Record<EtatTache, string> = { a_faire: 'default', en_cours: 'processing', terminee: 'success', annulee: 'error' };
 

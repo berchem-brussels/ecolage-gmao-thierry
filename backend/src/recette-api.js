@@ -70,23 +70,27 @@ async function main() {
   // 016_equipes_prestataires, ses sept tables, corps de métier livrés dans chaque entité active, passages du valideur
   // toujours là (0.16.0). 0.20.0 : migration 017_taches, tables des tâches et des ouvriers d'une tâche, deux passages
   // « via affecter » (Qualifiée ↔ Planifiée, DV-161), tables de la 0.19.0 toujours là.
+  // 0.21.0 : migration 018_planning, table des indisponibilités, colonnes des heures réelles et de la date annoncée.
   const db = await lireBase();
   const migr = db.exec("SELECT name FROM schema_migrations ORDER BY id DESC LIMIT 1")[0]?.values?.[0]?.[0];
-  const tables = db.exec("SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name IN ('equipes', 'equipe_membres', 'equipe_horaires', 'ouvrier_profils', 'ouvrier_competences', 'prestataires', 'prestataire_corps', 'demande_taches', 'tache_ouvriers')")[0]?.values?.[0]?.[0];
+  const colonnes = (table) => (db.exec(`PRAGMA table_info(${table})`)[0]?.values || []).map((x) => x[1]);
+  const nouvelles = ['debut_reel', 'fin_reelle'].filter((x) => colonnes('demande_taches').includes(x)).length
+    + ['date_prevue_connue', 'date_prevue_avant', 'date_prevue_modifiee_le'].filter((x) => colonnes('demandes').includes(x)).length;
+  const tables = db.exec("SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name IN ('equipes', 'equipe_membres', 'equipe_horaires', 'ouvrier_profils', 'ouvrier_competences', 'prestataires', 'prestataire_corps', 'demande_taches', 'tache_ouvriers', 'indisponibilites')")[0]?.values?.[0]?.[0];
   const affecter = db.exec("SELECT COUNT(*) FROM demande_transitions WHERE via = 'affecter'")[0]?.values?.[0]?.[0] || 0;
   const sansCorps = db.exec("SELECT COUNT(*) FROM entites e WHERE e.is_active = 1 AND NOT EXISTS (SELECT 1 FROM listes_valeurs v WHERE v.entite_id = e.id AND v.liste = 'corps_metier')")[0]?.values?.[0]?.[0];
   const passages = db.exec("SELECT COUNT(*) FROM demande_transitions WHERE acteur = 'valideur'")[0]?.values?.[0]?.[0] || 0;
-  note(migr === '017_taches' && tables === 9 && affecter === 2 && sansCorps === 0 && passages === 2, 5, 'migration 017_taches appliquée, tables des tâches, des équipes et des prestataires présentes, passages « Planifiée » par l’affectation, corps de métier livrés, passages du valideur gardés',
-    `${migr}, ${tables ?? 0} table(s) sur 9, ${affecter} passage(s) par l’affectation sur 2, ${sansCorps ?? '?'} entité(s) sans corps de métier, ${passages} passage(s) du valideur sur 2`);
+  note(migr === '018_planning' && tables === 10 && nouvelles === 5 && affecter === 2 && sansCorps === 0 && passages === 2, 5, 'migration 018_planning appliquée, tables des indisponibilités, des tâches, des équipes et des prestataires présentes, colonnes des heures réelles et de la date annoncée, passages « Planifiée » par l’affectation, corps de métier livrés, passages du valideur gardés',
+    `${migr}, ${tables ?? 0} table(s) sur 10, ${nouvelles} colonne(s) nouvelle(s) sur 5, ${affecter} passage(s) par l’affectation sur 2, ${sansCorps ?? '?'} entité(s) sans corps de métier, ${passages} passage(s) du valideur sur 2`);
 
   // 6. Refus sans session ; 0.18.0 : les trois exports Excel et CSV aussi ; 0.19.0 : équipes, ouvriers, prestataires ;
-  // 0.20.0 : tâches (liste d'une demande, fiche, ouvriers proposés).
+  // 0.20.0 : tâches (liste d'une demande, fiche, ouvriers proposés). 0.21.0 : planning et indisponibilités.
   const sans = await Promise.all(['/api/demandes', '/api/faq', '/api/tickets', '/api/audit',
     '/api/demandes/export?format=csv', '/api/demandes/a-valider/export?format=csv', '/api/tickets/export?format=csv',
-    '/api/equipes', '/api/ouvriers', '/api/prestataires', '/api/demandes/1/taches', '/api/taches/1', '/api/taches/1/suggestions'].map((u) => anonyme('GET', u)));
+    '/api/equipes', '/api/ouvriers', '/api/prestataires', '/api/demandes/1/taches', '/api/taches/1', '/api/taches/1/suggestions', '/api/planning', '/api/indisponibilites', '/api/indisponibilites/1'].map((u) => anonyme('GET', u)));
   const pub = await anonyme('GET', '/api/settings/public');
   note(sans.every((r) => r.status === 401) && !/business_roles|tickets\./.test(JSON.stringify(pub.body)), 6,
-    'sans session : demandes, FAQ, tickets, journal, exports, équipes, ouvriers, prestataires et tâches refusés (401), réglages des tickets jamais servis', sans.map((r) => r.status).join(' '));
+    'sans session : demandes, FAQ, tickets, journal, exports, équipes, ouvriers, prestataires, tâches, planning et indisponibilités refusés (401), réglages des tickets jamais servis', sans.map((r) => r.status).join(' '));
 
   // 7. Connexion du compte de démonstration et entités.
   const c = client();

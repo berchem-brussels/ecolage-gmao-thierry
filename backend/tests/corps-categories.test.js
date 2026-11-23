@@ -131,7 +131,7 @@ test('migration 016 sur une base de la 0.18.0 : catégories livrées complétée
     demandes: d.prepare("PRAGMA table_info(demandes)").all().some((c) => c.name === 'corps_metier_id') })))`);
   assert.equal(out.status, 0, out.stderr);
   const r = JSON.parse(out.stdout.trim().split('\n').pop());
-  assert.equal(r.migration, '017_taches', 'les migrations suivantes passent aussi (0.20.0)');
+  assert.equal(r.migration, '018_planning', 'les migrations suivantes passent aussi (0.20.0, 0.21.0)');
   assert.ok(r.demandes, 'colonne des demandes');
   const by = Object.fromEntries(r.cats.map((c) => [c.code, c.corps]));
   assert.equal(by.electricite, 'electricite');

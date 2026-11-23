@@ -1,6 +1,6 @@
 # Architecture
 
-Version 0.18.0 · Le français fait foi.
+Version 0.21.0 · Le français fait foi.
 
 ## Services
 
@@ -11,7 +11,7 @@ Version 0.18.0 · Le français fait foi.
 
 Base `sql.js` dans le volume `db-data` (`/app/data/app.db`), écrite par le seul processus `api`. Photos des lieux dans le même volume (`/app/data/photos`, variable `PHOTOS_DIR`) et, depuis la 0.8.0, pièces jointes des demandes (`/app/data/pieces`, variable `PIECES_DIR`), hors de la racine web, lues par des routes authentifiées. Certificat dans le volume `ssl-certs`. PostgreSQL 16 arrive au lot L7 (standard, section 5).
 
-## Tables (migrations `001_noyau` à `013_messages`)
+## Tables (migrations `001_noyau` à `013_messages` ; les suivantes, par version, plus bas)
 
 | Table | Rôle | Points clés |
 | --- | --- | --- |
@@ -275,6 +275,16 @@ Vues (`services/vues-demandes.js`, DV-93) : d'une personne dans une entité ; vu
 Permission nouvelle `demandes:qualifier` (gestionnaire et responsable) dans `config/roles.json`.
 
 Interface : `pages/GestionDemandesPage.tsx` (liste du service ; filtres dans l'adresse, repliés sous « Filtres et vues » sur téléphone ; vues ; fiche latérale et « Qualifier »), `components/demandes/TableauBord.tsx` (accueil et liste), `components/demandes/QualificationForm.tsx`, `FicheDemande` de `DemandesPage.tsx` (lignes du service : priorité et motif, échéances, durée, consignes, qualifiée le). Libellés des états pour le service : `demande.etat_service.*`. `ReglagesEntitePage.tsx` affiche le groupe `pieces` (contrôle 7 de la 0.8.0) ; un test compare ses groupes au catalogue.
+
+## Heures réelles, absences, planning, conflits et date annoncée (0.21.0)
+
+- Migration `018_planning` : `demande_taches.debut_reel` et `fin_reelle` (texte `AAAA-MM-JJ HH:MM:SS`, UTC, format contrôlé par `GLOB`) ; table `indisponibilites` (entité, ouvrier, `du`, `au`, `periode` `journee` / `matin` / `apres_midi`, `motif` `conge` / `formation` / `autre`, auteur et dates ; deux index) ; `demandes.date_prevue_connue`, `date_prevue_avant`, `date_prevue_modifiee_le` ; étape JS qui reprend une fois la première date des tâches ouvertes.
+- Serveur : `services/taches.js` règle 13 (heures réelles : `controlerHeures()`, `heuresApres()`) et règle 14 (`suivreDate()`, appelée par le passage d'une tâche et l'affectation, avis `avis.datePrevue()`) ; `services/indisponibilites.js` (règles 1 à 6, `duJour()` lu par la suggestion, le planning et les conflits) ; `services/planning.js` (règles 1 à 9 : période de 1 à 14 jours, jours, ouvriers, équipes, tâches, capacité, conflits `absent` / `jour_non_travaille` / `trop_charge`, tâches non planifiées ; `conflitsAffectation()` rendu par l'affectation) ; `demandes.js` : `intervention_prevue_avant`, `intervention_modifiee_le` sur la fiche.
+- Routes : `GET`/`POST /api/indisponibilites`, `GET`/`PUT`/`DELETE /api/indisponibilites/:id`, `GET /api/planning` ; `POST /api/taches/:id/etat` reçoit `debut` et `fin` ; `PUT /api/taches/:id/affectation` rend `conflits`. Six outils MCP (180). Permission `indisponibilites:gerer` (gestionnaire, responsable).
+- Journal : `tache.etat` porte `debut_reel` et `fin_reelle` ; `indisponibilite.create`, `.update` (avec `motif_change` 0 ou 1), `.delete`, jamais le motif ; `demande.date_prevue` (avant, après). Avis `demande.date_prevue` (`config/notifications.json`, modèle `config/modeles-courriel.json`, variable `date_prevue`).
+- Interface : `pages/PlanningPage.tsx` (route `/planning`, grille en `role="table"`, glisser-déposer natif et fenêtre « Déplacer » / « Planifier », couleurs du thème) ; `planning.ts` (texte des conflits) ; `components/IndisponibilitesOuvrier.tsx` (fiche d'un ouvrier) ; `TachesDemande.tsx` : bouton mis en avant selon l'état, fenêtre « Terminer la tâche », heures réelles, étiquettes d'absence des ouvriers proposés, avertissement des conflits ; `saisieDate.ts` (clavier masqué sur écran tactile, Entrée sans envoi) ; fiche du demandeur : date modifiée et date d'avant.
+- Correctifs de la recette 0.20.0 (DV-164) : saisie des dates (R1), bouton « Qualifier » d'une demande planifiée (R3), valeurs vides au féminin dans le journal (R4), heures réelles (R5).
+- Contrôle des téléphones : fenêtre « Terminer », formulaire d'absence, planning, « Déplacer », « Planifier » : 66 écrans.
 
 ## Tâches, affectation, suggestion et filtres par équipe (0.20.0)
 

@@ -37,6 +37,21 @@ const topic: HelpTopic = {
       ],
       result: { fr: 'Le métier et les compétences s’affichent dans la liste ; le filtre par équipe retrouve les ouvriers d’une équipe.', nl: 'Het vak en de bekwaamheden verschijnen in de lijst; de filter op ploeg vindt de arbeiders van een ploeg terug.' },
     },
+    // 0.21.0 (point 2 ; PLA-04) : absences d'un ouvrier.
+    {
+      title: { fr: 'Noter une absence d’un ouvrier', nl: 'Een afwezigheid van een arbeider noteren' },
+      when: { fr: 'Dès qu’un congé, une formation ou une autre absence est connue.', nl: 'Zodra een verlof, een opleiding of een andere afwezigheid gekend is.' },
+      steps: [
+        { fr: 'Choisissez {{equipes.onglet.ouvriers}} et cliquez sur son nom ; la section {{indispo.titre}} est en bas de sa fiche.', nl: 'Kies {{equipes.onglet.ouvriers}} en klik op zijn naam; de sectie {{indispo.titre}} staat onderaan zijn fiche.' },
+        { fr: 'Cliquez sur {{indispo.ajouter}} ; choisissez le premier jour, le dernier si l’absence dure plusieurs jours, le {{indispo.field.periode}} (journée, ou matin ou après-midi pour un seul jour) et le {{indispo.field.motif}}, puis cliquez sur {{common.save}}.', nl: 'Klik op {{indispo.ajouter}}; kies de eerste dag, de laatste als de afwezigheid meerdere dagen duurt, het {{indispo.field.periode}} (hele dag, of voormiddag of namiddag voor één dag) en de {{indispo.field.motif}}, en klik op {{common.save}}.' },
+      ],
+      result: { fr: 'L’ouvrier est marqué indisponible dans le planning et dans les ouvriers proposés, sans la cause. Le motif n’est visible que du gestionnaire et du responsable ; le chef d’équipe voit les jours seulement.', nl: 'De arbeider is als onbeschikbaar gemarkeerd in de planning en bij de voorgestelde arbeiders, zonder de oorzaak. De reden is enkel zichtbaar voor de beheerder en de verantwoordelijke; de ploegbaas ziet enkel de dagen.' },
+      shots: ['equipes-indisponibilites'],
+      errors: [{
+        problem: { fr: 'L’absence est refusée parce qu’elle chevauche une autre.', nl: 'De afwezigheid wordt geweigerd omdat ze een andere overlapt.' },
+        solution: { fr: 'Modifiez l’absence déjà notée plutôt que d’en ajouter une ; une absence saisie par erreur se supprime.', nl: 'Wijzig de reeds genoteerde afwezigheid in plaats van er een toe te voegen; een per vergissing ingevoerde afwezigheid wordt verwijderd.' },
+      }],
+    },
     {
       title: { fr: 'Ajouter un prestataire', nl: 'Een aannemer toevoegen' },
       when: { fr: 'Quand une société extérieure intervient pour le service technique (contrat de maintenance, marché).', nl: 'Wanneer een externe onderneming optreedt voor de technische dienst (onderhoudscontract, opdracht).' },
@@ -65,10 +80,11 @@ const topic: HelpTopic = {
       a: { fr: 'Non : la référence du marché ou du contrat se saisit librement, pour le retrouver dans 3P Procura ; aucun échange automatique.', nl: 'Neen: de referentie van de opdracht of het contract wordt vrij ingevuld, om het terug te vinden in 3P Procura; geen automatische uitwisseling.' },
     },
   ],
-  seeAlso: ['listes', 'users', 'referentiel'],
+  seeAlso: ['planning', 'listes', 'users', 'referentiel'],
   shots: [
     { id: 'equipes-overview', path: '/equipes', marks: [{ sel: '.page-header' }, { sel: '.ant-table' }], caption: { fr: 'Équipes', nl: 'Ploegen' } },
     { id: 'equipes-ouvriers', path: '/equipes?onglet=ouvriers', marks: [{ sel: '.equipes-filtre' }, { sel: '.ant-table' }], caption: { fr: 'Ouvriers, métiers et compétences', nl: 'Arbeiders, vakken en bekwaamheden' } },
+    { id: 'equipes-indisponibilites', path: '/equipes?onglet=ouvriers', actions: [{ clickSel: '.ant-table-row .ant-btn-link' }, { wait: 800 }, { scrollSel: '.indisponibilites' }, { clickSel: '.indisponibilites .ant-card-extra .ant-btn' }, { wait: 500 }, { scrollSel: '.indisponibilites' }], clip: 'drawer', marks: [{ sel: '.indisponibilites .indispo-form' }, { sel: '.indisponibilites .ant-list' }], caption: { fr: 'Absences d’un ouvrier', nl: 'Afwezigheden van een arbeider' } },
     { id: 'equipes-prestataires', path: '/equipes?onglet=prestataires', marks: [{ sel: '.prestataires-recherche' }, { sel: '.ant-table' }], caption: { fr: 'Prestataires externes', nl: 'Externe aannemers' } },
   ],
 };

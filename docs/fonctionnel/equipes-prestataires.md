@@ -1,6 +1,6 @@
 # Équipes, ouvriers et prestataires
 
-Version 0.19.0 · Fiche fonctionnelle (modèle du standard, section 17.8).
+Version 0.21.0 · Fiche fonctionnelle (modèle du standard, section 17.8).
 
 ## Objet
 
@@ -59,4 +59,4 @@ Aucune donnée de santé ni d'évaluation. Les compétences sont des faits profe
 
 ## Ce qui vient ensuite
 
-Affectation des tâches à un ouvrier, à plusieurs ou à une équipe, suggestion selon le corps de métier, filtres par équipe et par ouvrier de la liste du service (étape suivante, 0.20.0) ; planning et garde ensuite ; envoi d'une demande au prestataire par courriel (EXT-02) plus tard.
+Affectation des tâches, suggestion selon le corps de métier et filtres par équipe et par ouvrier : faits en 0.20.0 ; absences des ouvriers et planning : faits en 0.21.0 (fiche « Tâches, affectation, absences et planning ») ; garde à l'étape 21 ; envoi d'une demande au prestataire par courriel (EXT-02) plus tard.

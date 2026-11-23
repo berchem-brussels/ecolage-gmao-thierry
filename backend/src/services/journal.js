@@ -92,6 +92,8 @@ const REFERENCES = [
   { chemin: 'apres.ouvriers', type: 'personne', action: 'tache.affecter' },
   { chemin: 'avant.equipe_id', type: 'equipe', action: 'tache.affecter' },
   { chemin: 'apres.equipe_id', type: 'equipe', action: 'tache.affecter' },
+  // 0.21.0 (point 2, PLA-04) : ouvrier d'une indisponibilité (jamais le motif).
+  { chemin: 'ouvrier_id', type: 'personne', entity: 'indisponibilite' },
   // Point 4 : corps de métier d'une catégorie et d'une demande qualifiée.
   { chemin: 'avant.corps_metier_id', type: 'valeur' },
   { chemin: 'apres.corps_metier_id', type: 'valeur' },

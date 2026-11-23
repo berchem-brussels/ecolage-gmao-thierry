@@ -18,6 +18,7 @@ import { useI18n } from '../contexts/I18nContext';
 import { hasPermission, useRoles } from '../useRoles';
 import { texteObligatoire } from '../validation';
 import PrestatairesOnglet from '../components/PrestatairesOnglet';
+import IndisponibilitesOuvrier from '../components/IndisponibilitesOuvrier';
 
 interface Personne { id: number; prenom: string; nom: string }
 interface Valeur { id: number; code: string; libelle_fr: string; libelle_nl: string; is_active: number }
@@ -47,6 +48,8 @@ export default function EquipesPage() {
   const gerer = hasPermission(catalogue, roles, 'equipes:gerer');
   const voitPrestataires = hasPermission(catalogue, roles, 'prestataires:lire');
   const gererPrestataires = hasPermission(catalogue, roles, 'prestataires:gerer');
+  // 0.21.0 (point 2, PLA-04) : indisponibilités saisies par le gestionnaire et le responsable.
+  const gererIndispo = hasPermission(catalogue, roles, 'indisponibilites:gerer');
   const [nbPrestataires, setNbPrestataires] = useState<number | null>(null);
   const mobile = Grid.useBreakpoint().md === false;
   const [params, setParams] = useSearchParams();
@@ -326,13 +329,14 @@ export default function EquipesPage() {
             <Card size="small" title={t('ouvriers.col.equipes')} style={{ marginBottom: 16 }}>{equipesDe(ficheOuvrier)}</Card>
             <Typography.Paragraph type="secondary" style={{ fontSize: 12 }}>{t('ouvriers.aide')}</Typography.Paragraph>
             {gerer && (
-              <Space wrap>
+              <Space wrap style={{ marginBottom: 16 }}>
                 <Button type="primary" htmlType="submit" loading={envoi}>{t('common.save')}</Button>
                 <Button onClick={() => setFicheOuvrier(null)}>{t('common.cancel')}</Button>
               </Space>
             )}
           </Form>
         )}
+        {ficheOuvrier && <IndisponibilitesOuvrier ouvrierId={ficheOuvrier.id} gerer={gererIndispo} />}
       </Drawer>
 
       <Modal open={!!desactiver} title={desactiver ? `${t('equipes.desactiver')} ${desactiver.code}` : ''} okText={t('equipes.desactiver')} okButtonProps={{ danger: true, disabled: !motif.trim() }}

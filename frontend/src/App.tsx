@@ -28,6 +28,7 @@ const UsersPage = React.lazy(() => import('./pages/UsersPage'));
 const PatrimoinePage = React.lazy(() => import('./pages/PatrimoinePage'));
 const ListesValeursPage = React.lazy(() => import('./pages/ListesValeursPage'));
 const EquipesPage = React.lazy(() => import('./pages/EquipesPage'));
+const PlanningPage = React.lazy(() => import('./pages/PlanningPage'));
 const ParametresPage = React.lazy(() => import('./pages/ParametresPage'));
 const ReglagesEntitePage = React.lazy(() => import('./pages/ReglagesEntitePage'));
 const ReferentielPage = React.lazy(() => import('./pages/ReferentielPage'));
@@ -126,6 +127,8 @@ function AppRoutes() {
           <Route path="patrimoine" element={<ModuleGate module="patrimoine"><PermissionOnly permission="lieux:lire"><PatrimoinePage /></PermissionOnly></ModuleGate>} />
           <Route path="listes" element={<PermissionOnly permission="listes:gerer"><ListesValeursPage /></PermissionOnly>} />
           <Route path="equipes" element={<PermissionOnly permission="equipes:lire"><EquipesPage /></PermissionOnly>} />
+          {/* 0.21.0 (étape 17, point 3 ; PLA-03) : planning ; lecture equipes:lire, déplacements demandes:traiter. */}
+          <Route path="planning" element={<PermissionOnly permission="equipes:lire"><PlanningPage /></PermissionOnly>} />
           <Route path="referentiel" element={<PermissionOnly permission="categories:gerer"><ReferentielPage /></PermissionOnly>} />
           <Route path="reglages-entite" element={<PermissionOnly permission="parametres:gerer"><ReglagesEntitePage /></PermissionOnly>} />
           <Route path="entites" element={<AdminOnly><EntitesPage /></AdminOnly>} />

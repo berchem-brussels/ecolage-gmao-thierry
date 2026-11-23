@@ -14,26 +14,35 @@
  *   « Personne » retire l'affectation. Les ouvriers et les équipes de l'entité active sont lus à l'ouverture du formulaire.
  * - 0.20.0 (point 3 ; PLA-02, DV-162) : « Ouvriers proposés » pour le jour choisi (ou aujourd'hui) : même corps de métier,
  *   disponibles, charge du jour ; un toucher ajoute ou retire l'ouvrier de la sélection ; le gestionnaire garde la main.
+ * - 0.21.0 (point 1 ; R5 de la recette de la 0.20.0, DV-164) : « Démarrer » est le bouton mis en avant d'une tâche à faire,
+ *   « Terminer » celui d'une tâche en cours ; « Terminer » une tâche à faire ouvre une petite fenêtre qui demande l'heure
+ *   de début et l'heure de fin (préremplies avec l'heure actuelle, modifiables, fin après début, pas dans le futur), pour
+ *   un encodage après coup. Les heures réelles s'affichent sur la tâche ; une tâche terminée sans heure le dit.
  * Boutons qui passent à la ligne et champs en 16 px sur téléphone (DV-102) ; rien n'est montré au demandeur.
  */
 import { useEffect, useState } from 'react';
-import { Alert, Button, Card, DatePicker, Form, Input, InputNumber, List, Radio, Select, Space, Tag, TimePicker, Typography, message } from 'antd';
+import { Alert, Button, Card, DatePicker, Form, Input, InputNumber, List, Modal, Radio, Select, Space, Tag, TimePicker, Typography, message } from 'antd';
 import { PlusOutlined, TeamOutlined, UserOutlined } from '@ant-design/icons';
 import dayjs, { type Dayjs } from 'dayjs';
 import api, { ApiError, qs } from '../../api';
 import { useI18n } from '../../contexts/I18nContext';
-import { COULEUR_TACHE, type Demande, type EtatTache, type Tache, dateSouhaitee, duree } from '../../demandes';
+import { COULEUR_TACHE, type Demande, type EtatTache, type Tache, dateSouhaitee, duree, instant } from '../../demandes';
+import { saisieDate } from '../../saisieDate';
+import { type ConflitAffectation, texteConflits } from '../../planning';
 
 interface ValeurListe { id: number; libelle_fr: string; libelle_nl: string; is_active: number }
 interface Saisie { titre: string; consignes?: string; corps_metier_id?: number | null; duree_heures?: number | null }
 type Edition = { mode: 'ajout' } | { mode: 'modifier'; tache: Tache } | { mode: 'annuler'; tache: Tache } | { mode: 'affecter'; tache: Tache } | null;
 interface Ouvrier { id: number; prenom: string; nom: string }
 interface Equipe { id: number; code: string; nom_fr: string; nom_nl: string }
-interface Propose { id: number; prenom: string; nom: string; corps_metier: { libelle_fr: string; libelle_nl: string } | null; meme_corps: 0 | 1; disponible: 0 | 1; charge_min: number; nb_taches: number }
+interface Propose { id: number; prenom: string; nom: string; corps_metier: { libelle_fr: string; libelle_nl: string } | null; meme_corps: 0 | 1; disponible: 0 | 1; indisponible?: 'journee' | 'matin' | 'apres_midi' | null; charge_min: number; nb_taches: number }
+interface SaisieHeures { debut?: Dayjs | null; fin?: Dayjs | null }
 interface SaisieAffectation { qui: 'ouvriers' | 'equipe' | 'personne'; ouvriers?: number[]; equipe_id?: number | null; date?: Dayjs | null; heure?: Dayjs | null; duree_heures?: number | null }
 
 /** Libellé du bouton d'un passage, selon l'état de départ (rouvrir une tâche fermée, remettre à faire une tâche en cours). */
 const cleBouton = (de: EtatTache, vers: EtatTache) => (vers === 'a_faire' ? (de === 'en_cours' ? 'tache.action.remettre' : 'tache.action.rouvrir') : `tache.action.${vers}`);
+/** 0.21.0 (R5) : bouton mis en avant : « Démarrer » d'une tâche à faire, « Terminer » d'une tâche en cours. */
+const enAvant = (de: EtatTache, vers: EtatTache) => (de === 'a_faire' && vers === 'en_cours') || (de === 'en_cours' && vers === 'terminee');
 
 export default function TachesDemande({ d, onChange }: { d: Demande; onChange: () => void }) {
   const { t, lang, hint } = useI18n();
@@ -44,6 +53,8 @@ export default function TachesDemande({ d, onChange }: { d: Demande; onChange: (
   const [form] = Form.useForm<Saisie>();
   const [motif, setMotif] = useState('');
   const [formAff] = Form.useForm<SaisieAffectation>();
+  const [formHeures] = Form.useForm<SaisieHeures>();
+  const [aTerminer, setATerminer] = useState<Tache | null>(null);
   const qui = Form.useWatch('qui', formAff);
   const dateChoisie = Form.useWatch('date', formAff);
   const [ouvriersListe, setOuvriersListe] = useState<Ouvrier[]>([]);
@@ -105,18 +116,67 @@ export default function TachesDemande({ d, onChange }: { d: Demande; onChange: (
     } catch (e) { echec(e); } finally { setEnvoi(false); }
   };
 
-  const passer = async (tache: Tache, vers: EtatTache, motifSaisi?: string) => {
+  const passer = async (tache: Tache, vers: EtatTache, motifSaisi?: string, heures?: { debut: string; fin: string }) => {
     setEnvoi(true);
     setErreur(null);
     try {
-      const r = await api.post<Tache & { demande_passage_auto: string | null }>(`/taches/${tache.id}/etat`, { etat: vers, ...(motifSaisi ? { motif: motifSaisi } : {}) });
+      const r = await api.post<Tache & { demande_passage_auto: string | null }>(`/taches/${tache.id}/etat`, { etat: vers, ...(motifSaisi ? { motif: motifSaisi } : {}), ...(heures || {}) });
       message.success(r.demande_passage_auto
         ? `${t(`tache.etat.${vers}`)} · ${t('tache.demande_passee')} « ${t(`demande.etat_service.${r.demande_passage_auto}`)} »`
         : t(`tache.etat.${vers}`));
       setEdition(null);
+      setATerminer(null);
       onChange();
     } catch (e) { echec(e); } finally { setEnvoi(false); }
   };
+
+  /** 0.21.0 (R5) : « Terminer » une tâche à faire demande les heures ; une tâche en cours se termine tout de suite. */
+  const terminer = (x: Tache) => {
+    if (x.etat !== 'a_faire') { passer(x, 'terminee'); return; }
+    const maintenant = dayjs().second(0).millisecond(0);
+    formHeures.setFieldsValue({ debut: maintenant, fin: maintenant });
+    setErreur(null);
+    setATerminer(x);
+  };
+  const terminerAvecHeures = (v: SaisieHeures) => {
+    if (!aTerminer || !v.debut || !v.fin) return;
+    passer(aTerminer, 'terminee', undefined, { debut: v.debut.toISOString(), fin: v.fin.toISOString() });
+  };
+  /** Heures réelles d'une tâche (règle 13 du serveur), à l'heure du poste. */
+  const heuresReelles = (x: Tache) => {
+    if (x.etat === 'en_cours' && x.debut_reel) return `${t('tache.heures.demarree')} ${instant(x.debut_reel)}`;
+    if (x.etat !== 'terminee') return null;
+    if (x.debut_reel && x.fin_reelle) return `${t('tache.heures.realisee')} ${instant(x.debut_reel)} ${t('tache.heures.au')} ${instant(x.fin_reelle)} (${duree(Math.max(1, Math.round((dayjs(`${x.fin_reelle.replace(' ', 'T')}Z`).diff(dayjs(`${x.debut_reel.replace(' ', 'T')}Z`), 'minute')))))})`;
+    if (x.fin_reelle) return `${t('tache.heures.finie')} ${instant(x.fin_reelle)} · ${t('tache.heures.sans_debut')}`;
+    return t('tache.heures.aucune');
+  };
+  const futur = (d: Dayjs) => d.isAfter(dayjs().endOf('day'));
+  const fenetreHeures = (
+    <Modal open={!!aTerminer} onCancel={() => setATerminer(null)} title={aTerminer ? `${t('tache.heures.titre')} · ${t('tache.numero')} ${aTerminer.rang}` : ''}
+      okText={t('tache.action.terminee')} cancelText={t('common.cancel')} okButtonProps={{ loading: envoi, htmlType: 'submit', form: 'tache-heures' }}
+      destroyOnHidden width={420} className="tache-heures">
+      <Typography.Paragraph type="secondary" style={{ fontSize: 13 }}>{t('tache.heures.aide')}</Typography.Paragraph>
+      {erreur && <Alert type="error" showIcon message={erreur} style={{ marginBottom: 8 }} role="alert" />}
+      <Form<SaisieHeures> id="tache-heures" form={formHeures} layout="vertical" onFinish={terminerAvecHeures} requiredMark="optional">
+        <Form.Item name="debut" label={t('tache.heures.debut')} tooltip={hint('tache.heures.debut')}
+          rules={[{ required: true, message: t('form.obligatoire') },
+            { validator: (_, v: Dayjs | null) => (!v || !v.isAfter(dayjs().add(1, 'minute')) ? Promise.resolve() : Promise.reject(new Error(t('tache.heures.futur')))) }]}>
+          <DatePicker showTime={{ format: 'HH:mm', minuteStep: 5 }} format="DD/MM/YYYY HH:mm" needConfirm={false} allowClear={false} disabledDate={futur} {...saisieDate()} style={{ width: '100%' }} />
+        </Form.Item>
+        <Form.Item name="fin" label={t('tache.heures.fin')} tooltip={hint('tache.heures.fin')} dependencies={['debut']}
+          rules={[{ required: true, message: t('form.obligatoire') }, ({ getFieldValue }) => ({
+            validator: (_, v: Dayjs | null) => {
+              if (!v) return Promise.resolve();
+              if (v.isAfter(dayjs().add(1, 'minute'))) return Promise.reject(new Error(t('tache.heures.futur')));
+              const d0: Dayjs | null = getFieldValue('debut');
+              return !d0 || v.isAfter(d0) ? Promise.resolve() : Promise.reject(new Error(t('tache.heures.ordre')));
+            },
+          })]}>
+          <DatePicker showTime={{ format: 'HH:mm', minuteStep: 5 }} format="DD/MM/YYYY HH:mm" needConfirm={false} allowClear={false} disabledDate={futur} {...saisieDate()} style={{ width: '100%' }} />
+        </Form.Item>
+      </Form>
+    </Modal>
+  );
 
   const affecter = async (v: SaisieAffectation) => {
     if (edition?.mode !== 'affecter') return;
@@ -128,9 +188,11 @@ export default function TachesDemande({ d, onChange }: { d: Demande; onChange: (
       duree_estimee_min: v.duree_heures ? Math.round(v.duree_heures * 60) : null,
     };
     try {
-      const r = await api.put<Tache & { demande_passage_auto: string | null }>(`/taches/${edition.tache.id}/affectation`, corpsEnvoye);
+      const r = await api.put<Tache & { demande_passage_auto: string | null; conflits?: ConflitAffectation[] }>(`/taches/${edition.tache.id}/affectation`, corpsEnvoye);
       message.success(r.demande_passage_auto
         ? `${t('tache.affectee')} · ${t('tache.demande_passee')} « ${t(`demande.etat_service.${r.demande_passage_auto}`)} »` : t('tache.affectee'));
+      // 0.21.0 (point 4, PLA-06) : conflits du jour, sans bloquer.
+      if (r.conflits?.length) message.warning({ content: texteConflits(r.conflits, t, lang, equipesListe), duration: 8 });
       setEdition(null);
       onChange();
     } catch (e) { echec(e); } finally { setEnvoi(false); }
@@ -174,7 +236,8 @@ export default function TachesDemande({ d, onChange }: { d: Demande; onChange: (
                   <Typography.Text strong style={{ overflowWrap: 'anywhere' }}>{`${o.prenom} ${o.nom}`}</Typography.Text>
                   <Space size={[4, 4]} wrap>
                     {o.corps_metier && <Tag color={o.meme_corps ? 'green' : undefined}>{lang === 'nl' ? o.corps_metier.libelle_nl : o.corps_metier.libelle_fr}</Tag>}
-                    <Tag color={o.disponible ? 'blue' : 'default'}>{t(o.disponible ? 'tache.proposes.disponible' : 'tache.proposes.indisponible')}</Tag>
+                    <Tag color={o.disponible ? 'blue' : 'default'}>{t(o.indisponible === 'journee' ? 'tache.proposes.absent' : o.disponible ? 'tache.proposes.disponible' : 'tache.proposes.indisponible')}</Tag>
+                    {o.indisponible && o.indisponible !== 'journee' && <Tag color="orange">{t(`tache.proposes.absent.${o.indisponible}`)}</Tag>}
                     <Typography.Text type="secondary" style={{ fontSize: 13 }}>{o.charge_min ? `${t('tache.proposes.charge')} ${duree(o.charge_min)}` : o.nb_taches ? `${o.nb_taches} ${t('tache.proposes.taches')}` : t('tache.proposes.libre')}</Typography.Text>
                   </Space>
                 </Space>
@@ -192,11 +255,11 @@ export default function TachesDemande({ d, onChange }: { d: Demande; onChange: (
       )}
       <Space wrap size={[16, 0]} align="start">
         <Form.Item name="date" label={t('tache.date')} tooltip={hint('tache.date')}>
-          <DatePicker format="DD/MM/YYYY" inputReadOnly
+          <DatePicker format="DD/MM/YYYY" {...saisieDate()}
             disabledDate={(j) => j.isAfter(dayjs().add(2, 'year')) || (j.isBefore(dayjs(), 'day') && j.format('YYYY-MM-DD') !== x.date_prevue)} />
         </Form.Item>
         <Form.Item name="heure" label={t('tache.heure')} tooltip={hint('tache.heure')}>
-          <TimePicker format="HH:mm" minuteStep={15} needConfirm={false} inputReadOnly disabled={!dateChoisie} />
+          <TimePicker format="HH:mm" minuteStep={15} needConfirm={false} {...saisieDate()} disabled={!dateChoisie} />
         </Form.Item>
       </Space>
       <Form.Item name="duree_heures" label={t('qualif.duree')} tooltip={hint('tache.duree')} extra={t('qualif.duree.aide')}>
@@ -257,6 +320,7 @@ export default function TachesDemande({ d, onChange }: { d: Demande; onChange: (
                 {x.corps_metier_id && <Tag>{lbl({ libelle_fr: x.corps_metier_libelle_fr, libelle_nl: x.corps_metier_libelle_nl })}</Tag>}
                 {x.duree_estimee_min && <Typography.Text type="secondary">{`${t('qualif.duree')} : ${duree(x.duree_estimee_min)}`}</Typography.Text>}
               </Space>
+              {heuresReelles(x) && <Typography.Text type="secondary" className="tache-heures-reelles" style={{ fontSize: 13, overflowWrap: 'anywhere' }}>{heuresReelles(x)}</Typography.Text>}
               {resumeAffectation(x)}
               {x.consignes && <Typography.Paragraph style={{ marginBottom: 0, whiteSpace: 'pre-line', overflowWrap: 'anywhere' }}>{x.consignes}</Typography.Paragraph>}
               {x.etat === 'annulee' && (
@@ -280,7 +344,7 @@ export default function TachesDemande({ d, onChange }: { d: Demande; onChange: (
               {modifiables && !enEdition(x) && (
                 <Space wrap size={8} style={{ maxWidth: '100%' }} role="group" aria-label={`${t('tache.numero')} ${x.rang}`}>
                   {x.passages.filter((v) => v !== 'annulee').map((v) => (
-                    <Button key={v} size="small" type={v === 'terminee' ? 'primary' : 'default'} disabled={envoi} onClick={() => passer(x, v)}
+                    <Button key={v} size="small" type={enAvant(x.etat, v) ? 'primary' : 'default'} disabled={envoi} onClick={() => (v === 'terminee' ? terminer(x) : passer(x, v))}
                       style={{ whiteSpace: 'normal', height: 'auto', minHeight: 28 }}>{t(cleBouton(x.etat, v))}</Button>
                   ))}
                   {(x.etat === 'a_faire' || x.etat === 'en_cours') && (
@@ -298,6 +362,7 @@ export default function TachesDemande({ d, onChange }: { d: Demande; onChange: (
           </Card>
         ))}
       </Space>
+      {fenetreHeures}
     </section>
   );
 }

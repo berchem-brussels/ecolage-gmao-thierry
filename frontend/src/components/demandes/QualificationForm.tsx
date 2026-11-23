@@ -18,6 +18,7 @@ import type { ArbreCategories, Categorie, PrioriteFiche } from '../../referentie
 import { type Demande, type LieuChoisi } from '../../demandes';
 import LieuPicker from './LieuPicker';
 import { obligatoire } from '../../validation';
+import { entreeSansEnvoi } from '../../saisieDate';
 
 /** Rôle ARIA du groupe : Form.Item y pose aria-required, permis seulement sur un radiogroup (axe-core). */
 const GROUPE_RADIO = { role: 'radiogroup' } as Record<string, string>;
@@ -136,7 +137,7 @@ export default function QualificationForm({ d, onDone, onCancel }: { d: Demande;
       </Form.Item>
       {sansFin && (
         <Form.Item name="date_convenue" label={t('qualif.date_convenue')} tooltip={hint('qualif.date_convenue')} extra={t('qualif.date_convenue.aide')}>
-          <DatePicker format="DD/MM/YYYY" disabledDate={(j) => j.isBefore(dayjs(), 'day') || j.isAfter(dayjs().add(2, 'year'))} />
+          <DatePicker format="DD/MM/YYYY" onKeyDown={entreeSansEnvoi} disabledDate={(j) => j.isBefore(dayjs(), 'day') || j.isAfter(dayjs().add(2, 'year'))} />
         </Form.Item>
       )}
       <Form.Item name="consignes" label={t('qualif.consignes')} tooltip={hint('qualif.consignes')} extra={t('qualif.consignes.aide')}>

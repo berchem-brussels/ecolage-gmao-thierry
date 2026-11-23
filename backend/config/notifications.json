@@ -142,6 +142,22 @@
       "depuis": "0.17.0"
     },
     {
+      "code": "demande.date_prevue",
+      "module": "demandes",
+      "disponible": true,
+      "depuis": "0.21.0",
+      "libelle_fr": "Date prévue de l'intervention modifiée",
+      "libelle_nl": "Geplande datum van de interventie gewijzigd",
+      "destinataires_fr": "Demandeur, bénéficiaire et personnes qui suivent",
+      "destinataires_nl": "Aanvrager, begunstigde en volgers",
+      "variantes": {
+        "defaut": {
+          "fr": "La date prévue de l'intervention pour la demande {numero} a changé.",
+          "nl": "De geplande datum van de interventie voor de aanvraag {numero} is gewijzigd."
+        }
+      }
+    },
+    {
       "code": "demande.message",
       "module": "demandes",
       "disponible": true,

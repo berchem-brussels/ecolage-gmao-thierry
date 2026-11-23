@@ -25,11 +25,14 @@ const topic: HelpTopic = {
         { fr: 'Ouvrez la fiche de la demande ; la section « Tâches » est sous la description.', nl: 'Open de fiche van de aanvraag; de sectie « Taken » staat onder de beschrijving.' },
         { fr: 'Cliquez sur {{tache.ajouter}} : dites ce qu’il faut faire, les consignes à l’ouvrier, le corps de métier (celui de la demande est proposé) et la durée estimée en heures.', nl: 'Klik op {{tache.ajouter}}: zeg wat er moet gebeuren, de instructies voor de arbeider, het vakgebied (dat van de aanvraag wordt voorgesteld) en de geschatte duur in uren.' },
         { fr: 'Au fil du travail : {{tache.action.en_cours}}, puis {{tache.action.terminee}} ; {{tache.action.annulee}} demande un motif.', nl: 'Naarmate het werk vordert: {{tache.action.en_cours}}, dan {{tache.action.terminee}}; {{tache.action.annulee}} vraagt een reden.' },
+        // 0.21.0 (point 1 ; DV-164 R5) : heures réelles.
+        { fr: '{{tache.action.en_cours}} note l’heure de début et {{tache.action.terminee}} l’heure de fin. Si la tâche n’a pas été démarrée dans l’application, {{tache.action.terminee}} ouvre {{tache.heures.titre}} : corrigez le {{tache.heures.debut}} et la {{tache.heures.fin}}, préremplis à maintenant.', nl: '{{tache.action.en_cours}} noteert het beginuur en {{tache.action.terminee}} het einduur. Werd de taak niet gestart in de toepassing, dan opent {{tache.action.terminee}} {{tache.heures.titre}}: verbeter het {{tache.heures.debut}} en het {{tache.heures.fin}}, vooraf ingevuld op nu.' },
       ],
       result: { fr: 'La demande passe « En cours » quand une tâche démarre, et « Travaux terminés » quand toutes ses tâches sont terminées ou annulées (au moins une terminée). Le demandeur ne voit jamais les tâches.', nl: 'De aanvraag wordt « Bezig » wanneer een taak start, en « Werken beëindigd » wanneer al haar taken beëindigd of geannuleerd zijn (minstens één beëindigd). De aanvrager ziet de taken nooit.' },
       shots: ['demandes-entite-taches'],
       errors: [
         { problem: { fr: '« Travaux terminés » n’est pas proposé.', nl: '« Werken beëindigd » wordt niet voorgesteld.' }, solution: { fr: 'Une tâche est encore à faire ou en cours : terminez-la ou annulez-la.', nl: 'Een taak is nog te doen of bezig: beëindig of annuleer ze.' } },
+        { problem: { fr: '« La fin doit venir après le début » ou « Cette heure est dans le futur ».', nl: '« Het einde moet na het begin komen » of « Dit uur ligt in de toekomst ».' }, solution: { fr: 'Les heures notées sont celles du travail réel : la fin vient après le début et aucune n’est après maintenant.', nl: 'De genoteerde uren zijn die van het werkelijke werk: het einde komt na het begin en geen enkel ligt na nu.' } },
         { problem: { fr: 'Plus de bouton sur les tâches.', nl: 'Geen knoppen meer bij de taken.' }, solution: { fr: 'La demande est « Travaux terminés » ou fermée. Repassez-la « En cours » pour rouvrir ou ajouter une tâche.', nl: 'De aanvraag is « Werken beëindigd » of afgesloten. Zet ze terug op « Bezig » om een taak te heropenen of toe te voegen.' } },
       ],
     },
@@ -47,7 +50,10 @@ const topic: HelpTopic = {
       shots: ['demandes-entite-affecter'],
       errors: [
         { problem: { fr: 'Message « Cette personne ne peut pas recevoir la tâche ».', nl: 'Melding « Deze persoon kan de taak niet krijgen ».' }, solution: { fr: 'Elle doit avoir le rôle Ouvrier ou Chef d’équipe dans l’entité (Utilisateurs).', nl: 'Ze moet de rol Arbeider of Ploegbaas hebben in de entiteit (Gebruikers).' } },
-        { problem: { fr: 'Un ouvrier est marqué « Ne travaille pas ce jour ».', nl: 'Een arbeider is gemarkeerd « Werkt die dag niet ».' }, solution: { fr: 'Le jour est hors de l’horaire de son équipe ou de l’entité (week-end, jour férié, fermeture). Les congés et absences ne sont pas encore connus de l’application.', nl: 'De dag valt buiten het uurrooster van zijn ploeg of van de entiteit (weekend, feestdag, sluiting). Verloven en afwezigheden zijn nog niet gekend door de toepassing.' } },
+        { problem: { fr: 'Un ouvrier est marqué « Ne travaille pas ce jour ».', nl: 'Een arbeider is gemarkeerd « Werkt die dag niet ».' }, solution: { fr: 'Le jour est hors de l’horaire de son équipe ou de l’entité (week-end, jour férié, fermeture).', nl: 'De dag valt buiten het uurrooster van zijn ploeg of van de entiteit (weekend, feestdag, sluiting).' } },
+        // 0.21.0 (points 2 et 4 ; PLA-04, PLA-06).
+        { problem: { fr: 'Un ouvrier est marqué {{tache.proposes.absent}}.', nl: 'Een arbeider is gemarkeerd {{tache.proposes.absent}}.' }, solution: { fr: 'Une absence (congé, formation…) est notée dans sa fiche, {{nav.equipes}}, onglet Ouvriers. Il reste choisissable, mais un avertissement le rappelle.', nl: 'Een afwezigheid (verlof, opleiding…) is genoteerd in zijn fiche, {{nav.equipes}}, tabblad Arbeiders. Hij blijft kiesbaar, maar een waarschuwing herinnert eraan.' } },
+        { problem: { fr: 'Après l’enregistrement, un message commence par {{planning.conflit.titre}}', nl: 'Na het opslaan begint een melding met {{planning.conflit.titre}}' }, solution: { fr: 'L’affectation est enregistrée, mais un ouvrier est absent, ne travaille pas ce jour ou a plus d’heures prévues que son horaire. Changez la date ou la personne si besoin, ici ou dans {{nav.planning}}.', nl: 'De toewijzing is opgeslagen, maar een arbeider is afwezig, werkt die dag niet of heeft meer geplande uren dan zijn uurrooster. Verander zo nodig de datum of de persoon, hier of in {{nav.planning}}.' } },
       ],
     },
     // 0.20.0 (point 5 ; GES-02, DV-163) : filtres Équipe et Ouvrier.
@@ -207,7 +213,7 @@ const topic: HelpTopic = {
     { q: { fr: 'Le chef d’équipe peut-il affecter les tâches ?', nl: 'Kan de ploegbaas de taken toewijzen?' }, a: { fr: 'Pas encore : le gestionnaire et le responsable affectent. Une tâche confiée à l’équipe entière laisse le chef répartir le travail sur le terrain.', nl: 'Nog niet: de beheerder en de verantwoordelijke wijzen toe. Een taak toevertrouwd aan de hele ploeg laat de ploegbaas het werk op het terrein verdelen.' } },
     { q: { fr: 'Je ne vois pas les demandes du CPAS.', nl: 'Ik zie de aanvragen van het OCMW niet.' }, a: { fr: 'La liste suit l’entité active ; si vous avez un rôle dans l’autre entité, changez d’entité dans l’en-tête.', nl: 'De lijst volgt de actieve entiteit; als u een rol hebt in de andere entiteit, wissel van entiteit in de kop.' } },
   ],
-  seeAlso: ['referentiel', 'patrimoine'],
+  seeAlso: ['planning', 'referentiel', 'patrimoine'],
   shots: [
     { id: 'demandes-entite-overview', path: '/demandes-entite', marks: [{ sel: '.bord-compteurs' }, { sel: '.gest-filtres' }, { sel: '.ant-table' }], caption: { fr: "Demandes de l'entité", nl: 'Aanvragen van de entiteit' } },
     { id: 'demandes-entite-fil', path: '/demandes-entite', actions: [{ clickSel: '.ant-table-row .ant-btn-link' }, { wait: 1000 }, { scrollSel: 'section.fil' }, { clickSel: '.fil-saisie .ant-radio-button-wrapper:nth-child(2)' }, { wait: 600 }, { scrollSel: '.fil-saisie' }],

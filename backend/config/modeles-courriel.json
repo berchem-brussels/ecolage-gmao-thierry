@@ -1,6 +1,6 @@
 {
   "_description": "Modèles de courriel livrés (cahier des charges NOT-04, NOT-06, LNG-05 ; 0.17.0, étape 13, point 3). Un modèle par événement de config/notifications.json, ou par variante (« demande.recue.validation ») ; à défaut de variante, le modèle de l'événement sert. Sujet (150 caractères) et texte (4 000) en FR et en NL, réglés par l'administrateur dans Paramètres › Courriel ; un modèle modifié n'est jamais remplacé, « Rétablir » rend le texte livré. Variables admises, et seulement elles : le courriel ne porte que le numéro, le lieu, l'état, le délai et le lien ; le détail se lit après connexion (NOT-06). Le pied est ajouté à chaque courriel et ne se modifie pas.",
-  "variables": ["numero", "lieu", "etat", "delai", "lien", "entite", "application"],
+  "variables": ["numero", "lieu", "etat", "delai", "date_prevue", "lien", "entite", "application"],
   "pied": {
     "fr": "—\nCourriel automatique de {application} : n'y répondez pas.",
     "nl": "—\nAutomatische e-mail van {application}: antwoord er niet op."
@@ -14,6 +14,7 @@
     "lieu": { "fr": "Maison communale › Bureau 1.04", "nl": "Gemeentehuis › Kantoor 1.04" },
     "etat": { "fr": "Reçue par le service technique", "nl": "Ontvangen door de technische dienst" },
     "delai": { "fr": "pour le 20/11/2026", "nl": "tegen 20/11/2026" },
+    "date_prevue": "24/11/2026",
     "lien": "/demandes?demande=42"
   },
   "modeles": [
@@ -49,6 +50,10 @@
       "sujet_fr": "Demande {numero} : {etat}", "sujet_nl": "Aanvraag {numero}: {etat}",
       "corps_fr": "Bonjour,\n\nLa demande {numero} a changé d'état : {etat}.\nLieu : {lieu}\n\nSuivre la demande : {lien}",
       "corps_nl": "Goedendag,\n\nDe status van de aanvraag {numero} is gewijzigd: {etat}.\nPlaats: {lieu}\n\nDe aanvraag opvolgen: {lien}" },
+    { "code": "demande.date_prevue", "ordre": 85,
+      "sujet_fr": "Demande {numero} : nouvelle date prévue", "sujet_nl": "Aanvraag {numero}: nieuwe geplande datum",
+      "corps_fr": "Bonjour,\n\nLa date prévue de l'intervention pour la demande {numero} a changé : elle est prévue le {date_prevue}.\nLieu : {lieu}\n\nSuivre la demande : {lien}",
+      "corps_nl": "Goedendag,\n\nDe geplande datum van de interventie voor de aanvraag {numero} is gewijzigd: ze is gepland op {date_prevue}.\nPlaats: {lieu}\n\nDe aanvraag opvolgen: {lien}" },
     { "code": "demande.message", "ordre": 90,
       "sujet_fr": "Nouveau message : demande {numero}", "sujet_nl": "Nieuw bericht: aanvraag {numero}",
       "corps_fr": "Bonjour,\n\nUn nouveau message vous attend sur la demande {numero}. Il se lit après connexion.\n\nOuvrir la demande : {lien}",

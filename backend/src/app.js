@@ -50,6 +50,8 @@ function buildApp() {
   app.use('/api/services', require('./routes/services'));
   app.use('/api/equipes', require('./routes/equipes'));
   app.use('/api/ouvriers', require('./routes/ouvriers'));
+  app.use('/api/indisponibilites', require('./routes/indisponibilites'));
+  app.use('/api/planning', require('./routes/planning'));
   app.use('/api/prestataires', require('./routes/prestataires'));
   app.use('/api/lieux', require('./routes/lieux'));
   app.use('/api/categories', require('./routes/categories'));

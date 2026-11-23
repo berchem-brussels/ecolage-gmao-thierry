@@ -15,6 +15,7 @@ import { type Ferie, type Horaire, type JourNonOuvre, moisJourDate } from '../..
 import TraceFiche from './TraceFiche';
 import ErreurObligatoire from '../ErreurObligatoire';
 import { obligatoire, seulementEspaces, texteObligatoire } from '../../validation';
+import { entreeSansEnvoi } from '../../saisieDate';
 
 const HM = 'HH:mm';
 
@@ -152,11 +153,11 @@ export default function CalendrierTab() {
           </Form.Item>
           {natureForm === 'conge' ? (
             <Form.Item name="jour" label={t('ref.cal.jour')} tooltip={hint('ref.cal.jour')} extra={t('ref.cal.chaque_annee')} rules={[obligatoire(t)]}>
-              <DatePicker format="D MMMM" aria-label={t('ref.cal.jour')} />
+              <DatePicker format="D MMMM" onKeyDown={entreeSansEnvoi} aria-label={t('ref.cal.jour')} />
             </Form.Item>
           ) : (
             <Form.Item name="periode" label={t('ref.cal.periode')} tooltip={hint('ref.cal.periode')} rules={[obligatoire(t)]}>
-              <DatePicker.RangePicker format="DD/MM/YYYY" aria-label={t('ref.cal.periode')} />
+              <DatePicker.RangePicker format="DD/MM/YYYY" onKeyDown={entreeSansEnvoi} aria-label={t('ref.cal.periode')} />
             </Form.Item>
           )}
           <Form.Item name="libelle_fr" label={t('ref.cal.libelle_fr')} tooltip={hint('ref.cal.libelle')} rules={[texteObligatoire(t), { max: 200 }]}><Input lang="fr" /></Form.Item>

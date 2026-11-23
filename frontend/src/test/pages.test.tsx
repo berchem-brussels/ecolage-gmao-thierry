@@ -3,7 +3,10 @@
  * La règle color-contrast est désactivée : jsdom ne calcule pas les couleurs rendues ; le contraste se vérifie à l'écran.
  */
 import React from 'react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import dayjs from 'dayjs';
+import 'dayjs/locale/nl';
+import 'dayjs/locale/fr';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { cleanup as cleanupAll, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import axe from 'axe-core';
@@ -28,8 +31,8 @@ const user: Record<string, unknown> & { nouveautes?: unknown[] } = {
 };
 const roles = [
   { code: 'agent', portee: 'entite', defaut: true, label_fr: 'Demandeur', label_nl: 'Aanvrager', description_fr: 'd', description_nl: 'd', permissions: ['lieux:lire', 'listes:lire'] },
-  { code: 'gestionnaire', portee: 'entite', defaut: false, label_fr: 'Gestionnaire technique', label_nl: 'Technisch beheerder', description_fr: 'd', description_nl: 'd', permissions: ['entites:membres', 'lieux:lire', 'lieux:gerer', 'listes:lire', 'equipes:lire', 'prestataires:lire'] },
-  { code: 'responsable', portee: 'entite', defaut: false, label_fr: 'Responsable du service technique', label_nl: 'Verantwoordelijke technische dienst', description_fr: 'd', description_nl: 'd', permissions: ['entites:membres', 'lieux:lire', 'lieux:gerer', 'listes:lire', 'listes:gerer', 'equipes:lire', 'equipes:gerer', 'prestataires:lire', 'prestataires:gerer'] },
+  { code: 'gestionnaire', portee: 'entite', defaut: false, label_fr: 'Gestionnaire technique', label_nl: 'Technisch beheerder', description_fr: 'd', description_nl: 'd', permissions: ['entites:membres', 'lieux:lire', 'lieux:gerer', 'listes:lire', 'equipes:lire', 'indisponibilites:gerer', 'prestataires:lire'] },
+  { code: 'responsable', portee: 'entite', defaut: false, label_fr: 'Responsable du service technique', label_nl: 'Verantwoordelijke technische dienst', description_fr: 'd', description_nl: 'd', permissions: ['entites:membres', 'lieux:lire', 'lieux:gerer', 'listes:lire', 'listes:gerer', 'equipes:lire', 'indisponibilites:gerer', 'equipes:gerer', 'prestataires:lire', 'prestataires:gerer'] },
   { code: 'valideur', portee: 'entite', defaut: false, label_fr: 'Valideur', label_nl: 'Goedkeurder', description_fr: 'd', description_nl: 'd', permissions: ['demandes:creer', 'demandes:valider'] },
   { code: 'admin', portee: 'instance', defaut: false, label_fr: 'Administrateur', label_nl: 'Beheerder', description_fr: 'd', description_nl: 'd', permissions: [] },
 ];
@@ -41,6 +44,33 @@ const equipesListe = [
     motif_desactivation: null, is_demo: 1, nb_membres: 1, membres: [{ id: 24, prenom: 'Paul', nom: 'Propre' }],
     horaire: [{ jour: 6, debut: '07:00', fin: '13:00' }, { jour: 7, debut: '07:00', fin: '13:00' }], trace: null },
 ];
+// 0.21.0 (point 3, PLA-03) : planning d'une semaine (lundi 07/12/2026) : Oscar (équipe BAT) en congé le mardi, Olga ; une
+// tâche de l'équipe le lundi, une tâche d'Olga le mercredi, une tâche sans affectation le jeudi.
+const jourP = (travaille: 0 | 1, extra: Record<string, unknown> = {}) => ({ travaille, indisponible: null, charge_min: 0, nb_taches: 0, ...extra });
+const semaineP = ['2026-12-07', '2026-12-08', '2026-12-09', '2026-12-10', '2026-12-11', '2026-12-12', '2026-12-13'];
+const planningData = {
+  du: semaineP[0], au: semaineP[6], aujourdhui: '2026-12-08',
+  jours: semaineP.map((date, i) => ({ date, jour_semaine: i + 1, ouvre_entite: i < 5 ? 1 : 0 })),
+  ouvriers: [
+    { id: 22, prenom: 'Oscar', nom: 'Ouvrier', equipes: [4], jours: Object.fromEntries(semaineP.map((d, i) => [d, i === 1 ? jourP(0, { indisponible: 'journee', nb_taches: 1, conflits: ['absent'] })
+      : jourP(i < 5 ? 1 : 0, i === 0 ? { charge_min: 600, nb_taches: 2, capacite_min: 510, conflits: ['trop_charge'] } : {})])) },
+    { id: 23, prenom: 'Olga', nom: 'Ouvrière', equipes: [4], jours: Object.fromEntries(semaineP.map((d, i) => [d, jourP(i < 5 ? 1 : 0, i === 0 ? { charge_min: 90, nb_taches: 1 } : i === 2 ? { charge_min: 60, nb_taches: 1 } : {})])) },
+  ],
+  equipes: [{ id: 4, code: 'BAT', nom_fr: 'Bâtiment', nom_nl: 'Gebouwen', membres: [22, 23], horaire_propre: 0, jours: Object.fromEntries(semaineP.map((d, i) => [d, jourP(i < 5 ? 1 : 0)])) }],
+  taches: [
+    { id: 51, demande_id: 7, numero: 'AA-DI-2026-00007', rang: 1, titre: 'Changer les luminaires', etat: 'a_faire', date_prevue: semaineP[0], heure_debut: '08:00', duree_estimee_min: 90, equipe_id: 4, ouvriers: [], lieu_code: 'MC-A-12', lieu_nom_fr: 'Bureau 12', lieu_nom_nl: 'Kantoor 12' },
+    { id: 52, demande_id: 7, numero: 'AA-DI-2026-00007', rang: 2, titre: 'Contrôler le tableau', etat: 'a_faire', date_prevue: semaineP[2], heure_debut: null, duree_estimee_min: 60, equipe_id: null, ouvriers: [23], lieu_code: 'MC-A-12', lieu_nom_fr: 'Bureau 12', lieu_nom_nl: 'Kantoor 12' },
+    { id: 53, demande_id: 8, numero: 'AA-DI-2026-00008', rang: 1, titre: 'Reboucher le trou', etat: 'a_faire', date_prevue: semaineP[3], heure_debut: null, duree_estimee_min: null, equipe_id: null, ouvriers: [], lieu_code: null, lieu_nom_fr: null, lieu_nom_nl: null },
+  ],
+  // 0.21.0 (point 4, PLA-05) : une tâche ouverte sans date, déjà confiée à Oscar.
+  non_planifiees: [
+    { id: 54, demande_id: 9, numero: 'AA-DI-2026-00009', rang: 1, titre: 'Repeindre la porte', etat: 'a_faire', date_prevue: null, heure_debut: null, duree_estimee_min: 120, equipe_id: null, ouvriers: [22], lieu_code: 'MC-A', lieu_nom_fr: 'Aile A', lieu_nom_nl: 'Vleugel A', priorite: 'P2' },
+  ],
+};
+// Conflits rendus par la maquette de l'affectation (0.21.0, point 4).
+let conflitsReponse: Record<string, unknown>[] = [];
+// 0.21.0 (point 2, PLA-04) : une indisponibilité d'Oscar (motif rendu au gestionnaire).
+const indisposListe: Record<string, unknown>[] = [{ id: 91, user_id: 22, du: '2026-12-21', au: '2026-12-24', periode: 'journee', motif: 'conge' }];
 const prestatairesListe = [
   { id: 8, nom: 'Chauffagiste fictif', numero_entreprise: '0123.456.749', langue: 'fr', contact_nom: 'Claire Fictive', telephone: '02 000 00 00', courriel: 'c@fictif.invalid',
     adresse: null, code_postal: null, commune: null, reference_marche: 'Contrat d’entretien des chaudières', is_active: 1, motif_desactivation: null, is_demo: 0,
@@ -287,6 +317,13 @@ beforeEach(() => {
       : url.startsWith('/api/services') ? page(servicesListe)
       : url.startsWith('/api/equipes') && init?.method && init.method !== 'GET' ? { data: equipesListe[0], meta: { envelope: 1 } }
       : url.startsWith('/api/equipes') ? page(equipesListe)
+      // 0.21.0 (point 3, PLA-03) : planning et déplacement d'une tâche.
+      : url.startsWith('/api/planning') ? { data: planningData, meta: { envelope: 1 } }
+      : url.match(/^\/api\/taches\/\d+\/affectation/) ? { data: { id: 1, demande_passage_auto: null, conflits: conflitsReponse }, meta: { envelope: 1 } }
+      // 0.21.0 (point 2, PLA-04) : indisponibilités d'un ouvrier.
+      : url.startsWith('/api/indisponibilites') && init?.method === 'POST' ? { data: { id: 92, ...JSON.parse(String(init.body)) }, meta: { envelope: 1 } }
+      : url.startsWith('/api/indisponibilites') && init?.method === 'DELETE' ? { data: { id: 91, supprimee: 1 }, meta: { envelope: 1 } }
+      : url.startsWith('/api/indisponibilites') ? page(indisposListe)
       : url.startsWith('/api/ouvriers') && init?.method === 'PUT' ? { data: ouvriersListe[2], meta: { envelope: 1 } }
       : url.startsWith('/api/ouvriers') ? page(ouvriersListe)
       : url.startsWith('/api/prestataires') && init?.method && init.method !== 'GET' ? { data: prestatairesListe[0], meta: { envelope: 1 } }
@@ -315,10 +352,11 @@ import ReferentielPage from '../pages/ReferentielPage';
 import TicketsPage from '../pages/TicketsPage';
 import ServicesPage from '../pages/ServicesPage';
 import EquipesPage from '../pages/EquipesPage';
+import PlanningPage from '../pages/PlanningPage';
 import { reloadModules } from '../moduleMap';
 import { sansDoublons } from '../components/RechercheGlobale';
 import { adresseExport } from '../components/BoutonExport';
-import { answer } from '../components/Chatbot';
+import { accesEcran, answer } from '../components/Chatbot';
 
 const PAGES: [string, React.ComponentType][] = [
   ['Home', HomePage], ['Entites', EntitesPage], ['Users', UsersPage], ['Help', HelpPage], ['Accessibility', AccessibilityPage], ['Login', LoginPage],
@@ -767,7 +805,7 @@ describe('écrans', () => {
     });
   }
 
-  it('0.20.0 (DV-159) : une liste vide du détail est masquée (membres, corps de métier) ; « Avant » vide dit « aucun »', async () => {
+  it('0.20.0 (DV-159) : une liste vide du détail est masquée (membres, corps de métier) ; « Avant » vide dit « aucun » (« aucune » au féminin depuis la 0.21.0)', async () => {
     const qui = { entite_id: 1, entite_code: 'AA', user_id: 1, user_email: 'a@exemple.test', user_first_name: 'Ada', user_last_name: 'Admin' };
     const ajout = [
       { id: 90, created_at: '2026-11-19 08:00:00', action: 'equipe.update', entity_type: 'equipe', entity_id: 3, channel: 'api', details: { membres_ajoutes: [9], membres_retires: [] }, ...qui,
@@ -784,8 +822,52 @@ describe('écrans', () => {
       expect(screen.queryByText('Membres retirés')).toBeNull();
       expect(screen.getByText('Toiture fictive')).toBeInTheDocument();
       expect(screen.queryByText('Corps de métier')).toBeNull();
-      expect(screen.getByText('Compétences : aucun')).toBeInTheDocument();
+      expect(screen.getByText('Compétences : aucune')).toBeInTheDocument(); // 0.21.0 (R4) : accord au féminin
       expect(screen.getByText('Compétences : BA4')).toBeInTheDocument();
+    } finally { journal.splice(journal.length - ajout.length, ajout.length); }
+  });
+
+  it('0.21.0 (R4) : date prévue d’une tâche au format de la langue (jj/mm/aaaa, dd-mm-jjjj) ; vide d’un champ féminin dit « aucune » (FR), « geen » (NL)', async () => {
+    const qui = { entite_id: 1, entite_code: 'AA', user_id: 1, user_email: 'a@exemple.test', user_first_name: 'Ada', user_last_name: 'Admin' };
+    const ajout = [
+      { id: 95, created_at: '2026-11-20 09:00:00', action: 'tache.affecter', entity_type: 'tache', entity_id: 7, channel: 'api',
+        details: { avant: { date_prevue: null, heure_debut: null, ouvriers: [] }, apres: { date_prevue: '2026-11-23', heure_debut: '09:00', ouvriers: [] } }, ...qui },
+    ];
+    (journal as unknown as Record<string, unknown>[]).push(...ajout);
+    try {
+      for (const lang of ['fr', 'nl'] as const) {
+        const { container, unmount } = render(wrap(JournalPage, lang));
+        await screen.findAllByText(lang === 'fr' ? /Tâche affectée/ : /Taak toegewezen/);
+        container.querySelectorAll<HTMLButtonElement>('button.ant-table-row-expand-icon').forEach((b) => fireEvent.click(b));
+        const dp = translations['audit.detail.date_prevue'][lang];
+        expect(await screen.findByText(new RegExp(`${dp} : ${lang === 'fr' ? '23/11/2026' : '23-11-2026'}`))).toBeInTheDocument();
+        expect(screen.getByText(new RegExp(`${dp} : ${lang === 'fr' ? 'aucune' : 'geen'}`))).toBeInTheDocument();
+        expect(screen.queryByText(/2026-11-23/)).toBeNull();
+        if (lang === 'fr') {
+          expect(screen.queryByText(/Date prévue : aucun( ·|$)/)).toBeNull();
+          expect(screen.getByText(/Heure de début : aucune/)).toBeInTheDocument();
+        }
+        unmount();
+      }
+    } finally { journal.splice(journal.length - ajout.length, ajout.length); }
+  });
+
+  it('0.21.0 (point 1, R5) : heures réelles d’une tâche au journal, à l’heure du poste, en FR et en NL', async () => {
+    const qui = { entite_id: 1, entite_code: 'AA', user_id: 1, user_email: 'a@exemple.test', user_first_name: 'Ada', user_last_name: 'Admin' };
+    const ajout = [{ id: 96, created_at: '2026-11-20 10:00:00', action: 'tache.etat', entity_type: 'tache', entity_id: 7, channel: 'api',
+      details: { numero: 'AA-DI-2026-00002', rang: 2, de: 'a_faire', vers: 'terminee', motif_donne: 0, debut_reel: '2026-11-19 07:00:00', fin_reelle: '2026-11-19 09:30:00' }, ...qui }];
+    (journal as unknown as Record<string, unknown>[]).push(...ajout);
+    const h = (sql: string, lang: string) => dayjs(`${sql.replace(' ', 'T')}Z`).locale(lang).format('L LT');
+    try {
+      for (const lang of ['fr', 'nl'] as const) {
+        const { container, unmount } = render(wrap(JournalPage, lang));
+        await screen.findAllByText(new RegExp(translations['audit.action.tache.etat'][lang]));
+        container.querySelectorAll<HTMLButtonElement>('button.ant-table-row-expand-icon').forEach((b) => fireEvent.click(b));
+        await waitFor(() => expect(container.textContent).toContain(`${translations['audit.detail.debut_reel'][lang]}${h('2026-11-19 07:00:00', lang)}`));
+        expect(container.textContent).toContain(`${translations['audit.detail.fin_reelle'][lang]}${h('2026-11-19 09:30:00', lang)}`);
+        expect(screen.queryByText(/2026-11-19 07:00:00/)).toBeNull();
+        unmount();
+      }
     } finally { journal.splice(journal.length - ajout.length, ajout.length); }
   });
 
@@ -1528,6 +1610,8 @@ describe('journal d’audit sans code brut (0.13.0, point 2 ; défauts D2, D3, D
     ouvriers: 'corps_metier competences',
     demo: 'equipes prestataires',
     // 0.19.0 (point 3) : prestataires externes (création, champs changés, corps de métier).
+    // 0.21.0 (point 1, R5) : heures réelles d'une tâche au passage.
+    taches_heures: 'debut_reel fin_reelle',
     prestataires: 'nom numero_entreprise langue contact_nom telephone courriel adresse code_postal commune reference_marche is_active motif_desactivation corps_metier',
   };
   it('chaque champ écrit au journal a son libellé, en FR et en NL', () => {
@@ -2380,6 +2464,219 @@ describe('équipes et ouvriers (0.19.0, point 2 ; ROL-05, DV-28)', () => {
   });
 });
 
+describe('planning (0.21.0, point 3 ; PLA-03)', () => {
+  const rendre = (entree = '/planning?du=2026-12-07', lang: 'fr' | 'nl' = 'fr') => render(
+    <SettingsProvider value={{ settings: FALLBACK_SETTINGS, reload: async () => {} }}>
+      <I18nProvider defaultLang={lang}><MemoryRouter initialEntries={[entree]}><PlanningPage /></MemoryRouter></I18nProvider>
+    </SettingsProvider>,
+  );
+  const ent = () => (user.entites as { roles: string[] }[])[0];
+  const appels = () => (fetch as unknown as { mock: { calls: [string, RequestInit?][] } }).mock.calls;
+  const corpsPut = (id: number) => { const c = appels().filter(([u, i]) => u === `/api/taches/${id}/affectation` && i?.method === 'PUT'); return c.length ? JSON.parse(String(c[c.length - 1][1]!.body)) : null; };
+  const cellule = (c: HTMLElement, cle: string) => c.querySelector(`[data-case="${cle}"]`) as HTMLElement;
+  // Le simulacre de matchMedia ne répond à aucune requête : Ant Design voit un écran étroit, d'où la vue jour par défaut ; la
+  // semaine se contrôle en forçant un grand écran.
+  // Gestionnaire du planning : lecture, déplacement et lien vers la demande (permissions réelles du rôle).
+  let rolesAvant: string[] = [];
+  beforeEach(() => {
+    rolesAvant = ent().roles;
+    ent().roles = ['planif'];
+    roles.push({ code: 'planif', portee: 'entite', defaut: false, label_fr: 'Gestionnaire', label_nl: 'Beheerder', description_fr: 'd', description_nl: 'd', permissions: ['equipes:lire', 'demandes:traiter', 'demandes:entite'] });
+  });
+  afterEach(() => { ent().roles = rolesAvant; const i = roles.findIndex((r) => r.code === 'planif'); if (i >= 0) roles.splice(i, 1); });
+  const grandEcran = () => {
+    const avant = window.matchMedia;
+    window.matchMedia = ((q: string) => ({ matches: /min-width/.test(q), media: q, onchange: null, addListener: () => {}, removeListener: () => {},
+      addEventListener: () => {}, removeEventListener: () => {}, dispatchEvent: () => false })) as unknown as typeof window.matchMedia;
+    return () => { window.matchMedia = avant; };
+  };
+
+  it('semaine par ouvrier : jours, non ouvrés, charge, indisponibilité sans cause, « via l’équipe », sans affectation ; axe-core FR et NL', async () => {
+    const remettre = grandEcran();
+    try {
+      const { container } = rendre();
+      await screen.findByRole('table', { name: 'Planning' });
+      expect(appels().some(([u]) => u === '/api/planning?du=2026-12-07&au=2026-12-13')).toBe(true);
+      expect(screen.getAllByRole('columnheader').map((h) => h.textContent)).toEqual(['Ouvrier', 'lun. 7/12', 'mar. 8/12', 'mer. 9/12', 'jeu. 10/12', 'ven. 11/12', 'sam. 12/12 · non ouvré', 'dim. 13/12 · non ouvré']);
+      expect(screen.getAllByRole('rowheader').map((h) => h.textContent)).toEqual(['Oscar Ouvrier', 'Olga Ouvrière', 'Sans affectation']);
+      expect(cellule(container, 'o22|2026-12-07').textContent).toContain('Prévu : 10 h');
+      expect(cellule(container, 'o22|2026-12-07').textContent).toContain('via l’équipe');
+      expect(cellule(container, 'o22|2026-12-08').textContent).toContain('Indisponible');
+      expect(cellule(container, 'o22|2026-12-08')).toHaveClass('planning-ferme');
+      expect(cellule(container, 'o23|2026-12-09').textContent).toContain('Contrôler le tableau');
+      expect(cellule(container, 'o23|2026-12-09').textContent).not.toContain('via l’équipe');
+      expect(cellule(container, 'aucun|2026-12-10').textContent).toContain('Reboucher le trou');
+      expect(screen.getAllByRole('link', { name: 'AA-DI-2026-00007 · 1' })[0]).toHaveAttribute('href', '/demandes-entite?demande=7');
+      const r = await axe.run(container, { rules: { 'color-contrast': { enabled: false }, region: { enabled: false } } });
+      expect(r.violations.map((v) => `${v.id}: ${v.nodes.map((n) => n.html.slice(0, 120)).join(' | ')}`)).toEqual([]);
+      cleanupAll();
+      const n = rendre('/planning?du=2026-12-07', 'nl');
+      await screen.findByRole('table', { name: 'Planning' });
+      expect(screen.getAllByRole('rowheader').map((h) => h.textContent)).toContain('Zonder toewijzing');
+      const rn = await axe.run(n.container, { rules: { 'color-contrast': { enabled: false }, region: { enabled: false } } });
+      expect(rn.violations).toEqual([]);
+    } finally { remettre(); }
+  });
+
+  it('glisser-déposer : tâche d’un ouvrier vers un autre et un autre jour ; tâche d’équipe chez un membre : jour seul ; chez un non-membre : refusée', async () => {
+    const remettre = grandEcran();
+    const sauve = planningData.ouvriers.slice();
+    planningData.ouvriers.push({ id: 24, prenom: 'Paul', nom: 'Propre', equipes: [], jours: Object.fromEntries(semaineP.map((d) => [d, jourP(1)])) });
+    try {
+      const { container } = rendre();
+      await screen.findByRole('table', { name: 'Planning' });
+      const glisser = (tache: number, depuis: string, vers: string) => {
+        const donnees: Record<string, string> = {};
+        const dt = { setData: (k: string, v: string) => { donnees[k] = v; }, getData: (k: string) => donnees[k], effectAllowed: '' };
+        const carte = cellule(container, depuis).querySelector(`[data-tache="${tache}"]`) as HTMLElement;
+        fireEvent.dragStart(carte, { dataTransfer: dt });
+        fireEvent.dragOver(cellule(container, vers.split('#')[0]), { dataTransfer: dt });
+        fireEvent.drop(cellule(container, vers.split('#')[0]), { dataTransfer: dt });
+      };
+      glisser(52, 'o23|2026-12-09', 'o24|2026-12-10');
+      await waitFor(() => expect(corpsPut(52)).toEqual({ ouvriers: [24], equipe_id: null, date_prevue: '2026-12-10', heure_debut: null, duree_estimee_min: 60 }));
+      glisser(51, 'o22|2026-12-07', 'o23|2026-12-09');
+      await waitFor(() => expect(corpsPut(51)).toEqual({ ouvriers: [], equipe_id: 4, date_prevue: '2026-12-09', heure_debut: '08:00', duree_estimee_min: 90 }));
+      const avant = appels().length;
+      glisser(51, 'o22|2026-12-07', 'o24|2026-12-09');
+      expect(await screen.findByText(/Cette tâche est confiée à une équipe/)).toBeInTheDocument();
+      expect(appels().slice(avant).some(([u]) => u.includes('/affectation'))).toBe(false);
+      glisser(53, 'aucun|2026-12-10', 'o22|2026-12-11');
+      await waitFor(() => expect(corpsPut(53)).toEqual({ ouvriers: [22], equipe_id: null, date_prevue: '2026-12-11', heure_debut: null, duree_estimee_min: null }));
+    } finally { planningData.ouvriers.splice(0, planningData.ouvriers.length, ...sauve); remettre(); }
+  });
+
+  it('téléphone : vue jour ; « Déplacer » change le jour et l’équipe par la fenêtre (vue par équipe)', async () => {
+    rendre('/planning?du=2026-12-07&lignes=equipes');
+    await screen.findByRole('table', { name: 'Planning' });
+    expect(appels().some(([u]) => u === '/api/planning?du=2026-12-07&au=2026-12-07')).toBe(true);
+    expect(screen.getByText('lundi 7 décembre 2026')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Déplacer AA-DI-2026-00007 · 1' }));
+    const fenetre = (await screen.findByText('Déplacer · AA-DI-2026-00007 · 1')).closest('.ant-modal') as HTMLElement;
+    const champ = within(fenetre).getByLabelText('Nouveau jour') as HTMLInputElement;
+    expect(champ.value).toBe('07/12/2026');
+    fireEvent.mouseDown(champ); fireEvent.focus(champ);
+    fireEvent.change(champ, { target: { value: '09/12/2026' } });
+    fireEvent.keyDown(champ, { key: 'Enter' });
+    fireEvent.click(within(fenetre).getByRole('button', { name: 'Déplacer' }));
+    await waitFor(() => expect(corpsPut(51)).toEqual({ ouvriers: [], equipe_id: 4, date_prevue: '2026-12-09', heure_debut: '08:00', duree_estimee_min: 90 }));
+  });
+
+  it('0.21.0 (point 4) : conflits dits en mots ; tâches non planifiées glissées sur un ouvrier ou « Planifier » ; conflits rendus après l’enregistrement', async () => {
+    const remettre = grandEcran();
+    conflitsReponse = [{ ouvrier_id: 23, prenom: 'Olga', nom: 'Ouvrière', conflits: ['trop_charge'], charge_min: 630, capacite_min: 510 }];
+    try {
+      const { container } = rendre();
+      await screen.findByRole('table', { name: 'Planning' });
+      expect(cellule(container, 'o22|2026-12-07').querySelector('.planning-conflit')?.textContent).toContain('Trop chargé (10 h prévues pour 8 h 30)');
+      expect(cellule(container, 'o22|2026-12-08').querySelector('.planning-conflit')?.textContent).toContain('Absent');
+      expect(cellule(container, 'o23|2026-12-07').querySelector('.planning-conflit')).toBeNull();
+      const liste = screen.getByRole('list', { name: 'Tâches non planifiées' });
+      expect(screen.getByText('Tâches non planifiées (1)')).toBeInTheDocument();
+      expect(within(liste).getByText('Repeindre la porte')).toBeInTheDocument();
+      expect(within(liste).getByText('P2')).toBeInTheDocument();
+      // Glissée sur Olga mercredi : confiée à elle seule, datée.
+      const donnees: Record<string, string> = {};
+      const dt = { setData: (k: string, v: string) => { donnees[k] = v; }, getData: (k: string) => donnees[k], effectAllowed: '' };
+      fireEvent.dragStart(liste.querySelector('[data-tache="54"]') as HTMLElement, { dataTransfer: dt });
+      fireEvent.drop(cellule(container, 'o23|2026-12-09'), { dataTransfer: dt });
+      await waitFor(() => expect(corpsPut(54)).toEqual({ ouvriers: [23], equipe_id: null, date_prevue: '2026-12-09', heure_debut: null, duree_estimee_min: 120 }));
+      expect(await screen.findByText('Attention : Olga Ouvrière : Trop chargé (10 h 30 prévues pour 8 h 30)')).toBeInTheDocument();
+      // « Planifier » : Oscar proposé (seul ouvrier de la tâche), jour de la période.
+      fireEvent.click(within(liste).getByRole('button', { name: 'Planifier AA-DI-2026-00009 · 1' }));
+      const fenetre = (await screen.findByText('Planifier · AA-DI-2026-00009 · 1')).closest('.ant-modal') as HTMLElement;
+      expect((within(fenetre).getByLabelText('Nouveau jour') as HTMLInputElement).value).toBe('08/12/2026');
+      fireEvent.click(within(fenetre).getByRole('button', { name: 'Planifier' }));
+      await waitFor(() => expect(corpsPut(54)).toEqual({ ouvriers: [22], equipe_id: null, date_prevue: '2026-12-08', heure_debut: null, duree_estimee_min: 120 }));
+    } finally { conflitsReponse = []; remettre(); }
+  });
+
+  it('chef d’équipe (lecture) : ni glisser, ni « Déplacer », ni lien vers la demande', async () => {
+    const avant = ent().roles;
+    ent().roles = ['chef_lecture'];
+    roles.push({ code: 'chef_lecture', portee: 'entite', defaut: false, label_fr: 'Chef', label_nl: 'Chef', description_fr: 'd', description_nl: 'd', permissions: ['equipes:lire'] });
+    try {
+      const { container } = rendre();
+      await screen.findByRole('table', { name: 'Planning' });
+      expect(screen.getByText(/Planning en lecture seule/)).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /Déplacer/ })).toBeNull();
+      expect(container.querySelector('[draggable="true"]')).toBeNull();
+      expect(screen.queryByRole('link', { name: /AA-DI-2026-00007/ })).toBeNull();
+    } finally { ent().roles = avant; roles.pop(); }
+  });
+});
+
+describe('indisponibilités d’un ouvrier (0.21.0, point 2 ; PLA-04)', () => {
+  const rendre = (entree = '/equipes?onglet=ouvriers') => render(
+    <SettingsProvider value={{ settings: FALLBACK_SETTINGS, reload: async () => {} }}>
+      <I18nProvider defaultLang="fr"><MemoryRouter initialEntries={[entree]}><EquipesPage /></MemoryRouter></I18nProvider>
+    </SettingsProvider>,
+  );
+  const ent = () => (user.entites as { roles: string[] }[])[0];
+  const appels = () => (fetch as unknown as { mock: { calls: [string, RequestInit?][] } }).mock.calls;
+  const ouvrirOscar = async () => {
+    rendre();
+    fireEvent.click(await screen.findByRole('button', { name: 'Oscar Ouvrier' }));
+    const volet = await screen.findByRole('dialog');
+    return within(volet).findByText('Indisponibilités').then(() => volet);
+  };
+
+  it('gestionnaire : liste avec le motif ; ajout d’une demi-journée sur un jour, envoyé au serveur ; sans violation axe-core', async () => {
+    const volet = await ouvrirOscar();
+    expect(await within(volet).findByText(/Du lundi 21 décembre 2026 au jeudi 24 décembre 2026/)).toBeInTheDocument();
+    expect(within(volet).getByText('Congé')).toBeInTheDocument();
+    fireEvent.click(within(volet).getByRole('button', { name: /Ajouter/ }));
+    const form = volet.querySelector('.indispo-form') as HTMLElement;
+    fireEvent.click(within(form).getByRole('button', { name: 'Enregistrer' }));
+    expect((await within(form).findAllByText('Ce champ est obligatoire')).length).toBeGreaterThan(0);
+    expect(appels().some(([u, i]) => u === '/api/indisponibilites' && i?.method === 'POST')).toBe(false);
+    const du = within(form).getAllByRole('textbox')[0];
+    fireEvent.mouseDown(du); fireEvent.focus(du);
+    fireEvent.change(du, { target: { value: '08/01/2027' } });
+    fireEvent.keyDown(du, { key: 'Enter' });
+    fireEvent.click(within(form).getByRole('radio', { name: 'Matin' }));
+    fireEvent.click(within(form).getByRole('radio', { name: 'Formation' }));
+    const r = await axe.run(volet, { rules: { 'color-contrast': { enabled: false }, region: { enabled: false } } });
+    expect(r.violations.map((v) => `${v.id}: ${v.nodes.map((n) => n.html.slice(0, 120)).join(' | ')}`)).toEqual([]);
+    fireEvent.click(within(form).getByRole('button', { name: 'Enregistrer' }));
+    await waitFor(() => expect(appels().some(([u, i]) => u === '/api/indisponibilites' && i?.method === 'POST')).toBe(true));
+    const [, init] = appels().find(([u, i]) => u === '/api/indisponibilites' && i?.method === 'POST')!;
+    expect(JSON.parse(String(init!.body))).toEqual({ user_id: 22, du: '2027-01-08', au: '2027-01-08', periode: 'matin', motif: 'formation' });
+  });
+
+  it('demi-journée impossible sur plusieurs jours ; suppression avec confirmation', async () => {
+    const volet = await ouvrirOscar();
+    fireEvent.click(within(volet).getByRole('button', { name: /Ajouter/ }));
+    const form = volet.querySelector('.indispo-form') as HTMLElement;
+    const [du, au] = within(form).getAllByRole('textbox');
+    for (const [champ, v] of [[du, '08/01/2027'], [au, '12/01/2027']] as const) {
+      fireEvent.mouseDown(champ); fireEvent.focus(champ); fireEvent.change(champ, { target: { value: v } }); fireEvent.keyDown(champ, { key: 'Enter' });
+    }
+    await waitFor(() => expect(within(form).getByRole('radio', { name: 'Matin' })).toBeDisabled());
+    fireEvent.click(within(volet).getByRole('button', { name: 'Supprimer' }));
+    await screen.findByText('Supprimer cette indisponibilité saisie par erreur ?');
+    fireEvent.click(screen.getAllByRole('button', { name: 'Supprimer' }).slice(-1)[0]);
+    await waitFor(() => expect(appels().some(([u, i]) => u === '/api/indisponibilites/91' && i?.method === 'DELETE')).toBe(true));
+  });
+
+  it('chef d’équipe (lecture) : la cause n’est jamais montrée ; ni ajout ni suppression', async () => {
+    const avant = ent().roles;
+    const liste = [...indisposListe];
+    ent().roles = ['chef_lecture'];
+    indisposListe.splice(0, 1, { id: 91, user_id: 22, du: '2026-12-21', au: '2026-12-24', periode: 'journee' });
+    roles.push({ code: 'chef_lecture', portee: 'entite', defaut: false, label_fr: 'Chef', label_nl: 'Chef', description_fr: 'd', description_nl: 'd', permissions: ['equipes:lire'] });
+    try {
+      const volet = await ouvrirOscar();
+      expect(await within(volet).findByText(/Du lundi 21 décembre 2026/)).toBeInTheDocument();
+      expect(within(volet).getByText('Indisponible')).toBeInTheDocument();
+      expect(within(volet).queryByText('Congé')).toBeNull();
+      expect(within(volet).getByText(/La cause n’est pas montrée/)).toBeInTheDocument();
+      expect(within(volet).queryByRole('button', { name: /Ajouter/ })).toBeNull();
+      expect(within(volet).queryByRole('button', { name: 'Supprimer' })).toBeNull();
+    } finally { ent().roles = avant; indisposListe.splice(0, 1, ...liste); roles.pop(); }
+  });
+});
+
 describe('prestataires externes (0.19.0, point 3 ; REF-07, EXT-03)', () => {
   const rendre = (entree = '/equipes?onglet=prestataires') => render(
     <SettingsProvider value={{ settings: FALLBACK_SETTINGS, reload: async () => {} }}>
@@ -2429,6 +2726,30 @@ describe('prestataires externes (0.19.0, point 3 ; REF-07, EXT-03)', () => {
       expect(await screen.findByText('Propreté du week-end')).toBeInTheDocument();
       expect(screen.queryByRole('radio', { name: /Prestataires/ })).toBeNull();
     } finally { ent().roles = avant; }
+  });
+});
+
+describe('assistant : planning, absences, heures et date déplacée (0.21.0, point 7)', () => {
+  it('chaque question trouve sa réponse et son écran, en FR et en NL ; les questions d’avant gardent la leur', () => {
+    for (const [q, key, route] of [
+      ['où voir le planning de la semaine ?', 'chat.intent.planning', '/planning'],
+      ['hoe een taak verplaatsen?', 'chat.intent.planning', '/planning'],
+      ['où noter le congé d’un ouvrier ?', 'chat.intent.absences', '/equipes?onglet=ouvriers'],
+      ['arbeider afwezig volgende week', 'chat.intent.absences', '/equipes?onglet=ouvriers'],
+      ['comment corriger l’heure de début ?', 'chat.intent.heures', '/demandes-entite'],
+      ['einduur van een taak', 'chat.intent.heures', '/demandes-entite'],
+      ['pourquoi la date a changé ?', 'chat.intent.datemodifiee', '/demandes'],
+      ['datum gewijzigd op mijn aanvraag', 'chat.intent.datemodifiee', '/demandes'],
+    ] as const) {
+      const r = answer(q);
+      expect(r.key, q).toBe(key);
+      expect((r as { route?: string }).route, q).toBe(route);
+    }
+    expect(answer('jours fériés de la commune').key).toBe('chat.intent.calendrier');
+    expect(answer('congé de la commune').key).toBe('chat.intent.calendrier');
+    expect(answer('comment créer une équipe ?').key).toBe('chat.intent.equipes');
+    expect(answer('ma demande est planifiée').key).not.toBe('chat.intent.planning');
+    expect(accesEcran('/planning?vue=jour')).toEqual({ permission: 'equipes:lire' });
   });
 });
 

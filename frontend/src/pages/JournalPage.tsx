@@ -55,7 +55,9 @@ const PAGE = 50;
 export const BOOLEENS = new Set(['commentaire_donne', 'compte_rendu_donne', 'suspendu', 'danger', 'beneficiaire_texte', 'is_active', 'obligatoire', 'remarque', 'brouillon', 'premiere', 'priorite_confirmee', 'photos_visibles', 'motif_priorite', 'consignes', 'internal', 'interne',
   'validation', 'must_change_password', 'is_admin_local', 'motif_donne',
   // 0.20.0 (point 1) : tâches (textes jamais au journal : on note qu'ils sont donnés ou modifiés).
-  'consignes_donnees', 'titre_modifie', 'consignes_modifie']);
+  'consignes_donnees', 'titre_modifie', 'consignes_modifie',
+  // 0.21.0 (point 2) : motif d'une indisponibilité changé (jamais lequel).
+  'motif_change']);
 const VIDE_DIT = new Set(['avant', 'apres']);
 /** Champs du détail qui portent un code traduit (R2, 0.9.1) : nom du champ → préfixe de la clé de traduction. */
 export const CODES: Record<string, string> = { etat: 'demande.etat_service' };
@@ -110,6 +112,8 @@ export const CODES_FAMILLE: Record<string, Record<string, string>> = {
   module: { module: 'audit.module' },
   // 0.19.0 (point 3) : langue de correspondance d'un prestataire.
   prestataire: { langue: 'audit.langue' },
+  // 0.21.0 (point 2, PLA-04) : journée ou demi-journée d'une indisponibilité.
+  indisponibilite: { periode: 'indispo.periode' },
 };
 /** Libellé d'un champ propre à une famille, quand le même nom veut dire autre chose ailleurs (« fin » d'une priorité ou de l'horaire). */
 export const CHAMPS_FAMILLE: Record<string, Record<string, string>> = {
@@ -120,9 +124,17 @@ export const CHAMPS_FAMILLE: Record<string, Record<string, string>> = {
 /** Champs qui portent un code de rôle, nommé par le catalogue des rôles. */
 const ROLES_CHAMPS = new Set(['role', 'from', 'to', 'user_role']);
 /** Champs de date sans heure : « 2026-12-26 » ou, pour un congé annuel, « 12-26 ». */
-const DATES = new Set(['date_debut', 'date_fin', 'date_souhaitee', 'date_convenue']);
+// 0.21.0 (R4, DV-164) : date prévue d'une tâche affectée, en jj/mm/aaaa comme les autres dates.
+const DATES = new Set(['date_debut', 'date_fin', 'date_souhaitee', 'date_convenue', 'date_prevue', 'du', 'au']);
+/**
+ * 0.21.0 (R4) : champ au féminin en français, dont le vide se dit « aucune » (« Date prévue : aucune ») ; en néerlandais,
+ * « geen » dans les deux cas.
+ */
+const FEMININS = new Set(['equipe_id', 'categorie_id', 'priorite', 'entite_id', 'langue', 'description', 'consignes', 'competences']);
+const feminin = (cle: string) => FEMININS.has(cle) || /^(date|heure|duree|echeance)_/.test(cle);
 /** Instants de la base (UTC, « AAAA-MM-JJ HH:MM:SS ») montrés à l'heure du poste (0.14.0 : échéance repoussée). */
-const INSTANTS = new Set(['echeance_le']);
+// 0.21.0 (point 1, R5) : heures réelles d'une tâche, à l'heure du poste.
+const INSTANTS = new Set(['echeance_le', 'debut_reel', 'fin_reelle']);
 /** Champs dont la valeur est une liste de noms de champs, affichés par leurs libellés (R4). */
 const LISTES_CHAMPS = new Set(['fields']);
 /** Valeur masquée par le serveur (secret client), dite en clair (R4). */
@@ -234,7 +246,7 @@ export default function JournalPage() {
     if (BOOLEENS.has(cle) && (v === 0 || v === 1 || typeof v === 'boolean')) return t(v ? 'yes' : 'no');
     if (LISTES_CHAMPS.has(cle) && Array.isArray(v)) return v.map((x) => cleDetail(String(x), l.action)).join(', ');
     // 0.16.0 : liste de numéros (demandes créées par un découpage).
-    if (Array.isArray(v) && !v.length) return t('audit.aucun');
+    if (Array.isArray(v) && !v.length) return t(feminin(cle) ? 'audit.aucune' : 'audit.aucun');
     if (Array.isArray(v) && v.every((x) => typeof x === 'string')) return v.join(', ');
     if (v === MASQUE) return t('audit.masque');
     const prefixe = CODES_ACTION[l.action]?.[cle] || CODES_FAMILLE[l.action.split('.')[0]]?.[cle] || CODES[cle];
@@ -250,7 +262,7 @@ export default function JournalPage() {
     if (DATES.has(cle) && typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v)) return dayjs(v).locale(lang).format('L');
     if (INSTANTS.has(cle) && typeof v === 'string' && /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(v)) return dayjs(`${v.replace(' ', 'T')}Z`).locale(lang).format('L LT');
     if (cle === 'mois_jour' && typeof v === 'string' && /^\d{2}-\d{2}$/.test(v)) return dayjs(`2000-${v}`).locale(lang).format('D MMMM');
-    if (vide(v)) return t('audit.aucun');
+    if (vide(v)) return t(feminin(cle) ? 'audit.aucune' : 'audit.aucun');
     return brut(v);
   };
   /** Champs affichés d'une ligne : les champs vides sont masqués, sauf « Avant » et « Après » ; les champs redondants aussi (R4). */

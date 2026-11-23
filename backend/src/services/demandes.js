@@ -261,6 +261,11 @@ function get(user, id) {
   // 0.20.0 (point 2, PLA-01, DV-161) : première date prévue des tâches ouvertes, lue par qui lit la demande (« Prévue le »),
   // sans le nom des ouvriers.
   f.intervention_prevue_le = require('./taches').interventionPrevue(d.id);
+  // 0.21.0 (point 5, SUI-03) : mention d'un changement de la date annoncée (date d'avant et moment du changement).
+  const dp = getDb().prepare('SELECT date_prevue_avant, date_prevue_modifiee_le FROM demandes WHERE id = ?').get(d.id);
+  // Une date retirée efface la mention en base (taches.js, règle 14) : rien à filtrer ici.
+  f.intervention_prevue_avant = dp ? dp.date_prevue_avant : null;
+  f.intervention_modifiee_le = dp ? dp.date_prevue_modifiee_le : null;
   const concerne = d.demandeur_id === user.id || (!!d.beneficiaire_id && d.beneficiaire_id === user.id);
   f.completable = concerne && !ETATS_FERMES.includes(d.etat) ? 1 : 0;
   const cycle = require('./cycle');

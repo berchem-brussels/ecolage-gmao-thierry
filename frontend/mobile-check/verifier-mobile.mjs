@@ -44,6 +44,8 @@
  * 0.20.0 (point 0, DV-159) : écran « visite et menu » (cadre et titre de la visite, menu touché pendant la visite) : 58 écrans.
  * 0.20.0 (point 5) : tâches d'une fiche, formulaire d'affectation avec les ouvriers proposés et le calendrier ouvert (le
  *   panneau du calendrier doit tenir dans l'écran), liste filtrée par équipe avec la liste « Équipe » ouverte : 61 écrans.
+ * 0.21.0 (étape 17) : fenêtre « Terminer » des heures d'une tâche, formulaire d'absence d'un ouvrier, planning, ses
+ *   fenêtres « Déplacer » (première période qui montre une tâche) et « Planifier » (tâche sans date) : 66 écrans.
  * 0.17.0 (point 7) : volet de la cloche ouvert (service technique et chef de service), onglet Courriel de Paramètres et
  *   fiche d'un modèle de courriel avec son aperçu (administrateur) : 45 écrans avec les trois comptes.
  */
@@ -65,7 +67,10 @@ const ROUTES = ['/', '/demandes/nouvelle', '/demandes', '/demandes-entite', '/pa
   // 0.19.0 (étape 15) : équipes, fiche d'une équipe à horaire propre (jours et heures), ouvriers et fiche d'un ouvrier.
   '/equipes', '/equipes#equipe', '/equipes?onglet=ouvriers', '/equipes?onglet=ouvriers#ouvrier',
   // 0.19.0 (point 3) : prestataires externes et fiche d'un prestataire.
-  '/equipes?onglet=prestataires', '/equipes?onglet=prestataires#prestataire'];
+  '/equipes?onglet=prestataires', '/equipes?onglet=prestataires#prestataire',
+  // 0.21.0 (étape 17) : absences d'un ouvrier (formulaire ouvert), planning, « Déplacer » et « Planifier » (fenêtre ouverte,
+  // rien n'est envoyé).
+  '/equipes?onglet=ouvriers#absence', '/planning', '/planning#deplacer-planning', '/planning#planifier'];
 const MOTEURS = (process.env.MOBILE_MOTEURS || 'chromium,webkit').split(',').map((m) => m.trim()).filter(Boolean);
 const TOUS = [
   ['iPhone SE (320 px)', devices['iPhone SE'], 'chromium'],
@@ -93,7 +98,9 @@ const COMPTES = [
       // 0.19.0 (point 4) : formulaire de qualification (corps de métier proposé) ; rien n'est envoyé.
       `/demandes-entite?demande=${f.aQualifier}#qualifier`] : []),
     // 0.20.0 (point 5) : tâches, affectation (calendrier ouvert), filtre Équipe ; rien n'est envoyé.
-    ...(f.taches ? [`/demandes-entite?demande=${f.taches}#taches`, `/demandes-entite?demande=${f.taches}#affecter`] : []),
+    ...(f.taches ? [`/demandes-entite?demande=${f.taches}#taches`, `/demandes-entite?demande=${f.taches}#affecter`,
+      // 0.21.0 (point 1) : « Terminer » sur une tâche à faire ouvre la fenêtre des heures ; rien n'est envoyé.
+      `/demandes-entite?demande=${f.taches}#terminer`] : []),
     ...(f.equipe ? [`/demandes-entite?equipe_id=${f.equipe}#filtre-equipe`] : []),
     // 0.19.0 (point 4) : fiche d'une catégorie (corps de métier par défaut).
     '/referentiel#categorie'] },
@@ -157,6 +164,40 @@ async function agir(page, action) {
     }
     case 'ouvrier': return cliquer(page.locator('.ant-table-row .ant-btn-link'), 'ouvrier');
     case 'prestataire': return cliquer(page.locator('.ant-table-row .ant-btn-link'), 'prestataire');
+    // 0.21.0 (point 2) : fiche du premier ouvrier, formulaire d'absence ouvert.
+    case 'absence': {
+      const e = await cliquer(page.locator('.ant-table-row .ant-btn-link'), 'ouvrier');
+      if (e) return e;
+      const bouton = page.locator('.ant-drawer-open .indisponibilites .ant-card-extra .ant-btn');
+      if (await bouton.count()) await bouton.first().scrollIntoViewIfNeeded();
+      return cliquer(bouton, '« Ajouter » une absence');
+    }
+    // 0.21.0 (points 3 et 4) : première période qui montre une tâche, puis sa fenêtre « Déplacer » ; « Planifier » d'une
+    // tâche sans date. Rien n'est envoyé.
+    case 'deplacer-planning': {
+      const action = page.locator('.planning-grille .planning-action');
+      for (let i = 0; i < 14 && !(await action.count()); i += 1) {
+        const e = await cliquer(page.locator('.planning-barre button:has(.anticon-right)'), 'période suivante');
+        if (e) return e;
+      }
+      const e = await cliquer(action, '« Déplacer »');
+      if (e) return e;
+      try { await page.locator('.planning-deplacer .ant-modal-content').first().waitFor({ timeout: 5000 }); } catch { return 'fenêtre « Déplacer » non ouverte'; }
+      return null;
+    }
+    case 'planifier': {
+      const e = await cliquer(page.locator('.planning-non-planifiees .planning-action'), '« Planifier »');
+      if (e) return e;
+      try { await page.locator('.planning-deplacer .ant-modal-content').first().waitFor({ timeout: 5000 }); } catch { return 'fenêtre « Planifier » non ouverte'; }
+      return null;
+    }
+    // 0.21.0 (point 1) : « Terminer » sur une tâche à faire (fenêtre des heures de début et de fin).
+    case 'terminer': {
+      const e = await cliquer(page.locator('.ant-drawer-open section.taches button').filter({ hasText: /^Terminer$|^Beëindigen$/ }), '« Terminer »');
+      if (e) return e;
+      try { await page.locator('.ant-modal-content').filter({ hasText: /Terminer la tâche|De taak beëindigen/ }).first().waitFor({ timeout: 5000 }); } catch { return 'fenêtre des heures non ouverte'; }
+      return null;
+    }
     // 0.20.0 (point 5) : section des tâches amenée à l'écran.
     case 'taches': {
       const sec = page.locator('.ant-drawer-open section.taches');

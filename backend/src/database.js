@@ -1043,6 +1043,42 @@ const MIGRATIONS = [
     DROP TABLE demande_transitions;
     ALTER TABLE demande_transitions_017 RENAME TO demande_transitions
   `],
+  // 0.21.0 (étape 17, point 5 ; SUI-03) : date prévue connue du demandeur, date d'avant et moment du changement.
+  // 0.21.0 (étape 17, point 2 ; PLA-04) : indisponibilités des ouvriers (période, journée ou demi-journée, motif en liste
+  // fermée, aucun texte libre ; voir services/indisponibilites.js).
+  // 0.21.0 (étape 17, point 1 ; R5 de la recette de la 0.20.0, DV-164) : heures réelles d'une tâche, en UTC
+  // (« AAAA-MM-JJ HH:MM:SS ») : début noté au démarrage, fin à la fin ; une tâche terminée sans avoir été démarrée reçoit
+  // les deux heures saisies. Les tâches déjà terminées restent sans heure. Le contrôle « fin après début » est fait par le
+  // service (une colonne ajoutée ne peut pas porter de contrainte sur deux colonnes).
+  ['018_planning', `
+    ALTER TABLE demande_taches ADD COLUMN debut_reel TEXT CHECK (debut_reel IS NULL OR (length(debut_reel) = 19 AND debut_reel GLOB '[0-9][0-9][0-9][0-9]-[0-1][0-9]-[0-3][0-9] [0-2][0-9]:[0-5][0-9]:[0-5][0-9]'));
+    ALTER TABLE demande_taches ADD COLUMN fin_reelle TEXT CHECK (fin_reelle IS NULL OR (length(fin_reelle) = 19 AND fin_reelle GLOB '[0-9][0-9][0-9][0-9]-[0-1][0-9]-[0-3][0-9] [0-2][0-9]:[0-5][0-9]:[0-5][0-9]'));
+    CREATE TABLE indisponibilites (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      entite_id INTEGER NOT NULL REFERENCES entites(id) ON DELETE RESTRICT,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
+      du TEXT NOT NULL CHECK (length(du) = 10 AND du GLOB '[0-9][0-9][0-9][0-9]-[0-1][0-9]-[0-3][0-9]'),
+      au TEXT NOT NULL CHECK (length(au) = 10 AND au GLOB '[0-9][0-9][0-9][0-9]-[0-1][0-9]-[0-3][0-9]'),
+      periode TEXT NOT NULL DEFAULT 'journee' CHECK (periode IN ('journee', 'matin', 'apres_midi')),
+      motif TEXT NOT NULL CHECK (motif IN ('conge', 'formation', 'autre')),
+      created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+      updated_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+      CHECK (au >= du),
+      CHECK (periode = 'journee' OR au = du)
+    );
+    CREATE INDEX idx_indispo_entite_dates ON indisponibilites(entite_id, du, au);
+    CREATE INDEX idx_indispo_user ON indisponibilites(user_id, du);
+    ALTER TABLE demandes ADD COLUMN date_prevue_connue TEXT;
+    ALTER TABLE demandes ADD COLUMN date_prevue_avant TEXT;
+    ALTER TABLE demandes ADD COLUMN date_prevue_modifiee_le TEXT
+  `, (db) => {
+    // 0.21.0 (point 5, SUI-03) : date prévue déjà connue du demandeur (première date des tâches ouvertes), pour qu'un
+    // changement après la mise à jour soit dit comme tel ; aucune mention de modification pour les dates déjà là.
+    db.prepare(`UPDATE demandes SET date_prevue_connue = (SELECT MIN(t.date_prevue) FROM demande_taches t
+      WHERE t.demande_id = demandes.id AND t.etat IN ('a_faire', 'en_cours') AND t.date_prevue IS NOT NULL)`).run();
+  }],
 ];
 
 function migrate() {

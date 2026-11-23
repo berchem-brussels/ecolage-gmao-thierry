@@ -78,6 +78,18 @@ const MESSAGES = {
   TACHE_PASSAGE_INTERDIT: { fr: 'Ce changement d’état de la tâche n’est pas permis.', nl: 'Deze statuswijziging van de taak is niet toegestaan.' },
   TACHE_MOTIF_REQUIS: { fr: 'Dites pourquoi la tâche est annulée.', nl: 'Zeg waarom de taak geannuleerd wordt.' },
   TACHE_MOTIF_INUTILE: { fr: 'Seule l’annulation d’une tâche prend un motif.', nl: 'Enkel de annulering van een taak heeft een reden.' },
+  // 0.21.0 (point 3, PLA-03) : planning.
+  PLANNING_PERIODE: { fr: 'Le planning se lit sur 1 à 14 jours, la fin après le début.', nl: 'De planning wordt gelezen over 1 tot 14 dagen, het einde na het begin.' },
+  // 0.21.0 (point 2, PLA-04) : indisponibilités des ouvriers.
+  INDISPO_DATES: { fr: 'La date de fin doit être le jour de début ou après.', nl: 'De einddatum moet de begindag of later zijn.' },
+  INDISPO_TROP_LONGUE: { fr: 'Une indisponibilité dure au plus un an ; saisissez-en plusieurs au besoin.', nl: 'Een onbeschikbaarheid duurt hoogstens een jaar; voer er zo nodig meerdere in.' },
+  INDISPO_DEMI_JOUR: { fr: 'Une demi-journée ne porte que sur un seul jour.', nl: 'Een halve dag geldt enkel voor één dag.' },
+  INDISPO_CHEVAUCHEMENT: { fr: 'Cet ouvrier a déjà une indisponibilité sur une partie de cette période.', nl: 'Deze arbeider heeft al een onbeschikbaarheid op een deel van deze periode.' },
+  // 0.21.0 (point 1, R5) : heures réelles d'une tâche.
+  TACHE_HEURES_REQUISES: { fr: 'Pour terminer une tâche qui n’a pas été démarrée, indiquez l’heure de début et l’heure de fin.', nl: 'Om een taak te beëindigen die niet gestart werd, geeft u het beginuur en het einduur op.' },
+  TACHE_HEURES_INUTILES: { fr: 'Les heures de début et de fin ne se saisissent que pour terminer une tâche qui n’a pas été démarrée.', nl: 'Begin- en einduur worden enkel ingevuld om een taak te beëindigen die niet gestart werd.' },
+  TACHE_FIN_AVANT_DEBUT: { fr: 'L’heure de fin doit venir après l’heure de début.', nl: 'Het einduur moet na het beginuur komen.' },
+  TACHE_HEURE_FUTURE: { fr: 'L’heure de début et l’heure de fin ne peuvent pas être dans le futur.', nl: 'Het beginuur en het einduur mogen niet in de toekomst liggen.' },
   AFFECTATION_DOUBLE: { fr: 'Confiez la tâche soit à une équipe, soit à des ouvriers, pas aux deux.', nl: 'Wijs de taak toe aan een ploeg of aan arbeiders, niet aan beide.' },
   OUVRIER_INVALIDE: { fr: 'Cette personne ne peut pas recevoir la tâche : elle doit avoir le rôle « Ouvrier » ou « Chef d’équipe » dans l’entité.', nl: 'Deze persoon kan de taak niet krijgen: ze moet de rol « Arbeider » of « Ploegbaas » hebben in de entiteit.' },
   EQUIPE_INVALIDE: { fr: 'Choisissez une équipe active de l’entité.', nl: 'Kies een actieve ploeg van de entiteit.' },

@@ -56,12 +56,14 @@ const lienService = (id) => `/demandes-entite?demande=${id}`;
 const { rolesWith, ROLES } = require('../roles');
 
 function charger(db, id) {
-  return db.prepare(`SELECT d.id, d.entite_id, d.numero, d.etat, d.lieu_id, d.danger, d.echeance_le, d.date_convenue, d.service_id,
+  return db.prepare(`SELECT d.id, d.entite_id, d.numero, d.etat, d.lieu_id, d.danger, d.echeance_le, d.date_convenue, d.service_id, d.date_prevue_connue,
     d.demandeur_id, d.beneficiaire_id, d.qualifiee_par, e.nom_fr AS entite_fr, e.nom_nl AS entite_nl
     FROM demandes d JOIN entites e ON e.id = d.entite_id WHERE d.id = ?`).get(id);
 }
 
 /** Règle 5 : valeurs du courriel dans une langue. */
+const DATE_A_FIXER = { fr: 'à fixer', nl: 'nog vast te leggen' };
+
 function valeurs(db, d, lang) {
   const chemin = require('./demandes').chemin(d.lieu_id).map((l) => l[`nom_${lang}`] || l.code).join(' › ');
   const e = db.prepare('SELECT libelle_fr, libelle_nl FROM demande_etats WHERE entite_id = ? AND code = ?').get(d.entite_id, d.etat);
@@ -73,7 +75,9 @@ function valeurs(db, d, lang) {
     const local = echeances.texteLocal(new Date(`${d.echeance_le.replace(' ', 'T')}Z`)).slice(0, 10).split('-').reverse().join('/');
     delai = DELAI.indicatif[lang].replace('{date}', local);
   } else delai = DELAI.convenir[lang];
-  return { numero: d.numero, lieu: chemin, etat: libelle ? libelle.l : d.etat, delai, entite: lang === 'nl' ? d.entite_nl : d.entite_fr };
+  // 0.21.0 (point 5, SUI-03) : date prévue de l'intervention, au format jj/mm/aaaa.
+  const datePrevue = d.date_prevue_connue ? d.date_prevue_connue.split('-').reverse().join('/') : DATE_A_FIXER[lang];
+  return { numero: d.numero, lieu: chemin, etat: libelle ? libelle.l : d.etat, delai, date_prevue: datePrevue, entite: lang === 'nl' ? d.entite_nl : d.entite_fr };
 }
 
 /**
@@ -134,6 +138,13 @@ function changement(db, { demandeId, de, vers, auteurId }) {
     const tous = [...concernes, ...suiveurs(db, d.id).map((userId) => ({ userId, lien: lienDemandeur(d.id) }))].map((x) => ({ ...x, variante: vers }));
     avertir(db, { evenement: 'demande.etat', d, auteurId, destinataires: tous });
   }
+}
+
+/** 0.21.0 (point 5, SUI-03) : date prévue changée, au demandeur, au bénéficiaire et aux personnes qui suivent. */
+function datePrevue(db, { demandeId, auteurId }) {
+  const d = charger(db, demandeId);
+  const tous = [d.demandeur_id, d.beneficiaire_id, ...suiveurs(db, d.id)].map((userId) => ({ userId, lien: lienDemandeur(d.id) }));
+  avertir(db, { evenement: 'demande.date_prevue', d, auteurId, destinataires: tous });
 }
 
 /** Rôles de l'entité qui ont une permission (« demandes:entite »…). */
@@ -288,4 +299,4 @@ function demarrerAlertes() {
   setTimeout(passe, 5000).unref?.();
 }
 
-module.exports = { depot, changement, message, filLu, ticketCree, ticketReponse, verifierEcheances, rattraper, demarrerAlertes, avertir, valeurs, ETATS_AVIS };
+module.exports = { depot, changement, datePrevue, message, filLu, ticketCree, ticketReponse, verifierEcheances, rattraper, demarrerAlertes, avertir, valeurs, ETATS_AVIS };

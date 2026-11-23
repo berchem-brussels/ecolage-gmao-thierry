@@ -45,7 +45,20 @@
  *      le jour est ouvré (horaire, jours fériés, congés, fermetures) ; charge planifiée : durées estimées des tâches
  *      ouvertes datées de ce jour qui lui sont confiées, directement ou par une de ses équipes (la tâche elle-même
  *      exclue). Ordre : même corps de métier que la tâche, disponible, charge croissante, nom. Filtre facultatif par
- *      compétence. Rien n'est écrit ; le gestionnaire choisit. Les absences s'ajoutent à l'étape 17 (PLA-04).
+ *      compétence. Rien n'est écrit ; le gestionnaire choisit. Depuis la 0.21.0 (point 2, PLA-04) : une indisponibilité de
+ *      la journée rend l'ouvrier non disponible ; une demi-journée est rendue (indisponible : 'matin' ou 'apres_midi')
+ *      sans changer la disponibilité ; jamais le motif. Depuis la 0.21.0 (point 4, PLA-06), l'affectation rend aussi les
+ *      conflits du jour (services/planning.js, règle 8), sans bloquer.
+ *  13. Heures réelles (0.21.0, point 1 ; R5 de la recette de la 0.20.0, DV-164), en UTC : « Démarrer » note l'heure de
+ *      début ; « Terminer » une tâche en cours note l'heure de fin (une tâche démarrée avant la 0.21.0 reste sans heure de
+ *      début) ; « Terminer » une tâche à faire exige l'heure de début et l'heure de fin (debut, fin), pour un encodage après
+ *      coup : fin après début (409 TACHE_FIN_AVANT_DEBUT), ni l'une ni l'autre dans le futur (409 TACHE_HEURE_FUTURE,
+ *      une minute de tolérance pour l'horloge du poste), les deux ou aucune (409 TACHE_HEURES_REQUISES) ; debut et fin
+ *      sont refusés pour tout autre passage (409 TACHE_HEURES_INUTILES). Remettre à faire une tâche en cours efface le
+ *      début ; rouvrir une tâche terminée ou annulée efface les deux heures ; une annulation les garde. Lues par le service,
+ *      l'API et le MCP (debut_reel, fin_reelle) ; nommées au journal du passage, jamais de texte libre. Base des heures
+ *      réalisées de l'ouvrier (étape 18) et des statistiques (étape 36).
+ *  14. Date prévue annoncée au demandeur et mention de son changement (0.21.0, point 5 ; SUI-03) : voir suivreDate().
  */
 const { getDb } = require('../database');
 const { AppError } = require('../envelope');
@@ -98,7 +111,7 @@ function modifiable(d) {
 }
 
 const COLUMNS = `t.id, t.demande_id, t.entite_id, t.rang, t.titre, t.consignes, t.corps_metier_id, t.duree_estimee_min, t.etat,
-  t.motif_annulation, t.annulation_auto, t.etat_depuis, t.created_by, t.updated_by, t.created_at, t.updated_at,
+  t.motif_annulation, t.annulation_auto, t.etat_depuis, t.debut_reel, t.fin_reelle, t.created_by, t.updated_by, t.created_at, t.updated_at,
   v.code AS corps_metier_code, v.libelle_fr AS corps_metier_libelle_fr, v.libelle_nl AS corps_metier_libelle_nl,
   t.equipe_id, t.date_prevue, t.heure_debut, q.code AS equipe_code, q.nom_fr AS equipe_nom_fr, q.nom_nl AS equipe_nom_nl`;
 const FROM = 'FROM demande_taches t LEFT JOIN listes_valeurs v ON v.id = t.corps_metier_id LEFT JOIN equipes q ON q.id = t.equipe_id';
@@ -197,7 +210,7 @@ function update(user, id, data, channel = 'api') {
 }
 
 /** Contrôles d'un passage de tâche (règles 2 à 4), sans rien écrire. */
-function controlerPassage(user, id, { etat, motif }) {
+function controlerPassage(user, id, { etat, motif, debut, fin }) {
   gestion(user);
   const t = load(user, id);
   const d = demandeDe(user, t.demande_id);
@@ -206,15 +219,41 @@ function controlerPassage(user, id, { etat, motif }) {
   const m = (motif || '').trim();
   if (etat === 'annulee' && !m) throw new AppError(409, 'TACHE_MOTIF_REQUIS');
   if (etat !== 'annulee' && m) throw new AppError(409, 'TACHE_MOTIF_INUTILE');
-  return { t, d, motif: m || null };
+  return { t, d, motif: m || null, heures: controlerHeures(t, etat, debut, fin) };
+}
+
+/** Règle 13 : heures saisies pour terminer une tâche à faire, rendues en UTC « AAAA-MM-JJ HH:MM:SS » ; null sinon. */
+function controlerHeures(t, etat, debut, fin) {
+  const saisie = debut !== undefined || fin !== undefined;
+  if (!(t.etat === 'a_faire' && etat === 'terminee')) {
+    if (saisie) throw new AppError(409, 'TACHE_HEURES_INUTILES');
+    return null;
+  }
+  if (!debut || !fin) throw new AppError(409, 'TACHE_HEURES_REQUISES');
+  const d0 = new Date(debut);
+  const d1 = new Date(fin);
+  if (Number.isNaN(d0.getTime()) || Number.isNaN(d1.getTime())) throw new AppError(409, 'TACHE_HEURES_REQUISES');
+  if (d0.getTime() > Date.now() + 60000 || d1.getTime() > Date.now() + 60000) throw new AppError(409, 'TACHE_HEURE_FUTURE');
+  if (d1.getTime() <= d0.getTime()) throw new AppError(409, 'TACHE_FIN_AVANT_DEBUT');
+  return { debut: versSql(d0), fin: versSql(d1) };
+}
+
+/** Règle 13 : heures réelles après le passage. */
+function heuresApres(t, etat, heures, maintenant) {
+  if (heures) return { debut: heures.debut, fin: heures.fin };
+  if (etat === 'en_cours') return { debut: maintenant, fin: null };
+  if (etat === 'terminee') return { debut: t.debut_reel, fin: maintenant };
+  if (etat === 'a_faire') return { debut: null, fin: null };
+  return { debut: t.debut_reel, fin: t.fin_reelle };
 }
 
 /** Effet d'un passage, sans l'écrire : première étape de l'annulation par le MCP (API-06). */
 function decrirePassage(user, id, data) {
-  const { t, d } = controlerPassage(user, id, data);
+  const { t, d, heures } = controlerPassage(user, id, data);
   const restantes = deDemande(d.id).filter((x) => x.id !== t.id && OUVERTS.includes(x.etat)).length;
   return { action: 'change_etat_tache', demande: { id: d.id, numero: d.numero }, tache: { id: t.id, rang: t.rang }, de: t.etat, vers: data.etat,
-    motif: data.motif ? 1 : 0, taches_encore_ouvertes: OUVERTS.includes(data.etat) ? restantes + 1 : restantes };
+    motif: data.motif ? 1 : 0, ...(heures ? { debut_reel: heures.debut, fin_reelle: heures.fin } : {}),
+    taches_encore_ouvertes: OUVERTS.includes(data.etat) ? restantes + 1 : restantes };
 }
 
 /**
@@ -222,14 +261,18 @@ function decrirePassage(user, id, data) {
  * et l'état de la demande après le passage.
  */
 function passer(user, id, data, channel = 'api') {
-  const { t, d, motif } = controlerPassage(user, id, data);
+  const { t, d, motif, heures } = controlerPassage(user, id, data);
   const db = getDb();
   const maintenant = versSql(new Date());
+  const h = heuresApres(t, data.etat, heures, maintenant);
   let demandeVers = null;
   db.transaction(() => {
-    db.prepare(`UPDATE demande_taches SET etat = ?, etat_depuis = ?, motif_annulation = ?, annulation_auto = NULL, updated_by = ?, updated_at = ? WHERE id = ?`)
-      .run(data.etat, maintenant, data.etat === 'annulee' ? motif : null, user.id, maintenant, t.id);
-    logAudit(user.id, 'tache.etat', 'tache', t.id, { numero: d.numero, rang: t.rang, de: t.etat, vers: data.etat, motif_donne: motif ? 1 : 0 }, channel, d.entite_id);
+    db.prepare(`UPDATE demande_taches SET etat = ?, etat_depuis = ?, motif_annulation = ?, annulation_auto = NULL, debut_reel = ?, fin_reelle = ?,
+      updated_by = ?, updated_at = ? WHERE id = ?`)
+      .run(data.etat, maintenant, data.etat === 'annulee' ? motif : null, h.debut, h.fin, user.id, maintenant, t.id);
+    // Règle 13 : heures nommées au journal quand le passage les note (démarrer, terminer).
+    const notees = data.etat === 'en_cours' ? { debut_reel: h.debut } : data.etat === 'terminee' ? { debut_reel: h.debut, fin_reelle: h.fin } : {};
+    logAudit(user.id, 'tache.etat', 'tache', t.id, { numero: d.numero, rang: t.rang, de: t.etat, vers: data.etat, motif_donne: motif ? 1 : 0, ...notees }, channel, d.entite_id);
     const cycle = require('./cycle');
     if (data.etat === 'en_cours') demandeVers = cycle.passageAuto(db, user, d.id, 'en_cours', channel);
     else if (!OUVERTS.includes(data.etat)) {
@@ -238,6 +281,7 @@ function passer(user, id, data, channel = 'api') {
     }
     // Règle 11 : une tâche fermée ou rouverte change les dates des tâches ouvertes.
     if (!demandeVers) demandeVers = replanifier(db, user, d.id, channel);
+    suivreDate(db, user, d.id, channel);
   })();
   const etat = getDb().prepare('SELECT etat FROM demandes WHERE id = ?').get(d.id).etat;
   return { ...get(user, id), demande_etat: etat, demande_passage_auto: demandeVers };
@@ -251,6 +295,30 @@ function replanifier(db, user, demandeId, channel) {
   const datee = db.prepare(`SELECT 1 FROM demande_taches WHERE demande_id = ? AND etat IN ('a_faire', 'en_cours') AND date_prevue IS NOT NULL`).get(demandeId);
   const cycle = require('./cycle');
   return datee ? cycle.passageAuto(db, user, demandeId, 'planifiee', channel) : cycle.passageAuto(db, user, demandeId, 'qualifiee', channel, { seulementDepuis: 'planifiee' });
+}
+
+/**
+ * Règle 14 (0.21.0, point 5 ; SUI-03) : la date prévue lue par le demandeur (première date des tâches ouvertes) est
+ * gardée sur la demande (date_prevue_connue). Quand une date déjà annoncée change, la demande garde la date d'avant et
+ * le moment du changement, le journal le note (sans texte) et le demandeur, le bénéficiaire et les personnes qui suivent
+ * reçoivent l'avis « demande.date_prevue » (cloche et courriel, jamais le nom des ouvriers). La première date passe par
+ * l'avis « Planifiée » ; une date retirée efface la mention (la demande revient « Qualifiée », avec son avis).
+ * Dans la transaction de l'appelant (passage d'une tâche, affectation).
+ */
+function suivreDate(db, user, demandeId, channel) {
+  const d = db.prepare('SELECT id, numero, entite_id, date_prevue_connue FROM demandes WHERE id = ?').get(demandeId);
+  const nouvelle = interventionPrevue(demandeId);
+  const ancienne = d.date_prevue_connue || null;
+  if (nouvelle === ancienne) return null;
+  if (ancienne && nouvelle) {
+    db.prepare(`UPDATE demandes SET date_prevue_connue = ?, date_prevue_avant = ?, date_prevue_modifiee_le = ? WHERE id = ?`)
+      .run(nouvelle, ancienne, versSql(new Date()), d.id);
+    logAudit(user.id, 'demande.date_prevue', 'demande', d.id, { numero: d.numero, avant: { date_prevue: ancienne }, apres: { date_prevue: nouvelle } }, channel, d.entite_id);
+    require('./avis').datePrevue(db, { demandeId: d.id, auteurId: user.id });
+    return 'modifiee';
+  }
+  db.prepare('UPDATE demandes SET date_prevue_connue = ?, date_prevue_avant = NULL, date_prevue_modifiee_le = NULL WHERE id = ?').run(nouvelle, d.id);
+  return nouvelle ? 'fixee' : 'retiree';
 }
 
 /** Première date prévue des tâches ouvertes (lue par le demandeur, règle 11), ou null. */
@@ -283,7 +351,7 @@ function affecter(user, id, data, channel = 'api') {
   const avant = { ouvriers: avantOuvriers, equipe_id: t.equipe_id, date_prevue: t.date_prevue, heure_debut: t.heure_debut, duree_estimee_min: t.duree_estimee_min };
   const apres = { ouvriers: apresOuvriers, equipe_id: equipe, date_prevue: date, heure_debut: heure, duree_estimee_min: duree ?? null };
   const changes = Object.keys(avant).filter((k) => JSON.stringify(avant[k]) !== JSON.stringify(apres[k]));
-  if (!changes.length) return { ...fiche(user, t), demande_etat: d.etat, demande_passage_auto: null };
+  if (!changes.length) return { ...fiche(user, t), demande_etat: d.etat, demande_passage_auto: null, conflits: require('./planning').conflitsAffectation(d.entite_id, fiche(user, t)) };
   const db = getDb();
   let demandeVers = null;
   db.transaction(() => {
@@ -296,9 +364,12 @@ function affecter(user, id, data, channel = 'api') {
       avant: Object.fromEntries(changes.map((k) => [k, avant[k]])), apres: Object.fromEntries(changes.map((k) => [k, apres[k]])),
     }, channel, d.entite_id);
     demandeVers = replanifier(db, user, d.id, channel);
+    suivreDate(db, user, d.id, channel);
   })();
   const etat = getDb().prepare('SELECT etat FROM demandes WHERE id = ?').get(d.id).etat;
-  return { ...get(user, id), demande_etat: etat, demande_passage_auto: demandeVers };
+  const apresTache = get(user, id);
+  // 0.21.0 (point 4, PLA-06) : conflits du jour pour les personnes concernées, sans bloquer.
+  return { ...apresTache, demande_etat: etat, demande_passage_auto: demandeVers, conflits: require('./planning').conflitsAffectation(d.entite_id, apresTache) };
 }
 
 /** Règle 12 : suggestion d'affectation pour une tâche (lecture seule). */
@@ -325,7 +396,9 @@ function suggestions(user, id, { date, competence_id: competence } = {}) {
       FROM equipe_membres m JOIN equipes q ON q.id = m.equipe_id WHERE m.user_id = ? AND q.entite_id = ? AND q.is_active = 1 ORDER BY q.ordre, q.nom_fr`)
       .all(jourSemaine, uid, entiteId);
     const suitEntite = !equipes.length || equipes.some((q) => !q.creneaux);
-    const disponible = equipes.some((q) => q.creneaux && q.creneau_du_jour) || (suitEntite && entiteOuvre);
+    // 0.21.0 (point 2, PLA-04) : une indisponibilité de la journée rend l'ouvrier indisponible ; une demi-journée est dite.
+    const indisponible = require('./indisponibilites').duJour(entiteId, uid, jour);
+    const disponible = indisponible !== 'journee' && (equipes.some((q) => q.creneaux && q.creneau_du_jour) || (suitEntite && entiteOuvre));
     const charge = db.prepare(`SELECT COUNT(*) AS n, COALESCE(SUM(t.duree_estimee_min), 0) AS minutes FROM demande_taches t
       WHERE t.entite_id = ? AND t.date_prevue = ? AND t.etat IN ('a_faire', 'en_cours') AND t.id <> ?
         AND (EXISTS (SELECT 1 FROM tache_ouvriers o WHERE o.tache_id = t.id AND o.user_id = ?)
@@ -334,7 +407,7 @@ function suggestions(user, id, { date, competence_id: competence } = {}) {
       id: u.id, prenom: u.first_name, nom: u.last_name, corps_metier: corps, competences,
       equipes: equipes.map(({ id: qid, code, nom_fr: nf, nom_nl: nn }) => ({ id: qid, code, nom_fr: nf, nom_nl: nn })),
       meme_corps: t.corps_metier_id && corps && corps.id === t.corps_metier_id ? 1 : 0,
-      disponible: disponible ? 1 : 0, charge_min: charge.minutes, nb_taches: charge.n, deja_affecte: affectes.has(uid) ? 1 : 0,
+      disponible: disponible ? 1 : 0, indisponible, charge_min: charge.minutes, nb_taches: charge.n, deja_affecte: affectes.has(uid) ? 1 : 0,
     };
   }).filter((x) => !competence || x.competences.some((c) => c.id === competence));
   lignes.sort((a, b) => b.meme_corps - a.meme_corps || b.disponible - a.disponible || a.charge_min - b.charge_min

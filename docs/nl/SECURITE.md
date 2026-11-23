@@ -2,6 +2,10 @@
 
 De Franse tekst (`docs/fr/SECURITE.md`) is rechtsgeldig en bevat het volledige rooster per versie.
 
+## 0.21.0 (20/11/2026)
+
+Werkelijke uren van de taken, afwezigheden van de arbeiders, planning per week en dag, niet-geplande taken en conflicten, datum aangekondigd aan de aanvrager, correcties van de test van 0.20.0. Getest: afwezigheden en planning van een andere entiteit geweigerd of leeg, via de API en de MCP; afwezigheid van een arbeider van beide entiteiten, genoteerd in de andere: zonder gevolg; reden van een afwezigheid nooit in het logboek en enkel getoond aan de beheerder en de verantwoordelijke; werkelijke uren nooit in de toekomst, einde na begin; migratie `018_planning` op een basis 0.20.0, terugkeer naar 0.20.0 geprobeerd. Bewijzen van falen: elf beschermingen, zie de Franse tekst. Telefooncontrole: 66 schermen zonder fout. Geen nieuwe afhankelijkheid.
+
 ## 0.20.0 (19/11/2026)
 
 Taken, toewijzing, « Gepland », voorstel van arbeiders, filters per ploeg en arbeider, correcties van de test van 0.19.0. Getest: taken en taken van een aanvraag van een andere entiteit geweigerd (403, 404 onbekend), via de API en de MCP; vakgebied, arbeider of ploeg van een andere entiteit geweigerd (409); filters van een andere entiteit: lege lijst; aanvrager zonder taken noch namen van arbeiders; teksten van taken nooit in het logboek; MCP-plafond van 60 oproepen nu getest; migratie `017_taches` op een basis 0.19.0. Bewijzen van falen: zie de Franse tekst. Gevonden en verbeterd: kalenderpaneel buiten het scherm op 320 px. Geen nieuwe afhankelijkheid.

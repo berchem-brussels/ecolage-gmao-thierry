@@ -2,6 +2,10 @@
 
 The French text (`docs/fr/SECURITE.md`) prevails and holds the full grid per version.
 
+## 0.21.0 (20/11/2026)
+
+Actual task times, workers' absences, weekly and daily planning, unplanned tasks and conflicts, date announced to the requester, fixes from the 0.20.0 acceptance test. Tested: absences and planning of another entity refused or empty, through the API and MCP; an absence of a worker of both entities recorded in the other one has no effect; the reason for an absence is never logged and shown only to the manager and the head of service; actual times never in the future, end after start; migration `018_planning` on a 0.20.0 database, rollback to 0.20.0 tried. Failure proofs: eleven protections, see the French text. Phone check: 66 screens without defect. No new dependency.
+
 ## 0.20.0 (19/11/2026)
 
 Tasks, assignment, « Planned », worker suggestions, filters per team and worker, fixes from the 0.19.0 acceptance test. Tested: tasks of a request of another entity refused (403, 404 unknown), through the API and MCP; trade, worker or team of another entity refused (409); filters of another entity: empty list; requester gets neither tasks nor worker names; task texts never in the log; MCP ceiling of 60 calls now tested; migration `017_taches` on a 0.19.0 base. Failure proofs: see the French text. Found and fixed: calendar panel off-screen at 320 px. No new dependency.

@@ -42,7 +42,7 @@ import { flatten } from '../lieux';
 import { hasPermission, useRoles } from '../useRoles';
 import {
   CANAUX, CLES_FILTRES, ETATS, type Demande, type FiltresGestion, type Transition, type VueDemandes,
-  cheminTexte, cleAction, dateDepot, extrait, filtresDepuisUrl, instant, qualifiable,
+  cheminTexte, cleAction, dateDepot, dejaQualifiee, extrait, filtresDepuisUrl, instant, qualifiable,
 } from '../demandes';
 import { DangerTag, EtatTag, FicheDemande, NonLusTag } from './DemandesPage';
 import BoutonExport from '../components/BoutonExport';
@@ -370,7 +370,7 @@ export default function GestionDemandesPage() {
         closable={{ 'aria-label': t(qualifier || action || decouper ? 'common.retour_fiche' : 'common.close') }}
         title={fiche ? `${qualifier ? t('qualif.titre') : decouper ? t('decoupage.titre') : action ? t(cleAction(fiche.etat, action.vers)) : t('demande.fiche')} ${fiche.numero}` : ''}
         extra={fiche && !qualifier && !action && !decouper && peutQualifier && qualifiable(fiche)
-          ? <Button type="primary" onClick={() => setQualifier(true)}>{fiche.etat === 'qualifiee' ? t('qualif.bouton.modifier') : t('qualif.bouton')}</Button> : null}>
+          ? <Button type="primary" onClick={() => setQualifier(true)}>{dejaQualifiee(fiche) ? t('qualif.bouton.modifier') : t('qualif.bouton')}</Button> : null}>
         {fiche && (qualifier
           ? <QualificationForm d={fiche} onCancel={() => setQualifier(false)} onDone={apresChangement} />
           : decouper

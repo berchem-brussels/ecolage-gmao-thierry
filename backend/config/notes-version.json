@@ -2,6 +2,32 @@
   "_description": "Notes de version pour les utilisateurs, en FR et en NL, sans terme technique (standard v3.2, sections 13.1 et 17.8 ; écart E-07). Une note par version, de la plus récente à la plus ancienne. Chaque ligne a un public : « tous », « admin » (administrateur de l'application) ou une permission du catalogue des rôles (par exemple « parametres:gerer »), lue dans l'entité active. La note de la version installée s'affiche une fois à la première connexion qui suit la mise à jour ; toutes restent relisibles dans Aide, Nouveautés.",
   "notes": [
     {
+      "version": "0.21.0",
+      "date": "2026-11-20",
+      "lignes": [
+        {
+          "public": "tous",
+          "fr": "Quand le service technique déplace votre intervention, votre demande affiche la nouvelle date, l'ancienne et le jour du changement ; vous en êtes prévenu par la cloche et par courriel.",
+          "nl": "Wanneer de technische dienst uw interventie verplaatst, toont uw aanvraag de nieuwe datum, de vorige en de dag van de wijziging; u wordt verwittigd via de bel en per e-mail."
+        },
+        {
+          "public": "equipes:lire",
+          "fr": "Nouvel écran « Planning » : la semaine ou le jour des ouvriers et des équipes, les tâches encore sans date et les conflits (absent, jour non travaillé, trop chargé). Le gestionnaire y déplace une tâche en la glissant ou par « Déplacer ».",
+          "nl": "Nieuw scherm « Planning »: de week of de dag van de arbeiders en de ploegen, de taken nog zonder datum en de conflicten (afwezig, geen werkdag, te zwaar belast). De beheerder verplaatst er een taak door ze te slepen of via « Verplaatsen »."
+        },
+        {
+          "public": "indisponibilites:gerer",
+          "fr": "Les congés, formations et autres absences d'un ouvrier se notent dans sa fiche (Équipes et prestataires, onglet Ouvriers) : il est signalé absent dans les ouvriers proposés et dans le planning, sans la cause.",
+          "nl": "Verlof, opleidingen en andere afwezigheden van een arbeider noteert u in zijn fiche (Ploegen en aannemers, tabblad Arbeiders): hij wordt als afwezig gemeld bij de voorgestelde arbeiders en in de planning, zonder de oorzaak."
+        },
+        {
+          "public": "demandes:traiter",
+          "fr": "« Démarrer » et « Terminer » notent l'heure de début et l'heure de fin d'une tâche ; une tâche terminée sans avoir été démarrée demande ses heures. Les dates se tapent au clavier sans envoyer le formulaire, et le clavier du téléphone ne cache plus le calendrier.",
+          "nl": "« Starten » en « Beëindigen » noteren het begin- en einduur van een taak; een taak die beëindigd wordt zonder gestart te zijn, vraagt haar uren. Datums worden met het toetsenbord ingetypt zonder het formulier te verzenden, en het toetsenbord van de telefoon verbergt de kalender niet meer."
+        }
+      ]
+    },
+    {
       "version": "0.20.0",
       "date": "2026-11-19",
       "lignes": [

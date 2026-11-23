@@ -267,7 +267,9 @@ module.exports = {
     titre: { type: 'string', minLength: 3, maxLength: 200 }, consignes: T.str(2000),
     corps_metier_id: { type: ['integer', 'null'], minimum: 1 }, duree_estimee_min: { type: ['integer', 'null'], minimum: 15, maximum: 10080 },
   }),
-  tacheEtat: obj({ etat: T.en('a_faire', 'en_cours', 'terminee', 'annulee'), motif: T.str(500) }, ['etat']),
+  // 0.21.0 (point 1, R5) : debut et fin (date et heure ISO 8601 avec fuseau) pour terminer une tâche jamais démarrée.
+  tacheEtat: obj({ etat: T.en('a_faire', 'en_cours', 'terminee', 'annulee'), motif: T.str(500),
+    debut: { type: 'string', format: 'date-time', maxLength: 40 }, fin: { type: 'string', format: 'date-time', maxLength: 40 } }, ['etat']),
   // Point 2 (PLA-01, DV-161) : affectation complète (remplace la précédente) ; une équipe ou des ouvriers, pas les deux.
   tacheAffectation: obj({
     ouvriers: { type: 'array', uniqueItems: true, maxItems: 10, items: T.int(1) }, equipe_id: { type: ['integer', 'null'], minimum: 1 },
@@ -290,6 +292,14 @@ module.exports = {
   }),
   equipeDeactivate: obj({ motif }, ['motif']),
   ouvrierList: listQuery({ equipe_id: T.int(1), corps_metier_id: T.int(1), competence_id: T.int(1) }),
+  // 0.21.0 (étape 17, point 3 ; PLA-03) : planning d'une période de 1 à 14 jours (par défaut la semaine en cours).
+  planningQuery: obj({ du: { type: 'string', format: 'date' }, au: { type: 'string', format: 'date' } }),
+  // 0.21.0 (étape 17, point 2 ; PLA-04) : indisponibilités des ouvriers ; du et au en AAAA-MM-JJ (au par défaut : du).
+  indispoList: listQuery({ user_id: T.int(1), du: { type: 'string', format: 'date' }, au: { type: 'string', format: 'date' } }),
+  indispoCreate: obj({ user_id: T.int(1), du: { type: 'string', format: 'date' }, au: { type: 'string', format: 'date' },
+    periode: T.en('journee', 'matin', 'apres_midi'), motif: T.en('conge', 'formation', 'autre') }, ['user_id', 'du', 'motif']),
+  indispoUpdate: obj({ du: { type: 'string', format: 'date' }, au: { type: 'string', format: 'date' },
+    periode: T.en('journee', 'matin', 'apres_midi'), motif: T.en('conge', 'formation', 'autre') }),
   // Prestataires externes (0.19.0, point 3 ; REF-07, EXT-03). Numéro d'entreprise : chiffres et points, contrôlé (modulo 97)
   // et normalisé par le service ; corps_metier : liste complète des identifiants.
   prestataireList: listQuery({ is_active: flag, corps_metier_id: T.int(1) }),

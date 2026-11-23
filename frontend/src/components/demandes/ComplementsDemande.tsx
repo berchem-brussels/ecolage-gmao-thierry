@@ -12,6 +12,7 @@ import { CalendarOutlined, CloseOutlined, DownOutlined, UpOutlined, UserOutlined
 import dayjs, { type Dayjs } from 'dayjs';
 import api, { qs } from '../../api';
 import { useI18n } from '../../contexts/I18nContext';
+import { saisieDate } from '../../saisieDate';
 
 export interface Collegue { id: number; prenom: string; nom: string }
 
@@ -113,7 +114,7 @@ export default function ComplementsDemande({ value, onChange }: Props) {
       {voirQuand && (
         <div id={idQuand} className="dem-complement">
           <label htmlFor={`${idQuand}-date`} className="dem-complement-label">{t('demande.quand.date')}</label>
-          <DatePicker id={`${idQuand}-date`} value={value.date} onChange={(d) => set({ date: d })} format="DD/MM/YYYY" inputReadOnly
+          <DatePicker id={`${idQuand}-date`} value={value.date} onChange={(d) => set({ date: d })} format="DD/MM/YYYY" {...saisieDate()}
             placeholder={t('demande.quand.date.placeholder')} style={{ width: '100%', maxWidth: 260 }}
             disabledDate={(d) => d.isBefore(dayjs().startOf('day')) || d.isAfter(dayjs().add(1, 'year'))} />
           <label htmlFor={`${idQuand}-creneau`} className="dem-complement-label" style={{ marginTop: 12 }}>{t('demande.quand.creneau')}</label>

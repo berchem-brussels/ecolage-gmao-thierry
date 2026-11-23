@@ -1,6 +1,10 @@
 # Architectuur
 
-Versie van de toepassing: **0.20.0** · De Franse tekst is rechtsgeldig (`docs/fr/ARCHITECTURE.md`); dit bestand vat elke versie samen.
+Versie van de toepassing: **0.21.0** · De Franse tekst is rechtsgeldig (`docs/fr/ARCHITECTURE.md`); dit bestand vat elke versie samen.
+
+## Werkelijke uren, afwezigheden, planning, conflicten en aangekondigde datum (0.21.0)
+
+Migratie `018_planning`: `demande_taches.debut_reel` en `fin_reelle` (UTC), tabel `indisponibilites` (arbeider, van, tot, hele dag / voormiddag / namiddag, reden verlof / opleiding / andere), drie kolommen van `demandes` voor de datum die de aanvrager leest en de vorige waarde. Diensten: `taches.js` regels 13 (werkelijke uren) en 14 (`suivreDate()`, bericht `demande.date_prevue`), `indisponibilites.js` (regels 1 tot 6), `planning.js` (regels 1 tot 9: periode van 1 tot 14 dagen, capaciteit, conflicten `absent` / `jour_non_travaille` / `trop_charge`, niet-geplande taken). Routes `/api/indisponibilites` en `GET /api/planning`; zes MCP-tools (180); toelating `indisponibilites:gerer`. De reden van een afwezigheid komt nooit in het logboek en wordt enkel aan de beheerder en de verantwoordelijke getoond. Interface: `PlanningPage.tsx` (slepen, venster « Verplaatsen » en « Plannen »), `IndisponibilitesOuvrier.tsx`, venster « De taak beëindigen » in `TachesDemande.tsx`, `saisieDate.ts`. Correcties van de test van 0.20.0 (DV-164). Telefooncontrole: 66 schermen.
 
 ## Taken, toewijzing, voorstel en filters per ploeg (0.20.0)
 

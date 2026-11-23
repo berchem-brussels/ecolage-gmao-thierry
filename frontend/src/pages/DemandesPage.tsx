@@ -183,7 +183,17 @@ export function FicheDemande({ d, avecDemandeur, service = false, onChange }: { 
       )}
       {d.date_souhaitee && <Descriptions.Item label={t('demande.champ.date_souhaitee')}>{dateSouhaitee(d.date_souhaitee, lang)}</Descriptions.Item>}
       {/* 0.20.0 (point 2, DV-161) : date prévue de l'intervention, sans le nom des ouvriers. */}
-      {d.intervention_prevue_le && <Descriptions.Item label={t('demande.champ.intervention_prevue')}>{dateSouhaitee(d.intervention_prevue_le, lang)}</Descriptions.Item>}
+      {d.intervention_prevue_le && (
+        <Descriptions.Item label={t('demande.champ.intervention_prevue')}>
+          {dateSouhaitee(d.intervention_prevue_le, lang)}
+          {/* 0.21.0 (point 5, SUI-03) : mention du dernier changement de la date annoncée. */}
+          {d.intervention_prevue_avant && d.intervention_modifiee_le && (
+            <Typography.Text type="secondary" className="date-prevue-modifiee" style={{ display: 'block', fontSize: 13 }}>
+              {`${t('demande.date_modifiee')} ${instant(d.intervention_modifiee_le)} (${t('demande.date_avant')} ${dateSouhaitee(d.intervention_prevue_avant, lang)})`}
+            </Typography.Text>
+          )}
+        </Descriptions.Item>
+      )}
       {d.creneau && <Descriptions.Item label={t('demande.champ.creneau')}>{d.creneau}</Descriptions.Item>}
       {/* 0.15.0 (R3 de la recette de la 0.14.0) : plus de délai annoncé sur une demande fermée. */}
       {/* 0.16.0 : en attente de l'accord du chef de service, les délais ne courent pas encore. */}

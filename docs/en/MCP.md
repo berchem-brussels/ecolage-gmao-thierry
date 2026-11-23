@@ -1,6 +1,10 @@
 # MCP server
 
-Application version: **0.20.0** · Updated on 19/11/2026 · The French text prevails (`docs/fr/MCP.md`).
+Application version: **0.21.0** · Updated on 20/11/2026 · The French text prevails (`docs/fr/MCP.md`).
+
+## 0.21.0
+
+Six new tools: `list_indisponibilites`, `get_indisponibilite`, `create_indisponibilite`, `update_indisponibilite` (a worker's absences; the reason is returned only to the manager and the head of service), `delete_indisponibilite` (two calls), `get_planning` (read only: 1 to 14 days, workers, teams, load, capacity, conflicts, dated and unplanned tasks). `change_etat_tache` accepts `debut` and `fin` and returns `debut_reel`, `fin_reelle`; `affecter_tache` returns `conflits` (never blocking); `suggerer_affectation_tache` returns `indisponible`; `get_demande` carries `intervention_prevue_avant` and `intervention_modifiee_le`. 180 tools. No new route outside MCP.
 
 ## 0.20.0
 

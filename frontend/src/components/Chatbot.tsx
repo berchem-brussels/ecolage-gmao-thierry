@@ -33,6 +33,7 @@ export const ACCES_ECRANS: [string, Acces][] = [
   ['/referentiel', { permission: 'categories:gerer' }],
   ['/listes', { permission: 'listes:gerer' }],
   ['/equipes', { permission: 'equipes:lire' }],
+  ['/planning', { permission: 'equipes:lire' }],
   ['/reglages-entite', { permission: 'parametres:gerer' }],
   ['/services', { admin: true }], ['/parametres', { admin: true }], ['/journal', { admin: true }], ['/entites', { admin: true }], ['/users', { admin: true }],
 ];

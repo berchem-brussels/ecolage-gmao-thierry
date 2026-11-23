@@ -1,6 +1,6 @@
 # Écarts
 
-Version de l'application : **0.20.0** · Mis à jour le 19/11/2026
+Version de l'application : **0.21.0** · Mis à jour le 20/11/2026
 
 Écarts mesurés entre le code, le standard (v3.3 depuis la 0.9.1), le gabarit v3 (1.1.0, puis 1.3.0 pour les modules de l'étape 8 bis) et le cahier des charges. Un numéro attribué ne change plus. Les écarts relevés à l'écriture du cahier des charges portent le préfixe EG (section 33 du cahier des charges) ; ceux du développement le préfixe E.
 
@@ -59,6 +59,7 @@ Version de l'application : **0.20.0** · Mis à jour le 19/11/2026
 | E-49 | 0.17.0 | Remarque de DV-137 : la fiche que lit le chef de service est corrigée à l'écran (« … du chef de service ») ; l'API et le MCP rendent encore au chef le libellé de l'état écrit pour le demandeur (« En attente de l'accord de votre chef de service ») | Le libellé de l'état est réglé par entité pour le demandeur et la GRC (CYC-04) ; un libellé « tiers » côté serveur serait un réglage de plus : à décider avec l'étape 38 (GRC) | Ouvert, sans incidence à l'écran |
 | E-50 | 0.18.0 | `exceljs` ^4.4.0 (dans le stack, TEC-03) dépend de `uuid` 8.3.2 ; `npm audit --omit=dev` du serveur signale deux avis modérés (GHSA-w5hq-g745-h8pq : contrôle des bornes manquant dans les versions 3, 5 et 6 de `uuid` quand un tampon est fourni) ; `exceljs` n'appelle que `uuid.v4()` sans tampon : chemin non emprunté. Le correctif proposé par `npm audit fix --force` ramènerait `exceljs` à la 3.4.0 (régression) | Aucun forçage de version (`overrides` vers `uuid` 11) sans l'accord de Renaud (DV-72) ; le travail `tests` de GitHub n'échoue pas sur un avis modéré ; minimum d'`exceljs` gardé par `dependances.test.js` | Ouvert, à décider par Renaud |
 | E-51 | 0.20.0 | Alerte CodeQL n° 11 du dépôt (« Workflow does not contain permissions ») sur `.github/workflows/ci.yml`, fichier repris à l'identique de `GITHUB.md`, section 7 : le travail n'a pas de bloc `permissions`, il reçoit donc les droits par défaut du jeton de GitHub au lieu du seul droit de lecture. Alerte ancienne, relevée à la recette de la 0.19.0 (DV-159) | Ajouter `permissions: contents: read` en tête de `ci.yml` ; le fichier étant imposé par `GITHUB.md`, la correction passe par le standard (section 7 de `GITHUB.md`) ou un accord de Renaud. Aucune brique hors stack | Ouvert, soumis à Renaud |
+| E-52 | 0.21.0 | PLA-06 : conflit quand un ouvrier est affecté « au-delà de sa durée de travail journalière » ; l'horaire de l'entité et celui des équipes ne connaissent qu'un début et une fin par jour, sans pause ; la capacité comptée va donc du début à la fin du créneau, pause comprise (moitié pour une demi-journée d'absence), et « Trop chargé » apparaît un peu plus tard que la durée réellement travaillée | Pause à ajouter à l'horaire si l'atelier le demande (donnée nouvelle, dans le stack) ; d'ici là, capacité dite « du début à la fin du créneau » dans l'aide et le code (`planning.js`, règle 7). Aucune brique hors stack | Accepté pour la démonstration ; à revoir en atelier |
 
 ## 2. Écarts relevés au cahier des charges (gabarit et standard)
 

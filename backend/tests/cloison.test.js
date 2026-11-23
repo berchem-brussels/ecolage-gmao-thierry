@@ -61,6 +61,8 @@ const RESSOURCES = [
   { route: 'GET /api/taches/:id', tool: 'get_tache', id: (ent) => objets[ent.code].tache },
   // 0.20.0 (point 3, PLA-02) : ouvriers proposés pour une tâche de l'autre entité.
   { route: 'GET /api/taches/:id/suggestions', tool: 'suggerer_affectation_tache', id: (ent) => objets[ent.code].tache },
+  // 0.21.0 (point 2, PLA-04) : indisponibilité d'un ouvrier.
+  { route: 'GET /api/indisponibilites/:id', tool: 'get_indisponibilite', id: (ent) => objets[ent.code].indispo },
 ];
 
 /** Écritures cloisonnées : même attente, 403 depuis l'autre entité, et l'objet n'a pas bougé. */
@@ -113,6 +115,8 @@ const ECRITURES = [
   { route: 'PUT /api/taches/:id', body: { titre: 'Piraté' }, tool: 'update_tache', id: (ent) => objets[ent.code].tache },
   { route: 'POST /api/taches/:id/etat', body: { etat: 'annulee', motif: 'Piraté' }, tool: 'prepare_change_etat_tache', id: (ent) => objets[ent.code].tache },
   { route: 'PUT /api/taches/:id/affectation', body: { date_prevue: '2099-01-01' }, tool: 'affecter_tache', id: (ent) => objets[ent.code].tache },
+  { route: 'PUT /api/indisponibilites/:id', body: { motif: 'autre' }, tool: 'update_indisponibilite', id: (ent) => objets[ent.code].indispo },
+  { route: 'DELETE /api/indisponibilites/:id', tool: 'prepare_delete_indisponibilite', id: (ent) => objets[ent.code].indispo },
   { route: 'POST /api/tickets/:id/faq', body: { question_fr: 'Piraté', question_nl: 'Piraté', answer_fr: 'Piraté', answer_nl: 'Piraté' }, tool: 'create_faq_from_ticket', id: (ent) => objets[ent.code].ticket },
 ];
 
@@ -159,7 +163,11 @@ before(async () => {
     // 0.20.0 (point 1, CYC-03) : une tâche sur la demande de l'entité.
     const tache = await c.post(`/api/demandes/${demande.body.data.id}/taches`, { titre: `Tâche ${ent.code}` });
     assert.equal(tache.status, 201, JSON.stringify(tache.body));
-    objets[ent.code] = { tache: tache.body.data.id, notification: notification.id, lieu: lieu.body.data.id, modele: modele.id, valeur: valeur.id, categorie: categorie.id, jour: jour.id, demande: demande.body.data.id, question: question.id, piece: piece.body.data.id, ticket: ticket.body.data.id, faq: faq.body.data.id };
+    // 0.21.0 (point 2, PLA-04) : un ouvrier de l'entité et son indisponibilité.
+    const ouvrier = await person(srv.base, admin, `ouvrier.${ent.code}@exemple.test`, ent.id, [[ent.id, 'ouvrier']]);
+    const indispo = await c.post('/api/indisponibilites', { user_id: ouvrier.id, du: '2099-03-02', motif: 'conge' });
+    assert.equal(indispo.status, 201, JSON.stringify(indispo.body));
+    objets[ent.code] = { indispo: indispo.body.data.id, tache: tache.body.data.id, notification: notification.id, lieu: lieu.body.data.id, modele: modele.id, valeur: valeur.id, categorie: categorie.id, jour: jour.id, demande: demande.body.data.id, question: question.id, piece: piece.body.data.id, ticket: ticket.body.data.id, faq: faq.body.data.id };
   }
 });
 after(() => srv.stop());
@@ -230,6 +238,8 @@ for (const w of ECRITURES) {
     assert.deepEqual(taches.map((t) => [t.titre, t.etat, t.date_prevue]), [['Tâche BB', 'a_faire', null]], 'aucune tâche ajoutée, modifiée, annulée ni datée');
     const ticket = (await gestB.get(`/api/tickets/${objets.BB.ticket}`)).body.data;
     assert.equal(ticket.status, 'new', 'le ticket n’a pas été pris en charge');
+    const indispo = (await gestB.get(`/api/indisponibilites/${objets.BB.indispo}`)).body.data;
+    assert.deepEqual([indispo.du, indispo.motif], ['2099-03-02', 'conge'], 'indisponibilité ni modifiée ni supprimée');
     assert.equal(ticket.priority, 'P4');
     assert.equal(ticket.messages.filter((m) => m.kind === 'message').length, 0, 'aucun message ajouté');
     assert.equal(ticket.faq_id, null, 'aucune entrée de FAQ née du ticket');
@@ -349,6 +359,6 @@ test('toute route qui porte un identifiant d’entité figure dans la liste des 
     const key = `${r.method} ${r.path}`;
     if (/^\/api\/entites\/:id/.test(r.path) && !instance.has(key)) assert.ok(declared.has(key), `${key} hors de la liste`);
     // Ressources métier rattachées à une entité : toute route à identifiant est essayée depuis l'autre entité.
-    if (/^\/api\/(lieux|listes-valeurs|categories|questions-categorie|jours-non-ouvres|demandes|pieces|tickets|notifications|taches)\/:id/.test(r.path)) assert.ok(declared.has(key) || ecritures.has(key), `${key} hors de la liste`);
+    if (/^\/api\/(lieux|listes-valeurs|categories|questions-categorie|jours-non-ouvres|demandes|pieces|tickets|notifications|taches|indisponibilites)\/:id/.test(r.path)) assert.ok(declared.has(key) || ecritures.has(key), `${key} hors de la liste`);
   }
 });

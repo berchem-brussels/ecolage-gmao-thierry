@@ -37,6 +37,8 @@ async function qualifiee(corps = V.elec) {
 }
 const ajouter = (c, id, body) => c.post(`/api/demandes/${id}/taches`, body);
 const passer = (c, id, body) => c.post(`/api/taches/${id}/etat`, body);
+// 0.21.0 (point 1, R5) : terminer une tâche jamais démarrée exige l'heure de début et l'heure de fin.
+const H = () => ({ debut: new Date(Date.now() - 3600000).toISOString(), fin: new Date(Date.now() - 60000).toISOString() });
 const etatDemande = (id) => getDb().prepare('SELECT etat FROM demandes WHERE id = ?').get(id).etat;
 
 before(async () => {
@@ -170,7 +172,7 @@ test('effet sur la demande : une tâche démarre → « En cours » ; la derniè
   const jt = JSON.parse(getDb().prepare("SELECT details_json AS details FROM audit_log WHERE action = 'demande.transition' AND entity_id = ? ORDER BY id DESC").get(d.id).details);
   assert.equal(jt.auto, 'taches');
   assert.equal((await passer(gest, t1.id, { etat: 'terminee' })).body.data.demande_etat, 'en_cours', 'une tâche encore ouverte');
-  const f = await passer(gest, t2.id, { etat: 'terminee' });
+  const f = await passer(gest, t2.id, { etat: 'terminee', ...H() });
   assert.equal(f.body.data.demande_etat, 'terminee');
   assert.equal(f.body.data.demande_passage_auto, 'terminee');
   assert.equal((await ajouter(gest, d.id, { titre: 'Trop tard' })).body.code, 'TACHES_FIGEES');
@@ -213,7 +215,7 @@ test('demande annulée par le service : tâches ouvertes annulées automatiqueme
   const t1 = (await ajouter(gest, d.id, { titre: 'Faite avant l’annulation' })).body.data;
   const t2 = (await ajouter(gest, d.id, { titre: 'Encore à faire' })).body.data;
   const t3 = (await ajouter(gest, d.id, { titre: 'Démarrée' })).body.data;
-  await passer(gest, t1.id, { etat: 'terminee' });
+  await passer(gest, t1.id, { etat: 'terminee', ...H() });
   await passer(gest, t3.id, { etat: 'en_cours' });
   assert.equal(etatDemande(d.id), 'en_cours');
   const r = await gest.post(`/api/demandes/${d.id}/transitions`, { etat: 'annulee', commentaire: 'Regroupée par téléphone.' });
@@ -234,7 +236,7 @@ test('MCP : liste, création, modification, passage en deux appels (rien d’éc
   assert.equal((await tool(gest, 'list_taches_demande', { id: d.id })).data.length, 1);
   assert.equal((await tool(gest, 'update_tache', { id: c.data.id, titre: 'Renommée par le MCP' })).data.titre, 'Renommée par le MCP');
   assert.equal((await tool(gest, 'get_tache', { id: c.data.id })).data.titre, 'Renommée par le MCP');
-  const p = await tool(gest, 'prepare_change_etat_tache', { id: c.data.id, etat: 'terminee' });
+  const p = await tool(gest, 'prepare_change_etat_tache', { id: c.data.id, etat: 'terminee', ...H() });
   assert.equal(p.data.de, 'a_faire');
   assert.equal(p.data.vers, 'terminee');
   assert.equal(p.data.taches_encore_ouvertes, 0);
@@ -352,7 +354,7 @@ test('planification : tâche fermée ou démarrée, requalification, passages de
   // Démarrage depuis « Planifiée » ; fin des tâches → « Travaux terminés ».
   assert.equal((await passer(gest, t2.id, { etat: 'en_cours' })).body.data.demande_etat, 'en_cours');
   await passer(gest, t2.id, { etat: 'terminee' });
-  assert.equal((await passer(gest, t1.id, { etat: 'terminee' })).body.data.demande_etat, 'terminee');
+  assert.equal((await passer(gest, t1.id, { etat: 'terminee', ...H() })).body.data.demande_etat, 'terminee');
   // Le demandeur annule une demande planifiée (passage du demandeur copié de « Qualifiée »).
   const p = await qualifiee();
   const tp = (await ajouter(gest, p.id, { titre: 'À annuler' })).body.data;
@@ -546,7 +548,7 @@ test('migration 017 sur une base de la 0.19.0 : table des tâches créée, deman
   assert.equal(out.status, 0, out.stderr);
   assert.match(out.stdout, /\[DB\] Migration 017_taches appliquée/);
   const r = JSON.parse(out.stdout.trim().split('\n').pop());
-  assert.equal(r.migrations.at(-1), '017_taches');
+  assert.equal(r.migrations.at(-1), '018_planning', 'la 018 suit (0.21.0)');
   for (const c of ['demande_id', 'entite_id', 'rang', 'titre', 'consignes', 'corps_metier_id', 'duree_estimee_min', 'etat', 'motif_annulation', 'annulation_auto',
     'equipe_id', 'date_prevue', 'heure_debut']) assert.ok(r.colonnes.includes(c), c);
   assert.ok(r.ouvriers, 'table des ouvriers d’une tâche');
