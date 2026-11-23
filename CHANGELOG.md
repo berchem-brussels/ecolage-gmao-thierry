@@ -1,6 +1,22 @@
 # Journal des versions
 
-Version de l'application : **0.20.0** · Mis à jour le 19/11/2026
+Version de l'application : **0.21.0** · Mis à jour le 20/11/2026
+
+## 0.21.0 (20/11/2026)
+
+Étape 17 : heures réelles des tâches, indisponibilités des ouvriers, planning semaine et jour, tâches non planifiées, conflits, date annoncée au demandeur (PLA-03 à PLA-06, SUI-03 ; DV-165 à DV-172), avec les remarques de la recette de la 0.20.0 (DV-164). Garde (PLA-09) reportée à l'étape 21 (DV-166). Migration `018_planning`. Aucune dépendance nouvelle. Permission nouvelle : `indisponibilites:gerer` (gestionnaire, responsable).
+
+- Point 0 (DV-164, DV-168) : saisie des dates (`saisieDate.ts`) : calendrier seul sur écran tactile, date tapée au clavier sans envoi par Entrée (R1) ; « Modifier la qualification » dès que la demande est qualifiée ou planifiée (R3) ; journal : dates en jj/mm/aaaa et valeur vide « aucune » au féminin (R4). R2 : rôle de Renaud Ziegler voulu, rien à corriger.
+- Heures réelles (R5, DV-169, `taches.js` règle 13) : « Démarrer » mis en avant et note le début ; « Terminer » note la fin ; une tâche à faire terminée demande ses heures (fenêtre « Terminer la tâche ») ; fin après début, jamais dans le futur (`TACHE_FIN_AVANT_DEBUT`, `TACHE_HEURE_FUTURE`, `TACHE_HEURES_REQUISES`, `TACHE_HEURES_INUTILES`) ; « Réalisée du … au … » sur la tâche.
+- Indisponibilités (DV-170, `services/indisponibilites.js`, `/api/indisponibilites`) : du, au, journée ou demi-journée, motif congé / formation / autre ; chevauchement refusé ; motif au seul gestionnaire et responsable, jamais au journal ; section « Indisponibilités » de la fiche d'un ouvrier ; « Indisponible ce jour » dans les ouvriers proposés.
+- Planning (DV-171, `services/planning.js`, `GET /api/planning`, écran `/planning`) : semaine ou jour, par ouvrier ou par équipe, charge du jour, absences sans cause, jours non travaillés grisés ; glisser-déposer et « Déplacer » par l'affectation existante ; tâches non planifiées au-dessus de la grille et « Planifier » ; conflits « Absent », « Jour non travaillé », « Trop chargé », jamais bloquants, rendus aussi par l'affectation (`conflits`).
+- Date annoncée (DV-172, `taches.js` règle 14) : un changement de la date annoncée garde l'ancienne date et le jour du changement, s'inscrit au journal (`demande.date_prevue`) et prévient le demandeur, le bénéficiaire et les personnes qui suivent (avis `demande.date_prevue`, cloche et courriel, modèle livré, variable `{date_prevue}`) ; fiche du demandeur « Date modifiée le … (prévue auparavant le …) ».
+- MCP : six outils (`list_indisponibilites`, `get_indisponibilite`, `create_indisponibilite`, `update_indisponibilite`, `delete_indisponibilite`, `get_planning`) ; 180 outils ; `change_etat_tache` reçoit `debut` et `fin`, `affecter_tache` rend `conflits`.
+- Aide : fiche « Planning » (vue d'ensemble, deux procédures, deux questions, deux captures) ; procédure « Noter une absence d'un ouvrier » ; heures, conflits et absences dans « Demandes de l'entité » ; « Date modifiée » dans « Mes demandes » ; captures `planning-overview`, `planning-deplacer`, `equipes-indisponibilites` et deux refaites (FR et NL). Assistant : quatre intentions ; visite guidée : « Planning » cité.
+- `mobile:check` : 66 écrans. `recette.sh` : contrôle 3 (capture du planning), contrôle 5 (`018_planning`, dix tables, cinq colonnes), contrôle 6 (planning et indisponibilités refusés sans session).
+- Documentation : fiche fonctionnelle `docs/fonctionnel/taches-planning.md` (tâches de la 0.20.0 comprises, registre des traitements) ; sections 0.21.0 d'ARCHITECTURE, EXPLOITATION, MCP, SECURITE et APRES-DEPLOIEMENT (FR, NL, EN) ; trois `README`.
+- Note de version : quatre lignes (tous ; `equipes:lire` ; `indisponibilites:gerer` ; `demandes:traiter`).
+- Tests : serveur 696 (667), interface 389 (370) et un contrôle des captures ; preuves d'échec dans `docs/fr/SECURITE.md`.
 
 ## 0.20.0 (19/11/2026)
 

@@ -2,6 +2,40 @@
 
 Le français fait foi. Grille de la section 10.2 du standard, rejouée à chaque version. « Non joué » veut dire que le contrôle n'a pas tourné.
 
+## 0.21.0 (20/11/2026)
+
+Étape 17 : remarques de la recette 0.20.0 (saisie des dates, bouton « Modifier la qualification », journal) ; heures réelles des tâches ; indisponibilités des ouvriers ; planning semaine et jour ; tâches non planifiées et conflits ; date annoncée au demandeur. Environnement : bac à sable de Claude, Node 22 ; parcours `ci.yml` rejoué sous Node 20.20.2 ; copie locale (API Node en production et relais HTTPS) partie d'une base de la 0.20.0.
+
+| Famille | Contrôle | Résultat |
+| --- | --- | --- |
+| Autorisation (cloison) | Indisponibilités d'une autre entité : lecture, modification, suppression refusées (403 ; 404 inconnue), par l'API et par le MCP ; ouvrier d'une autre entité refusé (409) ; planning d'une autre entité : ni ouvriers, ni équipes, ni tâches ; absence d'un ouvrier des deux entités notée dans l'autre : sans effet sur le planning, les ouvriers proposés et les conflits | Conforme (`cloison.test.js`, `indisponibilites.test.js`, `planning.test.js`) |
+| Autorisation | Indisponibilités : écriture `indisponibilites:gerer` (gestionnaire, responsable), lecture aussi `equipes:lire` ; motif rendu seulement à qui gère (PLA-04) ; planning `equipes:lire` ou `demandes:traiter`, demandeur et ouvrier refusés (403) ; déplacements par l'affectation existante (`demandes:traiter`) ; le demandeur ne lit que la date, jamais les ouvriers | Conforme |
+| Validation | Schémas `tacheEtat` (début, fin en date-heure), `indispoCreate/Update/List`, `planningQuery` ; heures réelles : fin après début, jamais dans le futur (une minute de tolérance), refusées hors de « Terminer » ; absence : un an au plus, demi-journée sur un seul jour, chevauchement refusé ; période du planning de 1 à 14 jours | Conforme |
+| Injections | Requêtes à colonnes constantes ; listes `IN` construites par des marques de paramètres | Conforme (`securite.test.js`) |
+| Données (RGPD) | Motif d'une absence jamais au journal (`motif_change` 0 ou 1) ni montré au chef d'équipe, au planning ou aux ouvriers proposés ; aucun texte libre sur une absence ; heures réelles au journal du passage, sans texte ; avis de date modifiée sans nom d'ouvrier ; registre dans `docs/fonctionnel/taches-planning.md` | Conforme |
+| LLM et MCP | Six outils nouveaux, mêmes fonctions de service ; suppression d'une absence en deux appels ; 180 outils | Conforme (`mcp.test.js`) |
+| Interface | `mobile:check` complet : 66 écrans, six appareils, parcours sur deux moteurs, sans défaut ; défauts trouvés à la relecture des captures et corrigés : libellé « Au (facultatif) (optionnel) », bouton « Verplaatsen » hors de sa carte en NL | Conforme |
+| Secrets commités | Aucun secret ni valeur de NIXUS ; captures sur une base de démonstration | Conforme |
+| Infrastructure | Dockerfile, compose, `nginx.conf`, `backup.sh`, `.env`, `ci.yml` inchangés | Conforme |
+| Dépendances | Aucune dépendance nouvelle | E-50 et E-09 inchangés |
+| Migration | `018_planning` sur une base 0.20.0 : table et colonnes ajoutées, date annoncée reprise sans avis, pas de relance ; la 0.20.0 redémarre sur la base migrée | Conforme (`date-prevue.test.js`, copie locale) |
+
+Preuves d'échec (chaque protection retirée seule, au moins un test échoue) :
+
+| Protection retirée | Échec constaté |
+| --- | --- |
+| Cloison de `indisponibilites.get()` | `indisponibilites.test.js`, `cloison.test.js` |
+| Motif retiré pour qui ne gère pas | `indisponibilites.test.js` |
+| Motif absent du journal (création) | `indisponibilites.test.js` |
+| Droit `indisponibilites:gerer` pour écrire | `indisponibilites.test.js` |
+| Refus du chevauchement | `indisponibilites.test.js` |
+| Droit de lecture du planning | `planning.test.js` |
+| Cloison des absences du planning | `planning.test.js` (survivait au premier passage : test ajouté pour un ouvrier des deux entités) |
+| Cloison des absences lues par la suggestion et les conflits (`duJour`) | `planning.test.js` |
+| Cloison des tâches du planning | `planning.test.js` |
+| Heures réelles jamais dans le futur | `heures-taches.test.js` |
+| Fin après début | `heures-taches.test.js` |
+
 ## 0.20.0 (19/11/2026)
 
 Étape 16 : correctifs de la recette 0.19.0 ; tâches d'une demande ; affectation ; « Planifiée » ; suggestion d'affectation ; filtres par équipe et par ouvrier. Environnement : bac à sable de Claude, Node 22 ; copie locale (API Node en production et relais HTTPS) partie d'une base de la 0.19.0.

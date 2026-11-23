@@ -1,0 +1,2357 @@
+/**
+ * Écrans des demandes d'intervention (0.5.0) : accueil adapté au rôle, nouvelle demande, « Mes demandes »,
+ * « Demandes de l'entité ». Rendu, audit axe-core en FR et en NL, parcours de dépôt et règles d'affichage.
+ * Le simulacre de matchMedia ne répond à aucune requête : la mise en page est celle du téléphone (cartes).
+ */
+import React from 'react';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { cleanup as cleanupAll, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
+import axe from 'axe-core';
+import dayjs from 'dayjs';
+import { I18nProvider } from '../contexts/I18nContext';
+import { SettingsProvider, FALLBACK_SETTINGS } from '../contexts/SettingsContext';
+import { translations } from '../i18n';
+import { ETATS, cheminTexte } from '../demandes';
+
+const chemin = [
+  { id: 1, code: 'MC', nom_fr: 'Maison communale', nom_nl: 'Gemeentehuis' },
+  { id: 2, code: 'MC-A', nom_fr: 'Aile A', nom_nl: 'Vleugel A' },
+  { id: 3, code: 'MC-A-12', nom_fr: 'Bureau 12', nom_nl: 'Bureau 12' },
+];
+const entite = { id: 1, code: 'AA', nom_fr: 'Administration fictive', nom_nl: 'Fictief bestuur', roles: ['agent', 'gestionnaire'] };
+const user: Record<string, unknown> = {
+  id: 7, email: 'agent@exemple.test', first_name: 'Agathe', last_name: 'Agent', user_role: 'agent', entite_id: 1, preferred_lang: 'fr',
+  ui_mode: 'simple', theme: 'clair', must_change_password: 0, entites: [entite], entite_active_id: 1, nouveautes: [],
+  lieu_habituel_id: null, lieu_propose: { id: 3, code: 'MC-A-12', nom_fr: 'Bureau 12', nom_nl: 'Bureau 12', chemin, source: 'derniere_demande' },
+};
+const roles = [
+  // 0.16.0 : chef de service (rôle « Valideur »).
+  { code: 'valideur', portee: 'entite', defaut: false, label_fr: 'Valideur', label_nl: 'Goedkeurder', description_fr: 'd', description_nl: 'd', permissions: ['lieux:lire', 'categories:lire', 'demandes:creer', 'demandes:valider'] },
+  { code: 'agent', portee: 'entite', defaut: true, label_fr: 'Demandeur', label_nl: 'Aanvrager', description_fr: 'd', description_nl: 'd', permissions: ['lieux:lire', 'categories:lire', 'demandes:creer'] },
+  { code: 'gestionnaire', portee: 'entite', defaut: false, label_fr: 'Gestionnaire technique', label_nl: 'Technisch beheerder', description_fr: 'd', description_nl: 'd', permissions: ['lieux:lire', 'entites:membres', 'demandes:creer', 'demandes:entite', 'demandes:qualifier'] },
+];
+const cat = (id: number, parent: number | null, fr: string, nl: string, icone: string, natures?: unknown[]) => ({
+  id, entite_id: 1, parent_id: parent, niveau: parent ? 'nature' : 'domaine', code: `c${id}`, libelle_fr: fr, libelle_nl: nl, icone,
+  priorite_defaut: 'P3', validation: 0, delai_fin_jours: null, ordre: 10, priorite_effective: 'P3', validation_effective: 0, delai_fin_jours_effectif: null,
+  parent_code: null, parent_libelle_fr: null, parent_libelle_nl: null, is_active: 1, motif_desactivation: null, created_at: '', updated_at: '', ...(natures ? { natures } : {}),
+});
+const arbreCategories = { total: 4, domaines: [
+  cat(10, null, 'Électricité et éclairage', 'Elektriciteit en verlichting', 'eclair', [cat(11, 10, 'Lampe ou éclairage en panne', 'Lamp of verlichting defect', 'ampoule')]),
+  cat(20, null, 'Divers', 'Diversen', 'autre', []),
+] };
+// 0.19.0 (REF-06, GES-04) : corps de métier en vigueur des catégories (la nature 11 prend celui de son domaine).
+Object.assign(arbreCategories.domaines[0], { corps_metier_effectif_id: 71 });
+Object.assign((arbreCategories.domaines[0] as { natures: Record<string, unknown>[] }).natures[0], { corps_metier_id: null, corps_metier_effectif_id: 71 });
+Object.assign(arbreCategories.domaines[1], { corps_metier_effectif_id: 72 });
+const demande = (id: number, numero: string, etat: string, extra: Record<string, unknown> = {}) => ({
+  id, entite_id: 1, numero, annee: 2026, sequence: id, description: 'La lampe du bureau 12 ne s’allume plus.', langue: 'fr', etat,
+  ouverte: ['cloturee', 'annulee', 'refusee'].includes(etat) ? 0 : 1, priorite: 'P3', canal: 'ecran',
+  lieu_id: 3, lieu_code: 'MC-A-12', lieu_nom_fr: 'Bureau 12', lieu_nom_nl: 'Bureau 12', lieu_nature: 'local', lieu_chemin: chemin,
+  categorie_id: 11, categorie_code: 'c11', categorie_libelle_fr: 'Lampe ou éclairage en panne', categorie_libelle_nl: 'Lamp of verlichting defect', categorie_icone: 'ampoule',
+  domaine_libelle_fr: 'Électricité et éclairage', domaine_libelle_nl: 'Elektriciteit en verlichting',
+  demandeur_id: 7, demandeur_prenom: 'Agathe', demandeur_nom: 'Agent', is_demo: 0, created_at: '2026-10-26 13:05:00', updated_at: '2026-10-26 13:05:00',
+  delai_annonce: { priorite: 'P3', unite: 'jours_ouvrables', delai_fin: 10, date_convenue: false, fin_le: { utc: '2026-11-10T06:45:00.000Z', local: '2026-11-10 07:45' } },
+  ...extra,
+});
+const demandes = [demande(2, 'AA-DI-2026-00002', 'a_qualifier'), demande(1, 'AA-DI-2026-00001', 'cloturee', { delai_annonce: null })];
+const lieuxTrouves = [{ id: 9, entite_id: 1, parent_id: 2, nature: 'local', code: 'ALC-21', nom_fr: 'Salle n°21', nom_nl: 'Zaal nr. 21', is_active: 1,
+  chemin: [{ id: 8, code: 'ALC', nom_fr: 'Alcyons', nom_nl: 'Alcyons' }, { id: 9, code: 'ALC-21', nom_fr: 'Salle n°21', nom_nl: 'Zaal nr. 21' }] }];
+
+const arbreLieux = [{ id: 8, entite_id: 1, parent_id: null, nature: 'site', code: 'ALC', nom_fr: 'Alcyons', nom_nl: 'Alcyons', is_active: 1,
+  enfants: [{ id: 9, entite_id: 1, parent_id: 8, nature: 'local', code: 'ALC-21', nom_fr: 'Salle n°21', nom_nl: 'Zaal nr. 21', is_active: 1, enfants: [] }] }];
+
+const refresh = vi.fn(async () => {});
+vi.mock('../contexts/AuthContext', () => ({
+  useAuth: () => ({ user, loading: false, isAdmin: false, login: async () => {}, logout: async () => {}, refresh, savePreferences: async () => {},
+    setEntite: async () => {}, nouveautesLues: async () => {}, entite, roles: entite.roles }),
+  AuthProvider: ({ children }: { children: React.ReactNode }) => children,
+}));
+
+const page = (data: unknown[], total = data.length) => ({ data, meta: { envelope: 1 }, pagination: { total, limit: 20, offset: 0 } });
+let posts: { url: string; body: Record<string, unknown> }[] = [];
+let gets: string[] = [];
+// 0.7.0 (DEM-04) : demandes ouvertes du même bâtiment ; aucune par défaut.
+const batiment = { id: 2, nature: 'batiment', code: 'MC-A', nom_fr: 'Maison communale', nom_nl: 'Gemeentehuis' };
+const voisine = (id: number, numero: string, extra: Record<string, unknown> = {}) => ({
+  id, numero, etat: 'a_qualifier', created_at: '2026-10-27 08:30:00', lieu_id: 4, lieu_code: 'MC-A-POP', lieu_nom_fr: 'Accueil Population', lieu_nom_nl: 'Onthaal Bevolking',
+  categorie_id: 11, categorie_libelle_fr: 'Lampe ou éclairage en panne', categorie_libelle_nl: 'Lamp of verlichting defect', categorie_icone: 'ampoule',
+  extrait: 'Le néon de l’accueil Population clignote depuis lundi matin…', meme_lieu: 0, propre: 0, suivie: 0, ...extra,
+});
+let voisinesData: unknown = { batiment, total: 0, demandes: [] };
+// 0.7.0 (DEM-11) : brouillon du formulaire ; aucun par défaut.
+let brouillonData: unknown = null;
+let puts: { url: string; method: string; body: Record<string, unknown> }[] = [];
+// 0.7.0 (DEM-05) : arbre sans questions par défaut ; le bloc des questions le remplace.
+let arbreData: unknown = arbreCategories;
+// 0.8.0 : pièces jointes du brouillon et plafonds de l'entité ; aucune pièce par défaut, plafonds livrés.
+const PLAFONDS = { nombre: 5, octets: 10 * 1024 * 1024, types: ['image/jpeg', 'image/png', 'application/pdf'] };
+const piece = (id: number, nom: string, type = 'image/jpeg', extra: Record<string, unknown> = {}) => ({
+  id, entite_id: 1, demande_id: null, auteur_id: 7, nom, type, octets: 180 * 1024, largeur: 800, hauteur: 600, canal: 'ecran',
+  created_at: '2026-10-30 10:00:00', brouillon: 1, ...extra,
+});
+let ficheData: unknown = null;
+// 0.21.0 (point 2, PLA-04) : indisponibilité rendue par « Ouvriers proposés ».
+let indispoOdile: string | null = null;
+let conflitsAffectation: Record<string, unknown>[] = [];
+let indispoOlivier: string | null = null;
+// 0.14.0 : historique de la fiche et valeurs des listes du cycle de vie.
+let historiqueData: unknown[] = [];
+const valeur = (id: number, liste: string, code: string, fr: string, nl: string, actif = 1) => ({ id, entite_id: 1, liste, code, libelle_fr: fr, libelle_nl: nl, ordre: id, is_active: actif, motif_desactivation: null, created_at: '', updated_at: '' });
+const valeursData = [
+  valeur(41, 'motif_attente', 'piece', 'Pièce à commander', 'Onderdeel te bestellen'), valeur(42, 'motif_attente', 'acces', 'Accès impossible', 'Toegang onmogelijk'),
+  valeur(43, 'motif_attente', 'budget', 'Budget à obtenir', 'Budget te verkrijgen', 0),
+  valeur(51, 'cause_panne', 'usure', 'Usure normale', 'Normale slijtage'), valeur(61, 'motif_refus', 'doublon', 'Déjà signalé dans une autre demande', 'Al gemeld in een andere aanvraag'),
+  valeur(71, 'corps_metier', 'electricite', 'Électricité', 'Elektriciteit'), valeur(72, 'corps_metier', 'polyvalent', 'Polyvalent', 'Polyvalent'),
+];
+// 0.9.0 : tableau de bord, vues enregistrées et priorités de l'entité.
+const BORD = { a_qualifier: 4, en_retard: 2, p1_p2: 1, echeance_proche: 3, limite_proche: '2026-11-04 16:00:00', jours_proches: 2, attente_longue: 6, jours_attente: 8, a_cloturer: 5, messages_a_lire: 3, mentions: 1 };
+let bordData: unknown = BORD;
+let vuesData: unknown[] = [];
+const prio = (code: string, fr: string, nl: string, fin: number | null) => ({ id: Number(code[1]), entite_id: 1, code, libelle_fr: fr, libelle_nl: nl, description_fr: null, description_nl: null,
+  couleur: 'blue', unite: 'jours_ouvrables', prise_en_charge: 2, fin, updated_at: '', defaut: {}, est_defaut: true });
+const prioritesData = [prio('P1', 'Sécurité', 'Veiligheid', 4), prio('P2', 'Urgente', 'Dringend', 2), prio('P3', 'Normale', 'Normaal', 10), prio('P4', 'Planifiable', 'Planbaar', null)];
+let piecesData: { pieces: unknown[]; plafonds: unknown } = { pieces: [], plafonds: PLAFONDS };
+let uploads: { url: string; fichier: File }[] = [];
+let reponseUpload: (n: number) => { status: number; json: unknown } = (n) => ({ status: 201, json: { data: piece(100 + n, `photo-${n}.jpg`), meta: { envelope: 1 } } });
+// 0.15.0 (point 2) : fil de messages de la fiche et demandes avec un message non lu ; vides par défaut.
+let messagesData: unknown[] = [];
+let nonLusData: unknown[] = [];
+// 0.16.0 : demandes à valider par le chef de service ; aucune par défaut.
+let aValiderData: unknown[] = [];
+// 0.16.0 (point 6) : table des passages lue par la vue en colonnes ; vide par défaut.
+let passagesData: unknown[] = [];
+let reponsePost: { status: number; json: unknown } = { status: 201, json: { data: demande(3, 'AA-DI-2026-00003', 'a_qualifier'), meta: { envelope: 1 } } };
+
+beforeEach(() => {
+  posts = [];
+  gets = [];
+  voisinesData = { batiment, total: 0, demandes: [] };
+  brouillonData = null;
+  arbreData = arbreCategories;
+  puts = [];
+  piecesData = { pieces: [], plafonds: PLAFONDS };
+  ficheData = null;
+  historiqueData = [];
+  messagesData = [];
+  nonLusData = [];
+  aValiderData = [];
+  passagesData = [];
+  bordData = BORD;
+  vuesData = [];
+  uploads = [];
+  reponseUpload = (n) => ({ status: 201, json: { data: piece(100 + n, `photo-${n}.jpg`), meta: { envelope: 1 } } });
+  reponsePost = { status: 201, json: { data: demande(3, 'AA-DI-2026-00003', 'a_qualifier'), meta: { envelope: 1 } } };
+  vi.stubGlobal('fetch', vi.fn(async (url: string, init?: { method?: string; body?: string | FormData }) => {
+    if (init?.method === 'POST' && init.body instanceof FormData) {
+      uploads.push({ url, fichier: init.body.get('fichier') as File });
+      const rep = reponseUpload(uploads.length);
+      return { ok: rep.status < 400, status: rep.status, statusText: 'x', json: async () => rep.json };
+    }
+    if (init?.method === 'POST') {
+      posts.push({ url, body: JSON.parse(String(init.body || '{}')) });
+      return { ok: reponsePost.status < 400, status: reponsePost.status, statusText: 'x', json: async () => reponsePost.json };
+    }
+    gets.push(url);
+    if (init?.method === 'PUT' || init?.method === 'DELETE') puts.push({ url, method: init.method, body: JSON.parse(String(init.body || '{}')) });
+    const json = url.startsWith('/api/demandes/brouillon/pieces') ? { data: piecesData, meta: { envelope: 1 } }
+      // 0.21.0 (point 4, PLA-06) : conflits rendus par l'affectation.
+      : url.match(/^\/api\/taches\/\d+\/affectation/) ? { data: { id: 5, demande_passage_auto: null, conflits: conflitsAffectation }, meta: { envelope: 1 } }
+      : url.startsWith('/api/pieces/') ? { data: { id: 1, supprime: 1 }, meta: { envelope: 1 } }
+      : url.startsWith('/api/demandes/brouillon') ? { data: init?.method && init.method !== 'GET' ? { efface: 1 } : brouillonData, meta: { envelope: 1 } }
+      : url.startsWith('/api/demandes/a-valider') ? page(aValiderData)
+      : url.startsWith('/api/etats-demande/transitions') ? { data: passagesData, meta: { envelope: 1 } }
+      : url.startsWith('/api/demandes/tableau-bord') ? { data: bordData, meta: { envelope: 1 } }
+      : url.startsWith('/api/vues-demandes') ? page(vuesData)
+      : url.startsWith('/api/priorites') ? page(prioritesData)
+      : url.startsWith('/api/demandes/voisines') ? { data: voisinesData, meta: { envelope: 1 } }
+      : url.startsWith('/api/demandes/beneficiaires') ? { data: [{ id: 9, prenom: 'Hélène', nom: 'Dupré' }], meta: { envelope: 1 } }
+      : url.startsWith('/api/categories/arbre') ? { data: arbreData, meta: { envelope: 1 } }
+      : url.startsWith('/api/lieux/arbre') ? { data: { racines: arbreLieux, total: 2 }, meta: { envelope: 1 } }
+      : url.startsWith('/api/lieux') ? page(lieuxTrouves)
+      : url.match(/^\/api\/demandes\/\d+\/historique/) ? { data: historiqueData, meta: { envelope: 1 } }
+      : url.startsWith('/api/modeles-reponse') ? page([{ id: 4, entite_id: 1, code: 'precision', titre_fr: 'Précision demandée', titre_nl: 'Verduidelijking gevraagd',
+        texte_fr: 'Bonjour {prenom},\n\nPour {numero} ({lieu}, {etat}), pouvez-vous préciser ?', texte_nl: 'Goedendag {prenom},\n\nKunt u {numero} ({lieu}, {etat}) verduidelijken?', ordre: 10, is_active: 1, motif_desactivation: null, created_at: '', updated_at: '' }])
+      : url.match(/^\/api\/demandes\/\d+\/messages\/mentionnables/) ? { data: [{ user_id: 8, prenom: 'Rémi', nom: 'Responsable' }, { user_id: 9, prenom: 'Gaston', nom: 'Gestion' }], meta: { envelope: 1 } }
+      : url.match(/^\/api\/demandes\/\d+\/messages\/pieces/) ? { data: { pieces: [], plafonds: PLAFONDS }, meta: { envelope: 1 } }
+      : url.match(/^\/api\/demandes\/\d+\/messages/) ? { data: messagesData, meta: { envelope: 1 } }
+      : url.startsWith('/api/demandes?') && url.includes('messages=non_lus') ? page(nonLusData)
+      : url.startsWith('/api/listes-valeurs') ? page(valeursData.filter((v) => url.includes(`liste=${v.liste}`)))
+      : url.match(/^\/api\/demandes\/\d+/) ? { data: ficheData || demandes[0], meta: { envelope: 1 } }
+      : url.startsWith('/api/demandes') ? (url.includes('etats=a_qualifier%2Crouverte') ? page([demandes[0]], 4) : page(demandes))
+      : url.includes('/suggestions') ? { data: { date: '2026-11-25', jour_ouvre_entite: 1, ouvriers: [
+        { id: 22, prenom: 'Odile', nom: 'Ouvrière', corps_metier: { libelle_fr: 'Électricité', libelle_nl: 'Elektriciteit' }, meme_corps: 1, disponible: 1, charge_min: 0, nb_taches: 0, indisponible: indispoOdile },
+        { id: 21, prenom: 'Olivier', nom: 'Ouvrier', corps_metier: { libelle_fr: 'Plomberie', libelle_nl: 'Loodgieterij' }, meme_corps: 0, disponible: 0, charge_min: 120, nb_taches: 1, indisponible: indispoOlivier }] }, meta: { envelope: 1 } }
+      : url.startsWith('/api/ouvriers') ? page([{ id: 21, prenom: 'Olivier', nom: 'Ouvrier' }, { id: 22, prenom: 'Odile', nom: 'Ouvrière' }])
+      : url.startsWith('/api/equipes') ? page([{ id: 31, code: 'BAT', nom_fr: 'Bâtiment', nom_nl: 'Gebouw' }])
+      : url.startsWith('/api/roles') ? { data: roles, meta: { envelope: 1 } }
+      : url.includes('/membres') ? { data: [], meta: { envelope: 1 } }
+      : { data: [], meta: { envelope: 1 }, pagination: { total: 0, limit: 20, offset: 0 } };
+    return { ok: true, status: 200, statusText: 'OK', json: async () => json };
+  }));
+});
+
+// 0.8.0 : jsdom n'a pas de canevas ; la réduction réelle est éprouvée dans le navigateur. « illisible » simule un échec.
+vi.mock('../photo', () => ({
+  reduirePhoto: vi.fn(async (f: File) => { if (f.name.startsWith('illisible')) throw new Error('decode'); return new Blob(['jpeg'], { type: 'image/jpeg' }); }),
+  PHOTO_MAX_PX: 1600, PHOTO_MAX_OCTETS: 900 * 1024,
+}));
+
+import HomePage from '../pages/HomePage';
+import NouvelleDemandePage from '../pages/NouvelleDemandePage';
+import DemandesPage, { FicheDemande } from '../pages/DemandesPage';
+import QualificationForm from '../components/demandes/QualificationForm';
+import AValiderPage from '../pages/AValiderPage';
+
+const MesDemandes = () => <DemandesPage perimetre="miennes" />;
+const DemandesEntite = () => <DemandesPage perimetre="entite" />;
+
+function wrap(C: React.ComponentType, lang: 'fr' | 'nl', entries: string[] = ['/']) {
+  return (
+    <SettingsProvider value={{ settings: FALLBACK_SETTINGS, reload: async () => {} }}>
+      <I18nProvider defaultLang={lang}><MemoryRouter initialEntries={entries}><C /></MemoryRouter></I18nProvider>
+    </SettingsProvider>
+  );
+}
+const audit = async (container: HTMLElement) => {
+  const r = await axe.run(container, { rules: { 'color-contrast': { enabled: false }, region: { enabled: false } } });
+  expect(r.violations.map((v) => `${v.id}: ${v.nodes.length} ${v.nodes.map((n) => n.html.slice(0, 200)).join(' | ')}`)).toEqual([]);
+};
+
+describe('demandes (0.5.0, 0.5.1)', () => {
+  beforeEach(() => { user.lieu_propose = { id: 3, code: 'MC-A-12', nom_fr: 'Bureau 12', nom_nl: 'Bureau 12', chemin, source: 'derniere_demande' }; });
+
+  for (const lang of ['fr', 'nl'] as const) {
+    for (const [nom, C] of [['Accueil', HomePage], ['Nouvelle demande', NouvelleDemandePage], ['Mes demandes', MesDemandes], ["Demandes de l'entité", DemandesEntite]] as [string, React.ComponentType][]) {
+      it(`${nom} (${lang}) s'affiche sans violation axe-core`, async () => {
+        const { container } = render(wrap(C, lang));
+        await waitFor(() => expect(container.querySelector('h1')).toBeTruthy());
+        await waitFor(() => expect(container.querySelector('.ant-spin-spinning')).toBeNull());
+        await audit(container);
+      }, 30000);
+    }
+  }
+
+  it('chaque état a son libellé simple en FR et en NL (ERG-08 : jamais « DI » ni « GMAO »)', () => {
+    for (const e of ETATS) {
+      const tr = translations[`demande.etat.${e}`];
+      expect(tr?.fr && tr?.nl, e).toBeTruthy();
+      expect(`${tr.fr} ${tr.nl}`).not.toMatch(/\bDI\b|GMAO|\bOT\b/);
+    }
+  });
+
+  it('accueil du demandeur : gros boutons « Nouvelle demande » et « Mes demandes », demandes en cours ; à qualifier pour le gestionnaire (ERG-03)', async () => {
+    render(wrap(HomePage, 'fr'));
+    expect(await screen.findByRole('link', { name: /Nouvelle demande/ })).toHaveAttribute('href', '/demandes/nouvelle');
+    expect(screen.getByRole('link', { name: /^Mes demandes$/ })).toHaveAttribute('href', '/demandes');
+    expect(await screen.findByRole('link', { name: /Demandes de l'entité \(4 à qualifier\)/ })).toHaveAttribute('href', '/demandes-entite');
+    expect(await screen.findByText('AA-DI-2026-00002')).toBeInTheDocument();
+    expect(screen.getByText('Reçue par le service technique')).toBeInTheDocument();
+    expect(screen.getByText('Administration fictive')).toBeInTheDocument();
+  });
+
+  it('nouvelle demande : lieu proposé d’office avec son chemin, envoi bloqué tant qu’il manque la catégorie et 10 caractères', async () => {
+    render(wrap(NouvelleDemandePage, 'fr'));
+    expect(await screen.findByText(cheminTexte(chemin, 'fr'))).toBeInTheDocument();
+    expect(screen.getByText('Le lieu de votre dernière demande')).toBeInTheDocument();
+    const envoyer = screen.getByRole('button', { name: /Envoyer la demande/ });
+    expect(envoyer).toBeDisabled();
+    expect(screen.getByText(/le type de problème, une description de 10 caractères au moins/)).toBeInTheDocument();
+    fireEvent.click(await screen.findByRole('button', { name: 'Électricité et éclairage : voir les natures' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Lampe ou éclairage en panne' }));
+    expect(screen.getByRole('button', { name: 'Lampe ou éclairage en panne' })).toHaveAttribute('aria-pressed', 'true');
+    fireEvent.change(screen.getByLabelText('3. Décrivez le problème'), { target: { value: '   court   ' } });
+    expect(envoyer).toBeDisabled();
+    fireEvent.change(screen.getByLabelText('3. Décrivez le problème'), { target: { value: '  La lampe ne marche plus.  ' } });
+    expect(envoyer).toBeEnabled();
+  });
+
+  it('nouvelle demande (0.5.1) : une description faite d’espaces montre « Ce champ est obligatoire » sous le champ, en FR et en NL', async () => {
+    for (const [lang, label, msg] of [['fr', '3. Décrivez le problème', 'Ce champ est obligatoire'], ['nl', '3. Beschrijf het probleem', 'Dit veld is verplicht']] as const) {
+      const { container, unmount } = render(wrap(NouvelleDemandePage, lang));
+      const champ = await screen.findByLabelText(label);
+      expect(screen.queryByText(msg)).toBeNull();
+      fireEvent.change(champ, { target: { value: '     ' } });
+      expect(screen.getByText(msg)).toBeInTheDocument();
+      expect(champ).toHaveAttribute('aria-invalid', 'true');
+      expect(champ.getAttribute('aria-describedby')).toContain('dem-description-erreur');
+      await waitFor(() => expect(container.querySelector('.ant-spin-spinning')).toBeNull());
+      await audit(container);
+      fireEvent.change(champ, { target: { value: 'La porte grince fort.' } });
+      expect(screen.queryByText(msg)).toBeNull();
+      expect(posts).toHaveLength(0);
+      unmount();
+    }
+  }, 30000);
+
+  it('nouvelle demande : envoi, puis numéro, lieu, délai indicatif et liens de suite (DEM-12 écran)', async () => {
+    render(wrap(NouvelleDemandePage, 'fr'));
+    fireEvent.click(await screen.findByRole('button', { name: 'Divers' }));
+    fireEvent.change(screen.getByLabelText('3. Décrivez le problème'), { target: { value: '  La porte du local grince fort.  ' } });
+    fireEvent.click(screen.getByRole('button', { name: /Envoyer la demande/ }));
+    expect(await screen.findByText('Demande envoyée')).toBeInTheDocument();
+    expect(posts).toHaveLength(1);
+    expect(posts[0].body).toEqual({ lieu_id: 3, categorie_id: 20, description: 'La porte du local grince fort.', langue: 'fr' });
+    expect(screen.getByText('Votre numéro de demande :')).toBeInTheDocument();
+    expect(screen.getByText('AA-DI-2026-00003')).toBeInTheDocument();
+    expect(screen.getByText(/Délai indicatif : au plus tard le mardi 10 novembre 2026/)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /Mes demandes/ })).toHaveAttribute('href', '/demandes');
+    expect(refresh).toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: /Faire une autre demande/ }));
+    expect(await screen.findByRole('button', { name: /Envoyer la demande/ })).toBeDisabled();
+  });
+
+  for (const [lang, divers, envoyer, titre, attente, suite] of [
+    ['fr', 'Divers', /Envoyer la demande/, 'Demande envoyée', 'Votre chef de service (Service : Secrétariat) doit d\'abord donner son accord. Le délai du service technique comptera à partir de cet accord.', 'Vous suivez son avancement dans « Mes demandes » ; vous y verrez la décision de votre chef de service.'],
+    ['nl', 'Diversen', /aanvraag verzenden/i, 'Aanvraag verzonden', 'Uw diensthoofd (Dienst: Secretariaat) moet eerst akkoord gaan. De termijn van de technische dienst telt vanaf dat akkoord.', 'U volgt de voortgang in « Mijn aanvragen »; u ziet er de beslissing van uw diensthoofd.'],
+  ] as const) {
+    it(`nouvelle demande (0.16.1, R1 ; ${lang}) : demande « En validation » : accord du chef de service, ni délai ni « le service technique l’a reçue »`, async () => {
+      reponsePost = { status: 201, json: { data: demande(3, 'AA-DI-2026-00003', 'en_validation', { service_id: 4, service_nom_fr: 'Secrétariat', service_nom_nl: 'Secretariaat' }), meta: { envelope: 1 } } };
+      const { container } = render(wrap(NouvelleDemandePage, lang));
+      fireEvent.click(await screen.findByRole('button', { name: divers }));
+      fireEvent.change(container.querySelector('textarea') as HTMLTextAreaElement, { target: { value: 'Déplacer deux armoires au premier étage.' } });
+      fireEvent.click(screen.getByRole('button', { name: envoyer }));
+      expect(await screen.findByText(titre)).toBeInTheDocument();
+      expect(screen.getByText('AA-DI-2026-00003')).toBeInTheDocument();
+      expect(screen.getByText(attente)).toBeInTheDocument();
+      expect(screen.getByText(suite)).toBeInTheDocument();
+      expect(container.textContent).not.toMatch(/Délai indicatif|Indicatieve termijn|l'a reçue|heeft ze ontvangen/);
+      await audit(container);
+    }, 30000);
+  }
+
+  it('nouvelle demande (0.5.2) : après l’envoi, « Mes demandes » et « Faire une autre demande » gardent un espace quand ils passent l’un sous l’autre', async () => {
+    render(wrap(NouvelleDemandePage, 'fr'));
+    fireEvent.click(await screen.findByRole('button', { name: 'Divers' }));
+    fireEvent.change(screen.getByLabelText('3. Décrivez le problème'), { target: { value: 'La porte du local grince fort.' } });
+    fireEvent.click(screen.getByRole('button', { name: /Envoyer la demande/ }));
+    expect(await screen.findByText('Demande envoyée')).toBeInTheDocument();
+    const mes = screen.getByRole('link', { name: /Mes demandes/ });
+    const autre = screen.getByRole('button', { name: /Faire une autre demande/ });
+    const suite = mes.closest('.dem-suite') as HTMLElement;
+    expect(suite).not.toBeNull();
+    expect(suite).toContainElement(autre);
+    expect(suite.style.flexWrap).toBe('wrap');
+    expect(suite.style.rowGap).toBe('12px');
+    fireEvent.click(autre);
+    expect(await screen.findByRole('button', { name: /Envoyer la demande/ })).toBeDisabled();
+  });
+
+  it('nouvelle demande : une erreur du serveur s’affiche et la saisie reste (ERG-09)', async () => {
+    reponsePost = { status: 409, json: { error: true, code: 'DEMANDE_LIEU_INACTIF', message: "Ce lieu n'est plus actif : choisissez-en un autre." } };
+    render(wrap(NouvelleDemandePage, 'fr'));
+    fireEvent.click(await screen.findByRole('button', { name: 'Divers' }));
+    fireEvent.change(screen.getByLabelText('3. Décrivez le problème'), { target: { value: 'Texte qui ne doit pas se perdre.' } });
+    fireEvent.click(screen.getByRole('button', { name: /Envoyer la demande/ }));
+    expect(await screen.findByText("Ce lieu n'est plus actif : choisissez-en un autre.")).toBeInTheDocument();
+    expect(screen.getByLabelText('3. Décrivez le problème')).toHaveValue('Texte qui ne doit pas se perdre.');
+    expect(screen.getByRole('button', { name: 'Divers' })).toHaveAttribute('aria-pressed', 'true');
+  });
+
+  it('nouvelle demande : changer de lieu par la recherche, résultats en boutons avec leur chemin, en néerlandais', async () => {
+    render(wrap(NouvelleDemandePage, 'nl'));
+    fireEvent.click(await screen.findByRole('button', { name: /Andere plaats/ }));
+    fireEvent.change(screen.getByLabelText('Een plaats zoeken'), { target: { value: 'alcyons 21' } });
+    const liste = await screen.findByRole('list', { name: 'Gevonden plaatsen' }, { timeout: 2000 });
+    const bouton = within(liste).getByRole('button', { name: /Zaal nr\. 21/ });
+    expect(bouton).toHaveTextContent('Alcyons › Zaal nr. 21');
+    const appel = (fetch as unknown as { mock: { calls: [string][] } }).mock.calls.map((c) => c[0]).find((u) => u.startsWith('/api/lieux?'));
+    expect(appel).toContain('q=alcyons+21');
+    expect(appel).toContain('is_active=1');
+    fireEvent.click(bouton);
+    expect(await screen.findByText('Alcyons › Zaal nr. 21')).toBeInTheDocument();
+    expect(screen.queryByRole('list', { name: 'Gevonden plaatsen' })).toBeNull();
+  });
+
+  it('« Mes demandes » : numéro, état simple, délai annoncé des seules demandes ouvertes ; la fiche s’ouvre au clic (SUI-01)', async () => {
+    render(wrap(MesDemandes, 'fr'));
+    expect(await screen.findByRole('button', { name: 'AA-DI-2026-00002' })).toBeInTheDocument();
+    expect(screen.getByText('Clôturée')).toBeInTheDocument();
+    expect(screen.getByText(/Délai annoncé : mardi 10 novembre 2026/)).toBeInTheDocument();
+    // 0.15.0 (R3) : la demande clôturée n'a plus de délai annoncé (avant : « À convenir »).
+    expect(screen.queryByText(/Délai annoncé : À convenir/)).toBeNull();
+    expect(screen.getAllByText(/Délai annoncé/)).toHaveLength(1);
+    expect(screen.queryByText('Agathe Agent')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'AA-DI-2026-00002' }));
+    expect(await screen.findByText('Demande AA-DI-2026-00002')).toBeInTheDocument();
+    expect(screen.getByText('Électricité et éclairage › Lampe ou éclairage en panne')).toBeInTheDocument();
+  });
+
+  it('« Mes demandes » (0.5.1) : pas de bouton « Nouvelle demande » dans la page, en FR et en NL (celui du haut de l’écran et celui du menu suffisent)', async () => {
+    for (const [lang, nom] of [['fr', /Nouvelle demande/], ['nl', /Nieuwe aanvraag/]] as const) {
+      const { unmount } = render(wrap(MesDemandes, lang));
+      await screen.findByRole('button', { name: 'AA-DI-2026-00002' });
+      expect(screen.queryByRole('link', { name: nom })).toBeNull();
+      expect(screen.queryByRole('button', { name: nom })).toBeNull();
+      unmount();
+    }
+  }, 30000);
+
+  it('« Mes demandes » : le filtre « En cours » demande les seules ouvertes', async () => {
+    render(wrap(MesDemandes, 'fr'));
+    await screen.findByRole('button', { name: 'AA-DI-2026-00002' });
+    fireEvent.click(screen.getByText('En cours', { selector: '.ant-segmented-item-label' }));
+    await waitFor(() => {
+      const urls = (fetch as unknown as { mock: { calls: [string][] } }).mock.calls.map((c) => c[0]);
+      expect(urls.some((u) => u.startsWith('/api/demandes?') && u.includes('ouvertes=1') && u.includes('perimetre=miennes'))).toBe(true);
+    });
+  });
+
+  it('« Demandes de l’entité » : périmètre entité et nom du demandeur, sans bouton de dépôt', async () => {
+    render(wrap(DemandesEntite, 'fr'));
+    expect(await screen.findAllByText('Agathe Agent')).not.toHaveLength(0);
+    const urls = (fetch as unknown as { mock: { calls: [string][] } }).mock.calls.map((c) => c[0]);
+    expect(urls.some((u) => u.includes('perimetre=entite'))).toBe(true);
+    expect(screen.queryByRole('link', { name: /Nouvelle demande/ })).toBeNull();
+  });
+  it('liste des bâtiments (0.5.1) : « Parcourir » ouvre et referme, « Masquer la liste » referme et rend le focus', async () => {
+    render(wrap(NouvelleDemandePage, 'fr'));
+    fireEvent.click(await screen.findByRole('button', { name: /Changer de lieu/ }));
+    const parcourir = screen.getByRole('button', { name: /Parcourir la liste des bâtiments/ });
+    expect(parcourir).toHaveAttribute('aria-expanded', 'false');
+    fireEvent.click(parcourir);
+    expect(await screen.findByText('Alcyons (ALC)')).toBeInTheDocument();
+    expect(parcourir).toHaveAttribute('aria-expanded', 'true');
+    fireEvent.click(screen.getByRole('button', { name: /Masquer la liste/ }));
+    expect(screen.queryByText('Alcyons (ALC)')).toBeNull();
+    expect(parcourir).toHaveAttribute('aria-expanded', 'false');
+    expect(document.activeElement).toBe(parcourir);
+    fireEvent.click(parcourir);
+    expect(await screen.findByText('Alcyons (ALC)')).toBeInTheDocument();
+    fireEvent.click(parcourir);
+    expect(screen.queryByText('Alcyons (ALC)')).toBeNull();
+    fireEvent.click(parcourir);
+    fireEvent.click(await screen.findByText('Alcyons (ALC)'));
+    expect(await screen.findAllByText('Alcyons')).not.toHaveLength(0);
+    expect(screen.queryByText('Alcyons (ALC)')).toBeNull();
+    expect(screen.queryByRole('button', { name: /Masquer la liste/ })).toBeNull();
+  }, 30000);
+
+  it('liste des bâtiments (0.5.1) : sans lieu proposé, « Annuler » referme la liste ; en néerlandais, sans violation axe-core', async () => {
+    user.lieu_propose = null;
+    const { container } = render(wrap(NouvelleDemandePage, 'nl'));
+    const parcourir = await screen.findByRole('button', { name: /De lijst van de gebouwen doorlopen/ });
+    expect(screen.queryByRole('button', { name: 'Annuleren' })).toBeNull();
+    fireEvent.click(parcourir);
+    expect(await screen.findByText('Alcyons (ALC)')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Lijst verbergen/ })).toBeInTheDocument();
+    await waitFor(() => expect(container.querySelector('.ant-spin-spinning')).toBeNull());
+    await audit(container);
+    fireEvent.click(screen.getByRole('button', { name: 'Annuleren' }));
+    expect(screen.queryByText('Alcyons (ALC)')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Annuleren' })).toBeNull();
+    expect(screen.getByLabelText('Een plaats zoeken')).toBeInTheDocument();
+  }, 30000);
+});
+
+describe('demandes du même bâtiment et « Moi aussi » (0.7.0, DEM-04)', () => {
+  beforeEach(() => { user.lieu_propose = { id: 3, code: 'MC-A-12', nom_fr: 'Bureau 12', nom_nl: 'Bureau 12', chemin, source: 'derniere_demande' }; });
+
+  it('aucune demande ouverte dans le bâtiment : rien ne s’affiche', async () => {
+    render(wrap(NouvelleDemandePage, 'fr'));
+    await screen.findByRole('button', { name: 'Divers' });
+    await waitFor(() => expect(gets.some((u) => u.startsWith('/api/demandes/voisines?lieu_id=3'))).toBe(true));
+    expect(screen.queryByText(/déjà ouverte/)).toBeNull();
+  });
+
+  it('bloc replié, puis cartes sans nom de demandeur, « Votre demande » pour la sienne ; catégorie choisie passée au serveur', async () => {
+    voisinesData = { batiment, total: 2, demandes: [voisine(5, 'AA-DI-2026-00005'), voisine(6, 'AA-DI-2026-00006', { propre: 1, extrait: 'Ma propre demande.' })] };
+    render(wrap(NouvelleDemandePage, 'fr'));
+    const bascule = await screen.findByRole('button', { name: /2 demandes déjà ouvertes dans ce bâtiment \(Maison communale\)/ });
+    expect(bascule).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.queryByText(/néon/)).toBeNull();
+    fireEvent.click(bascule);
+    expect(bascule).toHaveAttribute('aria-expanded', 'true');
+    expect(await screen.findByText(/Le néon de l’accueil Population/)).toBeInTheDocument();
+    expect(screen.getByText('Votre demande')).toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: /^Moi aussi/ })).toHaveLength(1);
+    expect(screen.queryByText(/Agathe|Agent\b/)).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: /Électricité et éclairage/ }));
+    fireEvent.click(await screen.findByRole('button', { name: /^Lampe ou éclairage en panne$/ }));
+    await waitFor(() => expect(gets.some((u) => u.includes('/api/demandes/voisines?lieu_id=3&categorie_id=11'))).toBe(true));
+  });
+
+  it('« Moi aussi » : confirmation avec le numéro, texte joint pour le service technique, puis écran « Vous suivez cette demande »', async () => {
+    voisinesData = { batiment, total: 1, demandes: [voisine(5, 'AA-DI-2026-00005')] };
+    reponsePost = { status: 200, json: { data: demande(5, 'AA-DI-2026-00005', 'a_qualifier', { suivie: 1, demandeur_id: null, demandeur_prenom: null, demandeur_nom: null }), meta: { envelope: 1 } } };
+    render(wrap(NouvelleDemandePage, 'fr'));
+    fireEvent.change(await screen.findByLabelText('3. Décrivez le problème'), { target: { value: '  Chez nous aussi, guichet 4.  ' } });
+    fireEvent.click(await screen.findByRole('button', { name: /1 demande déjà ouverte/ }));
+    fireEvent.click(await screen.findByRole('button', { name: /^Moi aussi/ }));
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).getByText(/Vous suivrez la demande AA-DI-2026-00005 \(Lampe ou éclairage en panne · Accueil Population\)/)).toBeInTheDocument();
+    expect(within(dialog).getByText(/sera joint pour le service technique/)).toBeInTheDocument();
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Moi aussi' }));
+    expect(await screen.findByText('Vous suivez cette demande')).toBeInTheDocument();
+    expect(posts).toEqual([{ url: '/api/demandes/5/suivre', body: { remarque: 'Chez nous aussi, guichet 4.' } }]);
+    expect(screen.getByText('AA-DI-2026-00005')).toBeInTheDocument();
+    expect(refresh).toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: /Faire une autre demande/ }));
+    expect(await screen.findByRole('button', { name: /Envoyer la demande/ })).toBeDisabled();
+  });
+
+  it('« Voir les autres (N) » demande la liste complète ; en néerlandais, sans violation axe-core', async () => {
+    voisinesData = { batiment, total: 7, demandes: [1, 2, 3, 4, 5].map((i) => voisine(10 + i, `AA-DI-2026-0001${i}`)) };
+    const { container } = render(wrap(NouvelleDemandePage, 'nl'));
+    fireEvent.click(await screen.findByRole('button', { name: /7 aanvragen al open in dit gebouw \(Gemeentehuis\)/ }));
+    expect(await screen.findAllByRole('button', { name: /^Ik ook/ })).toHaveLength(5);
+    await audit(container);
+    fireEvent.click(screen.getByRole('button', { name: 'De andere bekijken (2)' }));
+    await waitFor(() => expect(gets.some((u) => u.includes('limit=50'))).toBe(true));
+  }, 30000);
+
+  it('« Mes demandes » : une demande suivie porte « Vous suivez aussi cette demande », sa fiche le redit, sans demandeur', async () => {
+    const suivie = demande(5, 'AA-DI-2026-00005', 'a_qualifier', { suivie: 1, demandeur_id: null, demandeur_prenom: null, demandeur_nom: null });
+    demandes.splice(0, demandes.length, suivie, demande(1, 'AA-DI-2026-00001', 'cloturee', { delai_annonce: null }));
+    try {
+      render(wrap(MesDemandes, 'fr', ['/demandes?demande=5']));
+      expect(await screen.findAllByText('Vous suivez aussi cette demande')).toHaveLength(1);
+      expect(await screen.findByText(/déposée par un collègue/)).toBeInTheDocument();
+    } finally {
+      demandes.splice(0, demandes.length, demande(2, 'AA-DI-2026-00002', 'a_qualifier'), demande(1, 'AA-DI-2026-00001', 'cloturee', { delai_annonce: null }));
+    }
+  });
+
+  it('« Demandes de l’entité » : la fiche cite les personnes qui suivent et leur remarque', async () => {
+    const avec = demande(2, 'AA-DI-2026-00002', 'a_qualifier', { nb_suiveurs: 1,
+      suiveurs: [{ user_id: 9, prenom: 'Bruno', nom: 'Collègue', remarque: 'Chez nous aussi, guichet 4.', created_at: '2026-10-27 09:00:00' }] });
+    demandes.splice(0, 1, avec);
+    try {
+      render(wrap(DemandesEntite, 'fr', ['/demandes-entite?demande=2']));
+      expect(await screen.findByText('Suivie aussi par')).toBeInTheDocument();
+      expect(screen.getByText(/Bruno Collègue/)).toBeInTheDocument();
+      expect(screen.getByText('Chez nous aussi, guichet 4.')).toBeInTheDocument();
+    } finally {
+      demandes.splice(0, 1, demande(2, 'AA-DI-2026-00002', 'a_qualifier'));
+    }
+  });
+});
+
+describe('case « Danger » (0.7.0, DEM-06)', () => {
+  beforeEach(() => {
+    user.lieu_propose = { id: 3, code: 'MC-A-12', nom_fr: 'Bureau 12', nom_nl: 'Bureau 12', chemin, source: 'derniere_demande' };
+    user.telephone_urgence = '02 464 04 11';
+  });
+
+  it('cochée : numéro à appeler en lien « tel: », envoi avec danger, écran « priorité absolue » sans heure', async () => {
+    reponsePost = { status: 201, json: { data: demande(3, 'AA-DI-2026-00003', 'a_qualifier', { danger: 1, priorite: 'P1', delai_annonce: null }), meta: { envelope: 1 } } };
+    render(wrap(NouvelleDemandePage, 'fr'));
+    const caseDanger = await screen.findByRole('checkbox', { name: 'Danger pour les personnes ou les biens' });
+    expect(screen.queryByRole('alert')).toBeNull();
+    fireEvent.click(caseDanger);
+    const alerte = await screen.findByRole('alert');
+    expect(within(alerte).getByRole('link', { name: '02 464 04 11' })).toHaveAttribute('href', 'tel:024640411');
+    expect(within(alerte).getByText('Votre demande sera traitée en priorité absolue.')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Divers' }));
+    fireEvent.change(screen.getByLabelText('3. Décrivez le problème'), { target: { value: 'Câble électrique à nu dans le couloir.' } });
+    fireEvent.click(screen.getByRole('button', { name: /Envoyer la demande/ }));
+    expect(await screen.findByText('Traitée en priorité absolue par le service technique.')).toBeInTheDocument();
+    expect(posts[0].body).toMatchObject({ danger: 1 });
+    expect(screen.queryByText(/Délai indicatif/)).toBeNull();
+    expect(screen.getByRole('link', { name: '02 464 04 11' })).toBeInTheDocument();
+  });
+
+  it('non cochée : rien n’est envoyé pour le danger ; sans numéro, consigne de prévenir son responsable (NL, axe-core)', async () => {
+    user.telephone_urgence = null;
+    const { container } = render(wrap(NouvelleDemandePage, 'nl'));
+    fireEvent.click(await screen.findByRole('checkbox', { name: 'Gevaar voor personen of goederen' }));
+    expect(await screen.findByText(/Verwittig bij onmiddellijk gevaar meteen uw verantwoordelijke/)).toBeInTheDocument();
+    await audit(container);
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Gevaar voor personen of goederen' }));
+    expect(screen.queryByRole('alert')).toBeNull();
+  }, 30000);
+
+  it('« Mes demandes » : mention « Danger » et « Priorité absolue » au lieu d’un délai', async () => {
+    demandes.splice(0, 1, demande(2, 'AA-DI-2026-00002', 'a_qualifier', { danger: 1, priorite: 'P1', delai_annonce: null }));
+    try {
+      render(wrap(MesDemandes, 'fr'));
+      expect(await screen.findByText('Danger')).toBeInTheDocument();
+      expect(screen.getByText(/Priorité absolue/)).toBeInTheDocument();
+    } finally {
+      demandes.splice(0, 1, demande(2, 'AA-DI-2026-00002', 'a_qualifier'));
+    }
+  });
+});
+
+describe('« Pour », date souhaitée et créneau (0.7.0, DEM-07, DEM-08)', () => {
+  beforeEach(() => { user.lieu_propose = { id: 3, code: 'MC-A-12', nom_fr: 'Bureau 12', nom_nl: 'Bureau 12', chemin, source: 'derniere_demande' }; });
+
+  const remplir = async () => {
+    fireEvent.click(await screen.findByRole('button', { name: 'Divers' }));
+    fireEvent.change(screen.getByLabelText('3. Décrivez le problème'), { target: { value: 'Chaise cassée au bureau 12.' } });
+  };
+
+  it('pour un collègue : recherche, choix en bouton, envoi de beneficiaire_id, rappel après l’envoi', async () => {
+    reponsePost = { status: 201, json: { data: demande(3, 'AA-DI-2026-00003', 'a_qualifier', { beneficiaire_id: 9, beneficiaire_prenom: 'Hélène', beneficiaire_nom: 'Dupré' }), meta: { envelope: 1 } } };
+    render(wrap(NouvelleDemandePage, 'fr'));
+    await remplir();
+    const lien = screen.getByRole('button', { name: /Pour quelqu'un d'autre/ });
+    expect(lien).toHaveAttribute('aria-expanded', 'false');
+    fireEvent.click(lien);
+    fireEvent.change(screen.getByLabelText('Nom du collègue'), { target: { value: 'hel' } });
+    fireEvent.click(await screen.findByRole('button', { name: 'Hélène Dupré' }));
+    expect(screen.getByText('Hélène Dupré')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Retirer/ })).toBeInTheDocument();
+    await waitFor(() => expect(gets.some((u) => u.startsWith('/api/demandes/beneficiaires?q=hel'))).toBe(true));
+    fireEvent.click(screen.getByRole('button', { name: /Envoyer la demande/ }));
+    expect(await screen.findByText('Pour : Hélène Dupré')).toBeInTheDocument();
+    expect(posts[0].body).toMatchObject({ beneficiaire_id: 9 });
+    expect(posts[0].body).not.toHaveProperty('beneficiaire_texte');
+  });
+
+  it('pour un service sans compte, avec un moment à respecter : texte et créneau envoyés, champs vides omis', async () => {
+    render(wrap(NouvelleDemandePage, 'fr'));
+    await remplir();
+    fireEvent.click(screen.getByRole('button', { name: /Pour quelqu'un d'autre/ }));
+    fireEvent.click(screen.getByRole('radio', { name: 'Un service ou une personne sans compte' }));
+    fireEvent.change(screen.getByLabelText('Pour qui ?'), { target: { value: '  Service Population ' } });
+    fireEvent.click(screen.getByRole('button', { name: /Une date ou un moment à respecter/ }));
+    expect(screen.getByLabelText('Date souhaitée')).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText('Moment à respecter'), { target: { value: 'pas pendant les permanences' } });
+    fireEvent.click(screen.getByRole('button', { name: /Envoyer la demande/ }));
+    await screen.findByText('Demande envoyée');
+    expect(posts[0].body).toMatchObject({ beneficiaire_texte: 'Service Population', creneau: 'pas pendant les permanences' });
+    expect(posts[0].body).not.toHaveProperty('beneficiaire_id');
+    expect(posts[0].body).not.toHaveProperty('date_souhaitee');
+  });
+
+  it('sections ouvertes en néerlandais, sans violation axe-core', async () => {
+    const { container } = render(wrap(NouvelleDemandePage, 'nl'));
+    fireEvent.click(await screen.findByRole('button', { name: /Voor iemand anders/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Een datum of moment/ }));
+    expect(screen.getByLabelText('Naam van de collega')).toBeInTheDocument();
+    await audit(container);
+  }, 30000);
+
+  it('fiche : pour qui, date souhaitée et moment ; « Faite pour vous » pour le bénéficiaire', async () => {
+    demandes.splice(0, 1, demande(2, 'AA-DI-2026-00002', 'a_qualifier', { pour_moi: 1, demandeur_prenom: 'Bruno', demandeur_nom: 'Collègue',
+      date_souhaitee: '2026-11-06', creneau: 'après 16 h' }));
+    try {
+      render(wrap(MesDemandes, 'fr', ['/demandes?demande=2']));
+      expect(await screen.findAllByText('Faite pour vous')).toHaveLength(1);
+      expect(await screen.findByText(/Cette demande a été faite pour vous par Bruno Collègue/)).toBeInTheDocument();
+      expect(screen.getByText('vendredi 6 novembre 2026')).toBeInTheDocument();
+      expect(screen.getByText('après 16 h')).toBeInTheDocument();
+    } finally {
+      demandes.splice(0, 1, demande(2, 'AA-DI-2026-00002', 'a_qualifier'));
+    }
+  });
+});
+
+describe('brouillon (0.7.0, DEM-11)', () => {
+  beforeEach(() => { user.lieu_propose = { id: 3, code: 'MC-A-12', nom_fr: 'Bureau 12', nom_nl: 'Bureau 12', chemin, source: 'derniere_demande' }; });
+  const enregistre = { entite_id: 1, updated_at: '2026-10-28 09:05:00', contenu: { danger: 1, lieu: { id: 3, code: 'MC-A-12', nom_fr: 'Bureau 12', nom_nl: 'Bureau 12', chemin },
+    categorie: { id: 20, libelle_fr: 'Divers', libelle_nl: 'Diversen', icone: 'autre', domaine_fr: null, domaine_nl: null },
+    description: 'La porte du local commence à', pour_mode: 'texte', collegue: null, beneficiaire_texte: 'Service Population', date_souhaitee: null, creneau: 'après 16 h' } };
+
+  it('brouillon trouvé : bandeau, rien n’est enregistré avant le choix ; « Reprendre » remet tout le formulaire', async () => {
+    brouillonData = enregistre;
+    render(wrap(NouvelleDemandePage, 'fr'));
+    expect(await screen.findByText(/Vous aviez commencé une demande le \d\d\/10\/2026 à \d\d:05/)).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText('3. Décrivez le problème'), { target: { value: 'Je tape sans choisir.' } });
+    await new Promise((r) => { setTimeout(r, 1800); });
+    expect(puts).toEqual([]);
+    fireEvent.click(screen.getByRole('button', { name: 'Reprendre' }));
+    expect(screen.queryByText(/Vous aviez commencé/)).toBeNull();
+    expect(screen.getByLabelText('3. Décrivez le problème')).toHaveValue('La porte du local commence à');
+    expect(screen.getByRole('checkbox', { name: 'Danger pour les personnes ou les biens' })).toBeChecked();
+    fireEvent.click(screen.getByRole('button', { name: /Pour quelqu'un d'autre/ }));
+    expect(screen.getByLabelText('Pour qui ?')).toHaveValue('Service Population');
+  }, 15000);
+
+  it('« Recommencer à zéro » efface le brouillon sur le serveur', async () => {
+    brouillonData = enregistre;
+    render(wrap(NouvelleDemandePage, 'fr'));
+    fireEvent.click(await screen.findByRole('button', { name: 'Recommencer à zéro' }));
+    await waitFor(() => expect(puts).toEqual([{ url: '/api/demandes/brouillon', method: 'DELETE', body: {} }]));
+    expect(screen.getByLabelText('3. Décrivez le problème')).toHaveValue('');
+  });
+
+  it('enregistrement automatique après un changement, avec l’heure ; formulaire vide : rien n’est envoyé', async () => {
+    // Lieu proposé tel que le serveur le rend, nature comprise (défaut de recette 0.7.0) : seuls les champs du schéma partent.
+    user.lieu_propose = { id: 3, code: 'MC-A-12', nom_fr: 'Bureau 12', nom_nl: 'Bureau 12', nature: 'local', chemin: chemin.map((e) => ({ ...e, nature: 'site' })), source: 'habituel' };
+    render(wrap(NouvelleDemandePage, 'fr'));
+    await screen.findByRole('button', { name: 'Divers' });
+    await new Promise((r) => { setTimeout(r, 1800); });
+    expect(puts).toEqual([]);
+    fireEvent.change(screen.getByLabelText('3. Décrivez le problème'), { target: { value: 'Une lampe' } });
+    await waitFor(() => expect(puts.length).toBe(1), { timeout: 4000 });
+    expect(puts[0]).toMatchObject({ url: '/api/demandes/brouillon', method: 'PUT' });
+    expect((puts[0].body.contenu as Record<string, unknown>).description).toBe('Une lampe');
+    expect((puts[0].body.contenu as Record<string, unknown>).lieu).toEqual({ id: 3, code: 'MC-A-12', nom_fr: 'Bureau 12', nom_nl: 'Bureau 12', source: 'habituel',
+      chemin: chemin.map((e) => ({ ...e, nature: 'site' })) });
+    expect(await screen.findByText(/Brouillon enregistré à \d\d:\d\d/)).toBeInTheDocument();
+  }, 15000);
+});
+
+describe('questions propres à la catégorie (0.7.0, DEM-05)', () => {
+  const ouiNon = [{ valeur: 'oui', fr: 'Oui', nl: 'Ja' }, { valeur: 'non', fr: 'Non', nl: 'Nee' }];
+  const qDomaine = { id: 31, categorie_id: 10, origine: 'domaine', question_fr: 'Est-ce tout le bâtiment ?', question_nl: 'Is het hele gebouw getroffen?', type: 'oui_non', reponses: ouiNon, obligatoire: 0 };
+  const qNature = { id: 32, categorie_id: 11, origine: 'nature', question_fr: 'Combien de lampes ?', question_nl: 'Hoeveel lampen?', type: 'choix', obligatoire: 1,
+    reponses: [{ valeur: '1', fr: 'Une', nl: 'Eén' }, { valeur: '2', fr: 'Plusieurs', nl: 'Meerdere' }] };
+  const avecQuestions = { total: 4, domaines: [
+    { ...cat(10, null, 'Électricité et éclairage', 'Elektriciteit en verlichting', 'eclair', [{ ...cat(11, 10, 'Lampe ou éclairage en panne', 'Lamp of verlichting defect', 'ampoule'), questions: [qDomaine, qNature] }]), questions: [qDomaine] },
+    { ...cat(20, null, 'Divers', 'Diversen', 'autre', []), questions: [] },
+  ] };
+  beforeEach(() => {
+    user.lieu_propose = { id: 3, code: 'MC-A-12', nom_fr: 'Bureau 12', nom_nl: 'Bureau 12', chemin, source: 'derniere_demande' };
+    arbreData = avecQuestions;
+  });
+  const choisirLampe = async () => {
+    fireEvent.click(await screen.findByRole('button', { name: /Électricité et éclairage/ }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Lampe ou éclairage en panne' }));
+  };
+
+  it('après le choix : questions du domaine puis de la nature, en boutons ; l’obligatoire bloque l’envoi, puis les réponses partent avec la demande', async () => {
+    reponsePost = { status: 201, json: { data: demande(3, 'AA-DI-2026-00003', 'a_qualifier', { reponses: [
+      { question_id: 32, question_fr: 'Combien de lampes ?', question_nl: 'Hoeveel lampen?', valeur: '2', reponse_fr: 'Plusieurs', reponse_nl: 'Meerdere' }] }), meta: { envelope: 1 } } };
+    render(wrap(NouvelleDemandePage, 'fr'));
+    expect(screen.queryByRole('group', { name: /Combien de lampes/ })).toBeNull();
+    await choisirLampe();
+    await screen.findByRole('group', { name: /Combien de lampes/ });
+    const groupes = screen.getAllByRole('group').filter((g) => /^dem-q-/.test(g.getAttribute('aria-labelledby') || ''));
+    expect(groupes.map((g) => g.getAttribute('aria-labelledby'))).toEqual(['dem-q-31', 'dem-q-32']);
+    expect(screen.getByText('(obligatoire)')).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText('3. Décrivez le problème'), { target: { value: 'Les néons du couloir ne marchent plus.' } });
+    expect(screen.getByRole('button', { name: /Envoyer la demande/ })).toBeDisabled();
+    expect(screen.getByText(/la réponse aux questions obligatoires/)).toBeInTheDocument();
+    expect(within(groupes[1]).getByText('Ce champ est obligatoire')).toBeInTheDocument();
+    const plusieurs = within(groupes[1]).getByRole('button', { name: 'Plusieurs' });
+    fireEvent.click(plusieurs);
+    expect(plusieurs).toHaveAttribute('aria-pressed', 'true');
+    fireEvent.click(plusieurs);
+    expect(plusieurs).toHaveAttribute('aria-pressed', 'true'); // une question obligatoire garde sa réponse
+    const oui = within(groupes[0]).getByRole('button', { name: 'Oui' });
+    fireEvent.click(oui);
+    fireEvent.click(oui);
+    expect(oui).toHaveAttribute('aria-pressed', 'false'); // une question facultative se relâche
+    fireEvent.click(screen.getByRole('button', { name: /Envoyer la demande/ }));
+    expect(await screen.findByText('Demande envoyée')).toBeInTheDocument();
+    expect(posts[0].body.reponses).toEqual([{ question_id: 32, valeur: '2' }]);
+    expect(screen.getByText('Combien de lampes ? Plusieurs')).toBeInTheDocument();
+  }, 20000);
+
+  it('sans questions : rien ne s’affiche et rien n’est envoyé ; changer de catégorie retire les réponses qui ne valent plus', async () => {
+    render(wrap(NouvelleDemandePage, 'fr'));
+    await choisirLampe();
+    fireEvent.click(within(await screen.findByRole('group', { name: /Combien de lampes/ })).getByRole('button', { name: 'Une' }));
+    fireEvent.click(screen.getByRole('button', { name: /Revenir aux domaines/ }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Divers' }));
+    expect(screen.queryByRole('group', { name: /Combien de lampes/ })).toBeNull();
+    fireEvent.change(screen.getByLabelText('3. Décrivez le problème'), { target: { value: 'Une chaise est cassée.' } });
+    fireEvent.click(screen.getByRole('button', { name: /Envoyer la demande/ }));
+    await waitFor(() => expect(posts.length).toBe(1));
+    expect(posts[0].body).not.toHaveProperty('reponses');
+  }, 20000);
+
+  it('brouillon : réponses enregistrées sans les questions ; à la reprise, la catégorie retrouve ses questions et les réponses reviennent', async () => {
+    render(wrap(NouvelleDemandePage, 'fr'));
+    await choisirLampe();
+    fireEvent.click(within(await screen.findByRole('group', { name: /Combien de lampes/ })).getByRole('button', { name: 'Une' }));
+    await waitFor(() => expect(puts.length).toBe(1), { timeout: 4000 });
+    const contenu = puts[0].body.contenu as Record<string, unknown>;
+    expect(contenu.reponses).toEqual([{ question_id: 32, valeur: '1' }]);
+    expect(contenu.categorie).not.toHaveProperty('questions');
+  }, 15000);
+
+  it('reprise d’un brouillon avec réponses ; en néerlandais, sans violation axe-core', async () => {
+    brouillonData = { entite_id: 1, updated_at: '2026-10-28 09:05:00', contenu: { categorie: { id: 11, libelle_fr: 'Lampe ou éclairage en panne', libelle_nl: 'Lamp of verlichting defect', icone: 'ampoule', domaine_fr: 'Électricité et éclairage', domaine_nl: 'Elektriciteit en verlichting' },
+      reponses: [{ question_id: 31, valeur: 'non' }, { question_id: 32, valeur: '2' }], description: 'Plus de lumière.' } };
+    const { container } = render(wrap(NouvelleDemandePage, 'nl'));
+    fireEvent.click(await screen.findByRole('button', { name: 'Verdergaan' }));
+    const groep = await screen.findByRole('group', { name: /Hoeveel lampen/ });
+    expect(within(groep).getByRole('button', { name: 'Meerdere' })).toHaveAttribute('aria-pressed', 'true');
+    expect(within(screen.getByRole('group', { name: /hele gebouw/ })).getByRole('button', { name: 'Nee' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByText('(verplicht)')).toBeInTheDocument();
+    await audit(container);
+  }, 20000);
+
+  it('fiche : les réponses sont lues par le demandeur, dans sa langue', async () => {
+    const avec = demande(2, 'AA-DI-2026-00002', 'a_qualifier', { reponses: [
+      { question_id: 31, question_fr: 'Est-ce tout le bâtiment ?', question_nl: 'Is het hele gebouw getroffen?', valeur: 'non', reponse_fr: 'Non', reponse_nl: 'Nee' }] });
+    vi.stubGlobal('fetch', vi.fn(async (url: string) => ({ ok: true, status: 200, statusText: 'OK',
+      json: async () => (url.match(/^\/api\/demandes\/\d+/) ? { data: avec, meta: { envelope: 1 } } : page([avec])) })));
+    render(wrap(MesDemandes, 'nl', ['/demandes?demande=2']));
+    expect(await screen.findByText('Details')).toBeInTheDocument();
+    expect(screen.getByText('Is het hele gebouw getroffen?', { exact: false })).toBeInTheDocument();
+    expect(screen.getByText('Nee')).toBeInTheDocument();
+  });
+});
+
+describe('mentions RGPD et consigne (0.7.0, RGPD-10, DEM-16)', () => {
+  beforeEach(() => {
+    user.lieu_propose = { id: 3, code: 'MC-A-12', nom_fr: 'Bureau 12', nom_nl: 'Bureau 12', chemin, source: 'derniere_demande' };
+    user.protection_donnees = {
+      mention_courte_fr: 'Vos données servent uniquement à traiter votre demande.', mention_courte_nl: 'Uw gegevens dienen enkel om uw aanvraag te behandelen.',
+      mention_fr: 'Administration fictive traite les données de cette demande. DPO : dpo@exemple.test.', mention_nl: 'Fictief bestuur verwerkt de gegevens. DPO: dpo@exemple.test.', dpo_contact: 'dpo@exemple.test',
+    };
+  });
+
+  it('mention courte au-dessus du bouton d’envoi ; « En savoir plus » déplie le texte complet sans quitter la page', async () => {
+    render(wrap(NouvelleDemandePage, 'fr'));
+    expect(await screen.findByText(/Vos données servent uniquement à traiter votre demande\./)).toBeInTheDocument();
+    const plus = screen.getByRole('button', { name: 'En savoir plus' });
+    expect(plus).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.getByText(/Administration fictive traite les données/)).not.toBeVisible();
+    fireEvent.click(plus);
+    expect(screen.getByRole('button', { name: 'Masquer' })).toHaveAttribute('aria-expanded', 'true');
+    expect(screen.getByText(/Administration fictive traite les données/)).toBeVisible();
+    // DEM-16 : l'aide de la description rappelle de ne citer personne.
+    expect(screen.getByText(/Ne citez pas de nom ni de donnée personnelle sur une autre personne\./)).toBeInTheDocument();
+  });
+
+  it('en néerlandais, texte complet ouvert, sans violation axe-core', async () => {
+    const { container } = render(wrap(NouvelleDemandePage, 'nl'));
+    fireEvent.click(await screen.findByRole('button', { name: 'Meer weten' }));
+    expect(screen.getByText(/Fictief bestuur verwerkt de gegevens/)).toBeVisible();
+    expect(screen.getByText(/Vermeld geen naam of persoonsgegevens van een andere persoon\./)).toBeInTheDocument();
+    await waitFor(() => expect(container.querySelector('.ant-spin-spinning')).toBeNull());
+    await audit(container);
+  }, 30000);
+});
+
+describe('lieux récents (0.7.5, DV-74)', () => {
+  const recent = (id: number, code: string, fr: string, nl: string) => ({ id, code, nom_fr: fr, nom_nl: nl, nature: 'local',
+    chemin: [{ id: 1, code: 'MC', nom_fr: 'Maison communale', nom_nl: 'Gemeentehuis' }, { id, code, nom_fr: fr, nom_nl: nl }] });
+  beforeEach(() => {
+    user.lieu_propose = { id: 3, code: 'MC-A-12', nom_fr: 'Bureau 12', nom_nl: 'Bureau 12', chemin, source: 'derniere_demande' };
+    user.lieux_recents = [recent(8, 'MC-ACC', 'Accueil', 'Onthaal'), recent(9, 'MC-SDC', 'Salle du conseil', 'Raadzaal')];
+  });
+
+  it('« Changer de lieu » montre les lieux récents en boutons ; un clic choisit le lieu ; la recherche les masque', async () => {
+    render(wrap(NouvelleDemandePage, 'fr'));
+    fireEvent.click(await screen.findByRole('button', { name: /Changer de lieu/ }));
+    const liste = screen.getByRole('list', { name: 'Vos lieux récents' });
+    expect(within(liste).getAllByRole('button').map((b) => b.querySelector('.dem-resultat-nom')?.textContent)).toEqual(['Accueil MC-ACC', 'Salle du conseil MC-SDC']);
+    fireEvent.change(screen.getByLabelText('Chercher un lieu'), { target: { value: 'bur' } });
+    expect(screen.queryByRole('list', { name: 'Vos lieux récents' })).toBeNull();
+    fireEvent.change(screen.getByLabelText('Chercher un lieu'), { target: { value: '' } });
+    fireEvent.click(within(screen.getByRole('list', { name: 'Vos lieux récents' })).getByRole('button', { name: /Salle du conseil/ }));
+    expect(await screen.findByText('Salle du conseil')).toBeInTheDocument();
+    expect(screen.queryByRole('list', { name: 'Vos lieux récents' })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: /Changer de lieu/ }));
+    expect(within(screen.getByRole('list', { name: 'Vos lieux récents' })).getAllByRole('button')).toHaveLength(1);
+  }, 30000);
+
+  it('sans lieu récent, rien ne s’affiche ; en néerlandais, noms NL et sans violation axe-core', async () => {
+    user.lieux_recents = [];
+    const vide = render(wrap(NouvelleDemandePage, 'fr'));
+    fireEvent.click(await screen.findByRole('button', { name: /Changer de lieu/ }));
+    expect(screen.queryByText('Vos lieux récents')).toBeNull();
+    vide.unmount();
+    user.lieux_recents = [recent(8, 'MC-ACC', 'Accueil', 'Onthaal')];
+    const { container } = render(wrap(NouvelleDemandePage, 'nl'));
+    fireEvent.click(await screen.findByRole('button', { name: /Andere plaats/ }));
+    const liste = screen.getByRole('list', { name: 'Uw recente plaatsen' });
+    expect(within(liste).getByRole('button', { name: /Onthaal/ })).toBeInTheDocument();
+    await waitFor(() => expect(container.querySelector('.ant-spin-spinning')).toBeNull());
+    await audit(container);
+  }, 30000);
+});
+
+describe('pièces jointes du formulaire (0.8.0, DEM-09, DEM-16)', () => {
+  beforeEach(() => { user.lieu_propose = { id: 3, code: 'MC-A-12', nom_fr: 'Bureau 12', nom_nl: 'Bureau 12', chemin, source: 'derniere_demande' }; });
+  const entree = () => screen.getByTestId('dem-pieces-entree') as HTMLInputElement;
+  const deposer = (...fichiers: File[]) => fireEvent.change(entree(), { target: { files: fichiers } });
+
+  for (const lang of ['fr', 'nl'] as const) {
+    it(`bloc « Photos et documents » (${lang}) : bouton, compteur, consigne, sans violation axe-core`, async () => {
+      piecesData = { pieces: [piece(1, 'fuite.jpg'), piece(2, 'devis.pdf', 'application/pdf', { octets: 2.5 * 1024 * 1024 })], plafonds: PLAFONDS };
+      const { container } = render(wrap(NouvelleDemandePage, lang));
+      expect(await screen.findByRole('heading', { name: translations['demande.pieces.title'][lang] })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: new RegExp(`${translations['demande.pieces.ajouter'][lang]}$`) })).toBeEnabled();
+      expect(screen.getByText(lang === 'fr' ? '2 sur 5' : '2 van 5')).toBeInTheDocument();
+      expect(screen.getByText(new RegExp(lang === 'fr' ? 'Ne photographiez ni personne' : 'Fotografeer geen personen'))).toBeInTheDocument();
+      expect(screen.getByRole('img', { name: 'fuite.jpg' })).toHaveAttribute('src', '/api/pieces/1/fichier');
+      expect(screen.getByRole('link', { name: lang === 'fr' ? 'Télécharger devis.pdf' : 'devis.pdf downloaden' })).toHaveAttribute('href', '/api/pieces/2/fichier');
+      expect(screen.getByText(lang === 'fr' ? '2,5 Mo' : '2,5 MB')).toBeInTheDocument();
+      expect(entree()).toHaveAttribute('accept', 'image/*,application/pdf');
+      await waitFor(() => expect(container.querySelector('.ant-spin-spinning')).toBeNull());
+      await audit(container);
+    }, 30000);
+  }
+
+  it('ajout : photo réduite puis envoyée au brouillon, PDF envoyé tel quel ; vignettes et compteur suivent', async () => {
+    render(wrap(NouvelleDemandePage, 'fr'));
+    await screen.findByText('0 sur 5');
+    reponseUpload = (n) => ({ status: 201, json: { data: n === 1 ? piece(101, 'Fuite cave.jpg') : piece(102, 'devis.pdf', 'application/pdf'), meta: { envelope: 1 } } });
+    deposer(new File(['brut'], 'Fuite cave.HEIC', { type: 'image/heic' }), new File(['%PDF-1.7'], 'devis.pdf', { type: 'application/pdf' }));
+    await waitFor(() => expect(screen.getByText('2 sur 5')).toBeInTheDocument());
+    expect(uploads.map((u) => u.url)).toEqual(['/api/demandes/brouillon/pieces', '/api/demandes/brouillon/pieces']);
+    expect(uploads[0].fichier.name).toBe('Fuite cave.jpg');
+    expect(uploads[0].fichier.type).toBe('image/jpeg');
+    expect(uploads[1].fichier.name).toBe('devis.pdf');
+    expect(uploads[1].fichier.type).toBe('application/pdf');
+    expect(screen.getByRole('img', { name: 'Fuite cave.jpg' })).toBeInTheDocument();
+  });
+
+  it('refus : photo illisible, format refusé, PDF trop lourd, refus du serveur ; les autres fichiers partent', async () => {
+    render(wrap(NouvelleDemandePage, 'fr'));
+    await screen.findByText('0 sur 5');
+    reponseUpload = () => ({ status: 400, json: { error: true, code: 'FILE_ACTIVE', message: 'Ce PDF contient du contenu actif (script, fichier joint, formulaire) : il est refusé.' } });
+    deposer(new File(['x'], 'illisible.jpg', { type: 'image/jpeg' }), new File(['x'], 'notes.docx', { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' }),
+      new File([new Uint8Array(11 * 1024 * 1024)], 'scan.pdf', { type: 'application/pdf' }), new File(['%PDF'], 'piege.pdf', { type: 'application/pdf' }));
+    const alerte = await screen.findByRole('alert');
+    expect(alerte).toHaveTextContent('illisible.jpg : cette photo ne peut pas être lue');
+    expect(alerte).toHaveTextContent('notes.docx : format non accepté.');
+    expect(alerte).toHaveTextContent('scan.pdf dépasse 10 Mo.');
+    expect(alerte).toHaveTextContent('piege.pdf : Ce PDF contient du contenu actif');
+    expect(uploads.map((u) => u.fichier.name)).toEqual(['piege.pdf']);
+    expect(screen.getByText('0 sur 5')).toBeInTheDocument();
+  });
+
+  it('maximum atteint : bouton désactivé, message ; fichiers en trop annoncés', async () => {
+    piecesData = { pieces: [piece(1, 'a.jpg'), piece(2, 'b.jpg'), piece(3, 'c.jpg'), piece(4, 'd.jpg')], plafonds: PLAFONDS };
+    render(wrap(NouvelleDemandePage, 'fr'));
+    await screen.findByText('4 sur 5');
+    deposer(new File(['x'], 'e.jpg', { type: 'image/jpeg' }), new File(['x'], 'f.jpg', { type: 'image/jpeg' }));
+    await waitFor(() => expect(screen.getByText('5 sur 5')).toBeInTheDocument());
+    expect(uploads).toHaveLength(1);
+    expect(screen.getByRole('alert')).toHaveTextContent('Nombre maximal atteint : 1 fichier non ajouté.');
+    expect(screen.getByRole('button', { name: /Ajouter une photo ou un document$/ })).toBeDisabled();
+    expect(screen.getByText(/Maximum atteint : retirez une pièce/)).toBeInTheDocument();
+  });
+
+  it('« Retirer » demande confirmation puis supprime réellement sur le serveur', async () => {
+    piecesData = { pieces: [piece(1, 'fuite.jpg'), piece(2, 'autre.jpg')], plafonds: PLAFONDS };
+    render(wrap(NouvelleDemandePage, 'fr'));
+    fireEvent.click(await screen.findByRole('button', { name: 'Retirer fuite.jpg' }));
+    expect(await screen.findByText('Retirer « fuite.jpg » ? La pièce est effacée définitivement.')).toBeInTheDocument();
+    fireEvent.click(screen.getAllByRole('button', { name: 'Retirer' }).slice(-1)[0]);
+    await waitFor(() => expect(puts).toContainEqual({ url: '/api/pieces/1', method: 'DELETE', body: {} }));
+    await waitFor(() => expect(screen.queryByRole('img', { name: 'fuite.jpg' })).toBeNull());
+    expect(screen.getByText('1 sur 5')).toBeInTheDocument();
+  });
+
+  it('entité qui ferme le dépôt : aucun bloc ; photos seulement : bouton « Ajouter une photo », sélecteur d’images', async () => {
+    piecesData = { pieces: [], plafonds: { ...PLAFONDS, nombre: 0 } };
+    const { unmount } = render(wrap(NouvelleDemandePage, 'fr'));
+    await screen.findByRole('button', { name: 'Divers' });
+    expect(screen.queryByRole('heading', { name: 'Photos et documents (facultatif)' })).toBeNull();
+    unmount();
+    piecesData = { pieces: [], plafonds: { ...PLAFONDS, types: ['image/jpeg', 'image/png'], octets: 2 * 1024 * 1024 } };
+    render(wrap(NouvelleDemandePage, 'fr'));
+    expect(await screen.findByRole('button', { name: /Ajouter une photo$/ })).toBeInTheDocument();
+    expect(entree()).toHaveAttribute('accept', 'image/*');
+    expect(screen.getByText(/Photos seulement, 2 Mo au plus/)).toBeInTheDocument();
+  });
+
+  it('brouillon avec pièces : l’invite le dit ; une pièce seule suffit à garder le brouillon', async () => {
+    piecesData = { pieces: [piece(1, 'fuite.jpg'), piece(2, 'autre.jpg')], plafonds: PLAFONDS };
+    brouillonData = { entite_id: 1, updated_at: '2026-10-30 09:05:00', contenu: { description: 'Fuite' } };
+    const { unmount } = render(wrap(NouvelleDemandePage, 'fr'));
+    expect(await screen.findByText('« Recommencer à zéro » efface aussi les pièces jointes déjà ajoutées (2).')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Recommencer à zéro' }));
+    await waitFor(() => expect(screen.getByText('0 sur 5')).toBeInTheDocument());
+    unmount();
+    brouillonData = null;
+    piecesData = { pieces: [piece(1, 'fuite.jpg')], plafonds: PLAFONDS };
+    puts = [];
+    render(wrap(NouvelleDemandePage, 'fr'));
+    await screen.findByText('1 sur 5');
+    await waitFor(() => expect(puts.some((p) => p.url === '/api/demandes/brouillon' && p.method === 'PUT')).toBe(true), { timeout: 4000 });
+  }, 15000);
+
+  it('après l’envoi, l’écran dit le nombre de pièces jointes', async () => {
+    reponsePost = { status: 201, json: { data: demande(3, 'AA-DI-2026-00003', 'a_qualifier', { pieces: [piece(1, 'fuite.jpg', 'image/jpeg', { demande_id: 3, brouillon: 0 })] }), meta: { envelope: 1 } } };
+    piecesData = { pieces: [piece(1, 'fuite.jpg')], plafonds: PLAFONDS };
+    render(wrap(NouvelleDemandePage, 'fr'));
+    fireEvent.click(await screen.findByRole('button', { name: 'Divers' }));
+    fireEvent.change(screen.getByLabelText('3. Décrivez le problème'), { target: { value: 'Une fuite sous l’évier de la cuisine.' } });
+    fireEvent.click(screen.getByRole('button', { name: /Envoyer/ }));
+    expect(await screen.findByText('Pièces jointes : 1')).toBeInTheDocument();
+  });
+});
+
+describe('pièces jointes sur la fiche (0.8.0, DEM-09, DV-84)', () => {
+  const avecPieces = (peut: 0 | 1) => demande(2, 'AA-DI-2026-00002', 'a_qualifier', {
+    pieces: [piece(1, 'fuite.jpg', 'image/jpeg', { demande_id: 2, brouillon: 0, peut_retirer: peut }), piece(2, 'devis.pdf', 'application/pdf', { demande_id: 2, brouillon: 0, peut_retirer: peut })],
+  });
+
+  for (const lang of ['fr', 'nl'] as const) {
+    it(`fiche avec pièces (${lang}) : vignette, PDF à télécharger, « Retirer » si permis ; sans violation axe-core`, async () => {
+      ficheData = avecPieces(1);
+      render(wrap(MesDemandes, lang, ['/?demande=2']));
+      const fiche = await screen.findByRole('dialog');
+      expect(await within(fiche).findByText(translations['demande.champ.pieces'][lang])).toBeInTheDocument();
+      expect(within(fiche).getByRole('img', { name: 'fuite.jpg' })).toHaveAttribute('src', '/api/pieces/1/fichier');
+      expect(within(fiche).getByRole('link', { name: lang === 'fr' ? 'Télécharger devis.pdf' : 'devis.pdf downloaden' })).toHaveAttribute('href', '/api/pieces/2/fichier');
+      expect(within(fiche).getAllByRole('button', { name: new RegExp(translations['demande.pieces.retirer'][lang]) })).toHaveLength(2);
+      await audit(fiche);
+    }, 30000);
+  }
+
+  it('sans le droit (bénéficiaire, demande prise en charge) : pièces visibles, pas de « Retirer »', async () => {
+    ficheData = avecPieces(0);
+    render(wrap(MesDemandes, 'fr', ['/?demande=2']));
+    const fiche = await screen.findByRole('dialog');
+    expect(await within(fiche).findByRole('img', { name: 'fuite.jpg' })).toBeInTheDocument();
+    expect(within(fiche).queryByRole('button', { name: /Retirer/ })).toBeNull();
+  });
+
+  it('« Retirer » : confirmation, suppression sur le serveur, fiche rechargée', async () => {
+    ficheData = avecPieces(1);
+    render(wrap(MesDemandes, 'fr', ['/?demande=2']));
+    const fiche = await screen.findByRole('dialog');
+    fireEvent.click(await within(fiche).findByRole('button', { name: 'Retirer fuite.jpg' }));
+    expect(await screen.findByText('Retirer « fuite.jpg » ? La pièce est effacée définitivement.')).toBeInTheDocument();
+    const avant = gets.filter((g) => g === '/api/demandes/2').length;
+    ficheData = demande(2, 'AA-DI-2026-00002', 'a_qualifier', { pieces: [] });
+    fireEvent.click(screen.getAllByRole('button', { name: 'Retirer' }).slice(-1)[0]);
+    await waitFor(() => expect(puts).toContainEqual({ url: '/api/pieces/1', method: 'DELETE', body: {} }));
+    await waitFor(() => expect(gets.filter((g) => g === '/api/demandes/2').length).toBe(avant + 1));
+    await waitFor(() => expect(within(fiche).queryByRole('img', { name: 'fuite.jpg' })).toBeNull());
+  });
+
+  it('qui suit seulement la demande (pieces null) : aucune ligne « Pièces jointes »', async () => {
+    ficheData = demande(2, 'AA-DI-2026-00002', 'a_qualifier', { pieces: null, suivie: 1 });
+    render(wrap(MesDemandes, 'fr', ['/?demande=2']));
+    const fiche = await screen.findByRole('dialog');
+    await within(fiche).findByText('AA-DI-2026-00002');
+    expect(within(fiche).queryByText('Pièces jointes')).toBeNull();
+  });
+});
+
+
+const passage = (vers: string, extra: Record<string, unknown> = {}) => ({ vers, via: null, motif_liste: null, commentaire: 'interdit', commentaire_public: 0, compte_rendu: 0, ...extra });
+const PASSAGES: Record<string, unknown[]> = {
+  a_qualifier: [passage('qualifiee', { via: 'qualifier' }), passage('refusee', { motif_liste: 'motif_refus', commentaire: 'facultatif', commentaire_public: 1 }),
+    passage('annulee', { commentaire: 'obligatoire', commentaire_public: 1 })],
+  qualifiee: [passage('en_cours'), passage('en_attente', { motif_liste: 'motif_attente', commentaire: 'facultatif', commentaire_public: 1 }),
+    passage('terminee', { commentaire: 'facultatif' }), passage('refusee', { motif_liste: 'motif_refus', commentaire: 'facultatif', commentaire_public: 1 }),
+    passage('annulee', { commentaire: 'obligatoire', commentaire_public: 1 })],
+  terminee: [passage('en_cours', { commentaire: 'obligatoire' }), passage('cloturee', { motif_liste: 'cause_panne', commentaire: 'facultatif', commentaire_public: 1, compte_rendu: 1 })],
+};
+
+describe('service technique (0.9.0, GES-01, GES-02, GES-04, PRI-01, PRI-03)', () => {
+  const service = (id: number, numero: string, etat: string, extra: Record<string, unknown> = {}) => demande(id, numero, etat, {
+    priorite_proposee: 'P3', prise_en_charge_le: '2026-10-28 13:05:00', echeance_le: '2026-11-09 13:05:00', echeance_type: etat === 'a_qualifier' ? 'prise_en_charge' : 'fin',
+    echeance_courante: etat === 'a_qualifier' ? '2026-10-28 13:05:00' : '2026-11-09 13:05:00', retard: 0, photos_visibles: 1,
+    // 0.14.0 : passages permis rendus par le serveur pour un gestionnaire.
+    transitions: PASSAGES[etat] || [], etat_depuis: '2026-10-28 13:05:00', ...extra,
+  });
+  const calls = () => (fetch as unknown as { mock: { calls: [string, { method?: string; body?: string }?][] } }).mock.calls;
+  beforeEach(() => {
+    demandes.splice(0, demandes.length, service(2, 'AA-DI-2026-00002', 'a_qualifier', { retard: 1 }), service(1, 'AA-DI-2026-00001', 'qualifiee'));
+  });
+  const remettre = () => demandes.splice(0, demandes.length, demande(2, 'AA-DI-2026-00002', 'a_qualifier'), demande(1, 'AA-DI-2026-00001', 'cloturee', { delai_annonce: null }));
+
+  it('accueil du service : quatre compteurs en liens vers la liste filtrée, nombre et libellé dans le lien', async () => {
+    try {
+      render(wrap(HomePage, 'fr'));
+      const retard = await screen.findByRole('link', { name: /2\s*En retard/ });
+      expect(retard).toHaveAttribute('href', expect.stringContaining('echeance=retard'));
+      expect(retard).toHaveClass('bord-alerte');
+      expect(screen.getByRole('link', { name: /4\s*À qualifier/ })).toHaveAttribute('href', expect.stringContaining('etats=a_qualifier'));
+      expect(screen.getByRole('link', { name: /1\s*P1 et P2 ouvertes/ })).toHaveAttribute('href', expect.stringContaining('priorites=P1%2CP2'));
+      expect(screen.getByRole('link', { name: /3\s*Échéance dans les 2 jours ouvrés/ })).toHaveAttribute('href', expect.stringContaining('echeance=proche'));
+    } finally { remettre(); }
+  });
+
+  it('0.20.0 (DV-159) : « Demandes de l’entité (n à qualifier) » de l’accueil compte comme le tableau de bord, rouvertes comprises', async () => {
+    try {
+      render(wrap(HomePage, 'fr'));
+      await screen.findByRole('link', { name: /4\s*À qualifier/ });
+      await waitFor(() => expect(calls().map((c) => c[0]).some((u) => u.startsWith('/api/demandes?') && u.includes('perimetre=entite')
+        && u.includes('etats=a_qualifier%2Crouverte') && u.includes('limit=1'))).toBe(true));
+      expect(calls().map((c) => c[0]).some((u) => u.startsWith('/api/demandes?') && /[?&]etat=a_qualifier(&|$)/.test(u))).toBe(false);
+    } finally { remettre(); }
+  });
+
+  it('liste : filtres de l’adresse transmis au serveur ; en cours par défaut ; échéance et « En retard » en mots', async () => {
+    try {
+      render(wrap(DemandesEntite, 'fr', ['/demandes-entite?echeance=retard&tri=echeance&ordre=asc']));
+      expect(await screen.findAllByText('En retard')).not.toHaveLength(0);
+      const u = calls().map((c) => c[0]).find((x) => x.startsWith('/api/demandes?') && x.includes('perimetre=entite'))!;
+      expect(u).toContain('echeance=retard');
+      expect(u).toContain('tri=echeance');
+      expect(u).toContain('ouvertes=1');
+      expect(screen.getAllByText('Prise en charge avant').length).toBeGreaterThan(0);
+      expect(screen.getAllByText('À qualifier').length).toBeGreaterThan(0);
+    } finally { remettre(); }
+  });
+
+  it('liste : le filtre « Dans les 2 jours ouvrés » demande echeance=proche', async () => {
+    try {
+      render(wrap(DemandesEntite, 'fr', ['/demandes-entite']));
+      await screen.findByRole('button', { name: 'AA-DI-2026-00002' });
+      fireEvent.click(screen.getByText('Filtres et vues'));
+      fireEvent.click(await screen.findByText('Dans les 2 jours ouvrés'));
+      await waitFor(() => expect(calls().some((c) => c[0].includes('perimetre=entite') && c[0].includes('echeance=proche'))).toBe(true));
+    } finally { remettre(); }
+  });
+
+  it('liste : filtres équipe et ouvrier (0.20.0, DV-163) : lus dans l’adresse, envoyés au serveur, nommés, gardés dans la vue', async () => {
+    try {
+      render(wrap(DemandesEntite, 'fr', ['/demandes-entite?equipe_id=31&ouvrier_id=21']));
+      await screen.findByRole('button', { name: 'AA-DI-2026-00002' });
+      const u = calls().map((c) => c[0]).find((x) => x.startsWith('/api/demandes?') && x.includes('perimetre=entite'))!;
+      expect(u).toContain('equipe_id=31');
+      expect(u).toContain('ouvrier_id=21');
+      expect(calls().some((c) => c[0].includes('/api/demandes/export')), 'pas d’export sans clic').toBe(false);
+      fireEvent.click(screen.getByText(/Filtres et vues \(2\)/));
+      expect(await screen.findByText('Bâtiment (BAT)')).toBeInTheDocument();
+      expect(screen.getByText('Olivier Ouvrier')).toBeInTheDocument();
+      expect(screen.getByRole('combobox', { name: 'Équipe' })).toBeInTheDocument();
+      expect(screen.getByRole('combobox', { name: 'Ouvrier' })).toBeInTheDocument();
+      fireEvent.click(await screen.findByRole('button', { name: /Enregistrer la vue/ }));
+      fireEvent.change(await screen.findByLabelText('Nom de la vue'), { target: { value: 'Équipe bâtiment' } });
+      fireEvent.click(screen.getByRole('button', { name: 'Enregistrer' }));
+      await waitFor(() => expect(posts.some((p) => p.url === '/api/vues-demandes')).toBe(true));
+      expect(posts.find((x) => x.url === '/api/vues-demandes')!.body).toEqual({ nom: 'Équipe bâtiment', filtres: { equipe_id: 31, ouvrier_id: 21, ouvertes: 1 } });
+    } finally { remettre(); }
+  });
+
+  it('vue : « Enregistrer la vue » envoie le nom et les filtres du moment', async () => {
+    try {
+      render(wrap(DemandesEntite, 'fr', ['/demandes-entite?priorites=P1,P2&echeance=retard']));
+      await screen.findByRole('button', { name: 'AA-DI-2026-00002' });
+      fireEvent.click(screen.getByText(/Filtres et vues \(2\)/));
+      fireEvent.click(await screen.findByRole('button', { name: /Enregistrer la vue/ }));
+      fireEvent.change(await screen.findByLabelText('Nom de la vue'), { target: { value: 'Urgentes en retard' } });
+      fireEvent.click(screen.getByRole('button', { name: 'Enregistrer' }));
+      await waitFor(() => expect(posts.some((p) => p.url === '/api/vues-demandes')).toBe(true));
+      const p = posts.find((x) => x.url === '/api/vues-demandes')!;
+      expect(p.body).toEqual({ nom: 'Urgentes en retard', filtres: { priorites: 'P1,P2', echeance: 'retard', ouvertes: 1 } });
+    } finally { remettre(); }
+  });
+
+  it('fiche du service : échéances, « Qualifier » ; le formulaire propose la priorité, exige un motif quand elle change, puis envoie', async () => {
+    ficheData = service(2, 'AA-DI-2026-00002', 'a_qualifier', { retard: 1 });
+    reponsePost = { status: 200, json: { data: service(2, 'AA-DI-2026-00002', 'qualifiee', { priorite: 'P2', motif_priorite: 'Classe occupée' }), meta: { envelope: 1 } } };
+    try {
+      render(wrap(DemandesEntite, 'fr', ['/demandes-entite?demande=2']));
+      const fiche = await screen.findByRole('dialog');
+      expect(await within(fiche).findByText('Échéances')).toBeInTheDocument();
+      fireEvent.click(await screen.findByRole('button', { name: 'Qualifier' }));
+      expect(await screen.findByText(/Priorité proposée : P3/)).toBeInTheDocument();
+      // 0.19.0 (GES-04) : corps de métier proposé par la catégorie (celui du domaine pour cette nature).
+      expect(await screen.findByText('Proposé par la catégorie : Électricité')).toBeInTheDocument();
+      fireEvent.click(await screen.findByText('P2 · Urgente'));
+      expect(await screen.findByLabelText(/Motif du changement de priorité/)).toBeInTheDocument();
+      fireEvent.change(screen.getByLabelText(/Consignes à l’ouvrier|Consignes à l'ouvrier/), { target: { value: 'Prendre l’échelle.' } });
+      fireEvent.click(screen.getAllByRole('button', { name: 'Qualifier' }).slice(-1)[0]);
+      expect(await screen.findByText('Indiquez pourquoi vous changez la priorité proposée.')).toBeInTheDocument();
+      expect(posts.some((p) => p.url.endsWith('/qualifier'))).toBe(false);
+      fireEvent.change(screen.getByLabelText(/Motif du changement de priorité/), { target: { value: 'Classe occupée' } });
+      fireEvent.click(screen.getAllByRole('button', { name: 'Qualifier' }).slice(-1)[0]);
+      await waitFor(() => expect(posts.some((p) => p.url === '/api/demandes/2/qualifier')).toBe(true));
+      expect(posts.find((p) => p.url === '/api/demandes/2/qualifier')!.body).toEqual({
+        categorie_id: 11, lieu_id: 3, priorite: 'P2', corps_metier_id: 71, motif_priorite: 'Classe occupée', duree_estimee_minutes: null,
+        consignes: 'Prendre l’échelle.', photos_visibles: 1, date_convenue: null,
+      });
+    } finally { remettre(); }
+  });
+
+  it('R1 (0.9.1, DV-94) : après une qualification, les compteurs du tableau de bord se rechargent avec la liste', async () => {
+    ficheData = service(2, 'AA-DI-2026-00002', 'a_qualifier');
+    reponsePost = { status: 200, json: { data: service(2, 'AA-DI-2026-00002', 'qualifiee'), meta: { envelope: 1 } } };
+    try {
+      render(wrap(DemandesEntite, 'fr', ['/demandes-entite?demande=2']));
+      expect(await screen.findByRole('link', { name: /4\s*À qualifier/ })).toBeInTheDocument();
+      const avant = gets.filter((u) => u.startsWith('/api/demandes/tableau-bord')).length;
+      fireEvent.click(await screen.findByRole('button', { name: 'Qualifier' }));
+      await screen.findByText(/Priorité proposée : P3/);
+      bordData = { ...BORD, a_qualifier: 3 };
+      fireEvent.click(screen.getAllByRole('button', { name: 'Qualifier' }).slice(-1)[0]);
+      await waitFor(() => expect(posts.some((p) => p.url === '/api/demandes/2/qualifier')).toBe(true));
+      expect(await screen.findByRole('link', { name: /3\s*À qualifier/ })).toHaveAttribute('href', expect.stringContaining('etats=a_qualifier'));
+      expect(gets.filter((u) => u.startsWith('/api/demandes/tableau-bord')).length).toBe(avant + 1);
+    } finally { remettre(); }
+  });
+
+  for (const lang of ['fr', 'nl'] as const) {
+    it(`formulaire de qualification (${lang}) sans violation axe-core`, async () => {
+      ficheData = service(2, 'AA-DI-2026-00002', 'a_qualifier');
+      try {
+        render(wrap(DemandesEntite, lang, ['/demandes-entite?demande=2']));
+        await screen.findByRole('dialog');
+        fireEvent.click(await screen.findByRole('button', { name: translations['qualif.bouton'][lang] }));
+        await screen.findByText(new RegExp(translations['qualif.proposee'][lang]));
+        await audit(screen.getByRole('dialog'));
+      } finally { remettre(); }
+    }, 30000);
+  }
+
+  it('erreur du serveur à la qualification : message affiché, saisie gardée (ERG-09)', async () => {
+    ficheData = service(2, 'AA-DI-2026-00002', 'a_qualifier');
+    reponsePost = { status: 409, json: { error: true, code: 'DEMANDE_ETAT', message: 'Cette demande ne peut plus être qualifiée dans son état actuel.' } };
+    try {
+      render(wrap(DemandesEntite, 'fr', ['/demandes-entite?demande=2']));
+      fireEvent.click(await screen.findByRole('button', { name: 'Qualifier' }));
+      await screen.findByText(/Priorité proposée : P3/);
+      fireEvent.change(screen.getByLabelText(/Consignes à l’ouvrier|Consignes à l'ouvrier/), { target: { value: 'Ne pas oublier.' } });
+      fireEvent.click(screen.getAllByRole('button', { name: 'Qualifier' }).slice(-1)[0]);
+      expect(await screen.findByText('Cette demande ne peut plus être qualifiée dans son état actuel.')).toBeInTheDocument();
+      expect(screen.getByLabelText(/Consignes à l’ouvrier|Consignes à l'ouvrier/)).toHaveValue('Ne pas oublier.');
+    } finally { remettre(); }
+  });
+
+  it('« Mes demandes » : la fiche du demandeur ne montre ni échéances du service ni consignes', async () => {
+    ficheData = demande(2, 'AA-DI-2026-00002', 'qualifiee');
+    render(wrap(MesDemandes, 'fr', ['/?demande=2']));
+    const fiche = await screen.findByRole('dialog');
+    expect(await within(fiche).findByText('Prise en charge')).toBeInTheDocument();
+    expect(within(fiche).queryByText('Échéances')).toBeNull();
+    expect(within(fiche).queryByText(/Consignes/)).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Qualifier' })).toBeNull();
+  });
+});
+
+describe('tâches d’une demande, fiche du service technique (0.20.0, point 1 ; CYC-03, DV-160)', () => {
+  const tache = (id: number, rang: number, etat: string, extra: Record<string, unknown> = {}) => ({
+    id, demande_id: 2, rang, titre: `Tâche ${rang}`, consignes: null, corps_metier_id: 71, corps_metier_code: 'electricite',
+    corps_metier_libelle_fr: 'Électricité', corps_metier_libelle_nl: 'Elektriciteit', duree_estimee_min: 90, etat, motif_annulation: null,
+    annulation_auto: null, etat_depuis: '2026-11-19 09:00:00', equipe_id: null, equipe_code: null, equipe_nom_fr: null, equipe_nom_nl: null, ouvriers: [],
+    date_prevue: null, heure_debut: null,
+    passages: ({ a_faire: ['en_cours', 'terminee', 'annulee'], en_cours: ['a_faire', 'terminee', 'annulee'], terminee: ['a_faire'], annulee: ['a_faire'] } as Record<string, string[]>)[etat], ...extra,
+  });
+  const fiche = (extra: Record<string, unknown> = {}) => demande(2, 'AA-DI-2026-00002', 'qualifiee', {
+    priorite_proposee: 'P3', transitions: [], etat_depuis: '2026-11-08 09:30:00', corps_metier_id: 71, taches_modifiables: 1, ...extra,
+  });
+  const ouvrir = async (lang: 'fr' | 'nl' = 'fr') => { render(wrap(DemandesEntite, lang, ['/demandes-entite?demande=2'])); return screen.findByRole('dialog'); };
+  afterEach(() => { ficheData = null; });
+
+  it('liste par rang : état, corps de métier, durée, motif d’annulation ou annulation avec la demande ; boutons par passage ; sans violation axe-core (FR, NL)', async () => {
+    ficheData = fiche({ taches: [tache(5, 1, 'en_cours', { consignes: 'Clé à l’accueil.' }), tache(6, 2, 'annulee', { motif_annulation: 'Fait par le concierge.' }), tache(7, 3, 'annulee', { annulation_auto: 'refusee' })] });
+    const d = await ouvrir();
+    const section = await within(d).findByRole('region', { name: 'Tâches (3)' });
+    expect(within(section).getByText('Tâche 1 · Tâche 1')).toBeInTheDocument();
+    expect(within(section).getByText('En cours')).toBeInTheDocument();
+    expect(within(section).getAllByText('Électricité')).toHaveLength(3);
+    expect(within(section).getAllByText('Durée estimée : 1 h 30')).toHaveLength(3);
+    expect(within(section).getByText('Clé à l’accueil.')).toBeInTheDocument();
+    expect(within(section).getByText('Motif : Fait par le concierge.')).toBeInTheDocument();
+    expect(within(section).getByText(/Annulée avec la demande : « Refusée/)).toBeInTheDocument();
+    const g1 = within(section).getByRole('group', { name: 'Tâche 1' });
+    expect(within(g1).getAllByRole('button').map((b) => b.textContent)).toEqual(['Remettre à faire', 'Terminer', 'Affecter', 'Modifier', 'Annuler la tâche']);
+    expect(within(within(section).getByRole('group', { name: 'Tâche 2' })).getAllByRole('button').map((b) => b.textContent)).toEqual(['Rouvrir']);
+    expect(within(section).getByText(/quand toutes ses tâches sont terminées ou annulées/)).toBeInTheDocument();
+    await audit(d as HTMLElement);
+    cleanupAll();
+    const n = await ouvrir('nl');
+    await within(n).findByRole('region', { name: 'Taken (3)' });
+    await audit(n as HTMLElement);
+  });
+
+  it('ajouter : corps de métier de la demande proposé, durée en heures envoyée en minutes ; titre exigé', async () => {
+    ficheData = fiche({ taches: [] });
+    reponsePost = { status: 201, json: { data: tache(8, 1, 'a_faire'), meta: { envelope: 1 } } };
+    const d = await ouvrir();
+    const section = await within(d).findByRole('region', { name: 'Tâches' });
+    expect(within(section).getByText(/Aucune tâche\. Découpez le travail/)).toBeInTheDocument();
+    fireEvent.click(within(section).getByRole('button', { name: /Ajouter une tâche/ }));
+    expect(await within(section).findByText('Électricité')).toBeInTheDocument();
+    fireEvent.click(within(section).getAllByRole('button', { name: /Ajouter une tâche/ }).slice(-1)[0]);
+    expect(await within(section).findByText('Dites ce qu’il faut faire (3 caractères au moins).')).toBeInTheDocument();
+    expect(posts.some((p) => p.url === '/api/demandes/2/taches')).toBe(false);
+    fireEvent.change(within(section).getByLabelText(/Ce qu’il faut faire/), { target: { value: 'Remplacer le luminaire' } });
+    fireEvent.change(within(section).getByLabelText(/Durée estimée/), { target: { value: '1,5' } });
+    fireEvent.click(within(section).getAllByRole('button', { name: /Ajouter une tâche/ }).slice(-1)[0]);
+    await waitFor(() => expect(posts.find((p) => p.url === '/api/demandes/2/taches')?.body).toEqual({ titre: 'Remplacer le luminaire', consignes: null, corps_metier_id: 71, duree_estimee_min: 90 }));
+    await waitFor(() => expect(gets.filter((u) => u === '/api/demandes/2').length).toBeGreaterThanOrEqual(2));
+  });
+
+  it('démarrer sans motif ; annuler avec un motif exigé ; le passage de la demande est dit', async () => {
+    ficheData = fiche({ taches: [tache(5, 1, 'a_faire')] });
+    reponsePost = { status: 200, json: { data: { ...tache(5, 1, 'en_cours'), demande_etat: 'en_cours', demande_passage_auto: 'en_cours' }, meta: { envelope: 1 } } };
+    const d = await ouvrir();
+    const section = await within(d).findByRole('region', { name: 'Tâches (1)' });
+    fireEvent.click(within(section).getByRole('button', { name: 'Démarrer' }));
+    await waitFor(() => expect(posts.find((p) => p.url === '/api/taches/5/etat')?.body).toEqual({ etat: 'en_cours' }));
+    expect(await screen.findByText(/demande passée « En cours/)).toBeInTheDocument();
+    posts.length = 0;
+    fireEvent.click(within(section).getByRole('button', { name: 'Annuler la tâche' }));
+    const confirmer = (await within(section).findAllByRole('button', { name: 'Annuler la tâche' })).slice(-1)[0];
+    expect(confirmer).toBeDisabled();
+    fireEvent.change(within(section).getByLabelText('Pourquoi annuler cette tâche ?'), { target: { value: '  Fait par le concierge.  ' } });
+    fireEvent.click(confirmer);
+    await waitFor(() => expect(posts.find((p) => p.url === '/api/taches/5/etat')?.body).toEqual({ etat: 'annulee', motif: 'Fait par le concierge.' }));
+  });
+
+  it('0.20.0 (point 2) : affectation résumée ; formulaire ouvriers ou équipe, date, heure ; envoi complet ; « Personne » retire tout', async () => {
+    const demain = dayjs().add(1, 'day').format('YYYY-MM-DD');
+    ficheData = fiche({ taches: [tache(5, 1, 'a_faire', { ouvriers: [{ id: 21, prenom: 'Olivier', nom: 'Ouvrier' }], date_prevue: demain, heure_debut: '08:30' }), tache(6, 2, 'a_faire', { equipe_id: 31, equipe_code: 'BAT', equipe_nom_fr: 'Bâtiment', equipe_nom_nl: 'Gebouw' })] });
+    const d = await ouvrir();
+    const section = await within(d).findByRole('region', { name: 'Tâches (2)' });
+    expect(within(section).getByText(new RegExp(`Olivier Ouvrier · .* à 08:30`))).toBeInTheDocument();
+    expect(within(section).getByText(/Équipe Bâtiment/)).toBeInTheDocument();
+    fireEvent.click(within(within(section).getByRole('group', { name: 'Tâche 1' })).getByRole('button', { name: 'Affecter' }));
+    expect((await within(section).findAllByText('Olivier Ouvrier')).length).toBeGreaterThan(0);
+    expect(within(section).getByRole('radio', { name: 'Ouvriers' })).toBeChecked();
+    fireEvent.click(within(section).getByRole('button', { name: 'Enregistrer' }));
+    await waitFor(() => expect(puts.find((p) => p.url === '/api/taches/5/affectation')?.body).toEqual({ ouvriers: [21], equipe_id: null, date_prevue: demain, heure_debut: '08:30', duree_estimee_min: 90 }));
+    await audit(d as HTMLElement);
+    puts.length = 0;
+    fireEvent.click(within(within(section).getByRole('group', { name: 'Tâche 2' })).getByRole('button', { name: 'Affecter' }));
+    expect(await within(section).findByRole('radio', { name: 'Équipe' })).toBeChecked();
+    fireEvent.click(within(section).getByRole('radio', { name: 'Personne' }));
+    fireEvent.click(within(section).getByRole('button', { name: 'Enregistrer' }));
+    await waitFor(() => expect(puts.find((p) => p.url === '/api/taches/6/affectation')?.body).toEqual({ ouvriers: [], equipe_id: null, date_prevue: null, heure_debut: null, duree_estimee_min: 90 }));
+  });
+
+  it('0.20.0 (point 3) : ouvriers proposés pour la date de la tâche ; « Choisir » ajoute à la sélection ; charge et disponibilité dites', async () => {
+    const demain = dayjs().add(1, 'day').format('YYYY-MM-DD');
+    ficheData = fiche({ taches: [tache(5, 1, 'a_faire', { ouvriers: [{ id: 21, prenom: 'Olivier', nom: 'Ouvrier' }], date_prevue: demain })] });
+    const d = await ouvrir();
+    const section = await within(d).findByRole('region', { name: 'Tâches (1)' });
+    fireEvent.click(within(section).getByRole('button', { name: 'Affecter' }));
+    expect(await within(section).findByText('Odile Ouvrière')).toBeInTheDocument();
+    await waitFor(() => expect(gets.some((u) => u === `/api/taches/5/suggestions?date=${demain}`)).toBe(true));
+    expect(within(section).getByText('Travaille ce jour')).toBeInTheDocument();
+    expect(within(section).getByText('Ne travaille pas ce jour')).toBeInTheDocument();
+    expect(within(section).getByText('Déjà prévu : 2 h')).toBeInTheDocument();
+    expect(within(section).getByRole('button', { name: 'Choisi' })).toHaveAttribute('aria-pressed', 'true');
+    fireEvent.click(within(section).getByRole('button', { name: 'Choisir' }));
+    fireEvent.click(within(section).getByRole('button', { name: 'Enregistrer' }));
+    await waitFor(() => expect(puts.find((p) => p.url === '/api/taches/5/affectation')?.body).toEqual({ ouvriers: [21, 22], equipe_id: null, date_prevue: demain, heure_debut: null, duree_estimee_min: 90 }));
+    await audit(d as HTMLElement);
+  });
+
+  it('0.21.0 (point 2, PLA-04) : ouvriers proposés : « Indisponible ce jour », demi-journée dite, jamais la cause', async () => {
+    indispoOdile = 'matin';
+    indispoOlivier = 'journee';
+    try {
+      ficheData = fiche({ taches: [tache(5, 1, 'a_faire', { ouvriers: [{ id: 21, prenom: 'Olivier', nom: 'Ouvrier' }] })] });
+      const d = await ouvrir();
+      const section = await within(d).findByRole('region', { name: 'Tâches (1)' });
+      fireEvent.click(within(section).getByRole('button', { name: 'Affecter' }));
+      expect(await within(section).findByText('Indisponible le matin')).toBeInTheDocument();
+      expect(within(section).getByText('Travaille ce jour')).toBeInTheDocument();
+      expect(within(section).getByText('Indisponible ce jour')).toBeInTheDocument();
+      expect(within(section).queryByText('Ne travaille pas ce jour')).toBeNull();
+      expect(within(section).queryByText(/Congé|Formation/)).toBeNull();
+    } finally { indispoOdile = null; indispoOlivier = null; }
+  });
+
+  it('0.21.0 (point 4, PLA-06) : l’affectation enregistrée avertit d’un conflit sans bloquer', async () => {
+    conflitsAffectation = [{ ouvrier_id: 21, prenom: 'Olivier', nom: 'Ouvrier', conflits: ['absent'], charge_min: 90, capacite_min: 0 }];
+    try {
+      const demain = dayjs().add(1, 'day').format('YYYY-MM-DD');
+      ficheData = fiche({ taches: [tache(5, 1, 'a_faire', { ouvriers: [{ id: 21, prenom: 'Olivier', nom: 'Ouvrier' }], date_prevue: demain })] });
+      const d = await ouvrir();
+      const section = await within(d).findByRole('region', { name: 'Tâches (1)' });
+      fireEvent.click(within(section).getByRole('button', { name: 'Affecter' }));
+      await within(section).findByText('Odile Ouvrière');
+      fireEvent.click(within(section).getByRole('button', { name: 'Enregistrer' }));
+      expect(await screen.findByText('Attention : Olivier Ouvrier : Absent')).toBeInTheDocument();
+      // Les messages d'Ant Design restent un moment à l'écran : celui des tests précédents peut s'y trouver aussi.
+      expect((await screen.findAllByText('Affectation enregistrée')).length).toBeGreaterThan(0);
+    } finally { conflitsAffectation = []; }
+  });
+
+  it('0.20.0 (point 2) : le demandeur lit « Intervention prévue le », sans nom d’ouvrier', async () => {
+    ficheData = demande(2, 'AA-DI-2026-00002', 'planifiee', { intervention_prevue_le: '2026-11-26' });
+    render(wrap(MesDemandes, 'fr', ['/demandes?demande=2']));
+    const d = await screen.findByRole('dialog');
+    expect(await within(d).findByText('Intervention prévue le')).toBeInTheDocument();
+    expect(within(d).getByText(/jeudi 26 novembre 2026/)).toBeInTheDocument();
+  });
+
+  it('0.21.0 (point 5, SUI-03) : le demandeur lit la date changée, la date d’avant et le moment du changement (FR et NL)', async () => {
+    ficheData = demande(2, 'AA-DI-2026-00002', 'planifiee', { intervention_prevue_le: '2026-11-27', intervention_prevue_avant: '2026-11-24', intervention_modifiee_le: '2026-11-20 13:05:00' });
+    const quand = dayjs('2026-11-20T13:05:00Z').format('DD/MM/YYYY HH:mm');
+    render(wrap(MesDemandes, 'fr', ['/demandes?demande=2']));
+    const d = await screen.findByRole('dialog');
+    expect(await within(d).findByText(`Date modifiée le ${quand} (prévue auparavant le mardi 24 novembre 2026)`)).toBeInTheDocument();
+    expect(within(d).getByText(/vendredi 27 novembre 2026/)).toBeInTheDocument();
+    cleanupAll();
+    render(wrap(MesDemandes, 'nl', ['/demandes?demande=2']));
+    const n = await screen.findByRole('dialog');
+    expect(await within(n).findByText(`Datum gewijzigd op ${quand} (eerder gepland op dinsdag 24 november 2026)`)).toBeInTheDocument();
+    cleanupAll();
+    // Première date : aucune mention.
+    ficheData = demande(2, 'AA-DI-2026-00002', 'planifiee', { intervention_prevue_le: '2026-11-27', intervention_prevue_avant: null, intervention_modifiee_le: null });
+    render(wrap(MesDemandes, 'fr', ['/demandes?demande=2']));
+    const p = await screen.findByRole('dialog');
+    await within(p).findByText('Intervention prévue le');
+    expect(p.querySelector('.date-prevue-modifiee')).toBeNull();
+  });
+
+  it('demande « Travaux terminés » (tâches figées) : ni ajout ni bouton ; refus du serveur affiché, saisie gardée', async () => {
+    ficheData = fiche({ etat: 'terminee', taches_modifiables: 0, taches: [tache(5, 1, 'terminee')] });
+    const d = await ouvrir();
+    const section = await within(d).findByRole('region', { name: 'Tâches (1)' });
+    expect(within(section).queryByRole('button')).toBeNull();
+    cleanupAll();
+    ficheData = fiche({ taches: [tache(5, 1, 'a_faire')] });
+    reponsePost = { status: 409, json: { error: true, code: 'TACHES_FIGEES', message: 'Les tâches de cette demande ne se modifient plus dans son état actuel.' } };
+    const e = await ouvrir();
+    const s2 = await within(e).findByRole('region', { name: 'Tâches (1)' });
+    fireEvent.click(within(s2).getByRole('button', { name: 'Démarrer' }));
+    expect(await within(s2).findByRole('alert')).toHaveTextContent('ne se modifient plus');
+  });
+
+  it('0.21.0 (point 1, R5) : « Démarrer » mis en avant ; « Terminer » une tâche à faire demande les heures ; heures affichées', async () => {
+    const debutFin = { debut_reel: '2026-11-18 07:15:00', fin_reelle: '2026-11-18 09:45:00' };
+    ficheData = fiche({ taches: [tache(5, 1, 'a_faire'), tache(6, 2, 'en_cours', { debut_reel: '2026-11-19 08:00:00' }), tache(7, 3, 'terminee', debutFin),
+      tache(8, 4, 'terminee', { debut_reel: null, fin_reelle: '2026-11-19 10:00:00' }), tache(9, 5, 'terminee')] });
+    reponsePost = { status: 200, json: { data: { ...tache(5, 1, 'terminee'), demande_etat: 'qualifiee', demande_passage_auto: null }, meta: { envelope: 1 } } };
+    const d = await ouvrir();
+    const section = await within(d).findByRole('region', { name: 'Tâches (5)' });
+    const g1 = within(section).getByRole('group', { name: 'Tâche 1' });
+    expect(within(g1).getByRole('button', { name: 'Démarrer' })).toHaveClass('ant-btn-primary');
+    expect(within(g1).getByRole('button', { name: 'Terminer' })).not.toHaveClass('ant-btn-primary');
+    expect(within(within(section).getByRole('group', { name: 'Tâche 2' })).getByRole('button', { name: 'Terminer' })).toHaveClass('ant-btn-primary');
+    // Heures lues à l'heure du poste (le fuseau des tests est fixé par instant()).
+    const h = (sql: string) => dayjs(`${sql.replace(' ', 'T')}Z`).format('DD/MM/YYYY HH:mm');
+    expect(within(section).getByText(`Démarrée le ${h('2026-11-19 08:00:00')}`)).toBeInTheDocument();
+    expect(within(section).getByText(`Réalisée du ${h(debutFin.debut_reel)} au ${h(debutFin.fin_reelle)} (2 h 30)`)).toBeInTheDocument();
+    expect(within(section).getByText(`Terminée le ${h('2026-11-19 10:00:00')} · sans heure de début`)).toBeInTheDocument();
+    expect(within(section).getByText('Terminée sans heures notées')).toBeInTheDocument();
+    // « Terminer » une tâche à faire : rien n'est envoyé, la fenêtre demande les heures (préremplies maintenant).
+    fireEvent.click(within(g1).getByRole('button', { name: 'Terminer' }));
+    const fenetre = (await screen.findByText('Terminer la tâche · Tâche 1')).closest('.ant-modal') as HTMLElement;
+    expect(posts.some((p) => p.url === '/api/taches/5/etat')).toBe(false);
+    await audit(fenetre);
+    const [champDebut, champFin] = within(fenetre).getAllByRole('textbox') as HTMLInputElement[];
+    expect(champDebut.value).toBe(dayjs().format('DD/MM/YYYY HH:mm'));
+    expect(champFin.value).toBe(champDebut.value);
+    fireEvent.click(within(fenetre).getByRole('button', { name: 'Terminer' }));
+    expect(await within(fenetre).findByText('La fin doit venir après le début.')).toBeInTheDocument();
+    expect(posts.some((p) => p.url === '/api/taches/5/etat')).toBe(false);
+    // Début corrigé au clavier (hier à 08:00), fin hier à 10:30 : envoyés en ISO.
+    const hier = dayjs().subtract(1, 'day');
+    for (const [champ, heure] of [[champDebut, '08:00'], [champFin, '10:30']] as const) {
+      fireEvent.mouseDown(champ); fireEvent.focus(champ);
+      fireEvent.change(champ, { target: { value: `${hier.format('DD/MM/YYYY')} ${heure}` } });
+      fireEvent.keyDown(champ, { key: 'Enter' });
+    }
+    fireEvent.click(within(fenetre).getByRole('button', { name: 'Terminer' }));
+    await waitFor(() => expect(posts.find((p) => p.url === '/api/taches/5/etat')?.body).toEqual({
+      etat: 'terminee', debut: hier.hour(8).minute(0).second(0).millisecond(0).toISOString(), fin: hier.hour(10).minute(30).second(0).millisecond(0).toISOString() }));
+    // Une tâche en cours se termine sans fenêtre.
+    posts.length = 0;
+    fireEvent.click(within(within(section).getByRole('group', { name: 'Tâche 2' })).getByRole('button', { name: 'Terminer' }));
+    await waitFor(() => expect(posts.find((p) => p.url === '/api/taches/6/etat')?.body).toEqual({ etat: 'terminee' }));
+  });
+});
+
+describe('photo de l’endroit sur la fiche d’une demande (0.13.0, point 5, DV-101)', () => {
+  const photoBat = { lieu_id: 2, nature: 'batiment', code: 'MC-A', nom_fr: 'Aile A', nom_nl: 'Vleugel A', photo_at: '2026-11-08 07:00:00', du_lieu: 0 as const };
+  const photoLocal = { lieu_id: 3, nature: 'local', code: 'MC-A-12', nom_fr: 'Bureau 12', nom_nl: 'Kantoor 12', photo_at: '2026-11-08 08:00:00', du_lieu: 1 as const };
+  const Fiche = ({ d, service }: { d: Record<string, unknown>; service: boolean }) => <FicheDemande d={d as never} avecDemandeur={service} service={service} />;
+  const rendre = (d: Record<string, unknown>, service: boolean, lang: 'fr' | 'nl' = 'fr') => render(wrap(() => <Fiche d={d} service={service} />, lang));
+
+  it('service technique : photo du bâtiment quand le local n’en a pas, dite comme telle, avec l’adresse qui évite le cache (FR et NL)', async () => {
+    const { container } = rendre(demande(2, 'AA-DI-2026-00002', 'a_qualifier', { photo_lieu: photoBat }), true);
+    expect(screen.getByText("Photo de l'endroit")).toBeInTheDocument();
+    const img = screen.getByAltText('Photo du lieu MC-A — Aile A');
+    expect(img.getAttribute('src')).toBe('/api/lieux/2/photo?v=2026-11-08%2007%3A00%3A00');
+    expect(screen.getByText("Le lieu n'a pas de photo : photo du bâtiment MC-A — Aile A.")).toBeInTheDocument();
+    await audit(container);
+    cleanupAll();
+    rendre(demande(2, 'AA-DI-2026-00002', 'a_qualifier', { photo_lieu: photoBat }), true, 'nl');
+    expect(screen.getByText('De plaats heeft geen foto: foto van gebouw MC-A — Vleugel A.')).toBeInTheDocument();
+  });
+
+  it('service technique : photo du lieu lui-même ; rien sans photo ; rien pour le demandeur même si le champ arrivait', () => {
+    rendre(demande(2, 'AA-DI-2026-00002', 'a_qualifier', { photo_lieu: photoLocal }), true);
+    expect(screen.getByText('Photo du lieu de la demande.')).toBeInTheDocument();
+    cleanupAll();
+    rendre(demande(2, 'AA-DI-2026-00002', 'a_qualifier', { photo_lieu: null }), true);
+    expect(screen.queryByText("Photo de l'endroit")).toBeNull();
+    cleanupAll();
+    rendre(demande(2, 'AA-DI-2026-00002', 'a_qualifier', { photo_lieu: photoLocal }), false);
+    expect(screen.queryByText("Photo de l'endroit")).toBeNull();
+    expect(screen.queryByRole('img', { name: /Photo du lieu/ })).toBeNull();
+  });
+
+  it('qualification : la photo de l’endroit en tête du formulaire', () => {
+    render(wrap(() => <QualificationForm d={demande(2, 'AA-DI-2026-00002', 'a_qualifier', { photo_lieu: photoLocal }) as never} onCancel={() => {}} onDone={() => {}} />, 'fr'));
+    expect(screen.getByAltText('Photo du lieu MC-A-12 — Bureau 12')).toBeInTheDocument();
+  });
+});
+
+describe('cycle de vie, fiche du service technique (0.14.0, point 3 ; CYC-01, CLO-01, DV-118)', () => {
+  const fiche = (etat: string, extra: Record<string, unknown> = {}) => demande(2, 'AA-DI-2026-00002', etat, {
+    priorite_proposee: 'P3', prise_en_charge_le: '2026-10-28 13:05:00', echeance_le: '2026-11-09 13:05:00', echeance_type: 'fin',
+    echeance_courante: '2026-11-09 13:05:00', retard: 0, photos_visibles: 1, transitions: PASSAGES[etat] || [], etat_depuis: '2026-11-08 09:30:00', ...extra,
+  });
+  const ouvrir = async (lang: 'fr' | 'nl' = 'fr') => { render(wrap(DemandesEntite, lang, ['/demandes-entite?demande=2'])); return screen.findByRole('dialog'); };
+
+  it('fiche « Qualifiée » : un bouton par passage permis, « Modifier la qualification », état daté ; rien de fermé (DV-118)', async () => {
+    ficheData = fiche('qualifiee');
+    const d = await ouvrir();
+    const groupe = await within(d).findByRole('group', { name: 'Faire avancer la demande' });
+    expect(within(groupe).getAllByRole('button').map((b) => b.textContent)).toEqual(['Démarrer les travaux', 'Mettre en attente', 'Travaux terminés', 'Refuser', 'Annuler la demande']);
+    expect(within(d).getByText(/depuis le 08\/11\/2026/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: translations['qualif.bouton.modifier'].fr })).toBeInTheDocument();
+  });
+
+  it('R3 (0.21.0) : « Modifier la qualification » aussi sur une demande « Planifiée », « Qualifier » sur une demande à qualifier', async () => {
+    ficheData = fiche('planifiee');
+    await ouvrir();
+    expect(await screen.findByRole('button', { name: translations['qualif.bouton.modifier'].fr })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: translations['qualif.bouton'].fr })).not.toBeInTheDocument();
+    cleanupAll();
+    ficheData = fiche('a_qualifier', { transitions: [{ vers: 'qualifiee', via: 'qualifier' }] });
+    await ouvrir('nl');
+    expect(await screen.findByRole('button', { name: translations['qualif.bouton'].nl })).toBeInTheDocument();
+  });
+
+  it('mettre en attente : motif exigé, choisi en boutons parmi les valeurs actives ; commentaire lu par le demandeur ; envoi et rechargement', async () => {
+    ficheData = fiche('qualifiee');
+    reponsePost = { status: 200, json: { data: fiche('en_attente', { transitions: [] }), meta: { envelope: 1 } } };
+    const d = await ouvrir();
+    fireEvent.click(await within(d).findByRole('button', { name: 'Mettre en attente' }));
+    expect(await within(d).findByRole('radio', { name: 'Pièce à commander' })).toBeInTheDocument();
+    expect(within(d).queryByRole('radio', { name: 'Budget à obtenir' })).toBeNull();
+    expect(within(d).getByText('Le demandeur lira ce commentaire dans sa demande.')).toBeInTheDocument();
+    const avant = gets.filter((u) => u.startsWith('/api/demandes/tableau-bord')).length;
+    fireEvent.click(within(d).getAllByRole('button', { name: 'Mettre en attente' }).slice(-1)[0]);
+    expect(await within(d).findByText('Ce champ est obligatoire')).toBeInTheDocument();
+    expect(posts.some((p) => p.url === '/api/demandes/2/transitions')).toBe(false);
+    fireEvent.click(within(d).getByText('Pièce à commander'));
+    fireEvent.change(within(d).getByLabelText('Commentaire'), { target: { value: '  Ampoule commandée.  ' } });
+    fireEvent.click(within(d).getAllByRole('button', { name: 'Mettre en attente' }).slice(-1)[0]);
+    await waitFor(() => expect(posts.find((p) => p.url === '/api/demandes/2/transitions')?.body).toEqual({ etat: 'en_attente', motif_id: 41, commentaire: 'Ampoule commandée.' }));
+    await waitFor(() => expect(gets.filter((u) => u.startsWith('/api/demandes/tableau-bord')).length).toBe(avant + 1));
+  });
+
+  it('annuler : commentaire obligatoire ; « Démarrer » part sans motif ni commentaire', async () => {
+    ficheData = fiche('qualifiee');
+    reponsePost = { status: 200, json: { data: fiche('en_cours'), meta: { envelope: 1 } } };
+    const d = await ouvrir();
+    fireEvent.click(await within(d).findByRole('button', { name: 'Annuler la demande' }));
+    fireEvent.click(within(d).getAllByRole('button', { name: 'Annuler la demande' }).slice(-1)[0]);
+    expect(await within(d).findByText('Ce champ est obligatoire')).toBeInTheDocument();
+    fireEvent.click(within(d).getByRole('button', { name: 'Annuler' }));
+    fireEvent.click(await within(d).findByRole('button', { name: 'Démarrer les travaux' }));
+    expect(within(d).queryByLabelText('Commentaire')).toBeNull();
+    fireEvent.click(within(d).getAllByRole('button', { name: 'Démarrer les travaux' }).slice(-1)[0]);
+    await waitFor(() => expect(posts.find((p) => p.url === '/api/demandes/2/transitions')?.body).toEqual({ etat: 'en_cours' }));
+  });
+
+  it('clôturer : cause de la panne, compte rendu interne et commentaire au demandeur ; refus du serveur affiché, saisie gardée', async () => {
+    ficheData = fiche('terminee');
+    reponsePost = { status: 409, json: { error: true, code: 'TRANSITION_INTERDITE', message: "Ce changement d'état n'est pas permis depuis l'état actuel de la demande." } };
+    const d = await ouvrir();
+    expect(within(d).getByRole('button', { name: 'Reprendre les travaux' })).toBeInTheDocument();
+    fireEvent.click(await within(d).findByRole('button', { name: 'Clôturer' }));
+    fireEvent.click(await within(d).findByText('Usure normale'));
+    fireEvent.change(within(d).getByLabelText('Compte rendu des travaux'), { target: { value: 'Ampoule remplacée.' } });
+    fireEvent.click(within(d).getAllByRole('button', { name: 'Clôturer' }).slice(-1)[0]);
+    await waitFor(() => expect(posts.find((p) => p.url === '/api/demandes/2/transitions')?.body).toEqual({ etat: 'cloturee', motif_id: 51, compte_rendu: 'Ampoule remplacée.' }));
+    expect(await within(d).findByText("Ce changement d'état n'est pas permis depuis l'état actuel de la demande.")).toBeInTheDocument();
+    expect(within(d).getByLabelText('Compte rendu des travaux')).toHaveValue('Ampoule remplacée.');
+  });
+
+  it('historique du service : étapes datées, auteur, canal, motif ; commentaire interne marqué ; cause et compte rendu sur la fiche close', async () => {
+    ficheData = fiche('cloturee', { transitions: [], cause_code: 'usure', cause_libelle_fr: 'Usure normale', cause_libelle_nl: 'Normale slijtage', compte_rendu: 'Ampoule remplacée.' });
+    const h = (id: number, de: string | null, vers: string, extra: Record<string, unknown> = {}) => ({ id, de_etat: de, vers_etat: vers, auteur: 'service', auteur_prenom: 'Gaston', auteur_nom: 'Gestion',
+      canal: 'ecran', motif_id: null, motif_code: null, motif_libelle_fr: null, motif_libelle_nl: null, commentaire: null, commentaire_public: 0, created_at: `2026-11-0${id} 08:00:00`, etat_libelle_fr: null, etat_libelle_nl: null, ...extra });
+    historiqueData = [h(1, null, 'a_qualifier', { auteur: 'demandeur', auteur_prenom: 'Agathe', auteur_nom: 'Agent' }), h(2, 'a_qualifier', 'qualifiee', { canal: 'mcp' }),
+      h(3, 'qualifiee', 'terminee', { commentaire: 'Échelle de 3 m.' }), h(4, 'terminee', 'cloturee', { motif_code: 'usure', motif_libelle_fr: 'Usure normale', commentaire: 'C’est réparé.', commentaire_public: 1 })];
+    const d = await ouvrir();
+    const histo = await within(d).findByRole('region', { name: 'Historique' });
+    expect(within(histo).getByText('Demande reçue')).toBeInTheDocument();
+    expect(within(histo).getByText(/Agathe Agent/)).toBeInTheDocument();
+    expect(within(histo).getByText(/Gaston Gestion · par Claude \(MCP\)/)).toBeInTheDocument();
+    expect(within(histo).getByText('Interne')).toBeInTheDocument();
+    expect(within(histo).getAllByText('Usure normale').length).toBe(1);
+    expect(within(d).getByText('Ampoule remplacée.')).toBeInTheDocument();
+    expect(within(d).queryByRole('group', { name: 'Faire avancer la demande' })).toBeNull();
+  });
+
+  it('« Mes demandes » : aucun bouton de passage pour le demandeur', async () => {
+    ficheData = demande(2, 'AA-DI-2026-00002', 'qualifiee');
+    render(wrap(MesDemandes, 'fr', ['/?demande=2']));
+    await screen.findByRole('dialog');
+    expect(screen.queryByRole('group', { name: 'Faire avancer la demande' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Démarrer les travaux' })).toBeNull();
+  });
+
+  for (const lang of ['fr', 'nl'] as const) {
+    it(`formulaire de clôture et historique (${lang}) sans violation axe-core`, async () => {
+      ficheData = fiche('terminee');
+      historiqueData = [{ id: 1, de_etat: null, vers_etat: 'a_qualifier', auteur: 'demandeur', auteur_prenom: 'Agathe', auteur_nom: 'Agent', canal: 'ecran', motif_id: null, motif_code: null,
+        motif_libelle_fr: null, motif_libelle_nl: null, commentaire: null, commentaire_public: 0, created_at: '2026-11-01 08:00:00', etat_libelle_fr: null, etat_libelle_nl: null }];
+      const d = await ouvrir(lang);
+      await within(d).findByRole('region', { name: translations['cycle.historique'][lang] });
+      await audit(d);
+      fireEvent.click(await within(d).findByRole('button', { name: translations['cycle.action.cloturee'][lang] }));
+      await within(d).findByText(lang === 'fr' ? 'Usure normale' : 'Normale slijtage');
+      await audit(screen.getByRole('dialog'));
+    }, 30000);
+  }
+
+  it('point 4 : compteurs « en attente depuis plus de N jours » (N de l’entité) et « à clôturer », en liens vers la liste filtrée', async () => {
+    render(wrap(HomePage, 'fr'));
+    const attente = await screen.findByRole('link', { name: /6\s*En attente depuis plus de 8 jours ouvrés/ });
+    expect(attente).toHaveAttribute('href', expect.stringContaining('attente=longue'));
+    expect(screen.getByRole('link', { name: /5\s*À clôturer/ })).toHaveAttribute('href', expect.stringContaining('etats=terminee'));
+  });
+
+  it('point 4 : le filtre attente=longue de l’adresse part au serveur ; « Délai suspendu » dans la liste et sur la fiche', async () => {
+    const suspendue = fiche('en_attente', { echeance_type: 'suspendu', retard: 0, attente_suspend: 1 });
+    demandes.splice(0, demandes.length, suspendue);
+    ficheData = suspendue;
+    try {
+      render(wrap(DemandesEntite, 'fr', ['/demandes-entite?attente=longue&demande=2']));
+      const d = await screen.findByRole('dialog');
+      expect(await within(d).findByText(/échéance sera repoussée du temps d'attente/)).toBeInTheDocument();
+      expect(screen.getAllByText('Délai suspendu').length).toBeGreaterThan(1);
+      const calls = (fetch as unknown as { mock: { calls: [string][] } }).mock.calls.map((c) => c[0]);
+      expect(calls.some((u) => u.includes('perimetre=entite') && u.includes('attente=longue'))).toBe(true);
+    } finally { demandes.splice(0, demandes.length, demande(2, 'AA-DI-2026-00002', 'a_qualifier'), demande(1, 'AA-DI-2026-00001', 'cloturee', { delai_annonce: null })); }
+  });
+});
+
+describe('cycle de vie, fiche du demandeur (0.14.0, point 5 ; SUI-02, SUI-05, CYC-04)', () => {
+  const mienne = (etat: string, extra: Record<string, unknown> = {}) => demande(2, 'AA-DI-2026-00002', etat, {
+    etat_libelle_fr: 'Bien reçue par nos services', etat_libelle_nl: 'Goed ontvangen door onze diensten', completable: 1, annulable: 1, complements: [], pieces: [], ...extra,
+  });
+  const etape = (id: number, de: string | null, vers: string, extra: Record<string, unknown> = {}) => ({ id, de_etat: de, vers_etat: vers, auteur: 'service', motif_id: null, motif_code: null,
+    motif_libelle_fr: null, motif_libelle_nl: null, commentaire: null, commentaire_public: 0, created_at: `2026-11-0${id} 08:00:00`, etat_libelle_fr: null, etat_libelle_nl: null, ...extra });
+  const ouvrir = async (lang: 'fr' | 'nl' = 'fr') => { render(wrap(MesDemandes, lang, ['/?demande=2'])); return screen.findByRole('dialog'); };
+
+  it('ligne du temps avec les libellés de l’entité, sans nom d’agent ; état de la fiche au libellé de l’entité ; compléments datés', async () => {
+    ficheData = mienne('a_qualifier', { complements: [{ id: 1, texte: 'C’est la lampe près de la fenêtre.', langue: 'fr', created_at: '2026-11-08 09:00:00', auteur: 'demandeur' }] });
+    historiqueData = [etape(1, null, 'a_qualifier', { auteur: 'demandeur' }), etape(2, 'a_qualifier', 'qualifiee', { etat_libelle_fr: 'Prise en charge par nos services' }),
+      etape(3, 'qualifiee', 'en_attente', { motif_code: 'demandeur', motif_libelle_fr: 'Réponse du demandeur attendue', commentaire: 'Quel étage ?', commentaire_public: 1 })];
+    const d = await ouvrir();
+    expect(within(d).getByText('Bien reçue par nos services')).toBeInTheDocument();
+    const histo = await within(d).findByRole('region', { name: 'Historique' });
+    expect(within(histo).getByText('Prise en charge par nos services')).toBeInTheDocument();
+    expect(within(histo).getByText('Quel étage ?')).toBeInTheDocument();
+    expect(within(histo).getAllByText(/Le service technique/).length).toBe(2);
+    expect(within(histo).queryByText('Interne')).toBeNull();
+    expect(within(d).getByText('C’est la lampe près de la fenêtre.')).toBeInTheDocument();
+    expect(within(d).getByText('Compléments')).toBeInTheDocument();
+  });
+
+  it('compléter : précision obligatoire sans photo ajoutée ; envoyée avec la langue', async () => {
+    ficheData = mienne('qualifiee');
+    const d = await ouvrir();
+    fireEvent.click(await within(d).findByRole('button', { name: 'Compléter ma demande' }));
+    expect(await within(d).findByRole('button', { name: /Ajouter une photo ou un document/ })).toBeInTheDocument();
+    fireEvent.click(await within(d).findByRole('button', { name: 'Envoyer le complément' }));
+    expect(await within(d).findByText('Ce champ est obligatoire')).toBeInTheDocument();
+    fireEvent.change(within(d).getByLabelText('Précision'), { target: { value: '  Bureau 3, à gauche.  ' } });
+    fireEvent.click(within(d).getByRole('button', { name: 'Envoyer le complément' }));
+    await waitFor(() => expect(puts.find((p) => p.url === '/api/demandes/2' && p.method === 'PUT')?.body).toEqual({ complement: 'Bureau 3, à gauche.', langue: 'fr' }));
+  });
+
+  it('annuler : motif obligatoire ; « Garder ma demande » revient à la fiche ; envoi du motif', async () => {
+    ficheData = mienne('a_qualifier');
+    const d = await ouvrir();
+    fireEvent.click(await within(d).findByRole('button', { name: 'Annuler ma demande' }));
+    fireEvent.click(within(d).getAllByRole('button', { name: 'Annuler ma demande' }).slice(-1)[0]);
+    expect(await within(d).findByText('Ce champ est obligatoire')).toBeInTheDocument();
+    fireEvent.click(within(d).getByRole('button', { name: 'Garder ma demande' }));
+    fireEvent.click(await within(d).findByRole('button', { name: 'Annuler ma demande' }));
+    fireEvent.change(within(d).getByLabelText('Pourquoi annulez-vous ?'), { target: { value: 'Réglé tout seul.' } });
+    fireEvent.click(within(d).getAllByRole('button', { name: 'Annuler ma demande' }).slice(-1)[0]);
+    await waitFor(() => expect(puts.find((p) => p.url === '/api/demandes/2' && p.method === 'DELETE')?.body).toEqual({ motif: 'Réglé tout seul.' }));
+  });
+
+  it('travaux commencés ou demande close : plus de bouton', async () => {
+    ficheData = mienne('en_cours', { annulable: 0 });
+    const d = await ouvrir();
+    expect(await within(d).findByRole('button', { name: 'Compléter ma demande' })).toBeInTheDocument();
+    expect(within(d).queryByRole('button', { name: 'Annuler ma demande' })).toBeNull();
+    cleanupAll();
+    ficheData = mienne('cloturee', { annulable: 0, completable: 0 });
+    const d2 = await ouvrir();
+    await within(d2).findByText('Bien reçue par nos services');
+    expect(within(d2).queryByRole('group', { name: 'Ma demande' })).toBeNull();
+  });
+
+  for (const lang of ['fr', 'nl'] as const) {
+    it(`fiche, complément et annulation du demandeur (${lang}) sans violation axe-core`, async () => {
+      ficheData = mienne('a_qualifier');
+      historiqueData = [etape(1, null, 'a_qualifier', { auteur: 'demandeur' })];
+      const d = await ouvrir(lang);
+      await within(d).findByRole('region', { name: translations['cycle.historique'][lang] });
+      await audit(d);
+      fireEvent.click(within(d).getByRole('button', { name: translations['demandeur.completer'][lang] }));
+      await within(d).findByLabelText(translations['demandeur.complement'][lang]);
+      await audit(screen.getByRole('dialog'));
+      fireEvent.click(within(d).getByRole('button', { name: translations['common.cancel'][lang] }));
+      fireEvent.click(await within(d).findByRole('button', { name: translations['demandeur.annuler'][lang] }));
+      await within(d).findByLabelText(translations['demandeur.motif'][lang]);
+      await audit(screen.getByRole('dialog'));
+    }, 30000);
+  }
+
+  it('point 6 : avis en cinq niveaux, réponse exigée, commentaire facultatif ; envoyé', async () => {
+    ficheData = mienne('cloturee', { completable: 0, annulable: 0, avis_possible: 1, avis: [], reouvrable: 1, reouvrable_jusqu_au: '2026-11-15 09:00:00' });
+    const d = await ouvrir();
+    const groupe = await within(d).findByRole('radiogroup', { name: "Êtes-vous satisfait de l'intervention ?" });
+    expect(within(groupe).getAllByRole('radio').map((r) => r.closest('label')?.textContent)).toEqual(['Très insatisfait', 'Insatisfait', 'Correct', 'Satisfait', 'Très satisfait']);
+    fireEvent.click(within(d).getByRole('button', { name: 'Envoyer mon avis' }));
+    expect(await within(d).findByText('Choisissez une réponse.')).toBeInTheDocument();
+    fireEvent.click(within(groupe).getByText('Satisfait'));
+    fireEvent.change(within(d).getByLabelText('Commentaire'), { target: { value: ' Rapide, merci. ' } });
+    fireEvent.click(within(d).getByRole('button', { name: 'Envoyer mon avis' }));
+    await waitFor(() => expect(posts.find((p) => p.url === '/api/demandes/2/avis')?.body).toEqual({ note: 4, commentaire: 'Rapide, merci.' }));
+  });
+
+  it('point 6 : avis déjà donné affiché ; réouverture proposée avec sa date limite, motif exigé, envoyée', async () => {
+    ficheData = mienne('cloturee', { completable: 0, annulable: 0, avis_possible: 0, reouvrable: 1, reouvrable_jusqu_au: '2026-11-15 09:00:00',
+      avis: [{ id: 1, note: 2, commentaire: 'Toujours un bruit.', created_at: '2026-11-08 10:00:00', auteur: 'demandeur' }] });
+    const d = await ouvrir();
+    expect(await within(d).findByText('Insatisfait')).toBeInTheDocument();
+    expect(within(d).getByText('Toujours un bruit.')).toBeInTheDocument();
+    expect(within(d).getByText(/rouvrir la demande jusqu'au 15\/11\/2026/)).toBeInTheDocument();
+    fireEvent.click(within(d).getByRole('button', { name: 'Rouvrir ma demande' }));
+    fireEvent.click(within(d).getAllByRole('button', { name: 'Rouvrir ma demande' }).slice(-1)[0]);
+    expect(await within(d).findByText('Ce champ est obligatoire')).toBeInTheDocument();
+    fireEvent.change(within(d).getByLabelText("Qu'est-ce qui ne va pas ?"), { target: { value: 'Le bruit est revenu.' } });
+    fireEvent.click(within(d).getAllByRole('button', { name: 'Rouvrir ma demande' }).slice(-1)[0]);
+    await waitFor(() => expect(posts.find((p) => p.url === '/api/demandes/2/transitions')?.body).toEqual({ etat: 'rouverte', commentaire: 'Le bruit est revenu.' }));
+  });
+
+  // 0.15.0 (R3 de la recette de la 0.14.0) : délai annoncé encore affiché sur une demande clôturée ; « Après cette date »
+  // dans le formulaire de réouverture, sans la date.
+  it('R3 : demande fermée sans délai annoncé (fiche et liste) ; formulaire de réouverture daté', async () => {
+    ficheData = mienne('cloturee', { completable: 0, annulable: 0, avis_possible: 0, avis: [], reouvrable: 1, reouvrable_jusqu_au: '2026-11-15 09:00:00', delai_annonce: '2026-11-10' });
+    const d = await ouvrir();
+    await within(d).findByText('Rouvrir ma demande');
+    expect(within(d).queryByText('Délai annoncé')).toBeNull();
+    // Liste en cartes (téléphone, voir l'en-tête) : plus de ligne « Délai annoncé » sur la carte d'une demande fermée.
+    const carte = (await screen.findByText('AA-DI-2026-00001')).closest('.ant-card') as HTMLElement;
+    expect(within(carte).queryByText(/Délai annoncé/)).toBeNull();
+    const ouverteCarte = screen.getAllByText('AA-DI-2026-00002').map((e) => e.closest('.ant-card')).find(Boolean) as HTMLElement;
+    expect(within(ouverteCarte).getByText(/Délai annoncé/)).toBeInTheDocument();
+    fireEvent.click(within(d).getByRole('button', { name: 'Rouvrir ma demande' }));
+    expect(await within(d).findByText(/Après le 15\/11\/2026.*, faites une nouvelle demande\./)).toBeInTheDocument();
+    cleanupAll();
+    ficheData = mienne('qualifiee', { annulable: 0 });
+    const d2 = await ouvrir();
+    expect(await within(d2).findByText('Délai annoncé')).toBeInTheDocument();
+  });
+
+  for (const lang of ['fr', 'nl'] as const) {
+    it(`avis et réouverture (${lang}) sans violation axe-core`, async () => {
+      ficheData = mienne('cloturee', { completable: 0, annulable: 0, avis_possible: 1, avis: [], reouvrable: 1, reouvrable_jusqu_au: '2026-11-15 09:00:00' });
+      const d = await ouvrir(lang);
+      await within(d).findByRole('radiogroup', { name: translations['avis.question'][lang] });
+      await audit(d);
+      fireEvent.click(within(d).getByRole('button', { name: translations['demandeur.reouvrir'][lang] }));
+      await within(d).findByLabelText(translations['demandeur.reouvrir.motif'][lang]);
+      await audit(screen.getByRole('dialog'));
+    }, 30000);
+  }
+});
+
+describe('avis sur la fiche du service (0.14.0, point 6)', () => {
+  it('le service lit l’avis du demandeur en mots et en note', async () => {
+    ficheData = demande(2, 'AA-DI-2026-00002', 'cloturee', { transitions: [], avis: [{ id: 1, note: 5, commentaire: 'Parfait.', created_at: '2026-11-08 10:00:00', auteur: 'demandeur' }] });
+    render(wrap(DemandesEntite, 'fr', ['/demandes-entite?demande=2']));
+    const d = await screen.findByRole('dialog');
+    expect(await within(d).findByText('Avis du demandeur')).toBeInTheDocument();
+    expect(within(d).getByText('Très satisfait')).toBeInTheDocument();
+    expect(within(d).getByText(/\(5 sur 5\)/)).toBeInTheDocument();
+    expect(within(d).getByText('Parfait.')).toBeInTheDocument();
+  });
+});
+
+
+describe('fil de messages (0.15.0, point 2 ; SUI-04, SUI-07)', () => {
+  const msg = (id: number, auteur: string, texte: string, extra: Record<string, unknown> = {}) => ({ id, demande_id: 2, auteur, interne: 0, texte, langue: 'fr',
+    created_at: `2026-11-0${id} 09:00:00`, auteur_prenom: null, auteur_nom: null, de_moi: 0, non_lu: 0, pieces: [], ...extra });
+  const mienne = (etat = 'qualifiee', extra: Record<string, unknown> = {}) => demande(2, 'AA-DI-2026-00002', etat, { fil: { lecture: 1, ecriture: 1, interne: 0 }, pieces: [], complements: [], ...extra });
+  const ouvrirMienne = async (lang: 'fr' | 'nl' = 'fr') => { render(wrap(MesDemandes, lang, ['/demandes?demande=2'])); return screen.findByRole('dialog'); };
+
+  it('demandeur : « Vous » et « Service technique » sans nom d’agent ; repère des nouveaux messages ; fil marqué lu', async () => {
+    ficheData = mienne();
+    messagesData = [msg(1, 'demandeur', 'Elle clignote aussi.', { de_moi: 1 }), msg(2, 'service', 'Nous passons jeudi.', { non_lu: 1 })];
+    const d = await ouvrirMienne();
+    const fil = await within(d).findByRole('region', { name: 'Messages' });
+    expect(await within(fil).findByText('Nous passons jeudi.')).toBeInTheDocument();
+    expect(within(fil).getByText('Vous')).toBeInTheDocument();
+    expect(within(fil).getByText('Service technique')).toBeInTheDocument();
+    expect(within(fil).getByText('Nouveaux messages')).toBeInTheDocument();
+    await waitFor(() => expect(posts.some((p) => p.url === '/api/demandes/2/messages/lu')).toBe(true));
+    expect(within(fil).getByText('Votre message est lu par le service technique.')).toBeInTheDocument();
+    expect(within(fil).queryByRole('radio', { name: 'Note interne au service' })).toBeNull();
+  });
+
+  it('gestionnaire sur sa propre demande (Mes demandes) : il écrit comme demandeur, sans « Note interne »', async () => {
+    ficheData = mienne('qualifiee', { fil: { lecture: 1, ecriture: 1, interne: 1 } });
+    const d = await ouvrirMienne();
+    const fil = await within(d).findByRole('region', { name: 'Messages' });
+    await within(fil).findByLabelText('Votre message');
+    expect(within(fil).queryByText('Note interne au service')).toBeNull();
+    expect(within(fil).queryByLabelText('Insérer un modèle')).toBeNull();
+  });
+
+  it('demandeur : rien à envoyer, message sous le champ ; envoi du texte dans sa langue, jamais en interne', async () => {
+    ficheData = mienne();
+    const d = await ouvrirMienne();
+    const fil = await within(d).findByRole('region', { name: 'Messages' });
+    expect(await within(fil).findByText(/Aucun message pour l’instant/)).toBeInTheDocument();
+    fireEvent.click(within(fil).getByRole('button', { name: /Envoyer/ }));
+    expect(await within(fil).findByText('Écrivez un message ou joignez une photo ou un document.')).toBeInTheDocument();
+    expect(posts.some((p) => p.url === '/api/demandes/2/messages')).toBe(false);
+    fireEvent.change(within(fil).getByLabelText('Votre message'), { target: { value: '  C’est au 2e étage.  ' } });
+    fireEvent.click(within(fil).getByRole('button', { name: /Envoyer/ }));
+    await waitFor(() => expect(posts.find((p) => p.url === '/api/demandes/2/messages')?.body).toEqual({ texte: 'C’est au 2e étage.', interne: false, langue: 'fr' }));
+  });
+
+  it('demande fermée : fil lisible, plus de champ ; qui suit seulement : pas de fil', async () => {
+    ficheData = mienne('cloturee', { fil: { lecture: 1, ecriture: 0, interne: 0 }, completable: 0, annulable: 0 });
+    messagesData = [msg(1, 'service', 'C’est réparé.')];
+    const d = await ouvrirMienne();
+    const fil = await within(d).findByRole('region', { name: 'Messages' });
+    expect(await within(fil).findByText('C’est réparé.')).toBeInTheDocument();
+    expect(within(fil).getByText(/La demande est fermée/)).toBeInTheDocument();
+    expect(within(fil).queryByLabelText('Votre message')).toBeNull();
+    cleanupAll();
+    gets = [];
+    ficheData = mienne('qualifiee', { fil: { lecture: 0, ecriture: 0, interne: 0 }, suivie: 1 });
+    const d2 = await ouvrirMienne();
+    await within(d2).findByText('Demande AA-DI-2026-00002');
+    expect(within(d2).queryByRole('region', { name: 'Messages' })).toBeNull();
+    expect(gets.some((u) => /\/demandes\/\d+\/messages/.test(u))).toBe(false);
+  });
+
+  for (const [lang, invitation, aucun, ferme] of [
+    ['fr', /Écrivez ici/, 'Aucun message.', /La demande est fermée/],
+    ['nl', /Schrijf hier/, 'Geen berichten.', /De aanvraag is afgesloten/],
+  ] as const) {
+    it(`fil vide d’une demande fermée (0.16.1, R2 ; ${lang}) : pas d’invitation à écrire, « aucun message » et demande fermée`, async () => {
+      ficheData = mienne('cloturee', { ouverte: 0, fil: { lecture: 1, ecriture: 0, interne: 0 }, completable: 0, annulable: 0 });
+      const d = await ouvrirMienne(lang);
+      const fil = await within(d).findByRole('region', { name: lang === 'fr' ? 'Messages' : 'Berichten' });
+      expect(await within(fil).findByText(aucun)).toBeInTheDocument();
+      expect(within(fil).getByText(ferme)).toBeInTheDocument();
+      expect(within(fil).queryByText(invitation)).toBeNull();
+    });
+  }
+
+  it('fil vide (0.16.1, R2) : invitation à écrire si la personne peut écrire ; sinon « Aucun message pour l’instant »', async () => {
+    ficheData = mienne();
+    const d = await ouvrirMienne();
+    const fil = await within(d).findByRole('region', { name: 'Messages' });
+    expect(await within(fil).findByText(/Écrivez ici au service technique/)).toBeInTheDocument();
+    cleanupAll();
+    ficheData = mienne('qualifiee', { fil: { lecture: 1, ecriture: 0, interne: 0 } });
+    const d2 = await ouvrirMienne();
+    const fil2 = await within(d2).findByRole('region', { name: 'Messages' });
+    expect(await within(fil2).findByText('Aucun message pour l’instant.')).toBeInTheDocument();
+    expect(within(fil2).queryByText(/Écrivez ici/)).toBeNull();
+  });
+
+  it('service : noms des agents et du demandeur, note interne marquée ; « Note interne au service » envoie interne', async () => {
+    ficheData = demande(2, 'AA-DI-2026-00002', 'qualifiee', { transitions: [], fil: { lecture: 1, ecriture: 1, interne: 1 }, pieces: [] });
+    messagesData = [msg(1, 'demandeur', 'Elle clignote.', { auteur_prenom: 'Agathe', auteur_nom: 'Agent' }),
+      msg(2, 'service', 'Prévoir l’échelle.', { interne: 1, auteur_prenom: 'Gaston', auteur_nom: 'Gestion' })];
+    render(wrap(DemandesEntite, 'fr', ['/demandes-entite?demande=2']));
+    const d = await screen.findByRole('dialog');
+    const fil = await within(d).findByRole('region', { name: 'Messages' });
+    expect(await within(fil).findByText('Agathe Agent')).toBeInTheDocument();
+    expect(within(fil).getByText('Gaston Gestion')).toBeInTheDocument();
+    expect(within(fil).getByText('Note interne')).toBeInTheDocument();
+    fireEvent.click(within(fil).getByText('Note interne au service'));
+    expect(within(fil).getByText('Lue par le service technique seulement, jamais par le demandeur.')).toBeInTheDocument();
+    fireEvent.change(within(fil).getByLabelText('Votre message'), { target: { value: 'Tube T8 en stock ?' } });
+    fireEvent.click(within(fil).getByRole('button', { name: /Enregistrer la note/ }));
+    await waitFor(() => expect(posts.find((p) => p.url === '/api/demandes/2/messages')?.body).toEqual({ texte: 'Tube T8 en stock ?', interne: true, langue: 'fr' }));
+  });
+
+  it('liste et accueil : « n nouveaux messages » sur la demande ; lien vers les demandes avec un nouveau message ; compteur du service', async () => {
+    nonLusData = [demande(2, 'AA-DI-2026-00002', 'qualifiee', { messages_non_lus: 2 })];
+    render(wrap(HomePage, 'fr'));
+    const lien = await screen.findByRole('link', { name: '1 demande a un nouveau message' });
+    expect(lien.getAttribute('href')).toBe('/demandes?messages=non_lus');
+    const compteur = await screen.findByRole('link', { name: /Messages à lire/ });
+    expect(compteur.getAttribute('href')).toContain('messages=non_lus');
+    cleanupAll();
+    render(wrap(MesDemandes, 'fr', ['/demandes?messages=non_lus']));
+    expect(await screen.findByText('2 nouveaux messages')).toBeInTheDocument();
+    expect(screen.getByText('Seulement les demandes avec un nouveau message')).toBeInTheDocument();
+    expect(gets.some((u) => u.includes('perimetre=miennes') && u.includes('messages=non_lus'))).toBe(true);
+  });
+
+  it('point 3 : « Prévenir un collègue » dans une note interne ; mentions affichées, « Vous êtes mentionné » ; compteur', async () => {
+    ficheData = demande(2, 'AA-DI-2026-00002', 'qualifiee', { transitions: [], fil: { lecture: 1, ecriture: 1, interne: 1 }, pieces: [] });
+    messagesData = [msg(1, 'service', 'Peux-tu passer ?', { interne: 1, auteur_prenom: 'Gaston', auteur_nom: 'Gestion', mentions: [{ user_id: 7, prenom: 'Agathe', nom: 'Agent' }] })];
+    render(wrap(DemandesEntite, 'fr', ['/demandes-entite?demande=2']));
+    const d = await screen.findByRole('dialog');
+    const fil = await within(d).findByRole('region', { name: 'Messages' });
+    expect(await within(fil).findByText('@Agathe Agent')).toBeInTheDocument();
+    expect(within(fil).getByText('Vous êtes mentionné')).toBeInTheDocument();
+    expect(within(fil).queryByLabelText('Prévenir un collègue')).toBeNull();
+    fireEvent.click(within(fil).getByText('Note interne au service'));
+    const choix = await within(fil).findByLabelText('Prévenir un collègue');
+    fireEvent.mouseDown(choix);
+    fireEvent.click(await screen.findByText('Rémi Responsable'));
+    fireEvent.change(within(fil).getByLabelText('Votre message'), { target: { value: 'Commande la pièce.' } });
+    fireEvent.click(within(fil).getByRole('button', { name: /Enregistrer la note/ }));
+    await waitFor(() => expect(posts.find((p) => p.url === '/api/demandes/2/messages')?.body).toEqual({ texte: 'Commande la pièce.', interne: true, langue: 'fr', mentions: [8] }));
+    cleanupAll();
+    render(wrap(HomePage, 'fr'));
+    const compteur = await screen.findByRole('link', { name: /Notes où vous êtes mentionné/ });
+    expect(compteur.getAttribute('href')).toContain('mentions=a_voir');
+  });
+
+  it('point 4 (GES-09) : « Insérer un modèle » dans la langue de la demande, variables remplacées ; pas en note interne', async () => {
+    ficheData = demande(2, 'AA-DI-2026-00002', 'qualifiee', { transitions: [], fil: { lecture: 1, ecriture: 1, interne: 1 }, pieces: [], langue: 'nl',
+      etat_libelle_nl: 'In behandeling', etat_libelle_fr: 'Prise en charge' });
+    render(wrap(DemandesEntite, 'fr', ['/demandes-entite?demande=2']));
+    const d = await screen.findByRole('dialog');
+    const fil = await within(d).findByRole('region', { name: 'Messages' });
+    const choix = await within(fil).findByLabelText('Insérer un modèle');
+    fireEvent.mouseDown(choix);
+    fireEvent.click(await screen.findByText('Précision demandée'));
+    await waitFor(() => expect((within(fil).getByLabelText('Votre message') as HTMLTextAreaElement).value)
+      .toBe('Goedendag Agathe,\n\nKunt u AA-DI-2026-00002 (Bureau 12, In behandeling) verduidelijken?'));
+    fireEvent.click(within(fil).getByText('Note interne au service'));
+    expect(within(fil).queryByLabelText('Insérer un modèle')).toBeNull();
+  });
+
+  it('0.16.0, R2 : un message prend la langue de son texte (modèle inséré : langue de la demande), pas celle de l’écran ; le service la corrige', async () => {
+    ficheData = demande(2, 'AA-DI-2026-00002', 'qualifiee', { transitions: [], fil: { lecture: 1, ecriture: 1, interne: 1 }, pieces: [], langue: 'nl',
+      etat_libelle_nl: 'In behandeling', etat_libelle_fr: 'Prise en charge' });
+    render(wrap(DemandesEntite, 'fr', ['/demandes-entite?demande=2']));
+    const d = await screen.findByRole('dialog');
+    const fil = await within(d).findByRole('region', { name: 'Messages' });
+    const langue = (await within(fil).findAllByLabelText('Langue du message')).find((e) => e.classList.contains('ant-radio-group')) as HTMLElement;
+    expect((within(langue).getByRole('radio', { name: 'Français' }) as HTMLInputElement).checked).toBe(true);
+    fireEvent.mouseDown(await within(fil).findByLabelText('Insérer un modèle'));
+    fireEvent.click(await screen.findByText('Précision demandée'));
+    await waitFor(() => expect((within(langue).getByRole('radio', { name: 'Néerlandais' }) as HTMLInputElement).checked).toBe(true));
+    expect(within(fil).getByLabelText('Votre message').getAttribute('lang')).toBe('nl');
+    fireEvent.click(within(fil).getByRole('button', { name: /Envoyer/ }));
+    await waitFor(() => expect(posts.filter((p) => p.url === '/api/demandes/2/messages').slice(-1)[0]?.body)
+      .toMatchObject({ interne: false, langue: 'nl' }));
+    // Après l'envoi, retour à la langue de l'écran ; le choix se corrige à la main.
+    await waitFor(() => expect((within(langue).getByRole('radio', { name: 'Français' }) as HTMLInputElement).checked).toBe(true));
+    fireEvent.click(within(langue).getByText('Néerlandais'));
+    fireEvent.change(within(fil).getByLabelText('Votre message'), { target: { value: 'Wij komen donderdag.' } });
+    fireEvent.click(within(fil).getByRole('button', { name: /Envoyer/ }));
+    await waitFor(() => expect(posts.filter((p) => p.url === '/api/demandes/2/messages').slice(-1)[0]?.body)
+      .toEqual({ texte: 'Wij komen donderdag.', interne: false, langue: 'nl' }));
+  });
+
+  it('0.16.0, R2 : le demandeur n’a pas de choix de langue ; son message prend la langue de son écran', async () => {
+    ficheData = mienne();
+    messagesData = [];
+    const d = await ouvrirMienne('nl');
+    const fil = await within(d).findByRole('region', { name: 'Berichten' });
+    expect(within(fil).queryByText('Taal van het bericht')).toBeNull();
+    fireEvent.change(await within(fil).findByLabelText('Uw bericht'), { target: { value: 'Het lekt nog steeds.' } });
+    fireEvent.click(within(fil).getByRole('button', { name: /Verzenden/ }));
+    await waitFor(() => expect(posts.filter((p) => /\/messages$/.test(p.url)).slice(-1)[0]?.body).toMatchObject({ langue: 'nl' }));
+  });
+
+  it('point 5 (SUI-09) : le service suit une demande vue (abonnement) ; qui suit par « Moi aussi » arrête, prévenu pour sa remarque', async () => {
+    ficheData = demande(2, 'AA-DI-2026-00002', 'qualifiee', { transitions: [], fil: { lecture: 1, ecriture: 1, interne: 1 }, pieces: [], suivable: 1, suivie: 0,
+      suiveurs: [{ user_id: 8, prenom: 'Rémi', nom: 'Responsable', remarque: null, created_at: '2026-11-09 10:00:00', source: 'abonnement' },
+        { user_id: 9, prenom: 'Sam', nom: 'Suiveur', remarque: 'Chez moi aussi.', created_at: '2026-11-09 11:00:00', source: 'moi_aussi' }] });
+    render(wrap(DemandesEntite, 'fr', ['/demandes-entite?demande=2']));
+    const d = await screen.findByRole('dialog');
+    expect(await within(d).findByText(/suit la demande/)).toBeInTheDocument();
+    expect(within(d).getByText(/« Moi aussi »/)).toBeInTheDocument();
+    fireEvent.click(await within(d).findByRole('button', { name: /Suivre cette demande/ }));
+    await waitFor(() => expect(posts.find((p) => p.url === '/api/demandes/2/suivre')?.body).toEqual({ source: 'abonnement' }));
+    cleanupAll();
+    ficheData = mienne('qualifiee', { suivie: 1, suivi_source: 'moi_aussi', suivable: 0, fil: { lecture: 0, ecriture: 0, interne: 0 } });
+    const d2 = await ouvrirMienne();
+    fireEvent.click(await within(d2).findByRole('button', { name: /Ne plus suivre/ }));
+    expect(await screen.findByText('La remarque laissée avec « Moi aussi » sera effacée.')).toBeInTheDocument();
+    fireEvent.click(screen.getAllByRole('button', { name: /Ne plus suivre/ }).slice(-1)[0]);
+    await waitFor(() => expect(puts.some((p) => p.url === '/api/demandes/2/suivre' && p.method === 'DELETE')).toBe(true));
+  });
+
+  for (const lang of ['fr', 'nl'] as const) {
+    it(`fil du demandeur et du service (${lang}) sans violation axe-core`, async () => {
+      ficheData = mienne();
+      messagesData = [msg(1, 'demandeur', 'Elle clignote.', { de_moi: 1 }), msg(2, 'service', 'Nous passons.', { non_lu: 1 })];
+      const d = await ouvrirMienne(lang);
+      await within(d).findByText('Nous passons.');
+      await audit(d);
+      cleanupAll();
+      ficheData = demande(2, 'AA-DI-2026-00002', 'qualifiee', { transitions: [], fil: { lecture: 1, ecriture: 1, interne: 1 }, pieces: [] });
+      messagesData = [msg(1, 'service', 'Note.', { interne: 1, auteur_prenom: 'G', auteur_nom: 'G' })];
+      render(wrap(DemandesEntite, lang, ['/demandes-entite?demande=2']));
+      const d2 = await screen.findByRole('dialog');
+      await within(d2).findByText('Note.');
+      await audit(d2);
+      // Point 3 : note interne choisie, champ « Prévenir un collègue » affiché.
+      fireEvent.click(within(d2).getByText(translations['fil.interne.option'][lang]));
+      await within(d2).findByLabelText(translations['fil.mentions'][lang]);
+      await audit(d2);
+    }, 30000);
+  }
+});
+
+describe('validation par le chef de service (0.16.0, point 2 ; DEM-15, ROL-04)', () => {
+  const enValidation = (extra: Record<string, unknown> = {}) => demande(5, 'AA-DI-2026-00005', 'en_validation', {
+    demandeur_id: 12, demandeur_prenom: 'Didier', demandeur_nom: 'Demandeur', service_id: 3, service_nom_fr: 'Secrétariat', service_nom_nl: 'Secretariaat',
+    etat_libelle_fr: "En attente de l'accord de votre chef de service", etat_libelle_nl: 'Wacht op akkoord van uw diensthoofd',
+    valideur: 1, pieces: [], complements: [],
+    transitions_valideur: [
+      { vers: 'a_qualifier', via: null, motif_liste: null, commentaire: 'facultatif', commentaire_public: 1, compte_rendu: 0 },
+      { vers: 'refusee_validation', via: null, motif_liste: null, commentaire: 'obligatoire', commentaire_public: 1, compte_rendu: 0 },
+    ], ...extra,
+  });
+  const avecRole = async (fn: () => Promise<void>) => {
+    const avant = [...entite.roles];
+    entite.roles.splice(0, entite.roles.length, 'agent', 'valideur');
+    try { await fn(); } finally { entite.roles.splice(0, entite.roles.length, ...avant); }
+  };
+
+  it('accueil : « Demandes à valider (n) » et l’alerte pour le chef de service ; rien pour un agent', async () => {
+    aValiderData = [enValidation()];
+    await avecRole(async () => {
+      render(wrap(HomePage, 'fr'));
+      expect(await screen.findByRole('link', { name: /Demandes à valider \(1\)/ })).toHaveAttribute('href', '/a-valider');
+      expect(await screen.findByRole('link', { name: '1 demande attend votre accord' })).toBeInTheDocument();
+    });
+    cleanupAll();
+    gets = [];
+    render(wrap(HomePage, 'fr'));
+    await screen.findByText(/Bienvenue|Welkom/);
+    expect(screen.queryByRole('link', { name: /Demandes à valider/ })).toBeNull();
+    expect(gets.some((u) => u.startsWith('/api/demandes/a-valider'))).toBe(false);
+  });
+
+  it('liste, fiche avec le demandeur et son service ; « Valider et transmettre » envoie le passage, commentaire facultatif', async () => {
+    aValiderData = [enValidation()];
+    ficheData = enValidation();
+    reponsePost = { status: 200, json: { data: enValidation({ etat: 'a_qualifier', transitions_valideur: [], valideur: 1 }), meta: { envelope: 1 } } };
+    await avecRole(async () => {
+      render(wrap(AValiderPage, 'fr', ['/a-valider']));
+      fireEvent.click(await screen.findByRole('button', { name: 'AA-DI-2026-00005' }));
+      const d = await screen.findByRole('dialog');
+      expect(await within(d).findByText('Secrétariat')).toBeInTheDocument();
+      expect(within(d).getByText(/Didier Demandeur/)).toBeInTheDocument();
+      // 0.17.0 (point 0, DV-137) : le chef de service lit « du chef de service », jamais « votre chef de service ».
+      expect(within(d).getByText("Délai : compté à partir de l'accord du chef de service")).toBeInTheDocument();
+      expect(within(d).queryByText(/votre chef de service/)).toBeNull();
+      fireEvent.click(within(d).getByRole('button', { name: 'Valider et transmettre' }));
+      expect(await within(d).findByText(/passe de « En attente de l'accord du chef de service » à « Reçue par le service technique »/)).toBeInTheDocument();
+      expect(within(d).queryByText(/votre chef de service/)).toBeNull();
+      fireEvent.click(within(d).getAllByRole('button', { name: 'Valider et transmettre' }).slice(-1)[0]);
+      await waitFor(() => expect(posts.find((p) => p.url === '/api/demandes/5/transitions')?.body).toEqual({ etat: 'a_qualifier' }));
+      expect(await within(d).findByText(/n’attend plus votre accord/)).toBeInTheDocument();
+    });
+  });
+
+  it('« Refuser la demande » : motif obligatoire, lu par le demandeur ; rien n’est envoyé sans motif', async () => {
+    ficheData = enValidation();
+    await avecRole(async () => {
+      render(wrap(AValiderPage, 'fr', ['/a-valider?demande=5']));
+      const d = await screen.findByRole('dialog');
+      fireEvent.click(await within(d).findByRole('button', { name: 'Refuser la demande' }));
+      expect(await within(d).findByText('Le demandeur lira ce commentaire dans sa demande.')).toBeInTheDocument();
+      fireEvent.click(within(d).getAllByRole('button', { name: 'Refuser la demande' }).slice(-1)[0]);
+      expect(await within(d).findByText('Ce champ est obligatoire')).toBeInTheDocument();
+      expect(posts.length).toBe(0);
+      fireEvent.change(within(d).getByLabelText(/Commentaire/), { target: { value: 'Budget épuisé.' } });
+      fireEvent.click(within(d).getAllByRole('button', { name: 'Refuser la demande' }).slice(-1)[0]);
+      await waitFor(() => expect(posts.find((p) => p.url === '/api/demandes/5/transitions')?.body).toEqual({ etat: 'refusee_validation', commentaire: 'Budget épuisé.' }));
+    });
+  });
+
+  it('chef de service (0.17.0, point 0, DV-137) : historique sans « votre chef de service » ; la croix pendant « Refuser » ramène à la fiche', async () => {
+    ficheData = enValidation();
+    historiqueData = [{ id: 1, de_etat: null, vers_etat: 'en_validation', auteur: 'demandeur', commentaire: null, created_at: '2026-11-10 08:00:00', etat_libelle_fr: "En attente de l'accord de votre chef de service", etat_libelle_nl: 'x' },
+      { id: 2, de_etat: 'en_validation', vers_etat: 'refusee_validation', auteur: 'valideur', commentaire: 'Budget épuisé.', created_at: '2026-11-10 09:00:00', etat_libelle_fr: 'Refusée par votre chef de service', etat_libelle_nl: 'x' }];
+    await avecRole(async () => {
+      render(wrap(AValiderPage, 'fr', ['/a-valider?demande=5']));
+      const d = await screen.findByRole('dialog');
+      expect(await within(d).findByText('Refusée par le chef de service')).toBeInTheDocument();
+      expect(within(d).queryByText(/votre chef de service/)).toBeNull();
+      fireEvent.click(within(d).getByRole('button', { name: 'Refuser la demande' }));
+      expect(await within(d).findByText('Le demandeur lira ce commentaire dans sa demande.')).toBeInTheDocument();
+      fireEvent.click(within(d).getByRole('button', { name: 'Revenir à la fiche' }));
+      expect(await within(d).findByRole('button', { name: 'Valider et transmettre' })).toBeInTheDocument();
+      expect(screen.getByRole('dialog')).toBeVisible();
+      expect(within(d).queryByText('Le demandeur lira ce commentaire dans sa demande.')).toBeNull();
+      expect(within(d).getByRole('button', { name: 'Fermer' })).toBeInTheDocument();
+      expect(posts.length).toBe(0);
+    });
+  });
+
+  it('demandeur : état et délai d’une demande en validation ; l’historique nomme le chef de service', async () => {
+    ficheData = enValidation({ demandeur_id: 7, valideur: 0, transitions_valideur: [], annulable: 1 });
+    historiqueData = [{ id: 1, de_etat: null, vers_etat: 'en_validation', auteur: 'demandeur', commentaire: null, created_at: '2026-11-10 08:00:00', etat_libelle_fr: "En attente de l'accord de votre chef de service", etat_libelle_nl: 'x' },
+      { id: 2, de_etat: 'en_validation', vers_etat: 'refusee_validation', auteur: 'valideur', commentaire: 'Budget épuisé.', created_at: '2026-11-10 09:00:00', etat_libelle_fr: 'Refusée par votre chef de service', etat_libelle_nl: 'x' }];
+    render(wrap(MesDemandes, 'fr', ['/demandes?demande=5']));
+    const d = await screen.findByRole('dialog');
+    expect(await within(d).findAllByText("En attente de l'accord de votre chef de service")).not.toHaveLength(0);
+    expect(within(d).getByText("Délai : compté à partir de l'accord de votre chef de service")).toBeInTheDocument();
+    expect(await within(d).findByText(/Le chef de service/)).toBeInTheDocument();
+    expect(within(d).getByText('Budget épuisé.')).toBeInTheDocument();
+    expect(within(d).queryByText('Service du demandeur'), 'le demandeur ne relit pas son service').toBeNull();
+  });
+
+  for (const lang of ['fr', 'nl'] as const) {
+    it(`demandes à valider (${lang}) sans violation axe-core, liste et fiche`, async () => {
+      aValiderData = [enValidation()];
+      ficheData = enValidation();
+      await avecRole(async () => {
+        const { container } = render(wrap(AValiderPage, lang, ['/a-valider']));
+        await screen.findByRole('button', { name: 'AA-DI-2026-00005' });
+        await audit(container);
+        cleanupAll();
+        render(wrap(AValiderPage, lang, ['/a-valider?demande=5']));
+        const d = await screen.findByRole('dialog');
+        await within(d).findByText(lang === 'fr' ? 'Secrétariat' : 'Secretariaat');
+        await audit(d);
+      });
+    }, 30000);
+  }
+});
+
+describe('demande encodée par le service technique (0.16.0, point 3 ; GES-05)', () => {
+  const Encoder = () => <NouvelleDemandePage encoder />;
+  it('canal et demandeur exigés ; ni lieu proposé, ni brouillon, ni « Moi aussi » ; envoi avec demandeur et canal', async () => {
+    render(wrap(Encoder, 'fr', ['/demandes/encoder']));
+    expect(await screen.findByRole('heading', { name: 'Encoder une demande reçue' })).toBeInTheDocument();
+    expect(screen.queryByText('Le lieu de votre dernière demande')).toBeNull();
+    const envoyer = screen.getByRole('button', { name: /Envoyer la demande/ });
+    expect(screen.getByText(/comment la demande est arrivée, qui demande/)).toBeInTheDocument();
+    fireEvent.click(screen.getByText('Téléphone'));
+    fireEvent.change(screen.getByLabelText('Qui demande ? Cherchez par le nom'), { target: { value: 'Hél' } });
+    fireEvent.click(await screen.findByRole('button', { name: 'Hélène Dupré' }));
+    expect(screen.getByText('Hélène Dupré')).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText('Chercher un lieu'), { target: { value: 'salle' } });
+    fireEvent.click(await screen.findByRole('button', { name: /Salle n°21/ }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Divers' }));
+    fireEvent.change(screen.getByLabelText('3. Décrivez le problème'), { target: { value: 'Appel : la porte du local grince fort.' } });
+    expect(envoyer).toBeEnabled();
+    fireEvent.click(envoyer);
+    expect(await screen.findByText('Demande envoyée')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Encoder une demande reçue');
+    // 0.16.1 (R3 de la recette 0.16.0) : l'encodeur n'est pas le demandeur.
+    expect(screen.getByText('Numéro de la demande :')).toBeInTheDocument();
+    expect(screen.queryByText(/Votre numéro de demande/)).toBeNull();
+    expect(posts[0].body).toEqual({ lieu_id: 9, categorie_id: 20, description: 'Appel : la porte du local grince fort.', langue: 'fr', demandeur_id: 9, canal: 'telephone' });
+    expect(screen.getByRole('link', { name: /Demandes de l'entité/ })).toHaveAttribute('href', '/demandes-entite');
+    expect(screen.getByRole('button', { name: /Encoder une autre demande/ })).toBeInTheDocument();
+    expect(gets.some((u) => u.startsWith('/api/demandes/brouillon')), 'aucun brouillon lu').toBe(false);
+    expect(puts.some((p) => p.url.startsWith('/api/demandes/brouillon')), 'aucun brouillon écrit').toBe(false);
+  });
+
+  it('encodage (0.16.1, R1) : demande qui part en validation : accord du chef de service de la personne, sans délai', async () => {
+    reponsePost = { status: 201, json: { data: demande(3, 'AA-DI-2026-00003', 'en_validation', { canal: 'telephone', demandeur_prenom: 'Hélène', demandeur_nom: 'Dupré', service_id: 4, service_nom_fr: 'Secrétariat', service_nom_nl: 'Secretariaat' }), meta: { envelope: 1 } } };
+    const { container } = render(wrap(Encoder, 'fr', ['/demandes/encoder']));
+    fireEvent.click(await screen.findByText('Téléphone'));
+    fireEvent.change(screen.getByLabelText('Qui demande ? Cherchez par le nom'), { target: { value: 'Hél' } });
+    fireEvent.click(await screen.findByRole('button', { name: 'Hélène Dupré' }));
+    fireEvent.change(screen.getByLabelText('Chercher un lieu'), { target: { value: 'salle' } });
+    fireEvent.click(await screen.findByRole('button', { name: /Salle n°21/ }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Divers' }));
+    fireEvent.change(screen.getByLabelText('3. Décrivez le problème'), { target: { value: 'Appel : déplacer deux armoires.' } });
+    fireEvent.click(screen.getByRole('button', { name: /Envoyer la demande/ }));
+    expect(await screen.findByText('Demande envoyée')).toBeInTheDocument();
+    expect(screen.getByText('La demande attend l\'accord du chef de service de la personne (Service : Secrétariat). Le délai du service technique comptera à partir de cet accord.')).toBeInTheDocument();
+    expect(screen.getByText('La personne retrouve la demande dans ses demandes et suit son avancement.')).toBeInTheDocument();
+    expect(container.textContent).not.toMatch(/Délai indicatif/);
+  });
+
+  it('fiche du service : « Reçue par Téléphone · encodée par » ; le demandeur lit le canal sans le nom', async () => {
+    ficheData = demande(2, 'AA-DI-2026-00002', 'a_qualifier', { canal: 'telephone', encodee_par_prenom: 'Gaston', encodee_par_nom: 'Gestion', transitions: [], pieces: [] });
+    render(wrap(DemandesEntite, 'fr', ['/demandes-entite?demande=2']));
+    const d = await screen.findByRole('dialog');
+    expect(await within(d).findByText('Téléphone · encodée par Gaston Gestion')).toBeInTheDocument();
+    cleanupAll();
+    ficheData = demande(2, 'AA-DI-2026-00002', 'a_qualifier', { canal: 'courriel', pieces: [], complements: [] });
+    render(wrap(MesDemandes, 'fr', ['/demandes?demande=2']));
+    const d2 = await screen.findByRole('dialog');
+    expect(await within(d2).findByText('Courriel')).toBeInTheDocument();
+  });
+
+  it('liste du service : bouton « Encoder une demande reçue » pour le gestionnaire', async () => {
+    roles.find((r) => r.code === 'gestionnaire')!.permissions.push('demandes:traiter');
+    try {
+      render(wrap(DemandesEntite, 'fr', ['/demandes-entite']));
+      expect(await screen.findByRole('link', { name: /Encoder une demande reçue/ })).toHaveAttribute('href', '/demandes/encoder');
+    } finally { roles.find((r) => r.code === 'gestionnaire')!.permissions.pop(); }
+  });
+
+  for (const lang of ['fr', 'nl'] as const) {
+    it(`encodage (${lang}) sans violation axe-core`, async () => {
+      const { container } = render(wrap(Encoder, lang, ['/demandes/encoder']));
+      await screen.findByText(lang === 'fr' ? 'Demande reçue' : 'Ontvangen aanvraag');
+      await waitFor(() => expect(container.querySelector('.ant-spin-spinning')).toBeNull());
+      await audit(container);
+    }, 30000);
+  }
+});
+
+describe('fusion de doublons (0.16.0, point 4 ; GES-06)', () => {
+  const doublon = (extra: Record<string, unknown> = {}) => demande(5, 'AA-DI-2026-00005', 'a_qualifier', {
+    pieces: [], complements: [], suiveurs: [],
+    transitions: [{ vers: 'fusionnee', via: 'fusionner', motif_liste: null, commentaire: 'facultatif', commentaire_public: 1, compte_rendu: 0 }], ...extra,
+  });
+
+  it('« Regrouper avec une autre demande » : proposées au même endroit, choix, effet annoncé, envoi avec commentaire', async () => {
+    ficheData = doublon();
+    reponsePost = { status: 200, json: { data: doublon({ etat: 'fusionnee', ouverte: 0, transitions: [], fusionnee_dans: 2, fusionnee_dans_numero: 'AA-DI-2026-00002' }), meta: { envelope: 1 } } };
+    // Une demande « En validation » au même endroit n'est jamais proposée comme principale.
+    demandes.push(demande(8, 'AA-DI-2026-00008', 'en_validation'));
+    render(wrap(DemandesEntite, 'fr', ['/demandes-entite?demande=5']));
+    const d = await screen.findByRole('dialog');
+    fireEvent.click(await within(d).findByRole('button', { name: 'Regrouper avec une autre demande' }));
+    await waitFor(() => expect(gets.some((u) => u.includes('batiment_id=1') && u.includes('ouvertes=1'))).toBe(true));
+    const proposees = await within(d).findByRole('list', { name: 'Demandes ouvertes au même endroit' });
+    expect(within(d).getByText(/Choisissez la demande principale : AA-DI-2026-00005 sera fermée/)).toBeInTheDocument();
+    expect(within(d).queryByText(/\{numero\}/)).toBeNull();
+    expect(within(proposees).queryByText(/AA-DI-2026-00005/), 'pas elle-même').toBeNull();
+    expect(within(proposees).queryByText(/AA-DI-2026-00008/), 'pas une demande en validation').toBeNull();
+    demandes.pop();
+    fireEvent.click(within(proposees).getByText(/AA-DI-2026-00002/));
+    expect(within(d).getByText('AA-DI-2026-00005 sera regroupée dans AA-DI-2026-00002.')).toBeInTheDocument();
+    fireEvent.change(within(d).getByLabelText('Commentaire'), { target: { value: 'Même néon.' } });
+    fireEvent.click(within(d).getByRole('button', { name: 'Regrouper dans AA-DI-2026-00002' }));
+    await waitFor(() => expect(posts.find((p) => p.url === '/api/demandes/5/fusionner')?.body).toEqual({ principale_id: 2, commentaire: 'Même néon.' }));
+    expect(await within(d).findByText('Cette demande a été regroupée avec la demande')).toBeInTheDocument();
+    expect(within(d).getByRole('link', { name: 'AA-DI-2026-00002' })).toHaveAttribute('href', '/demandes-entite?demande=2');
+  });
+
+  it('la croix pendant « Regrouper » ramène à la fiche, sans la fermer ; la croix de la fiche la ferme (0.17.0, point 0, DV-137)', async () => {
+    ficheData = doublon();
+    render(wrap(DemandesEntite, 'fr', ['/demandes-entite?demande=5']));
+    const d = await screen.findByRole('dialog');
+    expect(within(d).getByRole('button', { name: 'Fermer' })).toBeInTheDocument();
+    fireEvent.click(await within(d).findByRole('button', { name: 'Regrouper avec une autre demande' }));
+    await within(d).findByRole('list', { name: 'Demandes ouvertes au même endroit' });
+    fireEvent.click(within(d).getByRole('button', { name: 'Revenir à la fiche' }));
+    expect(await within(d).findByRole('button', { name: 'Regrouper avec une autre demande' })).toBeInTheDocument();
+    expect(within(d).queryByRole('list', { name: 'Demandes ouvertes au même endroit' })).toBeNull();
+    expect(screen.getByRole('dialog')).toBeVisible();
+    expect(posts.length).toBe(0);
+    fireEvent.click(within(d).getByRole('button', { name: 'Fermer' }));
+    await waitFor(() => expect(screen.queryByRole('button', { name: 'Regrouper avec une autre demande' })).toBeNull());
+  });
+
+  it('un refus du serveur s’affiche, le choix reste ; la principale liste ses demandes regroupées', async () => {
+    ficheData = doublon();
+    reponsePost = { status: 409, json: { error: true, code: 'FUSION_PRINCIPALE_FERMEE', message: 'La demande principale doit être ouverte.' } };
+    render(wrap(DemandesEntite, 'fr', ['/demandes-entite?demande=5']));
+    const d = await screen.findByRole('dialog');
+    fireEvent.click(await within(d).findByRole('button', { name: 'Regrouper avec une autre demande' }));
+    fireEvent.click(within(await within(d).findByRole('list', { name: 'Demandes ouvertes au même endroit' })).getByText(/AA-DI-2026-00002/));
+    fireEvent.click(within(d).getByRole('button', { name: 'Regrouper dans AA-DI-2026-00002' }));
+    expect(await within(d).findByText('La demande principale doit être ouverte.')).toBeInTheDocument();
+    expect(await within(d).findByRole('button', { name: /Regrouper dans AA-DI-2026-00002/ })).toBeInTheDocument();
+    cleanupAll();
+    ficheData = demande(2, 'AA-DI-2026-00002', 'a_qualifier', { transitions: [], pieces: [], regroupees: [{ id: 5, numero: 'AA-DI-2026-00005', created_at: '2026-11-10 08:00:00', demandeur_prenom: 'Didier', demandeur_nom: 'D' }] });
+    render(wrap(DemandesEntite, 'fr', ['/demandes-entite?demande=2']));
+    const d2 = await screen.findByRole('dialog');
+    expect(await within(d2).findByText('Demandes regroupées ici')).toBeInTheDocument();
+    expect(within(d2).getByRole('link', { name: 'AA-DI-2026-00005' })).toBeInTheDocument();
+  });
+
+  for (const lang of ['fr', 'nl'] as const) {
+    it(`formulaire de fusion (${lang}) sans violation axe-core`, async () => {
+      ficheData = doublon();
+      render(wrap(DemandesEntite, lang, ['/demandes-entite?demande=5']));
+      const d = await screen.findByRole('dialog');
+      fireEvent.click(await within(d).findByRole('button', { name: translations['cycle.action.fusionnee'][lang] }));
+      await within(d).findByRole('list', { name: translations['fusion.proposees'][lang] });
+      await audit(d);
+      fireEvent.click(within(d).getAllByRole('button', { name: /AA-DI-2026-00002/ })[0]);
+      await audit(d);
+    }, 30000);
+  }
+});
+
+describe('découpage d’une demande (0.16.0, point 5 ; GES-06)', () => {
+  const origine = (extra: Record<string, unknown> = {}) => demande(5, 'AA-DI-2026-00005', 'a_qualifier', { pieces: [], complements: [], suiveurs: [], transitions: [], decoupable: 1, issues: [], ...extra });
+
+  it('« Découper en plusieurs demandes » : deux parties, catégorie et lieu facultatifs, envoi ; la fiche liste les demandes issues', async () => {
+    ficheData = origine();
+    reponsePost = { status: 201, json: { data: { ...origine({ issues: [{ id: 6, numero: 'AA-DI-2026-00006', etat: 'a_qualifier' }, { id: 7, numero: 'AA-DI-2026-00007', etat: 'a_qualifier' }] }),
+      nouvelles: [{ id: 6, numero: 'AA-DI-2026-00006' }, { id: 7, numero: 'AA-DI-2026-00007' }] }, meta: { envelope: 1 } } };
+    render(wrap(DemandesEntite, 'fr', ['/demandes-entite?demande=5']));
+    const d = await screen.findByRole('dialog');
+    fireEvent.click(await within(d).findByRole('button', { name: /Découper en plusieurs demandes/ }));
+    expect(await within(d).findByText(/Elle garde le premier ; décrivez chacun des autres/)).toBeInTheDocument();
+    expect(within(d).queryByText(/\{numero\}/)).toBeNull();
+    const creer = within(d).getByRole('button', { name: 'Créer la demande' });
+    expect(creer).toBeDisabled();
+    fireEvent.change(within(d).getByLabelText('Problème'), { target: { value: 'Le robinet de la cuisine fuit.' } });
+    fireEvent.click(within(d).getByRole('button', { name: /Ajouter une demande nouvelle/ }));
+    const problemes = within(d).getAllByLabelText('Problème');
+    fireEvent.change(problemes[1], { target: { value: 'court' } });
+    expect(within(d).getByRole('button', { name: 'Créer les 2 demandes' })).toBeDisabled();
+    fireEvent.change(problemes[1], { target: { value: 'La prise du bureau 12 est arrachée.' } });
+    fireEvent.change(within(d).getByLabelText('Commentaire'), { target: { value: 'Deux problèmes.' } });
+    fireEvent.click(within(d).getByRole('button', { name: 'Créer les 2 demandes' }));
+    await waitFor(() => expect(posts.find((p) => p.url === '/api/demandes/5/decouper')?.body).toEqual({
+      parties: [{ description: 'Le robinet de la cuisine fuit.' }, { description: 'La prise du bureau 12 est arrachée.' }], langue: 'fr', commentaire: 'Deux problèmes.',
+    }));
+    expect(await within(d).findByText('Demandes issues de celle-ci')).toBeInTheDocument();
+    expect(within(d).getByRole('link', { name: 'AA-DI-2026-00007' })).toHaveAttribute('href', '/demandes-entite?demande=7');
+  });
+
+  it('demande issue d’un découpage : lien vers l’origine, pour le demandeur ; pas de bouton pour lui', async () => {
+    ficheData = demande(6, 'AA-DI-2026-00006', 'a_qualifier', { pieces: [], complements: [], issue_de: 5, issue_de_numero: 'AA-DI-2026-00005', decoupable: 0 });
+    render(wrap(MesDemandes, 'fr', ['/demandes?demande=6']));
+    const d = await screen.findByRole('dialog');
+    expect(await within(d).findByText('Cette demande est issue de la demande')).toBeInTheDocument();
+    expect(within(d).getByRole('link', { name: 'AA-DI-2026-00005' })).toHaveAttribute('href', '/demandes?demande=5');
+    expect(within(d).queryByRole('button', { name: /Découper/ })).toBeNull();
+  });
+
+  for (const lang of ['fr', 'nl'] as const) {
+    it(`formulaire de découpage (${lang}) sans violation axe-core`, async () => {
+      ficheData = origine();
+      render(wrap(DemandesEntite, lang, ['/demandes-entite?demande=5']));
+      const d = await screen.findByRole('dialog');
+      fireEvent.click(await within(d).findByRole('button', { name: new RegExp(translations['decoupage.bouton'][lang]) }));
+      await within(d).findByText(translations['decoupage.partie'][lang].replace('{n}', '1'));
+      await audit(d);
+    }, 30000);
+  }
+});
+
+describe('vue en colonnes par état (0.16.0, point 6 ; GES-03)', () => {
+  const passage = (de: string, vers: string, permission: string, extra: Record<string, unknown> = {}) => ({
+    de_etat: de, vers_etat: vers, permission, acteur: 'service', via: null, motif_liste: null, commentaire: 'interdit', commentaire_public: 0, compte_rendu: 0, is_active: 1, ...extra });
+  const gestionnaire = () => roles.find((r) => r.code === 'gestionnaire')!;
+
+  it('téléphone : une colonne à la fois avec son nombre ; « Déplacer » ne propose que les états permis ; la fiche s’ouvre sur le passage', async () => {
+    gestionnaire().permissions.push('demandes:traiter');
+    passagesData = [passage('qualifiee', 'en_cours', 'demandes:traiter'), passage('qualifiee', 'terminee', 'demandes:traiter', { commentaire: 'facultatif' }),
+      passage('qualifiee', 'refusee', 'demandes:traiter', { motif_liste: 'motif_refus' }), passage('qualifiee', 'cloturee', 'demandes:admin_inconnue'),
+      passage('qualifiee', 'rouverte', 'demandes:admin_inconnue'),
+      passage('qualifiee', 'en_attente', 'demandes:traiter', { is_active: 0 }), passage('qualifiee', 'en_cours', 'demandes:creer', { acteur: 'demandeur' })];
+    const carte = demande(4, 'AA-DI-2026-00004', 'qualifiee');
+    ficheData = demande(4, 'AA-DI-2026-00004', 'qualifiee', { pieces: [], suiveurs: [],
+      transitions: [{ vers: 'en_cours', via: null, motif_liste: null, commentaire: 'interdit', commentaire_public: 0, compte_rendu: 0 }] });
+    const avant = demandes.splice(0, demandes.length, carte, demande(2, 'AA-DI-2026-00002', 'a_qualifier'));
+    try {
+      render(wrap(DemandesEntite, 'fr', ['/demandes-entite?affichage=colonnes']));
+      await waitFor(() => expect(gets.some((u) => u.includes('etats=a_qualifier%2Cqualifiee%2Cen_attente%2Cen_cours%2Cterminee%2Crouverte') || u.includes('etats=a_qualifier,qualifiee'))).toBe(true));
+      const choix = await screen.findByRole('radiogroup', { name: 'Colonne' });
+      expect(within(choix).getByText('À qualifier (1)')).toBeInTheDocument();
+      fireEvent.click(within(choix).getByText('Qualifiée (1)'));
+      fireEvent.click(await screen.findByRole('button', { name: 'Déplacer AA-DI-2026-00004' }));
+      const menu = await screen.findByRole('menu');
+      expect(within(menu).getAllByRole('menuitem').map((m) => m.textContent)).toEqual(['En cours', 'Terminée']);
+      fireEvent.click(within(menu).getByText('En cours'));
+      const d = await screen.findByRole('dialog');
+      expect(await within(d).findByText(/Démarrer les travaux AA-DI-2026-00004/)).toBeInTheDocument();
+      expect(within(d).getByText(/passe de « Qualifiée » à « En cours »/)).toBeInTheDocument();
+      expect(posts.length, 'rien d’envoyé sans confirmation').toBe(0);
+    } finally {
+      demandes.splice(0, demandes.length, ...avant);
+      gestionnaire().permissions.pop();
+    }
+  });
+
+  it('sans passage permis, pas de bouton « Déplacer » ; retour à la liste par le choix d’affichage', async () => {
+    render(wrap(DemandesEntite, 'fr', ['/demandes-entite?affichage=colonnes']));
+    await screen.findByRole('radiogroup', { name: 'Colonne' });
+    expect(screen.queryByRole('button', { name: /Déplacer/ })).toBeNull();
+    fireEvent.click(screen.getByText('Liste'));
+    await waitFor(() => expect(screen.queryByRole('radiogroup', { name: 'Colonne' })).toBeNull());
+  });
+
+  for (const lang of ['fr', 'nl'] as const) {
+    it(`colonnes (${lang}) sans violation axe-core`, async () => {
+      const { container } = render(wrap(DemandesEntite, lang, ['/demandes-entite?affichage=colonnes']));
+      await screen.findByRole('radiogroup', { name: translations['colonnes.choisir'][lang] });
+      await audit(container);
+    }, 30000);
+  }
+});

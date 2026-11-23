@@ -1,0 +1,91 @@
+/**
+ * Seul point d'accès de l'interface à l'API (standard v3.2, section 6.2).
+ * Session par cookie HttpOnly SameSite=Strict posé par le serveur : aucun jeton en localStorage ni dans une URL.
+ * Toute écriture porte X-CSRF-Token, jeton propre à la session rendu par la connexion et par /api/auth/me ; il reste en mémoire.
+ * Réponses à l'enveloppe { data, meta, pagination } reconnue par meta.envelope === 1.
+ */
+let csrfToken: string | null = null;
+/** Dernière erreur de l'API, jointe au contexte d'un ticket (standard, section 13.5 ; repris du gabarit 1.3.0, 0.11.0). */
+let lastApiError: { status: number; route: string; code: string; message: string; at: string } | null = null;
+export const getLastApiError = () => lastApiError;
+const noterErreur = (status: number, method: string, path: string, json: { code?: string; message?: string } | null, texte: string) => {
+  lastApiError = { status, route: `${method} ${path.split('?')[0]}`, code: json?.code || 'INTERNAL', message: String(json?.message || texte).slice(0, 300), at: new Date().toISOString() };
+};
+export function setCsrfToken(t: string | null | undefined) { csrfToken = t || null; }
+export class ApiError extends Error {
+  constructor(public status: number, public code: string, message: string, public details?: string[]) {
+    super(message);
+  }
+}
+
+export interface Page<T> { data: T[]; pagination: { total: number; limit: number; offset: number }; meta?: Record<string, unknown> }
+
+async function request<T>(method: string, path: string, body?: unknown): Promise<{ data: T; pagination?: Page<T>['pagination']; meta?: Record<string, unknown> }> {
+  const headers: Record<string, string> = { Accept: 'application/json' };
+  if (method !== 'GET' && csrfToken) headers['X-CSRF-Token'] = csrfToken;
+  if (body !== undefined) headers['Content-Type'] = 'application/json';
+  const res = await fetch(`/api${path}`, { method, headers, credentials: 'same-origin', body: body === undefined ? undefined : JSON.stringify(body) });
+  const json = await res.json().catch(() => null);
+  if (!res.ok || !json || json.error) {
+    if (res.status === 401 && path !== '/auth/login' && path !== '/auth/me') window.dispatchEvent(new Event('app-unauthorized'));
+    noterErreur(res.status, method, path, json, res.statusText);
+    throw new ApiError(res.status, json?.code || 'INTERNAL', json?.message || res.statusText, json?.details);
+  }
+  if (json.meta?.envelope !== 1) throw new ApiError(res.status, 'INTERNAL', 'Réponse hors enveloppe');
+  if (json.data && typeof json.data === 'object' && 'csrf_token' in json.data) setCsrfToken(json.data.csrf_token);
+  return json;
+}
+
+/**
+ * Dépôt d'un fichier en formulaire multipart, au champ « fichier » (photo d'un lieu, pièces jointes ; `multer` côté
+ * serveur, 0.8.0) : même cookie, même jeton anti-CSRF, même enveloppe. Le navigateur pose lui-même l'en-tête du
+ * formulaire et sa frontière. Le nom envoyé (neutre par défaut) ne sert qu'à l'affichage : le serveur le nettoie et
+ * range le fichier sous un nom qu'il génère.
+ */
+async function upload<T>(path: string, blob: Blob, nom = 'fichier'): Promise<T> {
+  const headers: Record<string, string> = { Accept: 'application/json' };
+  if (csrfToken) headers['X-CSRF-Token'] = csrfToken;
+  const body = new FormData();
+  body.append('fichier', blob, nom);
+  const res = await fetch(`/api${path}`, { method: 'POST', headers, credentials: 'same-origin', body });
+  const json = await res.json().catch(() => null);
+  if (!res.ok || !json || json.error) {
+    if (res.status === 401) window.dispatchEvent(new Event('app-unauthorized'));
+    noterErreur(res.status, 'POST', path, json, res.statusText);
+    throw new ApiError(res.status, json?.code || 'INTERNAL', json?.message || res.statusText, json?.details);
+  }
+  return json.data as T;
+}
+
+/**
+ * Téléchargement d'un fichier produit par le serveur (0.18.0, point 2 : exports Excel et CSV) : même cookie ; une erreur
+ * rendue en JSON (droits, plafond) devient une ApiError comme ailleurs. Rend le contenu et le nom donné par le serveur.
+ */
+async function telecharger(path: string): Promise<{ blob: Blob; fichier: string }> {
+  const res = await fetch(`/api${path}`, { method: 'GET', credentials: 'same-origin' });
+  if (!res.ok) {
+    const json = await res.json().catch(() => null);
+    if (res.status === 401) window.dispatchEvent(new Event('app-unauthorized'));
+    noterErreur(res.status, 'GET', path, json, res.statusText);
+    throw new ApiError(res.status, json?.code || 'INTERNAL', json?.message || res.statusText, json?.details);
+  }
+  const nom = /filename="([^"]+)"/.exec(res.headers.get('Content-Disposition') || '');
+  return { blob: await res.blob(), fichier: nom ? nom[1] : 'export' };
+}
+
+export const api = {
+  upload,
+  telecharger,
+  get: <T>(path: string) => request<T>('GET', path).then((r) => r.data),
+  page: <T>(path: string) => request<T[]>('GET', path).then((r): Page<T> => ({ data: r.data, pagination: r.pagination!, meta: r.meta })),
+  post: <T>(path: string, body: unknown) => request<T>('POST', path, body).then((r) => r.data),
+  put: <T>(path: string, body: unknown) => request<T>('PUT', path, body).then((r) => r.data),
+  del: <T>(path: string, body?: unknown) => request<T>('DELETE', path, body ?? {}).then((r) => r.data),
+};
+
+export function qs(params: Record<string, string | number | undefined>) {
+  const p = Object.entries(params).filter(([, v]) => v !== undefined && v !== '').map(([k, v]) => [k, String(v)]);
+  return p.length ? `?${new URLSearchParams(p).toString()}` : '';
+}
+
+export default api;

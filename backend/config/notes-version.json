@@ -1,0 +1,702 @@
+{
+  "_description": "Notes de version pour les utilisateurs, en FR et en NL, sans terme technique (standard v3.2, sections 13.1 et 17.8 ; écart E-07). Une note par version, de la plus récente à la plus ancienne. Chaque ligne a un public : « tous », « admin » (administrateur de l'application) ou une permission du catalogue des rôles (par exemple « parametres:gerer »), lue dans l'entité active. La note de la version installée s'affiche une fois à la première connexion qui suit la mise à jour ; toutes restent relisibles dans Aide, Nouveautés.",
+  "notes": [
+    {
+      "version": "0.21.0",
+      "date": "2026-11-20",
+      "lignes": [
+        {
+          "public": "tous",
+          "fr": "Quand le service technique déplace votre intervention, votre demande affiche la nouvelle date, l'ancienne et le jour du changement ; vous en êtes prévenu par la cloche et par courriel.",
+          "nl": "Wanneer de technische dienst uw interventie verplaatst, toont uw aanvraag de nieuwe datum, de vorige en de dag van de wijziging; u wordt verwittigd via de bel en per e-mail."
+        },
+        {
+          "public": "equipes:lire",
+          "fr": "Nouvel écran « Planning » : la semaine ou le jour des ouvriers et des équipes, les tâches encore sans date et les conflits (absent, jour non travaillé, trop chargé). Le gestionnaire y déplace une tâche en la glissant ou par « Déplacer ».",
+          "nl": "Nieuw scherm « Planning »: de week of de dag van de arbeiders en de ploegen, de taken nog zonder datum en de conflicten (afwezig, geen werkdag, te zwaar belast). De beheerder verplaatst er een taak door ze te slepen of via « Verplaatsen »."
+        },
+        {
+          "public": "indisponibilites:gerer",
+          "fr": "Les congés, formations et autres absences d'un ouvrier se notent dans sa fiche (Équipes et prestataires, onglet Ouvriers) : il est signalé absent dans les ouvriers proposés et dans le planning, sans la cause.",
+          "nl": "Verlof, opleidingen en andere afwezigheden van een arbeider noteert u in zijn fiche (Ploegen en aannemers, tabblad Arbeiders): hij wordt als afwezig gemeld bij de voorgestelde arbeiders en in de planning, zonder de oorzaak."
+        },
+        {
+          "public": "demandes:traiter",
+          "fr": "« Démarrer » et « Terminer » notent l'heure de début et l'heure de fin d'une tâche ; une tâche terminée sans avoir été démarrée demande ses heures. Les dates se tapent au clavier sans envoyer le formulaire, et le clavier du téléphone ne cache plus le calendrier.",
+          "nl": "« Starten » en « Beëindigen » noteren het begin- en einduur van een taak; een taak die beëindigd wordt zonder gestart te zijn, vraagt haar uren. Datums worden met het toetsenbord ingetypt zonder het formulier te verzenden, en het toetsenbord van de telefoon verbergt de kalender niet meer."
+        }
+      ]
+    },
+    {
+      "version": "0.20.0",
+      "date": "2026-11-19",
+      "lignes": [
+        {
+          "public": "tous",
+          "fr": "La visite guidée ne bloque plus le menu sur téléphone. Quand une intervention est prévue, votre demande affiche le jour où l'ouvrier viendra.",
+          "nl": "De rondleiding blokkeert het menu op de telefoon niet meer. Wanneer een interventie gepland is, toont uw aanvraag de dag waarop de arbeider komt."
+        },
+        {
+          "public": "demandes:traiter",
+          "fr": "Une demande se découpe en tâches, chacune avec ses consignes, son métier et sa durée. Une tâche démarrée met la demande « En cours » ; quand toutes sont finies, elle passe « Travaux terminés ».",
+          "nl": "Een aanvraag wordt opgedeeld in taken, elk met instructies, vakgebied en duur. Een gestarte taak zet de aanvraag op « Bezig »; wanneer alle taken klaar zijn, wordt ze « Werken beëindigd »."
+        },
+        {
+          "public": "demandes:traiter",
+          "fr": "Chaque tâche se confie à des ouvriers ou à une équipe, à une date et une heure ; l'application propose les ouvriers du bon métier qui travaillent ce jour-là. Une date met la demande « Planifiée ».",
+          "nl": "Elke taak wordt toevertrouwd aan arbeiders of aan een ploeg, op een datum en een uur; de toepassing stelt arbeiders van het juiste vak voor die die dag werken. Een datum zet de aanvraag op « Gepland »."
+        },
+        {
+          "public": "demandes:entite",
+          "fr": "Demandes de l'entité : deux filtres nouveaux, « Équipe » et « Ouvrier », pour voir le travail de chacun.",
+          "nl": "Aanvragen van de entiteit: twee nieuwe filters, « Ploeg » en « Arbeider », om het werk van elk te zien."
+        }
+      ]
+    },
+    {
+      "version": "0.19.0",
+      "date": "2026-11-18",
+      "lignes": [
+        {
+          "public": "tous",
+          "fr": "La visite guidée tient sur l'écran d'un téléphone, et l'export Excel des tickets fonctionne.",
+          "nl": "De rondleiding past op het scherm van een telefoon, en de Excel-export van de tickets werkt."
+        },
+        {
+          "public": "equipes:lire",
+          "fr": "Nouvel écran « Équipes et prestataires » : les équipes du service technique, leur chef, leurs membres et leur horaire, week-end compris ; le métier et les compétences de chaque ouvrier.",
+          "nl": "Nieuw scherm « Ploegen en aannemers »: de ploegen van de technische dienst, hun ploegbaas, hun leden en hun uurrooster, weekend inbegrepen; het vak en de bekwaamheden van elke arbeider."
+        },
+        {
+          "public": "prestataires:lire",
+          "fr": "Onglet « Prestataires » : les sociétés extérieures, leur contact, leurs métiers et la référence de leur marché ou de leur contrat.",
+          "nl": "Tabblad « Aannemers »: de externe ondernemingen, hun contactpersoon, hun vakken en de referentie van hun opdracht of contract."
+        },
+        {
+          "public": "demandes:qualifier",
+          "fr": "À la qualification, la catégorie propose un corps de métier ; vous le gardez ou le changez. Le responsable le règle dans Catégories et délais.",
+          "nl": "Bij de kwalificatie stelt de categorie een vakgebied voor; u behoudt of wijzigt het. De verantwoordelijke stelt het in bij Categorieën en termijnen."
+        }
+      ]
+    },
+    {
+      "version": "0.18.0",
+      "date": "2026-11-18",
+      "lignes": [
+        {
+          "public": "tous",
+          "fr": "Une loupe en haut de l'écran retrouve une demande par son numéro, son lieu ou un mot de sa description. Sur un petit téléphone, « Rechercher » est en tête du menu.",
+          "nl": "Een vergrootglas bovenaan het scherm vindt een aanvraag terug via haar nummer, haar plaats of een woord uit de beschrijving. Op een kleine telefoon staat « Zoeken » bovenaan het menu."
+        },
+        {
+          "public": "tous",
+          "fr": "L'assistant (bulle en bas à droite) répond à « où en est ma demande » avec l'état de vos demandes, et propose les fiches du mode d'emploi quand il n'a pas de réponse.",
+          "nl": "De assistent (bel rechtsonder) antwoordt op « waar staat mijn aanvraag » met de status van uw aanvragen, en stelt de fiches van de handleiding voor als hij geen antwoord heeft."
+        },
+        {
+          "public": "tous",
+          "fr": "Une visite guidée présente l'application selon vos rôles ; vous la revoyez dans Aide.",
+          "nl": "Een rondleiding stelt de toepassing voor volgens uw rollen; u bekijkt ze opnieuw in Help."
+        },
+        {
+          "public": "tous",
+          "fr": "Bouton « Exporter » sur vos listes (Mes demandes, Tickets et, selon votre rôle, Demandes de l'entité ou Demandes à valider) : Excel ou CSV, avec les filtres affichés.",
+          "nl": "Knop « Exporteren » op uw lijsten (Mijn aanvragen, Tickets en, volgens uw rol, Aanvragen van de entiteit of Goed te keuren aanvragen): Excel of CSV, met de getoonde filters."
+        }
+      ]
+    },
+    {
+      "version": "0.17.0",
+      "date": "2026-11-17",
+      "lignes": [
+        {
+          "public": "tous",
+          "fr": "Une cloche en haut de l'écran vous prévient : demande reçue, validée, prise en charge, terminée, nouveau message… Touchez-la, puis touchez un avis pour ouvrir la demande. Les mêmes avis partent par courriel, dans votre langue, dès que l'administrateur active l'envoi.",
+          "nl": "Een bel bovenaan het scherm houdt u op de hoogte: aanvraag ontvangen, goedgekeurd, in behandeling, beëindigd, nieuw bericht… Tik erop en tik dan op een melding om de aanvraag te openen. Dezelfde meldingen vertrekken per e-mail, in uw taal, zodra de beheerder de verzending inschakelt."
+        },
+        {
+          "public": "tous",
+          "fr": "Sur téléphone, si vous travaillez pour deux entités, le choix de l'entité est en tête du menu.",
+          "nl": "Op een telefoon staat de keuze van de entiteit bovenaan het menu als u voor twee entiteiten werkt."
+        },
+        {
+          "public": "demandes:valider",
+          "fr": "Chef de service : la cloche vous signale chaque demande qui attend votre accord, et une demande partie sans vous parce qu'elle signale un danger.",
+          "nl": "Diensthoofd: de bel meldt u elke aanvraag die op uw akkoord wacht, en een aanvraag die zonder u vertrokken is omdat ze een gevaar meldt."
+        },
+        {
+          "public": "demandes:traiter",
+          "fr": "Service technique : la cloche vous signale les messages des demandeurs, les notes internes où l'on vous mentionne, et l'échéance proche ou le retard des demandes que vous avez qualifiées.",
+          "nl": "Technische dienst: de bel meldt u de berichten van aanvragers, de interne notities waarin u vermeld wordt, en de nabije vervaldag of de vertraging van de aanvragen die u gekwalificeerd hebt."
+        },
+        {
+          "public": "admin",
+          "fr": "Administrateur : Paramètres, onglet « Courriel » : réglage de l'envoi (en mode test, rien ne part et chaque courriel se lit dans le journal), courriel d'essai et textes des courriels en français et en néerlandais.",
+          "nl": "Beheerder: Parameters, tabblad « E-mail »: instelling van de verzending (in testmodus vertrekt er niets en is elke e-mail leesbaar in het logboek), testmail en teksten van de e-mails in het Frans en het Nederlands."
+        }
+      ]
+    },
+    {
+      "version": "0.16.1",
+      "date": "2026-11-16",
+      "lignes": [
+        {
+          "public": "tous",
+          "fr": "Danger pour les personnes ou les biens : même pour un aménagement, un déménagement ou un achat, la demande part tout de suite au service technique, sans attendre l'accord de votre chef de service.",
+          "nl": "Gevaar voor personen of goederen: zelfs voor een inrichting, een verhuizing of een aankoop gaat de aanvraag meteen naar de technische dienst, zonder op het akkoord van uw diensthoofd te wachten."
+        },
+        {
+          "public": "demandes:valider",
+          "fr": "Chef de service : vous ouvrez maintenant les photos et les documents joints aux demandes qui attendent votre accord.",
+          "nl": "Diensthoofd: u opent nu de foto's en documenten die bij de aanvragen horen die op uw akkoord wachten."
+        }
+      ]
+    },
+    {
+      "version": "0.16.0",
+      "date": "2026-11-10",
+      "lignes": [
+        {
+          "public": "tous",
+          "fr": "Aménagement d'un local, déménagement ou achat : la demande attend d'abord l'accord de votre chef de service ; vous voyez « En attente de l'accord de votre chef de service », puis sa décision.",
+          "nl": "Inrichting van een lokaal, verhuizing of aankoop: de aanvraag wacht eerst op het akkoord van uw diensthoofd; u ziet « Wacht op akkoord van uw diensthoofd », en daarna zijn beslissing."
+        },
+        {
+          "public": "tous",
+          "fr": "Le service technique peut regrouper deux demandes pour le même problème, ou découper une demande qui en signale plusieurs : la fiche vous dit vers quelle demande suivre.",
+          "nl": "De technische dienst kan twee aanvragen voor hetzelfde probleem samenvoegen, of een aanvraag die er meerdere meldt opsplitsen: de fiche zegt welke aanvraag u verder volgt."
+        },
+        {
+          "public": "demandes:valider",
+          "fr": "Chef de service : « Demandes à valider » liste les demandes de vos agents qui attendent votre accord ; validez-les ou refusez-les avec un motif.",
+          "nl": "Diensthoofd: « Goed te keuren aanvragen » toont de aanvragen van uw medewerkers die op uw akkoord wachten; keur ze goed of weiger ze met een reden."
+        },
+        {
+          "public": "demandes:traiter",
+          "fr": "Demandes de l'entité : « Encoder une demande reçue » (téléphone, courriel), « Regrouper avec une autre demande », « Découper en plusieurs demandes », et l'affichage « Colonnes par état » avec le bouton « Déplacer ».",
+          "nl": "Aanvragen van de entiteit: « Een ontvangen aanvraag invoeren » (telefoon, e-mail), « Samenvoegen met een andere aanvraag », « Opsplitsen in meerdere aanvragen », en de weergave « Kolommen per status » met de knop « Verplaatsen »."
+        },
+        {
+          "public": "admin",
+          "fr": "Services et valideurs : créez les services de chaque entité, désignez leur chef et un suppléant pour une période, et rattachez les agents à leur service dans Utilisateurs et rôles.",
+          "nl": "Diensten en goedkeurders: maak de diensten van elke entiteit aan, duid hun hoofd en een vervanger voor een periode aan, en verbind de medewerkers met hun dienst in Gebruikers en rollen."
+        }
+      ]
+    },
+    {
+      "version": "0.15.0",
+      "date": "2026-11-09",
+      "lignes": [
+        {
+          "public": "tous",
+          "fr": "Messages : sous la fiche de votre demande, écrivez au service technique et lisez ses réponses, photos comprises. « 1 nouveau message » vous signale une réponse, sur l'accueil et dans Mes demandes.",
+          "nl": "Berichten: onder de fiche van uw aanvraag schrijft u naar de technische dienst en leest u zijn antwoorden, foto's inbegrepen. « 1 nieuw bericht » wijst u op een antwoord, op de startpagina en in Mijn aanvragen."
+        },
+        {
+          "public": "tous",
+          "fr": "« Suivre cette demande » met une demande que vous voyez dans Mes demandes ; « Ne plus suivre » l'en retire.",
+          "nl": "« Deze aanvraag volgen » zet een aanvraag die u ziet in Mijn aanvragen; « Niet meer volgen » haalt ze eruit."
+        },
+        {
+          "public": "demandes:traiter",
+          "fr": "Fiche d'une demande : répondez au demandeur, avec un modèle de réponse si besoin, ou écrivez une note interne que le demandeur ne voit jamais et prévenez un collègue. Nouveaux compteurs : « Messages à lire » et « Notes où vous êtes mentionné ».",
+          "nl": "Fiche van een aanvraag: antwoord de aanvrager, zo nodig met een antwoordmodel, of schrijf een interne nota die de aanvrager nooit ziet en verwittig een collega. Nieuwe tellers: « Te lezen berichten » en « Nota's waarin u vermeld wordt »."
+        },
+        {
+          "public": "parametres:gerer",
+          "fr": "Catégories et délais, onglet « Modèles de réponse » : préparez les réponses fréquentes en français et en néerlandais ; quatre modèles sont livrés.",
+          "nl": "Categorieën en termijnen, tabblad « Antwoordmodellen »: bereid de veelgebruikte antwoorden voor in het Frans en het Nederlands; vier modellen worden geleverd."
+        }
+      ]
+    },
+    {
+      "version": "0.14.0",
+      "date": "2026-11-08",
+      "lignes": [
+        {
+          "public": "tous",
+          "fr": "Mes demandes : la fiche montre chaque étape de votre demande avec sa date. Vous pouvez la compléter (précision, photo) tant qu'elle est ouverte et l'annuler tant que les travaux n'ont pas commencé.",
+          "nl": "Mijn aanvragen: de fiche toont elke stap van uw aanvraag met de datum. U kunt ze aanvullen (verduidelijking, foto) zolang ze open is en annuleren zolang de werken niet begonnen zijn."
+        },
+        {
+          "public": "tous",
+          "fr": "Une fois la demande clôturée, donnez votre avis en un clic ; si le problème n'est pas réglé, rouvrez-la avant la date indiquée.",
+          "nl": "Zodra de aanvraag afgesloten is, geeft u uw beoordeling met één klik; is het probleem niet opgelost, heropen ze dan vóór de vermelde datum."
+        },
+        {
+          "public": "demandes:traiter",
+          "fr": "Fiche d'une demande : des boutons pour la faire avancer (démarrer, mettre en attente avec un motif, terminer, clôturer avec la cause de la panne, refuser, annuler) et l'historique complet. Une attente pour un motif extérieur au service suspend le délai.",
+          "nl": "Fiche van een aanvraag: knoppen om ze verder te behandelen (starten, in wacht zetten met een reden, beëindigen, afsluiten met de oorzaak van het defect, weigeren, annuleren) en de volledige historiek. Een wachttijd om een reden buiten de dienst schort de termijn op."
+        },
+        {
+          "public": "demandes:entite",
+          "fr": "Tableau de bord : deux compteurs de plus, « En attente depuis plus de N jours ouvrés » et « À clôturer ». Une demande rouverte revient dans « À qualifier ».",
+          "nl": "Dashboard: twee tellers meer, « Langer dan N werkdagen in wacht » en « Af te sluiten ». Een heropende aanvraag komt terug in « Te kwalificeren »."
+        },
+        {
+          "public": "parametres:gerer",
+          "fr": "Réglages de l'entité : les motifs d'attente qui suspendent le délai, la durée d'une attente longue et le délai de réouverture. Catégories et délais, onglet « États des demandes » : le texte que lit le demandeur pour chaque état. Listes de valeurs : motifs d'attente, motifs de refus et causes de panne.",
+          "nl": "Instellingen van de entiteit: de redenen van wachten die de termijn opschorten, de duur van een lange wachttijd en de termijn om te heropenen. Categorieën en termijnen, tabblad « Statussen van de aanvragen »: de tekst die de aanvrager voor elke status leest. Waardelijsten: redenen van wachten, redenen van weigering en oorzaken van defect."
+        }
+      ]
+    },
+    {
+      "version": "0.13.0",
+      "date": "2026-11-08",
+      "lignes": [
+        {
+          "public": "tous",
+          "fr": "Sur téléphone, l'en-tête tient sur les plus petits écrans, iPhone comme Android : la langue se change maintenant dans votre menu, sous vos initiales en haut à droite.",
+          "nl": "Op een telefoon past de koptekst op de kleinste schermen, iPhone zoals Android: de taal wijzigt u nu in uw menu, onder uw initialen rechtsboven."
+        },
+        {
+          "public": "tous",
+          "fr": "Aide : un lien « Voir aussi » ouvre la bonne fiche, l'impression du mode d'emploi est plus rapide, et l'onglet Questions fréquentes montre aussi les questions propres à un écran.",
+          "nl": "Help: een link « Zie ook » opent de juiste fiche, het afdrukken van de handleiding gaat sneller, en het tabblad Veelgestelde vragen toont ook de vragen eigen aan een scherm."
+        },
+        {
+          "public": "demandes:qualifier",
+          "fr": "Fiche d'une demande et qualification : la photo de l'endroit (celle du local, sinon celle du bâtiment ou du site) pour reconnaître le lieu. Patrimoine : la case « Sans photo » montre les lieux qu'il reste à photographier.",
+          "nl": "Fiche van een aanvraag en kwalificatie: de foto van de plek (die van het lokaal, anders die van het gebouw of de site) om de plaats te herkennen. Patrimonium: het vakje « Zonder foto » toont de plaatsen die nog gefotografeerd moeten worden."
+        },
+        {
+          "public": "admin",
+          "fr": "Journal d'audit : chaque champ et chaque réglage s'affichent par leur nom. Le motif tapé à la clôture d'un ticket n'y est plus recopié ; il reste lisible dans le ticket.",
+          "nl": "Auditlogboek: elk veld en elke instelling verschijnen met hun naam. De reden die bij het afsluiten van een ticket getypt wordt, wordt er niet meer overgenomen; ze blijft leesbaar in het ticket."
+        }
+      ]
+    },
+    {
+      "version": "0.12.0",
+      "date": "2026-11-06",
+      "lignes": [
+        {
+          "public": "tous",
+          "fr": "Bouton « Aide » en haut de chaque écran : le mode d'emploi de l'écran où vous êtes, avec ses captures et ses questions fréquentes. Le « ? » à côté d'un champ explique ce qu'il faut y mettre.",
+          "nl": "Knop « Help » bovenaan elk scherm: de handleiding van het scherm waar u bent, met schermafbeeldingen en veelgestelde vragen. Het « ? » naast een veld legt uit wat u erin zet."
+        },
+        {
+          "public": "tous",
+          "fr": "Aide, Mode d'emploi : une fiche par écran, une recherche dans toute l'aide, avec ou sans accents, et l'impression du mode d'emploi complet.",
+          "nl": "Help, Handleiding: een fiche per scherm, zoeken in de hele hulp, met of zonder accenten, en het afdrukken van de volledige handleiding."
+        },
+        {
+          "public": "demandes:qualifier",
+          "fr": "Une question des agents résolue dans Tickets peut devenir une question de l'aide de votre entité : « Ajouter à la FAQ ». Vous ajoutez, corrigez ou retirez aussi ces questions dans Aide, Questions fréquentes.",
+          "nl": "Een opgeloste vraag van de medewerkers in Tickets kan een vraag van de hulp van uw entiteit worden: « Toevoegen aan de FAQ ». U voegt die vragen ook toe, verbetert of trekt ze in via Help, Veelgestelde vragen."
+        },
+        {
+          "public": "admin",
+          "fr": "Paramètres : un réglage refusé nomme la valeur fautive ; les codes de rôles des tickets s'écrivent en majuscules ou en minuscules. Journal d'audit : plus aucun code brut dans le détail.",
+          "nl": "Parameters: een geweigerde instelling noemt de foute waarde; de rolcodes van de tickets mogen in hoofd- of kleine letters. Auditlogboek: geen ruwe codes meer in het detail."
+        },
+        {
+          "public": "admin",
+          "fr": "Aide, Questions fréquentes : vous ajoutez des questions communes aux deux entités ou propres à l'entité active.",
+          "nl": "Help, Veelgestelde vragen: u voegt vragen toe die gemeenschappelijk zijn voor beide entiteiten of eigen aan de actieve entiteit."
+        }
+      ]
+    },
+    {
+      "version": "0.11.0",
+      "date": "2026-11-05",
+      "lignes": [
+        {
+          "public": "tous",
+          "fr": "Bouton « Signaler » en haut de chaque écran : signalez un problème, posez une question sur l'application ou proposez une amélioration sans quitter l'écran. Vous suivez vos signalements dans Aide, Tickets.",
+          "nl": "Knop « Melden » bovenaan elk scherm: meld een probleem, stel een vraag over de toepassing of stel een verbetering voor zonder het scherm te verlaten. U volgt uw meldingen in Help, Tickets."
+        },
+        {
+          "public": "tous",
+          "fr": "La fenêtre des nouveautés ne se ferme plus par un clic à côté ; vous y changez la langue sans la fermer.",
+          "nl": "Het venster met de nieuwigheden sluit niet meer door ernaast te klikken; u wijzigt er de taal zonder het te sluiten."
+        },
+        {
+          "public": "demandes:qualifier",
+          "fr": "Aide, Tickets : les questions des agents de votre entité sur l'application arrivent chez vous. Répondez dans le fil du ticket, puis marquez-le résolu.",
+          "nl": "Help, Tickets: de vragen van de medewerkers van uw entiteit over de toepassing komen bij u terecht. Antwoord in de berichtenreeks van het ticket en markeer het daarna als opgelost."
+        },
+        {
+          "public": "admin",
+          "fr": "Aide, Tickets : les incidents, bugs et souhaits des deux entités arrivent chez vous. Paramètres, onglet « Tickets » : qui traite chaque file et les délais.",
+          "nl": "Help, Tickets: de incidenten, bugs en wensen van beide entiteiten komen bij u terecht. Parameters, tabblad « Tickets »: wie elke wachtrij behandelt en de termijnen."
+        },
+        {
+          "public": "admin",
+          "fr": "Paramètres, onglet « Connexion Microsoft » : la date et l'auteur du dernier enregistrement s'affichent, et l'ID d'un secret saisi à la place de sa valeur est refusé.",
+          "nl": "Parameters, tabblad « Microsoft-aanmelding »: de datum en de auteur van de laatste opslag worden getoond, en de id van een geheim die in plaats van de waarde wordt ingegeven, wordt geweigerd."
+        }
+      ]
+    },
+    {
+      "version": "0.10.0",
+      "date": "2026-11-05",
+      "lignes": [
+        {
+          "public": "admin",
+          "fr": "Paramètres, onglet « Connexion Microsoft » : les agents peuvent se connecter avec leur compte Microsoft 365 et arrivent depuis Portal sans nouvelle saisie. Trois modes : comptes locaux, Microsoft facultatif, Microsoft obligatoire.",
+          "nl": "Parameters, tabblad « Microsoft-aanmelding »: de medewerkers kunnen aanmelden met hun Microsoft 365-account en komen vanuit Portal binnen zonder opnieuw in te vullen. Drie modi: lokale accounts, Microsoft facultatief, Microsoft verplicht."
+        },
+        {
+          "public": "admin",
+          "fr": "Utilisateurs, « Rôles » : la case « Accès de secours par mot de passe » garde la connexion par mot de passe d'un administrateur quand Microsoft devient obligatoire.",
+          "nl": "Gebruikers, « Rollen »: het vakje « Noodtoegang met wachtwoord » behoudt het aanmelden met wachtwoord van een beheerder wanneer Microsoft verplicht wordt."
+        }
+      ]
+    },
+    {
+      "version": "0.9.1",
+      "date": "2026-11-03",
+      "lignes": [
+        {
+          "public": "demandes:entite",
+          "fr": "Demandes de l'entité : les compteurs du tableau de bord se mettent à jour dès qu'une demande est qualifiée.",
+          "nl": "Aanvragen van de entiteit: de tellers van het dashboard worden bijgewerkt zodra een aanvraag gekwalificeerd is."
+        },
+        {
+          "public": "admin",
+          "fr": "Dans le journal d'audit, l'état d'une demande s'affiche en toutes lettres (« À qualifier », « Qualifiée ») dans « Avant » et « Après ».",
+          "nl": "In het auditlogboek wordt de status van een aanvraag voluit getoond (« Te kwalificeren », « Gekwalificeerd ») in « Voor » en « Na »."
+        }
+      ]
+    },
+    {
+      "version": "0.9.0",
+      "date": "2026-11-02",
+      "lignes": [
+        {
+          "public": "tous",
+          "fr": "Quand le service technique prend votre demande en charge, elle passe à « Prise en charge » et le délai annoncé suit la priorité qu'il a retenue.",
+          "nl": "Wanneer de technische dienst uw aanvraag in behandeling neemt, gaat ze naar « In behandeling » en volgt de aangekondigde termijn de prioriteit die de dienst gekozen heeft."
+        },
+        {
+          "public": "demandes:entite",
+          "fr": "Tableau de bord du service technique à l'accueil : demandes à qualifier, en retard, P1 et P2 en cours, échéance dans les deux jours ouvrés. Un clic ouvre la liste filtrée.",
+          "nl": "Dashboard van de technische dienst op de startpagina: aanvragen te kwalificeren, te laat, P1 en P2 in behandeling, vervaldatum binnen twee werkdagen. Een klik opent de gefilterde lijst."
+        },
+        {
+          "public": "demandes:entite",
+          "fr": "Demandes de l'entité : filtres (état, priorité, catégorie, bâtiment, échéance, source), tri par colonne, vues enregistrées ; « Qualifier » sur la fiche pour confirmer ou changer la priorité (avec un motif), préciser le lieu et la catégorie, estimer la durée et donner des consignes à l'ouvrier.",
+          "nl": "Aanvragen van de entiteit: filters (status, prioriteit, categorie, gebouw, vervaldatum, bron), sorteren per kolom, opgeslagen weergaven; « Kwalificeren » op de fiche om de prioriteit te bevestigen of te wijzigen (met een reden), de plaats en de categorie te verfijnen, de duur te schatten en instructies voor de arbeider te geven."
+        },
+        {
+          "public": "parametres:gerer",
+          "fr": "Réglages de l'entité : le groupe « Pièces jointes des demandes » est maintenant affiché (nombre, taille, formats).",
+          "nl": "Instellingen van de entiteit: de groep « Bijlagen bij aanvragen » wordt nu getoond (aantal, grootte, formaten)."
+        }
+      ]
+    },
+    {
+      "version": "0.8.0",
+      "date": "2026-10-30",
+      "lignes": [
+        {
+          "public": "tous",
+          "fr": "Ajoutez des photos ou un PDF à vos demandes : « Ajouter une photo ou un document », dans le formulaire. Elles sont gardées avec le brouillon et visibles sur la fiche.",
+          "nl": "Voeg foto's of een pdf toe aan uw aanvragen: « Foto of document toevoegen », in het formulier. Ze worden met het ontwerp bewaard en zijn zichtbaar op de fiche."
+        },
+        {
+          "public": "parametres:gerer",
+          "fr": "Réglages de l'entité, Pièces jointes des demandes : nombre par demande, taille d'un fichier et formats admis.",
+          "nl": "Instellingen van de entiteit, Bijlagen bij aanvragen: aantal per aanvraag, grootte van een bestand en toegelaten formaten."
+        }
+      ]
+    },
+    {
+      "version": "0.7.5",
+      "date": "2026-10-29",
+      "lignes": [
+        {
+          "public": "tous",
+          "fr": "Pour choisir un lieu, « Changer de lieu » propose d'abord « Vos lieux récents » : les derniers lieux de vos demandes, à choisir d'un clic.",
+          "nl": "Om een plaats te kiezen, stelt « Andere plaats » eerst « Uw recente plaatsen » voor: de laatste plaatsen van uw aanvragen, met één klik te kiezen."
+        },
+        {
+          "public": "tous",
+          "fr": "À la connexion, le message « Identifiants incorrects » disparaît dès que vous corrigez votre adresse.",
+          "nl": "Bij het aanmelden verdwijnt het bericht « Ongeldige aanmeldgegevens » zodra u uw adres verbetert."
+        },
+        {
+          "public": "admin",
+          "fr": "Dans le journal d'audit, une case à cocher s'affiche « Oui » ou « Non » et les champs vides ne sont plus montrés.",
+          "nl": "In het auditlogboek verschijnt een selectievakje als « Ja » of « Nee » en worden lege velden niet meer getoond."
+        }
+      ]
+    },
+    {
+      "version": "0.7.4",
+      "date": "2026-10-29",
+      "lignes": [
+        {
+          "public": "admin",
+          "fr": "Dans le journal d'audit, le détail d'une ligne affiche le nom du lieu et de la catégorie au lieu de leur numéro interne.",
+          "nl": "In het auditlogboek toont het detail van een regel de naam van de plaats en de categorie in plaats van hun intern nummer."
+        }
+      ]
+    },
+    {
+      "version": "0.7.3",
+      "date": "2026-10-29",
+      "lignes": [
+        {
+          "public": "admin",
+          "fr": "Correctif de sécurité de trois composants du serveur. Rien ne change à l'écran.",
+          "nl": "Beveiligingscorrectie van drie onderdelen van de server. Er verandert niets op het scherm."
+        }
+      ]
+    },
+    {
+      "version": "0.7.2",
+      "date": "2026-10-29",
+      "lignes": [
+        {
+          "public": "admin",
+          "fr": "Le code de l'application est publié sous licence libre (EUPL-1.2), sans adresse ni réglage de vos serveurs. Rien ne change à l'écran.",
+          "nl": "De code van de toepassing is gepubliceerd onder vrije licentie (EUPL-1.2), zonder adres of instelling van uw servers. Er verandert niets op het scherm."
+        }
+      ]
+    },
+    {
+      "version": "0.7.1",
+      "date": "2026-10-28",
+      "lignes": [
+        {
+          "public": "tous",
+          "fr": "Votre formulaire commencé est bien gardé, aussi quand vous gardez le lieu proposé d'office : « Brouillon enregistré à … » s'affiche sous le bouton d'envoi.",
+          "nl": "Uw begonnen formulier wordt goed bewaard, ook als u de voorgestelde plaats behoudt: « Ontwerp bewaard om … » verschijnt onder de verzendknop."
+        },
+        {
+          "public": "parametres:gerer",
+          "fr": "Le texte livré de la mention « En savoir plus » commence par « Responsable du traitement : » suivi du nom de l'entité. Un texte que vous avez modifié ne change pas.",
+          "nl": "De geleverde tekst van de vermelding « Meer weten » begint met « Verwerkingsverantwoordelijke: » gevolgd door de naam van de entiteit. Een tekst die u hebt gewijzigd, verandert niet."
+        }
+      ]
+    },
+    {
+      "version": "0.7.0",
+      "date": "2026-10-28",
+      "lignes": [
+        {
+          "public": "tous",
+          "fr": "Avant d'envoyer une demande, vous voyez les demandes déjà ouvertes dans le même bâtiment : « Moi aussi » vous associe à l'une d'elles au lieu d'en créer une nouvelle.",
+          "nl": "Vóór u een aanvraag verzendt, ziet u de aanvragen die al openstaan in hetzelfde gebouw: « Ik ook » koppelt u aan een ervan in plaats van een nieuwe aan te maken."
+        },
+        {
+          "public": "tous",
+          "fr": "Case « Danger pour les personnes ou les biens » en tête du formulaire : elle affiche le numéro à appeler et votre demande est traitée en priorité absolue.",
+          "nl": "Vakje « Gevaar voor personen of goederen » bovenaan het formulier: het toont het nummer om te bellen en uw aanvraag wordt met absolute voorrang behandeld."
+        },
+        {
+          "public": "tous",
+          "fr": "« Pour quelqu'un d'autre ? », « Une date ou un moment à respecter ? » et quelques questions selon la catégorie complètent votre demande. Le formulaire est gardé si vous le quittez : « Reprendre » ou « Recommencer à zéro ». « En savoir plus » explique l'usage de vos données.",
+          "nl": "« Voor iemand anders? », « Een datum of moment om rekening mee te houden? » en enkele vragen volgens de categorie vervolledigen uw aanvraag. Het formulier blijft bewaard als u het verlaat: « Verdergaan » of « Opnieuw beginnen ». « Meer weten » legt het gebruik van uw gegevens uit."
+        },
+        {
+          "public": "demandes:entite",
+          "fr": "Sur la fiche d'une demande, le service technique voit la mention « Danger », la personne pour qui elle est faite, la date souhaitée, les réponses aux questions et les collègues qui la suivent, avec leur remarque.",
+          "nl": "Op de fiche van een aanvraag ziet de technische dienst de vermelding « Gevaar », de persoon voor wie ze is, de gewenste datum, de antwoorden op de vragen en de collega's die ze volgen, met hun opmerking."
+        },
+        {
+          "public": "categories:gerer",
+          "fr": "Le responsable règle les questions de chaque catégorie dans Catégories et délais, et le contact du délégué à la protection des données avec les mentions du formulaire dans Réglages de l'entité, groupe « Protection des données ».",
+          "nl": "De verantwoordelijke stelt de vragen van elke categorie in via Categorieën en termijnen, en het contact van de functionaris voor gegevensbescherming met de vermeldingen van het formulier via Instellingen van de entiteit, groep « Gegevensbescherming »."
+        }
+      ]
+    },
+    {
+      "version": "0.5.2",
+      "date": "2026-10-27",
+      "lignes": [
+        {
+          "public": "tous",
+          "fr": "Sur téléphone, la page ne s'agrandit plus quand on touche un champ pour écrire ; l'agrandissement à deux doigts reste possible.",
+          "nl": "Op de telefoon wordt de pagina niet meer groter wanneer u een veld aanraakt om te schrijven; vergroten met twee vingers blijft mogelijk."
+        },
+        {
+          "public": "tous",
+          "fr": "Une adresse e-mail mal écrite affiche « Adresse e-mail non valide » sous le champ, et chaque champ ne montre plus qu'un message à la fois.",
+          "nl": "Een verkeerd geschreven e-mailadres toont « Ongeldig e-mailadres » onder het veld, en elk veld toont nog maar één melding tegelijk."
+        }
+      ]
+    },
+    {
+      "version": "0.5.1",
+      "date": "2026-10-26",
+      "lignes": [
+        {
+          "public": "tous",
+          "fr": "Dans « Changer de lieu », la liste des bâtiments se referme : « Masquer la liste », ou un nouveau clic sur « Parcourir la liste des bâtiments ».",
+          "nl": "In « Andere plaats » gaat de lijst van de gebouwen weer dicht: « Lijst verbergen », of opnieuw klikken op « De lijst van de gebouwen doorlopen »."
+        },
+        {
+          "public": "tous",
+          "fr": "Un champ obligatoire laissé vide, ou rempli seulement d'espaces, affiche « Ce champ est obligatoire » juste en dessous, avant l'envoi.",
+          "nl": "Een verplicht veld dat leeg blijft, of alleen spaties bevat, toont « Dit veld is verplicht » er net onder, vóór het verzenden."
+        }
+      ]
+    },
+    {
+      "version": "0.5.0",
+      "date": "2026-10-26",
+      "lignes": [
+        {
+          "public": "tous",
+          "fr": "Vous pouvez faire une demande au service technique : « Nouvelle demande », en haut de chaque écran. Où, quoi, quelques mots, et vous recevez un numéro, par exemple AC-DI-2026-00001, avec le délai indicatif.",
+          "nl": "U kunt een aanvraag indienen bij de technische dienst: « Nieuwe aanvraag », bovenaan elk scherm. Waar, wat, enkele woorden, en u krijgt een nummer, bijvoorbeeld AC-DI-2026-00001, met de indicatieve termijn."
+        },
+        {
+          "public": "tous",
+          "fr": "« Mes demandes » montre vos demandes et leur état, les demandes en cours en premier. Choisissez votre lieu de travail (cliquez sur votre nom, « Mon lieu de travail ») : il sera proposé d'office.",
+          "nl": "« Mijn aanvragen » toont uw aanvragen en hun status, de lopende eerst. Kies uw werkplek (klik op uw naam, « Mijn werkplek »): ze wordt dan standaard voorgesteld."
+        },
+        {
+          "public": "demandes:entite",
+          "fr": "Le gestionnaire technique et le responsable voient toutes les demandes de l'entité dans « Demandes de l'entité », et le nombre de demandes à qualifier sur l'accueil.",
+          "nl": "De technisch beheerder en de verantwoordelijke zien alle aanvragen van de entiteit in « Aanvragen van de entiteit », en het aantal te kwalificeren aanvragen op de startpagina."
+        },
+        {
+          "public": "parametres:gerer",
+          "fr": "Le responsable règle la numérotation des demandes (code et remise à un chaque année ou numérotation continue) dans Réglages de l'entité.",
+          "nl": "De verantwoordelijke stelt de nummering van de aanvragen in (code en elk jaar vanaf één of doorlopend) via Instellingen van de entiteit."
+        },
+        {
+          "public": "tous",
+          "fr": "La recherche d'un lieu ne tient plus compte des accents et trouve aussi les salles par le nom de leur bâtiment ; les espaces en trop autour d'un texte saisi sont retirés.",
+          "nl": "Het zoeken naar een plaats houdt geen rekening meer met accenten en vindt zalen ook via de naam van hun gebouw; overtollige spaties rond een ingevoerde tekst worden verwijderd."
+        }
+      ]
+    },
+    {
+      "version": "0.4.1",
+      "date": "2026-10-23",
+      "lignes": [
+        {
+          "public": "categories:gerer",
+          "fr": "Dans Catégories et délais, chaque catégorie, priorité, jour de l'horaire, congé et fermeture dit qui l'a modifié en dernier et quand, ou « Valeur livrée » si personne n'y a touché.",
+          "nl": "In Categorieën en termijnen toont elke categorie, prioriteit, dag van het uurrooster, verlofdag en sluiting wie ze het laatst heeft gewijzigd en wanneer, of « Geleverde waarde » als niemand ze heeft aangeraakt."
+        },
+        {
+          "public": "delais:gerer",
+          "fr": "Le simulateur affiche la date de l'échéance et son délai l'un sous l'autre, lisibles aussi sur téléphone, iPhone comme Android.",
+          "nl": "De simulator toont de vervaldag en de termijn onder elkaar, ook leesbaar op een telefoon, iPhone en Android."
+        },
+        {
+          "public": "admin",
+          "fr": "Le journal d'audit ne note plus que les champs modifiés d'une catégorie, d'un congé, d'une fermeture, d'un lieu, d'une valeur de liste ou d'une entité, avec l'ancienne et la nouvelle valeur.",
+          "nl": "Het auditlogboek noteert van een categorie, verlofdag, sluiting, plaats, lijstwaarde of entiteit alleen nog de gewijzigde velden, met de oude en de nieuwe waarde."
+        }
+      ]
+    },
+    {
+      "version": "0.4.0",
+      "date": "2026-10-22",
+      "lignes": [
+        {
+          "public": "tous",
+          "fr": "L'aide explique comment le délai d'une demande est compté : jours ouvrables de votre entité, sans les jours fériés ni les congés ; les cas de danger comptent jour et nuit.",
+          "nl": "De help legt uit hoe de termijn van een aanvraag wordt geteld: werkdagen van uw entiteit, zonder feestdagen en verlofdagen; gevaarlijke situaties tellen dag en nacht."
+        },
+        {
+          "public": "categories:gerer",
+          "fr": "Le responsable du service technique règle les catégories des demandes, domaine puis nature, avec leur pictogramme, et voit les tuiles telles que les demandeurs les verront, dans Réglages du service, Catégories et délais.",
+          "nl": "De verantwoordelijke van de technische dienst stelt de categorieën van de aanvragen in, domein en dan soort, met hun pictogram, en ziet de tegels zoals de aanvragers ze zullen zien, via Instellingen van de dienst, Categorieën en termijnen."
+        },
+        {
+          "public": "delais:gerer",
+          "fr": "Il y règle aussi les priorités P1 à P4 et leurs délais, l'horaire, les congés et les fermetures de l'entité, et calcule une échéance avec le simulateur.",
+          "nl": "Hij stelt er ook de prioriteiten P1 tot P4 en hun termijnen in, het uurrooster, de verlofdagen en de sluitingen van de entiteit, en berekent een vervaldag met de simulator."
+        }
+      ]
+    },
+    {
+      "version": "0.3.1",
+      "date": "2026-10-22",
+      "lignes": [
+        {
+          "public": "tous",
+          "fr": "La question de l'aide sur l'appareil photo qui reste noir explique aussi le réglage des téléphones Android, Samsung compris, dans Chrome.",
+          "nl": "De vraag in de help over de camera die zwart blijft, legt nu ook de instelling uit voor Android-telefoons, ook Samsung, in Chrome."
+        }
+      ]
+    },
+    {
+      "version": "0.3.0",
+      "date": "2026-10-22",
+      "lignes": [
+        {
+          "public": "tous",
+          "fr": "Les nouveautés de chaque mise à jour s'affichent désormais à la première connexion, puis restent dans Aide, Nouveautés.",
+          "nl": "De nieuwigheden van elke update verschijnen voortaan bij de eerste aanmelding en blijven daarna in Help, Nieuwigheden."
+        },
+        {
+          "public": "tous",
+          "fr": "L'aide donne le téléphone et l'adresse du service technique de votre entité, et une question sur l'appareil photo de l'iPhone.",
+          "nl": "De help geeft het telefoonnummer en het adres van de technische dienst van uw entiteit, en een vraag over de camera van de iPhone."
+        },
+        {
+          "public": "parametres:gerer",
+          "fr": "Le responsable du service technique règle le contact de son service, le téléphone d'urgence et le délai de réouverture dans Réglages de l'entité.",
+          "nl": "De verantwoordelijke van de technische dienst stelt het contact van zijn dienst, het noodnummer en de termijn om te heropenen in via Instellingen van de entiteit."
+        },
+        {
+          "public": "admin",
+          "fr": "L'administrateur règle le nom de l'application et du pouvoir local, la langue par défaut et les modules dans Paramètres.",
+          "nl": "De beheerder stelt de naam van de toepassing en van het lokaal bestuur, de standaardtaal en de modules in via Parameters."
+        },
+        {
+          "public": "admin",
+          "fr": "Le journal d'audit montre qui a fait quoi, quand et dans quelle entité.",
+          "nl": "Het auditlogboek toont wie wat deed, wanneer en in welke entiteit."
+        }
+      ]
+    },
+    {
+      "version": "0.2.0",
+      "date": "2026-10-21",
+      "lignes": [
+        {
+          "public": "tous",
+          "fr": "L'écran Patrimoine montre les sites, bâtiments, niveaux et locaux de votre entité, avec une photo par lieu.",
+          "nl": "Het scherm Patrimonium toont de sites, gebouwen, verdiepingen en lokalen van uw entiteit, met een foto per plaats."
+        },
+        {
+          "public": "lieux:gerer",
+          "fr": "Le gestionnaire technique et le responsable créent, modifient et désactivent les lieux, et y ajoutent une photo prise au téléphone.",
+          "nl": "De technisch beheerder en de verantwoordelijke maken plaatsen aan, wijzigen en deactiveren ze, en voegen er een foto van de telefoon aan toe."
+        },
+        {
+          "public": "listes:gerer",
+          "fr": "Le responsable du service technique règle les types de lieux en français et en néerlandais.",
+          "nl": "De verantwoordelijke van de technische dienst stelt de soorten plaatsen in het Frans en het Nederlands in."
+        }
+      ]
+    },
+    {
+      "version": "0.1.1",
+      "date": "2026-10-15",
+      "lignes": [
+        {
+          "public": "admin",
+          "fr": "L'écran Utilisateurs et rôles tient dans la largeur de l'écran, téléphone compris.",
+          "nl": "Het scherm Gebruikers en rollen past in de breedte van het scherm, ook op de telefoon."
+        }
+      ]
+    },
+    {
+      "version": "0.1.0",
+      "date": "2026-10-15",
+      "lignes": [
+        {
+          "public": "tous",
+          "fr": "Première version : l'application aux couleurs de l'institution, en français et en néerlandais.",
+          "nl": "Eerste versie: de toepassing in de kleuren van de instelling, in het Frans en het Nederlands."
+        },
+        {
+          "public": "tous",
+          "fr": "Une personne qui a des rôles dans plusieurs entités passe de l'une à l'autre en haut de l'écran.",
+          "nl": "Wie rollen heeft in meerdere entiteiten, schakelt bovenaan het scherm van de ene naar de andere."
+        }
+      ]
+    }
+  ]
+}

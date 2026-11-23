@@ -1,6 +1,12 @@
 # After deployment
 
+Application version: **0.21.0** · Updated on 20/11/2026
+
 The French text prevails. Update procedure: upload the archive, `cd <folder>`, `ls -l` the archive, `sudo bash backup.sh`, `sudo rm -rf backend frontend docs`, `sudo tar xzf … --strip-components=1`, `ls backend frontend`, `sudo docker compose build`, `sudo docker compose up -d`, `sudo docker compose ps`, `curl -sk https://localhost:<https>/api/version`, checklist from the delivery message. `.env` and the volumes are never touched.
+
+## 0.21.0 (20/11/2026)
+
+Weekly and daily planning, unplanned tasks, conflicts, workers' absences, actual task times, date announced to the requester; remarks from the 0.20.0 acceptance test (step 17). Update through section 3, **with migration, no new dependency**. `sudo docker logs gmao-api --tail 30`: `[DB] Migration 018_planning appliquée`, then `[APP] API 0.21.0 sur le port 3001`. No rerun of `demo.js`: the demo password stays valid. `sudo bash recette.sh`: nine `OK` lines. Rollback to 0.20.0: possible without restoring (tried), recommended with the day's backup.
 
 ## 0.20.0 (19/11/2026)
 

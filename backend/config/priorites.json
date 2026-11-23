@@ -1,0 +1,21 @@
+{
+  "_description": "Priorités des demandes d'intervention (cahier des charges section 8.2, PRI-01, PRI-02 ; décision D-11 : défauts du cahier des charges en attendant l'atelier métier ; décompte validé par Thierry le 22/10/2026 : P1 en heures calendaires, nuit et week-end compris, P2 à P4 en jours ouvrables de l'entité). Catalogue fermé P1 à P4 : chaque entité a sa copie, créée au démarrage du serveur si elle manque, réglée par le rôle qui porte « delais:gerer » (responsable du service technique) ; DELETE rend les valeurs livrées ici. « unite » vaut pour les deux délais : heures_calendaires (toute heure compte), heures_ouvrables ou jours_ouvrables (selon le calendrier de l'entité). « fin » null : date convenue avec le demandeur. « couleurs » : couleurs d'étiquette admises (préréglages d'Ant Design).",
+  "unites": ["heures_calendaires", "heures_ouvrables", "jours_ouvrables"],
+  "couleurs": ["red", "volcano", "orange", "gold", "lime", "green", "cyan", "blue", "geekblue", "purple", "magenta", "default"],
+  "bornes": { "heures_calendaires": 720, "heures_ouvrables": 720, "jours_ouvrables": 365 },
+  "defauts": [
+    { "code": "P1", "libelle_fr": "Sécurité", "libelle_nl": "Veiligheid",
+      "description_fr": "Danger pour les personnes, les biens ou la continuité d'un service public. Mise en sécurité au moins dans le délai de fin.",
+      "description_nl": "Gevaar voor personen, goederen of de continuïteit van een openbare dienst. Minstens beveiliging binnen de eindtermijn.",
+      "couleur": "red", "unite": "heures_calendaires", "prise_en_charge": 1, "fin": 4 },
+    { "code": "P2", "libelle_fr": "Urgente", "libelle_nl": "Dringend",
+      "description_fr": "Gêne forte pour un service.", "description_nl": "Sterke hinder voor een dienst.",
+      "couleur": "orange", "unite": "jours_ouvrables", "prise_en_charge": 1, "fin": 2 },
+    { "code": "P3", "libelle_fr": "Normale", "libelle_nl": "Normaal",
+      "description_fr": "Gêne modérée.", "description_nl": "Matige hinder.",
+      "couleur": "blue", "unite": "jours_ouvrables", "prise_en_charge": 2, "fin": 10 },
+    { "code": "P4", "libelle_fr": "Planifiable", "libelle_nl": "Planbaar",
+      "description_fr": "Amélioration, aménagement. Fin des travaux à la date convenue.", "description_nl": "Verbetering, inrichting. Einde van de werken op de afgesproken datum.",
+      "couleur": "green", "unite": "jours_ouvrables", "prise_en_charge": 5, "fin": null }
+  ]
+}

@@ -1,0 +1,276 @@
+/**
+ * Comptes de démonstration fictifs pour les ateliers (standard v3.2, section 7.2 : jeu « Démonstration »,
+ * sur demande explicite, jamais en production). Lancé par une commande, jamais au démarrage du serveur.
+ *
+ *   node src/demo.js            crée ou réactive les comptes et leur donne un nouveau mot de passe commun, affiché une fois ;
+ *                               crée les lieux de démonstration qui manquent (version 0.2.0)
+ *   node src/demo.js --retirer  désactive tous les comptes et tous les lieux de démonstration
+ *
+ * Refusé sans DEMO_ALLOWED=1 dans l'environnement (variable du fichier .env d'une installation d'acceptance).
+ * Avec sql.js, un seul processus écrit dans la base : le service api doit être arrêté pendant la commande.
+ * Pour chaque entité active : un compte par rôle de portée « entite ». Un compte de plus a les rôles de gestionnaire
+ * et de demandeur dans toutes les entités actives, pour montrer le changement d'entité.
+ * Les comptes portent is_demo = 1, une adresse en .invalid (domaine réservé, RFC 2606) et des noms fictifs.
+ *
+ * Lieux (version 0.2.0) : pour chaque entité active, deux sites fictifs avec bâtiments, niveaux et locaux, marqués
+ * is_demo = 1, codes préfixés du code de l'entité, adresse fictive. La première entité (ordre des codes) reçoit le
+ * modèle « administration », la deuxième le modèle « action sociale », puis on alterne. Un lieu dont le code existe déjà
+ * n'est jamais modifié : relancer la commande garde les photos déposées et les corrections faites à l'écran.
+ * Aucune photo n'est livrée : les photos se déposent à l'écran, dans la base de l'installation seulement.
+ *
+ * Service (version 0.16.0, étape 11) : pour chaque entité active, un service fictif « <ENTITE>-DEMO », marqué is_demo = 1,
+ * dont le valideur est le compte « valideur.<entité> » et dont « agent.<entité> » est membre (s'il n'a pas déjà un
+ * service) : une demande d'aménagement de l'agent passe ainsi par la validation. Un service déjà présent n'est jamais
+ * modifié ; --retirer le désactive avec les comptes.
+ *
+ * Équipes (version 0.19.0, étape 15) : pour chaque entité active, deux ouvriers de plus (« ouvrier-2 » et « ouvrier-3 »)
+ * et deux équipes fictives, marquées is_demo = 1 : « Bâtiment » (chef « chef-equipe », membres « ouvrier » et
+ * « ouvrier-2 », horaire de l'entité) et « Propreté du week-end » (membre « ouvrier-3 », samedi et dimanche de 07:00 à
+ * 13:00). Corps de métier et compétences donnés aux ouvriers qui n'en ont pas encore. Une équipe ou un profil déjà
+ * présent n'est jamais modifié ; --retirer désactive les équipes avec les comptes.
+ * Prestataires (version 0.19.0, point 3) : deux prestataires fictifs par entité, sans numéro d'entreprise (aucune société
+ * réelle visée), courriel en .invalid ; créés s'ils manquent (nom), jamais modifiés ; --retirer les désactive.
+ */
+const crypto = require('crypto');
+const bcrypt = require('bcryptjs');
+const { initDb, getDb, saveNow } = require('./database');
+const { logAudit } = require('./audit');
+const { ROLES, ENTITE_ROLES, DEFAULT_ROLE } = require('./roles');
+const { VERSION } = require('./config');
+const listes = require('./services/listes-valeurs');
+
+const DOMAIN = 'demo.invalid';
+
+function fail(msg) {
+  console.error(`[DEMO] ${msg}`);
+  process.exit(1);
+}
+
+function upsertAccount(db, { email, first, last, entiteId, hash }) {
+  const u = db.prepare('SELECT id FROM users WHERE email = ?').get(email);
+  if (u) {
+    db.prepare("UPDATE users SET password_hash = ?, is_active = 1, must_change_password = 0, updated_at = datetime('now') WHERE id = ?").run(hash, u.id);
+    return u.id;
+  }
+  // Compte nouveau : la note de la version installée ne lui est pas montrée (version_vue = version installée).
+  return db.prepare(`INSERT INTO users (email, first_name, last_name, user_role, entite_id, password_hash, is_demo, version_vue)
+    VALUES (?, ?, ?, 'agent', ?, ?, 1, ?)`).run(email, first, last, entiteId, hash, VERSION).lastInsertRowid;
+}
+
+function ensureRole(db, userId, entiteId, role) {
+  const has = db.prepare('SELECT 1 FROM user_roles WHERE user_id = ? AND entite_id = ? AND role = ? AND is_active = 1').get(userId, entiteId, role);
+  if (!has) db.prepare('INSERT INTO user_roles (user_id, entite_id, role) VALUES (?, ?, ?)').run(userId, entiteId, role);
+}
+
+/**
+ * Modèles d'arbre : [code relatif, nature, code relatif du parent, nom FR, nom NL, code du type].
+ * Les codes s'écrivent ensuite « <ENTITE>-<code> ». Un local sans niveau ou rangé sous un site illustre les règles 1 et 2.
+ */
+const MODELES = [
+  [
+    ['S1', 'site', null, 'Site administratif (démo)', 'Administratieve site (demo)', null],
+    ['B1', 'batiment', 'S1', 'Maison communale (démo)', 'Gemeentehuis (demo)', null],
+    ['B1-R0', 'niveau', 'B1', 'Rez-de-chaussée', 'Gelijkvloers', null],
+    ['B1-R1', 'niveau', 'B1', 'Premier étage', 'Eerste verdieping', null],
+    ['B1-L01', 'local', 'B1-R0', 'Accueil', 'Onthaal', 'bureau'],
+    ['B1-L02', 'local', 'B1-R0', 'Salle du conseil', 'Raadzaal', 'salle_reunion'],
+    ['B1-L03', 'local', 'B1-R1', 'Bureau 1.01', 'Kantoor 1.01', 'bureau'],
+    ['B1-L04', 'local', 'B1-R0', 'Sanitaires', 'Sanitair', 'sanitaires'],
+    ['B2', 'batiment', 'S1', 'Annexe technique (démo)', 'Technisch bijgebouw (demo)', null],
+    ['B2-L01', 'local', 'B2', 'Atelier', 'Werkplaats', 'atelier'],
+    ['B2-L02', 'local', 'B2', 'Garage', 'Garage', 'garage'],
+    ['S2', 'site', null, 'École (démo)', 'School (demo)', null],
+    ['B3', 'batiment', 'S2', 'Bâtiment des classes (démo)', 'Klassengebouw (demo)', null],
+    ['B3-R0', 'niveau', 'B3', 'Rez-de-chaussée', 'Gelijkvloers', null],
+    ['B3-L01', 'local', 'B3-R0', 'Classe 1', 'Klas 1', 'classe'],
+    ['B3-L02', 'local', 'B3-R0', 'Cuisine', 'Keuken', 'cuisine'],
+    ['S2-X01', 'local', 'S2', 'Cour de récréation', 'Speelplaats', 'exterieur'],
+  ],
+  [
+    ['S1', 'site', null, 'Siège (démo)', 'Hoofdzetel (demo)', null],
+    ['B1', 'batiment', 'S1', 'Bâtiment principal (démo)', 'Hoofdgebouw (demo)', null],
+    ['B1-R0', 'niveau', 'B1', 'Rez-de-chaussée', 'Gelijkvloers', null],
+    ['B1-R1', 'niveau', 'B1', 'Premier étage', 'Eerste verdieping', null],
+    ['B1-L01', 'local', 'B1-R0', 'Accueil social', 'Sociaal onthaal', 'bureau'],
+    ['B1-L02', 'local', 'B1-R1', 'Bureau', 'Kantoor', 'bureau'],
+    ['B1-L03', 'local', 'B1-R1', 'Salle de réunion', 'Vergaderzaal', 'salle_reunion'],
+    ['S1-X01', 'local', 'S1', 'Parking', 'Parking', 'exterieur'],
+    ['S2', 'site', null, 'Résidence (démo)', 'Residentie (demo)', null],
+    ['B2', 'batiment', 'S2', 'Résidence pour aînés (démo)', 'Residentie voor senioren (demo)', null],
+    ['B2-R0', 'niveau', 'B2', 'Rez-de-chaussée', 'Gelijkvloers', null],
+    ['B2-R1', 'niveau', 'B2', 'Premier étage', 'Eerste verdieping', null],
+    ['B2-L01', 'local', 'B2-R0', 'Cuisine', 'Keuken', 'cuisine'],
+    ['B2-L02', 'local', 'B2-R1', 'Salle commune', 'Gemeenschappelijke zaal', 'salle_reunion'],
+  ],
+];
+const ADRESSE = { adresse: 'Rue Fictive 1', code_postal: '9999', commune: 'Démoville / Demostad' };
+const MOTIF_RETRAIT = 'Retrait des données de démonstration';
+
+/** Crée les lieux du modèle qui manquent dans l'entité ; rend le nombre de lieux créés. */
+function seedLieux(db, entite, modele) {
+  let n = 0;
+  const idOf = (rel) => {
+    const r = db.prepare('SELECT id FROM lieux WHERE entite_id = ? AND code = ?').get(entite.id, `${entite.code}-${rel}`);
+    return r ? r.id : null;
+  };
+  for (const [rel, nature, parentRel, nomFr, nomNl, typeCode] of modele) {
+    if (idOf(rel)) continue;
+    const type = typeCode ? db.prepare("SELECT id FROM listes_valeurs WHERE entite_id = ? AND liste = 'type_lieu' AND code = ?").get(entite.id, typeCode) : null;
+    const adr = nature === 'site' || nature === 'batiment' ? ADRESSE : { adresse: null, code_postal: null, commune: null };
+    db.prepare(`INSERT INTO lieux (entite_id, parent_id, nature, code, nom_fr, nom_nl, type_id, adresse, code_postal, commune, is_demo)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)`)
+      .run(entite.id, parentRel ? idOf(parentRel) : null, nature, `${entite.code}-${rel}`, nomFr, nomNl, type ? type.id : null,
+        adr.adresse, adr.code_postal, adr.commune);
+    n += 1;
+  }
+  return n;
+}
+
+async function main() {
+  if (process.env.DEMO_ALLOWED !== '1') fail('Refusé : DEMO_ALLOWED=1 absent. Les comptes de démonstration sont réservés à une installation d\'acceptance.');
+  await initDb();
+  const db = getDb();
+
+  if (process.argv.includes('--retirer')) {
+    const r = db.prepare("UPDATE users SET is_active = 0, updated_at = datetime('now') WHERE is_demo = 1 AND is_active = 1").run();
+    db.prepare('DELETE FROM sessions WHERE user_id IN (SELECT id FROM users WHERE is_demo = 1)').run();
+    const l = db.prepare("UPDATE lieux SET is_active = 0, motif_desactivation = ?, updated_at = datetime('now') WHERE is_demo = 1 AND is_active = 1")
+      .run(MOTIF_RETRAIT);
+    const sv = db.prepare("UPDATE services SET is_active = 0, motif_desactivation = ?, updated_at = datetime('now') WHERE is_demo = 1 AND is_active = 1")
+      .run(MOTIF_RETRAIT);
+    const eq = db.prepare("UPDATE equipes SET is_active = 0, motif_desactivation = ?, updated_at = datetime('now') WHERE is_demo = 1 AND is_active = 1")
+      .run(MOTIF_RETRAIT);
+    const pr = db.prepare("UPDATE prestataires SET is_active = 0, motif_desactivation = ?, updated_at = datetime('now') WHERE is_demo = 1 AND is_active = 1")
+      .run(MOTIF_RETRAIT);
+    logAudit(null, 'demo.retrait', 'user', null, { comptes: r.changes, lieux: l.changes, services: sv.changes, equipes: eq.changes, prestataires: pr.changes }, 'cli');
+    saveNow();
+    console.log(`[DEMO] ${r.changes} compte(s) et ${l.changes} lieu(x) de démonstration désactivé(s).`);
+    return;
+  }
+
+  if (!db.prepare('SELECT COUNT(*) AS n FROM users').get().n) fail("Refusé : l'installation n'est pas faite. Créez d'abord l'administrateur dans le navigateur.");
+  const entites = db.prepare('SELECT id, code FROM entites WHERE is_active = 1 ORDER BY code').all();
+  if (!entites.length) fail('Refusé : aucune entité active.');
+
+  const password = crypto.randomBytes(12).toString('base64url');
+  const hash = bcrypt.hashSync(password, 10);
+  const label = (code) => ROLES.find((r) => r.code === code).label_fr;
+  const created = [];
+  let lieux = 0;
+  let services = 0;
+  let equipes = 0;
+  let prestataires = 0;
+
+  db.transaction(() => {
+    for (const e of entites) {
+      for (const role of ENTITE_ROLES) {
+        const email = `${role.replace(/_/g, '-')}.${e.code.toLowerCase()}@${DOMAIN}`;
+        const id = upsertAccount(db, { email, first: 'Démo', last: `${label(role)} ${e.code}`, entiteId: e.id, hash });
+        ensureRole(db, id, e.id, DEFAULT_ROLE);
+        ensureRole(db, id, e.id, role);
+        created.push(email);
+      }
+    }
+    const multi = `multi-entites@${DOMAIN}`;
+    const id = upsertAccount(db, { email: multi, first: 'Démo', last: 'Plusieurs entités', entiteId: entites[0].id, hash });
+    for (const e of entites) {
+      ensureRole(db, id, e.id, DEFAULT_ROLE);
+      ensureRole(db, id, e.id, 'gestionnaire');
+    }
+    created.push(multi);
+    // Lieux retirés par --retirer : réactivés ; un lieu désactivé à l'écran pour un autre motif reste désactivé.
+    db.prepare("UPDATE lieux SET is_active = 1, motif_desactivation = NULL, updated_at = datetime('now') WHERE is_demo = 1 AND is_active = 0 AND motif_desactivation = ?")
+      .run(MOTIF_RETRAIT);
+    entites.forEach((e, i) => { lieux += seedLieux(db, e, MODELES[i % MODELES.length]); });
+    // Service de démonstration (0.16.0) : créé s'il manque, réactivé s'il a été retiré par --retirer.
+    db.prepare("UPDATE services SET is_active = 1, motif_desactivation = NULL, updated_at = datetime('now') WHERE is_demo = 1 AND is_active = 0 AND motif_desactivation = ?")
+      .run(MOTIF_RETRAIT);
+    for (const e of entites) {
+      const code = `${e.code}-DEMO`;
+      const compte = (role) => db.prepare('SELECT id FROM users WHERE email = ?').get(`${role}.${e.code.toLowerCase()}@${DOMAIN}`).id;
+      let sv = db.prepare('SELECT id FROM services WHERE entite_id = ? AND code = ?').get(e.id, code);
+      if (!sv) {
+        const r = db.prepare(`INSERT INTO services (entite_id, code, nom_fr, nom_nl, valideur_id, ordre, is_demo) VALUES (?, ?, ?, ?, ?, 10, 1)`)
+          .run(e.id, code, 'Secrétariat (démo)', 'Secretariaat (demo)', compte('valideur'));
+        sv = { id: r.lastInsertRowid };
+        services += 1;
+      }
+      db.prepare('UPDATE users SET service_id = ? WHERE id = ? AND service_id IS NULL').run(sv.id, compte('agent'));
+    }
+    // Équipes (0.19.0) : deux ouvriers de plus, deux équipes, profils des ouvriers ; équipes retirées par --retirer réactivées.
+    db.prepare("UPDATE equipes SET is_active = 1, motif_desactivation = NULL, updated_at = datetime('now') WHERE is_demo = 1 AND is_active = 0 AND motif_desactivation = ?")
+      .run(MOTIF_RETRAIT);
+    for (const e of entites) {
+      listes.seedEntite(e.id);
+      const bas = e.code.toLowerCase();
+      for (const n of [2, 3]) {
+        const email = `ouvrier-${n}.${bas}@${DOMAIN}`;
+        const id = upsertAccount(db, { email, first: 'Démo', last: `Ouvrier ${n} ${e.code}`, entiteId: e.id, hash });
+        ensureRole(db, id, e.id, DEFAULT_ROLE);
+        ensureRole(db, id, e.id, 'ouvrier');
+        created.push(email);
+      }
+      const compte = (nom) => db.prepare('SELECT id FROM users WHERE email = ?').get(`${nom}.${bas}@${DOMAIN}`).id;
+      const valeur = (liste, code) => db.prepare('SELECT id FROM listes_valeurs WHERE entite_id = ? AND liste = ? AND code = ? AND is_active = 1')
+        .get(e.id, liste, code)?.id;
+      const EQUIPES = [
+        { code: `${e.code}-BAT`, nom_fr: 'Bâtiment (démo)', nom_nl: 'Gebouwen (demo)', chef: 'chef-equipe', membres: ['ouvrier', 'ouvrier-2'], horaire: [], ordre: 10 },
+        { code: `${e.code}-PROP`, nom_fr: 'Propreté du week-end (démo)', nom_nl: 'Netheid in het weekend (demo)', chef: null, membres: ['ouvrier-3'],
+          horaire: [[6, '07:00', '13:00'], [7, '07:00', '13:00']], ordre: 20 },
+      ];
+      for (const q of EQUIPES) {
+        if (db.prepare('SELECT 1 FROM equipes WHERE entite_id = ? AND code = ?').get(e.id, q.code)) continue;
+        const id = db.prepare('INSERT INTO equipes (entite_id, code, nom_fr, nom_nl, chef_id, ordre, is_demo) VALUES (?, ?, ?, ?, ?, ?, 1)')
+          .run(e.id, q.code, q.nom_fr, q.nom_nl, q.chef ? compte(q.chef) : null, q.ordre).lastInsertRowid;
+        for (const m of q.membres) db.prepare('INSERT INTO equipe_membres (equipe_id, user_id) VALUES (?, ?)').run(id, compte(m));
+        for (const [jour, debut, fin] of q.horaire) db.prepare('INSERT INTO equipe_horaires (equipe_id, jour, debut, fin) VALUES (?, ?, ?, ?)').run(id, jour, debut, fin);
+        equipes += 1;
+      }
+      const PROFILS = [['ouvrier', 'electricite', ['ba4']], ['ouvrier-2', 'plomberie', ['vca']], ['ouvrier-3', 'proprete', ['permis_c']],
+        ['chef-equipe', 'polyvalent', ['vca', 'hauteur']]];
+      for (const [nom, corps, comps] of PROFILS) {
+        const uid = compte(nom);
+        if (db.prepare('SELECT 1 FROM ouvrier_profils WHERE user_id = ? AND entite_id = ?').get(uid, e.id)) continue;
+        db.prepare('INSERT INTO ouvrier_profils (user_id, entite_id, corps_metier_id) VALUES (?, ?, ?)').run(uid, e.id, valeur('corps_metier', corps) ?? null);
+        for (const c of comps) {
+          const v = valeur('competence', c);
+          if (v) db.prepare('INSERT OR IGNORE INTO ouvrier_competences (user_id, entite_id, valeur_id) VALUES (?, ?, ?)').run(uid, e.id, v);
+        }
+      }
+    }
+    // Prestataires (0.19.0, point 3) : réactivés s'ils ont été retirés par --retirer ; créés s'ils manquent.
+    db.prepare("UPDATE prestataires SET is_active = 1, motif_desactivation = NULL, updated_at = datetime('now') WHERE is_demo = 1 AND is_active = 0 AND motif_desactivation = ?")
+      .run(MOTIF_RETRAIT);
+    const PRESTATAIRES = [
+      { nom: 'Chauffagiste fictif (démo)', langue: 'fr', contact: 'Claire Fictive', ref: 'Contrat d’entretien des chaudières (démo)', corps: ['chauffage', 'plomberie'] },
+      { nom: 'Fictieve elektriciens (demo)', langue: 'nl', contact: 'Jan Fictief', ref: 'Raamovereenkomst elektriciteit (demo)', corps: ['electricite'] },
+    ];
+    for (const e of entites) {
+      for (const p of PRESTATAIRES) {
+        if (db.prepare('SELECT 1 FROM prestataires WHERE entite_id = ? AND nom = ?').get(e.id, p.nom)) continue;
+        const courriel = `${p.langue === 'nl' ? 'elektriciens' : 'chauffagiste'}.${e.code.toLowerCase()}@${DOMAIN}`;
+        const id = db.prepare(`INSERT INTO prestataires (entite_id, nom, langue, contact_nom, telephone, courriel, adresse, code_postal, commune, reference_marche, is_demo)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)`).run(e.id, p.nom, p.langue, p.contact, '02 000 00 00', courriel, ADRESSE.adresse, ADRESSE.code_postal,
+          ADRESSE.commune, p.ref).lastInsertRowid;
+        for (const c of p.corps) {
+          const v = db.prepare("SELECT id FROM listes_valeurs WHERE entite_id = ? AND liste = 'corps_metier' AND code = ? AND is_active = 1").get(e.id, c);
+          if (v) db.prepare('INSERT INTO prestataire_corps (prestataire_id, valeur_id) VALUES (?, ?)').run(id, v.id);
+        }
+        prestataires += 1;
+      }
+    }
+    logAudit(null, 'demo.chargement', 'user', null, { comptes: created.length, lieux, services, equipes, prestataires }, 'cli');
+  })();
+  saveNow();
+
+  console.log(`[DEMO] ${created.length} comptes de démonstration prêts.`);
+  for (const email of created) console.log(`  ${email}`);
+  console.log(`[DEMO] ${lieux} lieu(x) de démonstration créé(s) ; les lieux déjà présents sont gardés tels quels.`);
+  console.log(`[DEMO] ${services} service(s) de démonstration créé(s) (valideur : valideur.<entité>, membre : agent.<entité>).`);
+  console.log(`[DEMO] ${equipes} équipe(s) de démonstration créée(s) (Bâtiment, et Propreté du week-end le samedi et le dimanche).`);
+  console.log(`[DEMO] ${prestataires} prestataire(s) de démonstration créé(s), sans numéro d'entreprise.`);
+  console.log(`[DEMO] Mot de passe commun, affiché une seule fois : ${password}`);
+  console.log('[DEMO] Relancer la commande donne un nouveau mot de passe ; --retirer désactive ces comptes et ces lieux.');
+}
+
+main().catch((e) => { console.error('[DEMO] Échec :', e.message); process.exit(1); });

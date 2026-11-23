@@ -1,0 +1,193 @@
+/**
+ * Demandes d'intervention (DEM-01 à 03, SUI-01) : liste, fiche et dépôt, appelant la couche de service (standard v3.2,
+ * section 7.3). En 0.5.0, pas de modification ni d'annulation : elles arrivent avec le cycle de vie (étape 9, écart E-21).
+ * 0.7.0 : demandes ouvertes du même bâtiment et « Moi aussi » (DEM-04).
+ * 0.8.0 : pièces jointes du brouillon (DEM-09, DV-85), formulaire multipart lu par fichiers.js après le contrôle préalable.
+ * 0.9.0 : tableau de bord du service technique (GES-01), filtres et tris de la liste (GES-02), qualification (GES-04,
+ * PRI-01) ; services/qualification.js.
+ * 0.14.0 : cycle de vie (CYC-01, CYC-02, CLO-01) : historique de la fiche et passage d'un état à l'autre ; services/cycle.js.
+ * 0.14.0, point 5 (SUI-05, E-21) : PUT complète la demande (texte), DELETE l'annule avec un motif (annulation logique,
+ * CYC-05) ; POST /:id/pieces ajoute une photo ou un document à une demande envoyée (formulaire multipart, hors MCP, E-17).
+ * 0.15.0, point 1 (SUI-04, SEC-02) : fil de messages et commentaires internes (services/messages.js) ; pièces jointes en
+ * attente du prochain message de la personne (formulaire multipart, hors MCP, E-17).
+ * 0.18.0, point 2 (IMP-03) : export Excel ou CSV de la liste (mes demandes ou entité) et des demandes à valider, avec les
+ * filtres de la liste ; fichier binaire, hors MCP (E-17 étendu ; les mêmes données par list_demandes et
+ * list_demandes_a_valider).
+ */
+const express = require('express');
+const { authMiddleware } = require('../auth');
+const { validate, validateQuery, validateParams, idParam } = require('../validation');
+const { ok, handle } = require('../envelope');
+const S = require('../schemas');
+const demandes = require('../services/demandes');
+const qualification = require('../services/qualification');
+const cycle = require('../services/cycle');
+const messages = require('../services/messages');
+const brouillons = require('../services/brouillons');
+const pieces = require('../services/pieces');
+const exports_ = require('../services/exports');
+const fichiers = require('../fichiers');
+const { PIECE_MAX_OCTETS } = require('../config');
+
+const router = express.Router();
+router.use(authMiddleware);
+
+router.get('/', validateQuery(S.demandeList), handle((req, res) => {
+  const { rows, pagination } = demandes.list(req.user, req.query);
+  ok(res, rows, { resource: 'demandes' }, pagination);
+}));
+
+// Avant « /:id » : demandes ouvertes du même bâtiment (DEM-04, 0.7.0).
+router.get('/voisines', validateQuery(S.demandeVoisines), handle((req, res) => {
+  ok(res, demandes.voisines(req.user, req.query), { resource: 'demandes' });
+}));
+
+// Avant « /:id » : demandes « En validation » que la personne valide (0.16.0, étape 11 ; DEM-15, ROL-04).
+router.get('/a-valider', validateQuery(S.demandeAValider), handle((req, res) => {
+  const { rows, pagination } = demandes.aValider(req.user, req.query);
+  ok(res, rows, { resource: 'demandes' }, pagination);
+}));
+
+// Avant « /:id » : tableau de bord du service technique de l'entité active (GES-01, 0.9.0).
+router.get('/export', validateQuery(S.demandeExport), handle(async (req, res) => {
+  const { format, ...filtres } = req.query;
+  const liste = filtres.perimetre === 'entite' ? 'demandes_entite' : 'demandes_miennes';
+  exports_.envoyer(res, await exports_.produire(req.user, { liste, format, lang: req.user.lang,
+    lire: (limit) => demandes.list(req.user, { ...filtres, limit, offset: 0 }) }));
+}));
+
+router.get('/a-valider/export', validateQuery(S.demandeAValiderExport), handle(async (req, res) => {
+  const { format, ...filtres } = req.query;
+  exports_.envoyer(res, await exports_.produire(req.user, { liste: 'demandes_a_valider', format, lang: req.user.lang,
+    lire: (limit) => demandes.aValider(req.user, { ...filtres, limit, offset: 0 }) }));
+}));
+
+router.get('/tableau-bord', handle((req, res) => {
+  ok(res, qualification.tableauBord(req.user), { resource: 'demandes' });
+}));
+
+// Avant « /:id » : brouillon du formulaire de la personne dans l'entité active (DEM-11, 0.7.0).
+router.get('/brouillon', handle((req, res) => {
+  ok(res, brouillons.get(req.user), { resource: 'brouillons' });
+}));
+router.put('/brouillon', validate(S.brouillonSave), handle((req, res) => {
+  ok(res, brouillons.save(req.user, req.body), { resource: 'brouillons' });
+}));
+router.delete('/brouillon', handle((req, res) => {
+  ok(res, brouillons.remove(req.user), { resource: 'brouillons' });
+}));
+
+// Pièces jointes du brouillon (0.8.0) : liste avec les plafonds de l'entité, ajout d'un fichier. Le contrôle préalable
+// (droit, module, nombre) précède la lecture du corps ; le lecteur reçoit ensuite la taille et les formats de l'entité.
+router.get('/brouillon/pieces', handle((req, res) => {
+  ok(res, pieces.duBrouillon(req.user), { resource: 'pieces' });
+}));
+const avantPiece = handle((req, res, next) => { req.plafondsPieces = pieces.peutAjouter(req.user); next(); });
+const recevoirPiece = fichiers.recevoir({
+  maxOctets: (req) => req.plafondsPieces.octets,
+  types: (req) => req.plafondsPieces.types,
+  contrat: { maxOctets: PIECE_MAX_OCTETS, types: [...fichiers.IMAGES, fichiers.PDF] },
+});
+router.post('/brouillon/pieces', avantPiece, recevoirPiece, handle((req, res) => {
+  const annonce = fichiers.annonce(req, req.plafondsPieces.types);
+  ok(res, pieces.ajouter(req.user, req.file.buffer, annonce, req.file.originalname), { resource: 'pieces' }, null, 201);
+}));
+
+// Avant « /:id » : collègues pour le champ « Pour » (DEM-07, 0.7.0).
+router.get('/beneficiaires', validateQuery(S.demandeBeneficiaires), handle((req, res) => {
+  ok(res, demandes.beneficiaires(req.user, req.query), { resource: 'demandes' });
+}));
+
+router.get('/:id', validateParams(idParam), handle((req, res) => {
+  ok(res, demandes.get(req.user, Number(req.params.id)), { resource: 'demandes' });
+}));
+
+router.post('/', validate(S.demandeCreate), handle((req, res) => {
+  ok(res, demandes.create(req.user, req.body), { resource: 'demandes' }, null, 201);
+}));
+
+// « Moi aussi » (DEM-04) : suivre une demande ouverte au lieu d'en créer une nouvelle.
+router.post('/:id/suivre', validateParams(idParam), validate(S.demandeSuivre), handle((req, res) => {
+  ok(res, demandes.suivre(req.user, Number(req.params.id), req.body), { resource: 'demandes' });
+}));
+
+// Ne plus suivre (0.15.0, point 5 ; SUI-09) : « Moi aussi » ou abonnement retiré par la personne.
+router.delete('/:id/suivre', validateParams(idParam), handle((req, res) => {
+  ok(res, demandes.nePlusSuivre(req.user, Number(req.params.id)), { resource: 'demandes' });
+}));
+
+// Qualification par le service technique (GES-04, PRI-01, 0.9.0) : « À qualifier » devient « Qualifiée ».
+router.post('/:id/qualifier', validateParams(idParam), validate(S.demandeQualifier), handle((req, res) => {
+  ok(res, qualification.qualifier(req.user, Number(req.params.id), req.body), { resource: 'demandes' });
+}));
+
+// Complément et annulation par le demandeur ou le bénéficiaire (0.14.0, point 5).
+router.put('/:id', validateParams(idParam), validate(S.demandeComplement), handle((req, res) => {
+  ok(res, demandes.completer(req.user, Number(req.params.id), req.body), { resource: 'demandes' });
+}));
+router.delete('/:id', validateParams(idParam), validate(S.demandeAnnulation), handle((req, res) => {
+  ok(res, cycle.annuler(req.user, Number(req.params.id), req.body.motif), { resource: 'demandes' });
+}));
+const avantPieceDemande = handle((req, res, next) => { req.plafondsPieces = pieces.peutAjouterADemande(req.user, Number(req.params.id)); next(); });
+router.post('/:id/pieces', validateParams(idParam), avantPieceDemande, recevoirPiece, handle((req, res) => {
+  const annonce = fichiers.annonce(req, req.plafondsPieces.types);
+  ok(res, pieces.ajouter(req.user, req.file.buffer, annonce, req.file.originalname, 'api', Number(req.params.id)), { resource: 'pieces' }, null, 201);
+}));
+
+// Avis du demandeur ou du bénéficiaire sur une demande clôturée (0.14.0, point 6 ; SUI-06).
+router.post('/:id/avis', validateParams(idParam), validate(S.demandeAvis), handle((req, res) => {
+  ok(res, cycle.donnerAvis(req.user, Number(req.params.id), req.body), { resource: 'demandes' }, null, 201);
+}));
+
+// Fil de messages (0.15.0, point 1) : lu par le demandeur, le bénéficiaire et le service ; commentaires internes pour le
+// service seul. Pièces : déposées une à une en attente du message, rattachées à son envoi.
+router.get('/:id/messages', validateParams(idParam), handle((req, res) => {
+  ok(res, messages.list(req.user, Number(req.params.id)), { resource: 'messages' });
+}));
+router.post('/:id/messages', validateParams(idParam), validate(S.demandeMessage), handle((req, res) => {
+  ok(res, messages.create(req.user, Number(req.params.id), req.body), { resource: 'messages' }, null, 201);
+}));
+// Point 2 : fil lu jusqu'au dernier message (ou jusqu'à jusqu_a), pour « non lu » et le compteur « Messages à lire ».
+router.post('/:id/messages/lu', validateParams(idParam), validate(S.demandeMessagesLus), handle((req, res) => {
+  ok(res, messages.marquerLus(req.user, Number(req.params.id), req.body), { resource: 'messages' });
+}));
+// Point 3 (GES-08) : collègues du service que la personne peut mentionner dans une note interne.
+router.get('/:id/messages/mentionnables', validateParams(idParam), handle((req, res) => {
+  ok(res, messages.mentionnables(req.user, Number(req.params.id)), { resource: 'messages' });
+}));
+router.get('/:id/messages/pieces', validateParams(idParam), handle((req, res) => {
+  ok(res, pieces.enAttente(req.user, Number(req.params.id)), { resource: 'pieces' });
+}));
+const avantPieceMessage = handle((req, res, next) => { req.plafondsPieces = pieces.peutAjouterAMessage(req.user, Number(req.params.id)); next(); });
+router.post('/:id/messages/pieces', validateParams(idParam), avantPieceMessage, recevoirPiece, handle((req, res) => {
+  const annonce = fichiers.annonce(req, req.plafondsPieces.types);
+  ok(res, pieces.ajouter(req.user, req.file.buffer, annonce, req.file.originalname, 'api', Number(req.params.id), { message: true }), { resource: 'pieces' }, null, 201);
+}));
+
+// Cycle de vie (0.14.0) : historique lisible par qui lit la demande, passage contrôlé par la table des passages.
+router.get('/:id/historique', validateParams(idParam), handle((req, res) => {
+  ok(res, cycle.historique(req.user, Number(req.params.id)), { resource: 'demandes' });
+}));
+// 0.20.0 (point 1 ; CYC-03, DV-160) : tâches d'une demande (service technique).
+router.get('/:id/taches', validateParams(idParam), handle((req, res) => {
+  ok(res, require('../services/taches').list(req.user, Number(req.params.id)), { resource: 'taches' });
+}));
+router.post('/:id/taches', validateParams(idParam), validate(S.tacheCreate), handle((req, res) => {
+  ok(res, require('../services/taches').create(req.user, Number(req.params.id), req.body), { resource: 'taches' }, null, 201);
+}));
+
+// 0.16.0 (étape 12, GES-06) : fusion dans une demande principale.
+router.post('/:id/fusionner', validateParams(idParam), validate(S.demandeFusion), handle((req, res) => {
+  ok(res, require('../services/fusion').fusionner(req.user, Number(req.params.id), req.body), { resource: 'demandes' });
+}));
+
+// 0.16.0 (étape 12, GES-06) : découpage en plusieurs demandes.
+router.post('/:id/decouper', validateParams(idParam), validate(S.demandeDecoupage), handle((req, res) => {
+  ok(res, require('../services/decoupage').decouper(req.user, Number(req.params.id), req.body), { resource: 'demandes' }, null, 201);
+}));
+
+router.post('/:id/transitions', validateParams(idParam), validate(S.demandeTransition), handle((req, res) => {
+  ok(res, cycle.appliquer(req.user, Number(req.params.id), req.body), { resource: 'demandes' });
+}));
+
+module.exports = router;

@@ -1,6 +1,12 @@
 # Na de uitrol
 
+Versie van de toepassing: **0.21.0** · Bijgewerkt op 20/11/2026
+
 De Franse tekst is rechtsgeldig. Bijwerkingsprocedure: archief plaatsen, `cd <map>`, `ls -l` van het archief, `sudo bash backup.sh`, `sudo rm -rf backend frontend docs`, `sudo tar xzf … --strip-components=1`, `ls backend frontend`, `sudo docker compose build`, `sudo docker compose up -d`, `sudo docker compose ps`, `curl -sk https://localhost:<https>/api/version`, controlelijst van het leveringsbericht. `.env` en de volumes worden nooit aangeraakt.
+
+## 0.21.0 (20/11/2026)
+
+Planning per week en dag, niet-geplande taken, conflicten, afwezigheden van de arbeiders, werkelijke uren van de taken, datum aangekondigd aan de aanvrager; opmerkingen van de test van 0.20.0 (stap 17). Update via sectie 3, **met migratie, zonder nieuwe afhankelijkheid**. `sudo docker logs gmao-api --tail 30`: `[DB] Migration 018_planning appliquée`, daarna `[APP] API 0.21.0 sur le port 3001`. Geen herstart van `demo.js`: het demowachtwoord blijft geldig. `sudo bash recette.sh`: negen regels `OK`. Terugkeer naar 0.20.0: mogelijk zonder herstel (geprobeerd), aanbevolen met de back-up van de dag.
 
 ## 0.20.0 (19/11/2026)
 

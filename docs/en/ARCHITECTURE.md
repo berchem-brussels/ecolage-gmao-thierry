@@ -1,6 +1,10 @@
 # Architecture
 
-Application version: **0.20.0** · The French text prevails (`docs/fr/ARCHITECTURE.md`); this file summarises each version.
+Application version: **0.21.0** · The French text prevails (`docs/fr/ARCHITECTURE.md`); this file summarises each version.
+
+## Actual times, absences, planning, conflicts and announced date (0.21.0)
+
+Migration `018_planning`: `demande_taches.debut_reel` and `fin_reelle` (UTC), table `indisponibilites` (worker, from, to, whole day / morning / afternoon, reason leave / training / other), three columns of `demandes` for the date announced to the requester and its previous value. Services: `taches.js` rules 13 (actual times) and 14 (`suivreDate()`, notice `demande.date_prevue`), `indisponibilites.js` (rules 1 to 6), `planning.js` (rules 1 to 9: period of 1 to 14 days, capacity, conflicts `absent` / `jour_non_travaille` / `trop_charge`, unplanned tasks). Routes `/api/indisponibilites` and `GET /api/planning`; six MCP tools (180); permission `indisponibilites:gerer`. The reason for an absence is never logged nor shown to anyone but the manager and the head of service. Interface: `PlanningPage.tsx` (drag and drop, « Move » and « Plan » window), `IndisponibilitesOuvrier.tsx`, « Finish the task » window in `TachesDemande.tsx`, `saisieDate.ts`. Fixes from the 0.20.0 acceptance test (DV-164). Phone check: 66 screens.
 
 ## Tasks, assignment, suggestion and filters per team (0.20.0)
 

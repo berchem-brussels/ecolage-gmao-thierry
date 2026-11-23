@@ -2,7 +2,7 @@
 
 Application de gestion technique de l'Administration communale et du CPAS : demandes d'intervention, réservations de salles et de matériel, suivi des interventions, patrimoine, maintenance préventive, stock et véhicules. Elle remplace la partie technique de l'outil utilisé jusqu'ici. Elle suit le « Standard des applications communales v3.3 » (`STANDARD.md`) ; elle part du gabarit v3 1.1.0 et reprend du gabarit 1.3.0 les modules du standard v3.3 (étape 8 bis). Licence EUPL-1.2.
 
-Version 0.19.0 : équipes et prestataires ; le responsable du service technique décrit ses équipes (chef, membres, horaire, week-end compris), le corps de métier et les compétences de chaque ouvrier, et les prestataires externes (numéro d'entreprise contrôlé, marché ou contrat) ; chaque catégorie propose un corps de métier à la qualification ; l'export Excel des tickets et la visite guidée sur téléphone sont corrigés. Le protocole de la recette d'usage chronométrée avec cinq agents par entité est dans `docs/fr/RECETTE-USAGE.md`.
+Version 0.21.0 : planning du service technique ; la semaine ou le jour des ouvriers et des équipes, les tâches encore sans date, les conflits (absent, jour non travaillé, trop chargé) et le déplacement d'une tâche par glisser-déposer ; les absences des ouvriers (congé, formation, autre, sans la cause) ; les heures de début et de fin réelles d'une tâche ; le demandeur voit quand la date de son intervention change. Depuis la 0.20.0, une demande se découpe en tâches confiées à des ouvriers ou à une équipe. Le protocole de la recette d'usage chronométrée avec cinq agents par entité est dans `docs/fr/RECETTE-USAGE.md`.
 
 ## Structure
 

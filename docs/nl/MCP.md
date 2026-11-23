@@ -1,6 +1,10 @@
 # MCP-server
 
-Versie van de toepassing: **0.20.0** · Bijgewerkt op 19/11/2026 · De Franse tekst is rechtsgeldig (`docs/fr/MCP.md`).
+Versie van de toepassing: **0.21.0** · Bijgewerkt op 20/11/2026 · De Franse tekst is rechtsgeldig (`docs/fr/MCP.md`).
+
+## 0.21.0
+
+Zes nieuwe tools: `list_indisponibilites`, `get_indisponibilite`, `create_indisponibilite`, `update_indisponibilite` (afwezigheden van een arbeider; de reden wordt enkel aan de beheerder en de verantwoordelijke gegeven), `delete_indisponibilite` (twee oproepen), `get_planning` (enkel lezen: 1 tot 14 dagen, arbeiders, ploegen, belasting, capaciteit, conflicten, geplande en niet-geplande taken). `change_etat_tache` aanvaardt `debut` en `fin` en geeft `debut_reel`, `fin_reelle`; `affecter_tache` geeft `conflits` (nooit blokkerend); `suggerer_affectation_tache` geeft `indisponible`; `get_demande` bevat `intervention_prevue_avant` en `intervention_modifiee_le`. 180 tools. Geen nieuwe route buiten MCP.
 
 ## 0.20.0
 

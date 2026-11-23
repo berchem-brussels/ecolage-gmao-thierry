@@ -1,0 +1,46 @@
+{
+  "_description": "Calendrier des jours ouvrables par entité, pour le calcul des délais (cahier des charges PRI-02, PRI-03 ; décisions de Thierry du 22/10/2026). L'horaire qui fait foi est celui des ouvriers du service technique ; P2 à P4 comptent du lundi au vendredi, sans le week-end ; la garde et les horaires des équipes (balayeurs) viennent aux étapes 15 et 17. « horaires » : horaire livré par code d'entité, jour ISO 1 (lundi) à 7 (dimanche), début et fin HH:MM ; un jour absent n'est pas ouvré ; « defaut » sert à une entité sans horaire propre ici. Chaque entité a sa copie, créée au démarrage si elle manque, réglée par le rôle qui porte « delais:gerer ». « feries » : les dix jours fériés légaux belges, calculés chaque année par le serveur (Pâques par l'algorithme grégorien), jamais stockés. « conges » : congés propres à l'entité, répétés chaque année, créés au démarrage si leur date manque ; un congé désactivé n'est jamais recréé. Les fermetures ponctuelles se saisissent dans l'application.",
+  "fuseau": "Europe/Brussels",
+  "horaires": {
+    "AC": [
+      { "jour": 1, "debut": "07:45", "fin": "16:15" },
+      { "jour": 2, "debut": "07:45", "fin": "16:15" },
+      { "jour": 3, "debut": "07:45", "fin": "16:15" },
+      { "jour": 4, "debut": "07:45", "fin": "16:15" },
+      { "jour": 5, "debut": "07:45", "fin": "12:00" }
+    ],
+    "CPAS": [
+      { "jour": 1, "debut": "08:00", "fin": "16:30" },
+      { "jour": 2, "debut": "08:00", "fin": "16:30" },
+      { "jour": 3, "debut": "08:00", "fin": "16:30" },
+      { "jour": 4, "debut": "08:00", "fin": "16:30" },
+      { "jour": 5, "debut": "08:00", "fin": "16:30" }
+    ],
+    "defaut": [
+      { "jour": 1, "debut": "08:00", "fin": "16:30" },
+      { "jour": 2, "debut": "08:00", "fin": "16:30" },
+      { "jour": 3, "debut": "08:00", "fin": "16:30" },
+      { "jour": 4, "debut": "08:00", "fin": "16:30" },
+      { "jour": 5, "debut": "08:00", "fin": "16:30" }
+    ]
+  },
+  "feries": [
+    { "code": "nouvel_an", "date": "01-01", "libelle_fr": "Jour de l'an", "libelle_nl": "Nieuwjaar" },
+    { "code": "lundi_paques", "paques": 1, "libelle_fr": "Lundi de Pâques", "libelle_nl": "Paasmaandag" },
+    { "code": "fete_travail", "date": "05-01", "libelle_fr": "Fête du Travail", "libelle_nl": "Dag van de Arbeid" },
+    { "code": "ascension", "paques": 39, "libelle_fr": "Ascension", "libelle_nl": "Hemelvaart" },
+    { "code": "lundi_pentecote", "paques": 50, "libelle_fr": "Lundi de Pentecôte", "libelle_nl": "Pinkstermaandag" },
+    { "code": "fete_nationale", "date": "07-21", "libelle_fr": "Fête nationale", "libelle_nl": "Nationale feestdag" },
+    { "code": "assomption", "date": "08-15", "libelle_fr": "Assomption", "libelle_nl": "Onze-Lieve-Vrouw-Hemelvaart" },
+    { "code": "toussaint", "date": "11-01", "libelle_fr": "Toussaint", "libelle_nl": "Allerheiligen" },
+    { "code": "armistice", "date": "11-11", "libelle_fr": "Armistice", "libelle_nl": "Wapenstilstand" },
+    { "code": "noel", "date": "12-25", "libelle_fr": "Noël", "libelle_nl": "Kerstmis" }
+  ],
+  "conges": [
+    { "mois_jour": "05-08", "libelle_fr": "Fête de l'Iris", "libelle_nl": "Irisfeest" },
+    { "mois_jour": "09-27", "libelle_fr": "Fête de la Communauté française", "libelle_nl": "Feestdag van de Franse Gemeenschap" },
+    { "mois_jour": "11-02", "libelle_fr": "Jour des défunts", "libelle_nl": "Allerzielen" },
+    { "mois_jour": "11-15", "libelle_fr": "Fête du Roi", "libelle_nl": "Koningsdag" },
+    { "mois_jour": "12-26", "libelle_fr": "Lendemain de Noël", "libelle_nl": "Tweede Kerstdag" }
+  ]
+}
