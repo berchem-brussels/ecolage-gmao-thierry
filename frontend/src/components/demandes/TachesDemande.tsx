@@ -27,7 +27,7 @@ import dayjs, { type Dayjs } from 'dayjs';
 import api, { ApiError, qs } from '../../api';
 import { useI18n } from '../../contexts/I18nContext';
 import { COULEUR_TACHE, type Demande, type EtatTache, type Tache, dateSouhaitee, duree, instant } from '../../demandes';
-import { saisieDate } from '../../saisieDate';
+import { saisieDate, texteNonRetenu } from '../../saisieDate';
 import { type ConflitAffectation, texteConflits } from '../../planning';
 
 interface ValeurListe { id: number; libelle_fr: string; libelle_nl: string; is_active: number }
@@ -37,6 +37,8 @@ interface Ouvrier { id: number; prenom: string; nom: string }
 interface Equipe { id: number; code: string; nom_fr: string; nom_nl: string }
 interface Propose { id: number; prenom: string; nom: string; corps_metier: { libelle_fr: string; libelle_nl: string } | null; meme_corps: 0 | 1; disponible: 0 | 1; indisponible?: 'journee' | 'matin' | 'apres_midi' | null; charge_min: number; nb_taches: number }
 interface SaisieHeures { debut?: Dayjs | null; fin?: Dayjs | null }
+/** Format des heures réelles de la fenêtre « Terminer la tâche » (affiché, tapé et comparé au texte retenu). */
+const FORMAT_HEURES = 'DD/MM/YYYY HH:mm';
 interface SaisieAffectation { qui: 'ouvriers' | 'equipe' | 'personne'; ouvriers?: number[]; equipe_id?: number | null; date?: Dayjs | null; heure?: Dayjs | null; duree_heures?: number | null }
 
 /** Libellé du bouton d'un passage, selon l'état de départ (rouvrir une tâche fermée, remettre à faire une tâche en cours). */
@@ -140,6 +142,12 @@ export default function TachesDemande({ d, onChange }: { d: Demande; onChange: (
   };
   const terminerAvecHeures = (v: SaisieHeures) => {
     if (!aTerminer || !v.debut || !v.fin) return;
+    // 0.21.1 (DV-173) : rien ne part si un champ montrait un texte que le composant n'a pas retenu (saisieDate.ts).
+    const refuses = (['debut', 'fin'] as const).filter((n) => texteNonRetenu(`tache-heures_${n}`, v[n], FORMAT_HEURES));
+    if (refuses.length) {
+      formHeures.setFields(refuses.map((n) => ({ name: n, errors: [t('tache.heures.illisible')] })));
+      return;
+    }
     passer(aTerminer, 'terminee', undefined, { debut: v.debut.toISOString(), fin: v.fin.toISOString() });
   };
   /** Heures réelles d'une tâche (règle 13 du serveur), à l'heure du poste. */
@@ -157,11 +165,11 @@ export default function TachesDemande({ d, onChange }: { d: Demande; onChange: (
       destroyOnHidden width={420} className="tache-heures">
       <Typography.Paragraph type="secondary" style={{ fontSize: 13 }}>{t('tache.heures.aide')}</Typography.Paragraph>
       {erreur && <Alert type="error" showIcon message={erreur} style={{ marginBottom: 8 }} role="alert" />}
-      <Form<SaisieHeures> id="tache-heures" form={formHeures} layout="vertical" onFinish={terminerAvecHeures} requiredMark="optional">
+      <Form<SaisieHeures> id="tache-heures" name="tache-heures" form={formHeures} layout="vertical" onFinish={terminerAvecHeures} requiredMark="optional">
         <Form.Item name="debut" label={t('tache.heures.debut')} tooltip={hint('tache.heures.debut')}
           rules={[{ required: true, message: t('form.obligatoire') },
             { validator: (_, v: Dayjs | null) => (!v || !v.isAfter(dayjs().add(1, 'minute')) ? Promise.resolve() : Promise.reject(new Error(t('tache.heures.futur')))) }]}>
-          <DatePicker showTime={{ format: 'HH:mm', minuteStep: 5 }} format="DD/MM/YYYY HH:mm" needConfirm={false} allowClear={false} disabledDate={futur} {...saisieDate()} style={{ width: '100%' }} />
+          <DatePicker showTime={{ format: 'HH:mm', minuteStep: 5 }} format={FORMAT_HEURES} needConfirm={false} allowClear={false} disabledDate={futur} {...saisieDate()} style={{ width: '100%' }} />
         </Form.Item>
         <Form.Item name="fin" label={t('tache.heures.fin')} tooltip={hint('tache.heures.fin')} dependencies={['debut']}
           rules={[{ required: true, message: t('form.obligatoire') }, ({ getFieldValue }) => ({
@@ -172,7 +180,7 @@ export default function TachesDemande({ d, onChange }: { d: Demande; onChange: (
               return !d0 || v.isAfter(d0) ? Promise.resolve() : Promise.reject(new Error(t('tache.heures.ordre')));
             },
           })]}>
-          <DatePicker showTime={{ format: 'HH:mm', minuteStep: 5 }} format="DD/MM/YYYY HH:mm" needConfirm={false} allowClear={false} disabledDate={futur} {...saisieDate()} style={{ width: '100%' }} />
+          <DatePicker showTime={{ format: 'HH:mm', minuteStep: 5 }} format={FORMAT_HEURES} needConfirm={false} allowClear={false} disabledDate={futur} {...saisieDate()} style={{ width: '100%' }} />
         </Form.Item>
       </Form>
     </Modal>

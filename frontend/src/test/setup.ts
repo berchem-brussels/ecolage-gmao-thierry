@@ -14,3 +14,6 @@ window.localStorage.setItem('gmao.visite.auto', '0');
 // `findBy…`/`waitFor` de 1 s (défaut) y échouait (accueil du service, compteur « à qualifier »). Attente portée à 5 s.
 import { configure } from '@testing-library/react';
 configure({ asyncUtilTimeout: 5000 });
+// 0.21.1 (DV-173) : règle des champs de date et d'heure posée comme au démarrage de l'application (main.tsx).
+import { installerSaisieDate } from '../saisieDate';
+installerSaisieDate();

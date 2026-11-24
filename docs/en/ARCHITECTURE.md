@@ -1,6 +1,10 @@
 # Architecture
 
-Application version: **0.21.0** · The French text prevails (`docs/fr/ARCHITECTURE.md`); this file summarises each version.
+Application version: **0.21.1** · The French text prevails (`docs/fr/ARCHITECTURE.md`); this file summarises each version.
+
+## Typed dates and times kept before sending (0.21.1)
+
+`saisieDate.ts`: `installerSaisieDate()` (called once in `main.tsx`) listens in capture phase to `click` and `submit` on the document; when a date or time field (rc-picker) still has focus and the event comes from elsewhere, it sends Enter to the field (rc-picker keeps a valid text at once; losing focus alone keeps it two frames later, too late) and blurs it. `texteNonRetenu()` compares the text shown at the click with the retained value; « Terminer la tâche » refuses to send when they differ.
 
 ## Actual times, absences, planning, conflicts and announced date (0.21.0)
 

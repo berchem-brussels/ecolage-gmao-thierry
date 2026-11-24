@@ -1,6 +1,6 @@
 # Tâches, affectation, absences et planning
 
-Version 0.21.0 · Fiche fonctionnelle (modèle du standard, section 17.8). Couvre les étapes 16 (0.20.0, tâches et affectation, fiche qui manquait) et 17 (0.21.0, heures réelles, absences, planning, tâches non planifiées, conflits, date annoncée au demandeur).
+Version 0.21.1 · Fiche fonctionnelle (modèle du standard, section 17.8). Couvre les étapes 16 (0.20.0, tâches et affectation, fiche qui manquait) et 17 (0.21.0, heures réelles, absences, planning, tâches non planifiées, conflits, date annoncée au demandeur).
 
 ## Objet
 
@@ -32,7 +32,7 @@ Découper une demande d'intervention en tâches, les confier à des ouvriers ou 
 | 1 | Droits : lecture des tâches `demandes:entite` ; écriture `demandes:traiter` ; planning `equipes:lire` ou `demandes:traiter` ; absences : saisie `indisponibilites:gerer` (gestionnaire, responsable), lecture aussi `equipes:lire`. Cloison : entité active, contrôlée côté serveur et testée |
 | 2 | Une tâche : à faire, en cours, terminée, annulée (motif obligatoire) ; jamais supprimée. Les tâches se modifient tant que la demande n'est pas « Travaux terminés » ou fermée |
 | 3 | Affectation : une équipe ou un à dix ouvriers, jamais les deux ; une date nouvelle n'est jamais passée ; une heure demande une date |
-| 4 | Heures réelles : fin après début, aucune dans le futur (une minute de tolérance) ; refusées pour un autre passage que « Terminer » ; remettre à faire efface le début, rouvrir efface les deux |
+| 4 | Heures réelles : fin après début, aucune dans le futur (une minute de tolérance) ; refusées pour un autre passage que « Terminer » ; remettre à faire efface le début, rouvrir efface les deux. Depuis la 0.21.1, l'heure enregistrée est celle affichée : une heure tapée est retenue avant l'envoi, même sans Entrée, et une heure que le champ n'accepte pas bloque l'envoi (« Date ou heure non retenue ») |
 | 5 | Absence : du, au (un an au plus), journée, matin ou après-midi (demi-journée sur un seul jour), motif dans une liste fermée, aucun texte libre ; pas de chevauchement pour un même ouvrier ; une absence saisie par erreur se supprime |
 | 6 | Le motif d'une absence n'est rendu qu'au gestionnaire et au responsable ; le planning, les ouvriers proposés et les conflits disent seulement « indisponible » |
 | 7 | Capacité d'un ouvrier un jour : durée du créneau de son équipe à horaire propre, ou de l'horaire de l'entité ; moitié pour une demi-journée d'absence ; zéro un jour non travaillé. Conflits jamais bloquants |

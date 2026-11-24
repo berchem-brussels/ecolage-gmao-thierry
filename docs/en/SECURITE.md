@@ -2,6 +2,10 @@
 
 The French text (`docs/fr/SECURITE.md`) prevails and holds the full grid per version.
 
+## 0.21.1 (24/11/2026)
+
+Fix of the 0.21.0 acceptance-test anomaly: in « Terminer la tâche », a time typed without Enter, then sent without the field losing focus, saved the prefilled time instead of the displayed one. Rule for the whole application (`saisieDate.ts`): before any click or form submission from outside the field, the focused date or time field receives Enter, then loses focus; the window refuses to send a text the field did not accept. Tested: displayed time sent; invalid text blocked; failure proofs in the French text. No migration, no new route, dependency or permission.
+
 ## 0.21.0 (20/11/2026)
 
 Actual task times, workers' absences, weekly and daily planning, unplanned tasks and conflicts, date announced to the requester, fixes from the 0.20.0 acceptance test. Tested: absences and planning of another entity refused or empty, through the API and MCP; an absence of a worker of both entities recorded in the other one has no effect; the reason for an absence is never logged and shown only to the manager and the head of service; actual times never in the future, end after start; migration `018_planning` on a 0.20.0 database, rollback to 0.20.0 tried. Failure proofs: eleven protections, see the French text. Phone check: 66 screens without defect. No new dependency.

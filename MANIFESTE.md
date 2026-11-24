@@ -1,8 +1,26 @@
 # Manifeste
 
-Version de l'application : **0.21.0** · Mis à jour le 20/11/2026
+Version de l'application : **0.21.1** · Mis à jour le 24/11/2026
 
 Fichiers changés, dépendances et suites par version. Les décomptes sont recopiés de la sortie des commandes.
+
+## 0.21.1 (24/11/2026)
+
+Fichiers comparés à l'archive 0.21.0 (`gmao-v0_21_0.tar.gz`, SHA-256 `cd88c30f…505064`) par `diff -rq` (hors `node_modules` et `dist`). Pour le contrôle du `git status` (`GITHUB.md`, section 5) : aucune ligne `D` attendue ; une ligne `A`, les autres `M`.
+
+- Nouveau (ligne `A`) : `NOTES_LIVRAISON_v0.21.1.md`.
+- Modifiés, serveur : `package.json` et `package-lock.json` (version 0.21.1) ; `config/notes-version.json` (note 0.21.1) ; `tests/notes-version.test.js` (note 0.21.1, listes de versions décalées).
+- Modifiés, interface : `package.json` et `package-lock.json` (version 0.21.1) ; `src/saisieDate.ts` (règle commune : `installerSaisieDate`, `retenirSaisieAvant`, `champDateActif`, `texteAffiche`, `texteNonRetenu`) ; `src/main.tsx` (règle posée au démarrage) ; `src/components/demandes/TachesDemande.tsx` (formulaire `tache-heures` nommé, `FORMAT_HEURES`, texte non retenu refusé) ; `src/i18n.ts` (`tache.heures.illisible`) ; `src/help/topics/demandes-entite.ts` (problème fréquent) ; `src/test/setup.ts`, `src/test/demandes.test.tsx`, `src/test/saisie-date.test.ts`.
+- Modifiés, documentation et racine : `README.md`, `README.nl.md`, `README.en.md` ; `docs/fr`, `docs/nl`, `docs/en` (`APRES-DEPLOIEMENT.md`, `ARCHITECTURE.md`, `EXPLOITATION.md`, `MCP.md`, `SECURITE.md`) ; `docs/fonctionnel/taches-planning.md` (règle 4) ; fichiers de suivi (`ETAT.md`, `CHANGELOG.md`, `ECARTS-CDC.md`, `MANIFESTE.md`).
+- Inchangés : les deux Dockerfile, `nginx.conf`, `docker-entrypoint.sh`, `docker-compose.yml`, `.env.example`, `backup.sh`, `verifier-ports.sh`, `recette.sh`, `ci.yml`, `.gitignore`, `src/demo.js`, tout le code du serveur hors numéro de version et note. La construction n'a pas besoin de `--no-cache`.
+- Retirés : aucun fichier.
+- Dépendances : aucune nouvelle ; verrous inchangés hors numéro de version. Aucun `npm audit fix`.
+- Contrôle DV-09 de la séance, avant toute modification : archive 0.21.0 conforme à `ETAT.md` (14 030 163 octets, 727 entrées, SHA-256 `cd88c30f…505064`) ; serveur 696/696 ; interface 389 (+1 ignoré) ; `help:check` 11/11 ; typage, construction et accessibilité 0 erreur ; `mobile:check` 66 écrans, six appareils, parcours sur deux moteurs, sans défaut.
+- Suites de la 0.21.1 : voir `ETAT.md`, section 2.
+- Preuves d'échec : `docs/fr/SECURITE.md`, section 0.21.1 (trois).
+- Navigateur réel : Chromium et WebKit du bac à sable (Playwright), serveur réel en production sur une base de démonstration montée de zéro ; anomalie reproduite sur le `dist` de la 0.21.0, corrigée sur celui de la 0.21.1.
+- Retour arrière : aucune migration ; la 0.21.0 sert la même base.
+- Images Docker : non reconstruites dans le bac à sable ; l'image de l'interface change (`dist/`), celle du serveur pour le numéro de version et la note.
 
 ## 0.21.0 (20/11/2026)
 

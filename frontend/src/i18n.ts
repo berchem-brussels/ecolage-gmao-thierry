@@ -409,6 +409,7 @@ export const translations: Record<string, Record<Lang, string>> = {
   'tache.heures.fin': { fr: 'Fin du travail', nl: 'Einde van het werk' },
   'tache.heures.ordre': { fr: 'La fin doit venir après le début.', nl: 'Het einde moet na het begin komen.' },
   'tache.heures.futur': { fr: 'Cette heure est dans le futur.', nl: 'Dit uur ligt in de toekomst.' },
+  'tache.heures.illisible': { fr: 'Date ou heure non retenue : tapez-la au format JJ/MM/AAAA HH:MM, jamais dans le futur, ou choisissez-la dans le calendrier.', nl: 'Datum of uur niet aanvaard: typ het in de vorm DD/MM/JJJJ UU:MM, nooit in de toekomst, of kies het in de kalender.' },
   'tache.heures.demarree': { fr: 'Démarrée le', nl: 'Gestart op' },
   'tache.heures.realisee': { fr: 'Réalisée du', nl: 'Uitgevoerd van' },
   'tache.heures.au': { fr: 'au', nl: 'tot' },

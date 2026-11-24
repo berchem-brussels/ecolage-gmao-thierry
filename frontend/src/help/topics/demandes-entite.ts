@@ -33,6 +33,8 @@ const topic: HelpTopic = {
       errors: [
         { problem: { fr: '« Travaux terminés » n’est pas proposé.', nl: '« Werken beëindigd » wordt niet voorgesteld.' }, solution: { fr: 'Une tâche est encore à faire ou en cours : terminez-la ou annulez-la.', nl: 'Een taak is nog te doen of bezig: beëindig of annuleer ze.' } },
         { problem: { fr: '« La fin doit venir après le début » ou « Cette heure est dans le futur ».', nl: '« Het einde moet na het begin komen » of « Dit uur ligt in de toekomst ».' }, solution: { fr: 'Les heures notées sont celles du travail réel : la fin vient après le début et aucune n’est après maintenant.', nl: 'De genoteerde uren zijn die van het werkelijke werk: het einde komt na het begin en geen enkel ligt na nu.' } },
+        // 0.21.1 (DV-173) : texte tapé que le champ n'a pas retenu.
+        { problem: { fr: '« Date ou heure non retenue ».', nl: '« Datum of uur niet aanvaard ».' }, solution: { fr: 'Le texte tapé n’est pas une date et une heure valables (format JJ/MM/AAAA HH:MM, jamais dans le futur) : rien n’a été enregistré. Retapez-le ou choisissez-le dans le calendrier, puis {{tache.action.terminee}}.', nl: 'De getypte tekst is geen geldige datum en uur (vorm DD/MM/JJJJ UU:MM, nooit in de toekomst): er werd niets opgeslagen. Typ het opnieuw of kies het in de kalender, dan {{tache.action.terminee}}.' } },
         { problem: { fr: 'Plus de bouton sur les tâches.', nl: 'Geen knoppen meer bij de taken.' }, solution: { fr: 'La demande est « Travaux terminés » ou fermée. Repassez-la « En cours » pour rouvrir ou ajouter une tâche.', nl: 'De aanvraag is « Werken beëindigd » of afgesloten. Zet ze terug op « Bezig » om een taak te heropenen of toe te voegen.' } },
       ],
     },
