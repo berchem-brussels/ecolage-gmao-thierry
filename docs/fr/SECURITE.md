@@ -2,6 +2,24 @@
 
 Le français fait foi. Grille de la section 10.2 du standard, rejouée à chaque version. « Non joué » veut dire que le contrôle n'a pas tourné.
 
+## 0.21.2 (24/11/2026)
+
+Correctif de la recette de la 0.21.1 sur NIXUS (DV-177). Sur un PC, le calendrier d'Ant Design s'ouvrait dès qu'on touchait un champ de date et recouvrait ce qui suit : dans « Terminer la tâche », un clic sur « Fin du travail » tombait dans les heures du calendrier du début et changeait le début sans qu'on le voie (08:00 tapé, 12:00 retenu sur la copie locale) ; la fin tapée n'allait nulle part ; un clic sur « Terminer » ne faisait rien. Cause probable de l'anomalie du 23/11/2026. Second défaut trouvé en le corrigeant : un vrai clic de souris fait perdre le focus au champ dès l'appui, avant l'événement « click » ; la règle de la 0.21.1 ne jouait donc que pour les clics pilotés, et le premier clic sur « Terminer » était refusé en silence. Corrections : `components/ChampDate.tsx` (`ChampDate`, `ChampHeure`, `ChampPeriode`) pour tous les champs de date, d'heure et de période (calendrier par l'icône ou Alt+Flèche bas sur PC, comportement d'origine sur écran tactile, Échap ferme le calendrier sans fermer la fenêtre) ; `installerSaisieDate()` écoute aussi `pointerdown` et `mousedown`.
+
+| Famille | Contrôle | Résultat |
+| --- | --- | --- |
+| Validation | Ce qui part est ce qui est affiché, avec de vrais clics de souris aux positions réelles : début et fin tapés sans Entrée puis clic direct sur « Terminer » (Chromium et WebKit) ; heure impossible : « Date ou heure non retenue », rien n'est envoyé ; scénarios de la 0.21.1 (Entrée, sans Entrée, Tab, clic piloté) rejoués ; affectation (date et heure) et absence (du, au) tapées sans Entrée puis clic direct | Conforme (copie locale, `saisie-date.test.tsx`) |
+| Interface | Calendrier caché au toucher et à la frappe sur PC, affiché par l'icône et par Alt+Flèche bas, fermé par Échap sans fermer la fenêtre ; sur écran tactile, calendrier au toucher et champ en lecture seule ; plus aucun `DatePicker`, `TimePicker` ni `RangePicker` direct (inventaire) | Conforme |
+| Secrets, infrastructure, dépendances, serveur | Inchangés | Conforme |
+
+Preuves d'échec :
+
+| Protection retirée | Échec constaté |
+| --- | --- |
+| Calendrier caché sur PC (`display: none` retiré de `ChampDate.tsx`) | `saisie-date.test.tsx` : calendrier affiché au toucher du champ |
+| Écoute de l'appui (`pointerdown`, `mousedown`) retirée d'`installerSaisieDate()` | `saisie-date.test.tsx` : aucune Entrée envoyée au champ à l'appui du bouton |
+| Un `DatePicker` direct dans un formulaire | `saisie-date.test.tsx` : inventaire en échec |
+
 ## 0.21.1 (24/11/2026)
 
 Correctif de l'anomalie de la recette de la 0.21.0 (DV-173) : dans « Terminer la tâche », une heure tapée sans Entrée puis un envoi sans que le champ perde le focus enregistrait l'heure préremplie (maintenant) au lieu de l'heure affichée, sans erreur. Reproduit sur la copie locale dans Chromium et WebKit (fin affichée 09:00, envoyée 09:55). Règle pour toute l'application (`saisieDate.ts`, posée dans `main.tsx`) : avant tout clic et tout envoi venus d'ailleurs que du champ, le champ de date ou d'heure actif reçoit Entrée (texte valide retenu) puis perd le focus ; la fenêtre « Terminer la tâche » refuse l'envoi quand le texte affiché au moment du clic n'est pas la valeur retenue (« Date ou heure non retenue »). Aucune migration, aucune route, aucune dépendance, aucune permission nouvelle ; serveur inchangé hors numéro de version et note.

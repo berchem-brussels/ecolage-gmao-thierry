@@ -21,13 +21,15 @@
  * Boutons qui passent à la ligne et champs en 16 px sur téléphone (DV-102) ; rien n'est montré au demandeur.
  */
 import { useEffect, useState } from 'react';
-import { Alert, Button, Card, DatePicker, Form, Input, InputNumber, List, Modal, Radio, Select, Space, Tag, TimePicker, Typography, message } from 'antd';
+import { Alert, Button, Card, Form, Input, InputNumber, List, Modal, Radio, Select, Space, Tag, Typography, message } from 'antd';
+
 import { PlusOutlined, TeamOutlined, UserOutlined } from '@ant-design/icons';
 import dayjs, { type Dayjs } from 'dayjs';
 import api, { ApiError, qs } from '../../api';
 import { useI18n } from '../../contexts/I18nContext';
 import { COULEUR_TACHE, type Demande, type EtatTache, type Tache, dateSouhaitee, duree, instant } from '../../demandes';
-import { saisieDate, texteNonRetenu } from '../../saisieDate';
+import { texteNonRetenu } from '../../saisieDate';
+import { ChampDate, ChampHeure } from '../ChampDate';
 import { type ConflitAffectation, texteConflits } from '../../planning';
 
 interface ValeurListe { id: number; libelle_fr: string; libelle_nl: string; is_active: number }
@@ -169,7 +171,7 @@ export default function TachesDemande({ d, onChange }: { d: Demande; onChange: (
         <Form.Item name="debut" label={t('tache.heures.debut')} tooltip={hint('tache.heures.debut')}
           rules={[{ required: true, message: t('form.obligatoire') },
             { validator: (_, v: Dayjs | null) => (!v || !v.isAfter(dayjs().add(1, 'minute')) ? Promise.resolve() : Promise.reject(new Error(t('tache.heures.futur')))) }]}>
-          <DatePicker showTime={{ format: 'HH:mm', minuteStep: 5 }} format={FORMAT_HEURES} needConfirm={false} allowClear={false} disabledDate={futur} {...saisieDate()} style={{ width: '100%' }} />
+          <ChampDate showTime={{ format: 'HH:mm', minuteStep: 5 }} format={FORMAT_HEURES} needConfirm={false} allowClear={false} disabledDate={futur} style={{ width: '100%' }} />
         </Form.Item>
         <Form.Item name="fin" label={t('tache.heures.fin')} tooltip={hint('tache.heures.fin')} dependencies={['debut']}
           rules={[{ required: true, message: t('form.obligatoire') }, ({ getFieldValue }) => ({
@@ -180,7 +182,7 @@ export default function TachesDemande({ d, onChange }: { d: Demande; onChange: (
               return !d0 || v.isAfter(d0) ? Promise.resolve() : Promise.reject(new Error(t('tache.heures.ordre')));
             },
           })]}>
-          <DatePicker showTime={{ format: 'HH:mm', minuteStep: 5 }} format={FORMAT_HEURES} needConfirm={false} allowClear={false} disabledDate={futur} {...saisieDate()} style={{ width: '100%' }} />
+          <ChampDate showTime={{ format: 'HH:mm', minuteStep: 5 }} format={FORMAT_HEURES} needConfirm={false} allowClear={false} disabledDate={futur} style={{ width: '100%' }} />
         </Form.Item>
       </Form>
     </Modal>
@@ -263,11 +265,11 @@ export default function TachesDemande({ d, onChange }: { d: Demande; onChange: (
       )}
       <Space wrap size={[16, 0]} align="start">
         <Form.Item name="date" label={t('tache.date')} tooltip={hint('tache.date')}>
-          <DatePicker format="DD/MM/YYYY" {...saisieDate()}
+          <ChampDate format="DD/MM/YYYY"
             disabledDate={(j) => j.isAfter(dayjs().add(2, 'year')) || (j.isBefore(dayjs(), 'day') && j.format('YYYY-MM-DD') !== x.date_prevue)} />
         </Form.Item>
         <Form.Item name="heure" label={t('tache.heure')} tooltip={hint('tache.heure')}>
-          <TimePicker format="HH:mm" minuteStep={15} needConfirm={false} {...saisieDate()} disabled={!dateChoisie} />
+          <ChampHeure format="HH:mm" minuteStep={15} needConfirm={false} disabled={!dateChoisie} />
         </Form.Item>
       </Space>
       <Form.Item name="duree_heures" label={t('qualif.duree')} tooltip={hint('tache.duree')} extra={t('qualif.duree.aide')}>

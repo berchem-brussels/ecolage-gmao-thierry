@@ -5,7 +5,7 @@
  * Un congé ou une fermeture se désactive avec un motif et redevient alors ouvrable pour les délais suivants.
  */
 import { useCallback, useEffect, useState } from 'react';
-import { Button, Card, DatePicker, Descriptions, Drawer, Form, Input, List, Modal, Popconfirm, Radio, Segmented, Space, Switch, Table, Tag, TimePicker, Typography, message } from 'antd';
+import { Button, Card, Descriptions, Drawer, Form, Input, List, Modal, Popconfirm, Radio, Segmented, Space, Switch, Table, Tag, Typography, message } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
 import dayjs, { type Dayjs } from 'dayjs';
 import api, { ApiError, qs } from '../../api';
@@ -15,7 +15,7 @@ import { type Ferie, type Horaire, type JourNonOuvre, moisJourDate } from '../..
 import TraceFiche from './TraceFiche';
 import ErreurObligatoire from '../ErreurObligatoire';
 import { obligatoire, seulementEspaces, texteObligatoire } from '../../validation';
-import { entreeSansEnvoi } from '../../saisieDate';
+import { ChampDate, ChampHeure, ChampPeriode } from '../ChampDate';
 
 const HM = 'HH:mm';
 
@@ -38,8 +38,8 @@ function LigneHoraire({ h, onSaved }: { h: Horaire; onSaved: () => void }) {
         aria-label={`${jour} : ${t('ref.cal.ouvre')}`} checkedChildren={t('ref.cal.ouvre')} unCheckedChildren={t('ref.cal.ferme')} />
       {ouvre && (
         <Space wrap>
-          <TimePicker format={HM} minuteStep={5} value={debut} onChange={setDebut} aria-label={`${jour} : ${t('ref.cal.debut')}`} placeholder={t('ref.cal.debut')} allowClear={false} needConfirm={false} />
-          <TimePicker format={HM} minuteStep={5} value={fin} onChange={setFin} aria-label={`${jour} : ${t('ref.cal.fin')}`} placeholder={t('ref.cal.fin')} allowClear={false} needConfirm={false} />
+          <ChampHeure format={HM} minuteStep={5} value={debut} onChange={setDebut} aria-label={`${jour} : ${t('ref.cal.debut')}`} placeholder={t('ref.cal.debut')} allowClear={false} needConfirm={false} />
+          <ChampHeure format={HM} minuteStep={5} value={fin} onChange={setFin} aria-label={`${jour} : ${t('ref.cal.fin')}`} placeholder={t('ref.cal.fin')} allowClear={false} needConfirm={false} />
         </Space>
       )}
       <Space wrap>
@@ -153,11 +153,11 @@ export default function CalendrierTab() {
           </Form.Item>
           {natureForm === 'conge' ? (
             <Form.Item name="jour" label={t('ref.cal.jour')} tooltip={hint('ref.cal.jour')} extra={t('ref.cal.chaque_annee')} rules={[obligatoire(t)]}>
-              <DatePicker format="D MMMM" onKeyDown={entreeSansEnvoi} aria-label={t('ref.cal.jour')} />
+              <ChampDate format="D MMMM" aria-label={t('ref.cal.jour')} />
             </Form.Item>
           ) : (
             <Form.Item name="periode" label={t('ref.cal.periode')} tooltip={hint('ref.cal.periode')} rules={[obligatoire(t)]}>
-              <DatePicker.RangePicker format="DD/MM/YYYY" onKeyDown={entreeSansEnvoi} aria-label={t('ref.cal.periode')} />
+              <ChampPeriode format="DD/MM/YYYY" aria-label={t('ref.cal.periode')} />
             </Form.Item>
           )}
           <Form.Item name="libelle_fr" label={t('ref.cal.libelle_fr')} tooltip={hint('ref.cal.libelle')} rules={[texteObligatoire(t), { max: 200 }]}><Input lang="fr" /></Form.Item>

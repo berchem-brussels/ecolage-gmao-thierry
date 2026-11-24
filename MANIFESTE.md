@@ -1,8 +1,20 @@
 # Manifeste
 
-Version de l'application : **0.21.1** · Mis à jour le 24/11/2026
+Version de l'application : **0.21.2** · Mis à jour le 24/11/2026
 
 Fichiers changés, dépendances et suites par version. Les décomptes sont recopiés de la sortie des commandes.
+
+## 0.21.2 (24/11/2026)
+
+Fichiers comparés à l'archive 0.21.1 (`gmao-v0_21_1.tar.gz`, SHA-256 `387501c3…322fa`) par `diff -rq` (hors `node_modules` et `dist`). Pour le contrôle du `git status` (`GITHUB.md`, section 5) : deux lignes `A`, un fichier de test renommé (une ligne `R` de `saisie-date.test.ts` vers `saisie-date.test.tsx`, ou à défaut une ligne `D` pour l'ancien nom et une ligne `A` pour le nouveau), les autres `M`. Aucune autre ligne `D`.
+
+- Nouveaux (lignes `A`) : `NOTES_LIVRAISON_v0.21.2.md` ; `frontend/src/components/ChampDate.tsx`.
+- Renommé : `frontend/src/test/saisie-date.test.ts` devient `frontend/src/test/saisie-date.test.tsx` (le test monte désormais un composant).
+- Modifiés, serveur : `package.json` et `package-lock.json` (version 0.21.2) ; `config/notes-version.json` (note 0.21.2) ; `tests/notes-version.test.js` (note 0.21.2, listes de versions décalées).
+- Modifiés, interface : `package.json` et `package-lock.json` (version 0.21.2) ; `src/saisieDate.ts` (règle dès l'appui, `saisieDate()` retirée) ; `src/i18n.ts` (`champ.calendrier.ouvrir`, `champ.heures.ouvrir`) ; champs de date passés à `ChampDate`, `ChampHeure`, `ChampPeriode` : `src/components/demandes/TachesDemande.tsx`, `src/components/demandes/QualificationForm.tsx`, `src/components/demandes/ComplementsDemande.tsx`, `src/components/IndisponibilitesOuvrier.tsx`, `src/components/referentiel/CalendrierTab.tsx`, `src/components/referentiel/SimulateurTab.tsx`, `src/pages/PlanningPage.tsx`, `src/pages/ServicesPage.tsx`, `src/pages/JournalPage.tsx` ; aide : `src/help/topics/accueil.ts` (question), `src/help/topics/demandes-entite.ts` (icône du calendrier).
+- Modifiés, documentation et racine : `README.md`, `README.nl.md`, `README.en.md` ; `docs/fr`, `docs/nl`, `docs/en` (`APRES-DEPLOIEMENT.md`, `ARCHITECTURE.md`, `EXPLOITATION.md`, `MCP.md`, `SECURITE.md`) ; `docs/fonctionnel/taches-planning.md` (règle 4) ; fichiers de suivi (`ETAT.md`, `CHANGELOG.md`, `ECARTS-CDC.md`, `MANIFESTE.md`).
+- Dépendances : aucune nouvelle, aucune version changée.
+- Suites : voir `ETAT.md`, section 2.
 
 ## 0.21.1 (24/11/2026)
 

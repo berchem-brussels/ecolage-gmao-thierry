@@ -9,7 +9,8 @@
  * Android), les libellés du résultat passent au-dessus des valeurs.
  */
 import { useState } from 'react';
-import { Button, Card, DatePicker, Descriptions, Form, Grid, Radio, Select, Tag, Typography, message } from 'antd';
+import { Button, Card, Descriptions, Form, Grid, Radio, Select, Tag, Typography, message } from 'antd';
+import { ChampDate } from '../ChampDate';
 import dayjs, { type Dayjs } from 'dayjs';
 import api, { ApiError, qs } from '../../api';
 import { useI18n } from '../../contexts/I18nContext';
@@ -70,7 +71,7 @@ export default function SimulateurTab({ priorites, categories }: { priorites: Pr
             </Form.Item>
           )}
           <Form.Item name="recu" label={t('ref.sim.recu')} tooltip={hint('ref.sim.recu')} rules={[obligatoire(t)]}>
-            <DatePicker showTime={{ format: 'HH:mm', minuteStep: 5 }} format="DD/MM/YYYY HH:mm" allowClear={false} aria-label={t('ref.sim.recu')} />
+            <ChampDate showTime={{ format: 'HH:mm', minuteStep: 5 }} format="DD/MM/YYYY HH:mm" allowClear={false} aria-label={t('ref.sim.recu')} />
           </Form.Item>
           <Button type="primary" htmlType="submit">{t('ref.sim.calculer')}</Button>
         </Form>

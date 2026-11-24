@@ -1,6 +1,17 @@
 # Journal des versions
 
-Version de l'application : **0.21.1** · Mis à jour le 24/11/2026
+Version de l'application : **0.21.2** · Mis à jour le 24/11/2026
+
+## 0.21.2 (24/11/2026)
+
+Correctif de la recette de la 0.21.1 sur NIXUS (DV-177), avant l'audit du cahier des charges. Aucune migration, aucune dépendance, aucune permission, aucun réglage, aucun outil MCP nouveau.
+
+- Défaut constaté sur NIXUS, cause probable de l'anomalie du 23/11/2026 : sur PC, le calendrier d'Ant Design s'ouvrait au toucher d'un champ de date et recouvrait ce qui suit. Dans « Terminer la tâche », un clic sur « Fin du travail » tombait dans les heures du calendrier du début et changeait le début sans qu'on le voie (copie locale : 08:00 tapé, 12:00 retenu) ; la fin tapée n'allait nulle part ; un clic sur « Terminer » ne faisait rien.
+- `components/ChampDate.tsx` (nouveau) : `ChampDate`, `ChampHeure`, `ChampPeriode` remplacent `DatePicker`, `TimePicker` et `RangePicker` dans tous les écrans (affectation, heures d'une tâche, absences, qualification, compléments, planning, services, horaire et congés, simulateur, journal). Sur PC : on tape la date ; le calendrier ne s'affiche que par l'icône à droite du champ (« Ouvrir le calendrier », « Choisir l'heure ») ou Alt+Flèche bas ; Échap le ferme sans fermer la fenêtre. Sur écran tactile : comportement d'origine. Entrée n'envoie jamais le formulaire. `saisieDate()` retirée.
+- `saisieDate.ts` : second défaut trouvé en corrigeant, un vrai clic de souris retire le focus du champ dès l'appui, avant `click` ; la règle de la 0.21.1 ne jouait que pour les clics pilotés et le premier clic sur « Terminer » était refusé en silence. `installerSaisieDate()` écoute aussi `pointerdown` et `mousedown`.
+- Aide : « Accueil », question « Comment saisir une date ou une heure ? » ; « Demandes de l'entité », « Date ou heure non retenue » cite l'icône du calendrier.
+- Note de version : une ligne pour tous (calendrier par l'icône), une pour le service technique (« Terminer la tâche » en un clic).
+- Tests : `saisie-date.test.ts` devient `saisie-date.test.tsx` (calendrier caché sur PC, affiché par l'icône et Alt+Flèche bas ; écran tactile ; appui de la souris ; inventaire : aucun `DatePicker`, `TimePicker` ni `RangePicker` direct) ; note 0.21.2 dans `notes-version.test.js`.
 
 ## 0.21.1 (24/11/2026)
 

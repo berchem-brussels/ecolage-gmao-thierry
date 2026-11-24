@@ -1,6 +1,6 @@
 # Architecture
 
-Version 0.21.1 · Le français fait foi.
+Version 0.21.2 · Le français fait foi.
 
 ## Services
 
@@ -412,6 +412,12 @@ Repris du gabarit 1.3.0 (`services/tickets.js`, `routes/tickets.js`, schémas, n
 - `has_photo` (0 ou 1) de `GET /api/lieux` et de `list_lieux` ; case « Sans photo (n) » de `PatrimoinePage.tsx`, calculée sur l'arbre déjà chargé, filtre `?photo=sans` gardé dans l'adresse.
 - Journal d'audit : `noms.cle` (réglage de l'instance ou de l'entité, nommé par le catalogue, sans requête) et type d'un lieu (`listes_valeurs`) dans `services/journal.js` ; `CODES_FAMILLE`, `CHAMPS_FAMILLE`, rôles par le catalogue et titre de fiche pour `topic_id` dans `JournalPage.tsx` ; `motif_donne` à la place du motif d'un ticket (E-46).
 - En-tête des téléphones (`AppLayout.tsx`, sous 768 px) : la langue passe dans le menu de la personne ; contrôle `npm run mobile:check` (`frontend/mobile-check/verifier-mobile.mjs`, Playwright, développement seulement).
+
+## Champs de date : calendrier par l'icône sur PC (0.21.2)
+
+- `components/ChampDate.tsx` : `ChampDate`, `ChampHeure` et `ChampPeriode` enveloppent `DatePicker`, `TimePicker` et `DatePicker.RangePicker` d'Ant Design et remplacent leurs usages directs (inventaire dans `saisie-date.test.tsx`). Sur PC, le composant garde son fonctionnement (ouverture au focus, texte retenu à Entrée et à la fermeture) mais son calendrier reste caché (`styles.popup.root` : `display: none`) tant qu'il n'est pas demandé par l'icône (élément `.champ-date-icone`, `pointerEvents: 'auto'` car Ant Design rend l'icône insensible au pointeur) ou par Alt+Flèche bas ; il se referme par Échap (qui ne ferme plus la fenêtre qui le contient), par un clic à côté ou quand une date est choisie. Un premier essai qui pilotait `open` a été écarté : fermé, rc-picker ne retient plus le texte tapé. Sur écran tactile (`pointer: coarse`) : comportement d'origine et `inputReadOnly`. Entrée n'envoie jamais le formulaire (`entreeSansEnvoi`).
+- `installerSaisieDate()` écoute aussi `pointerdown` et `mousedown` : un vrai clic retire le focus du champ dès l'appui, avant `click`.
+- `saisieDate()` (propriétés à étaler) est retirée : remplacée par les composants.
 
 ## Dates et heures tapées retenues avant l'envoi (0.21.1)
 

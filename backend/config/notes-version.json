@@ -2,6 +2,22 @@
   "_description": "Notes de version pour les utilisateurs, en FR et en NL, sans terme technique (standard v3.2, sections 13.1 et 17.8 ; écart E-07). Une note par version, de la plus récente à la plus ancienne. Chaque ligne a un public : « tous », « admin » (administrateur de l'application) ou une permission du catalogue des rôles (par exemple « parametres:gerer »), lue dans l'entité active. La note de la version installée s'affiche une fois à la première connexion qui suit la mise à jour ; toutes restent relisibles dans Aide, Nouveautés.",
   "notes": [
     {
+      "version": "0.21.2",
+      "date": "2026-11-24",
+      "lignes": [
+        {
+          "public": "tous",
+          "fr": "Sur ordinateur, une date ou une heure se tape directement dans le champ ; le calendrier s'ouvre seulement par l'icône à droite du champ.",
+          "nl": "Op de computer typt u een datum of uur rechtstreeks in het veld; de kalender opent alleen via het pictogram rechts van het veld."
+        },
+        {
+          "public": "demandes:traiter",
+          "fr": "« Terminer la tâche » : le calendrier ne cache plus le champ « Fin du travail » ni le bouton ; un seul clic sur « Terminer » suffit.",
+          "nl": "« De taak beëindigen »: de kalender verbergt het veld « Einde van het werk » en de knop niet meer; één klik op « Beëindigen » volstaat."
+        }
+      ]
+    },
+    {
       "version": "0.21.1",
       "date": "2026-11-24",
       "lignes": [

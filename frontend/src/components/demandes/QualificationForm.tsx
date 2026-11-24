@@ -9,7 +9,7 @@
  * sous les zones de texte : il recouvrirait l'explication (même choix que les Réglages de l'entité, 0.7.0).
  */
 import { useEffect, useMemo, useState } from 'react';
-import { Alert, Button, DatePicker, Form, Input, InputNumber, Radio, Select, Space, Switch, TreeSelect, Typography, message } from 'antd';
+import { Alert, Button, Form, Input, InputNumber, Radio, Select, Space, Switch, TreeSelect, Typography, message } from 'antd';
 import PhotoLieu from './PhotoLieu';
 import dayjs, { type Dayjs } from 'dayjs';
 import api, { ApiError, qs } from '../../api';
@@ -18,7 +18,7 @@ import type { ArbreCategories, Categorie, PrioriteFiche } from '../../referentie
 import { type Demande, type LieuChoisi } from '../../demandes';
 import LieuPicker from './LieuPicker';
 import { obligatoire } from '../../validation';
-import { entreeSansEnvoi } from '../../saisieDate';
+import { ChampDate } from '../ChampDate';
 
 /** Rôle ARIA du groupe : Form.Item y pose aria-required, permis seulement sur un radiogroup (axe-core). */
 const GROUPE_RADIO = { role: 'radiogroup' } as Record<string, string>;
@@ -137,7 +137,7 @@ export default function QualificationForm({ d, onDone, onCancel }: { d: Demande;
       </Form.Item>
       {sansFin && (
         <Form.Item name="date_convenue" label={t('qualif.date_convenue')} tooltip={hint('qualif.date_convenue')} extra={t('qualif.date_convenue.aide')}>
-          <DatePicker format="DD/MM/YYYY" onKeyDown={entreeSansEnvoi} disabledDate={(j) => j.isBefore(dayjs(), 'day') || j.isAfter(dayjs().add(2, 'year'))} />
+          <ChampDate format="DD/MM/YYYY" disabledDate={(j) => j.isBefore(dayjs(), 'day') || j.isAfter(dayjs().add(2, 'year'))} />
         </Form.Item>
       )}
       <Form.Item name="consignes" label={t('qualif.consignes')} tooltip={hint('qualif.consignes')} extra={t('qualif.consignes.aide')}>

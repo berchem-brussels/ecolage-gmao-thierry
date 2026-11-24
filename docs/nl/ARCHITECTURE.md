@@ -1,6 +1,10 @@
 # Architectuur
 
-Versie van de toepassing: **0.21.1** · De Franse tekst is rechtsgeldig (`docs/fr/ARCHITECTURE.md`); dit bestand vat elke versie samen.
+Versie van de toepassing: **0.21.2** · De Franse tekst is rechtsgeldig (`docs/fr/ARCHITECTURE.md`); dit bestand vat elke versie samen.
+
+## Datumvelden: kalender via het pictogram op een pc (0.21.2)
+
+`components/ChampDate.tsx` (`ChampDate`, `ChampHeure`, `ChampPeriode`) vervangt het rechtstreekse gebruik van `DatePicker`, `TimePicker` en `RangePicker`: op een pc blijft de kalender verborgen tot hij gevraagd wordt via het pictogram of Alt+Pijl omlaag; op een aanraakscherm het oorspronkelijke gedrag. `installerSaisieDate()` luistert ook naar `pointerdown` en `mousedown`.
 
 ## Getypte datums en uren bewaard vóór het verzenden (0.21.1)
 
