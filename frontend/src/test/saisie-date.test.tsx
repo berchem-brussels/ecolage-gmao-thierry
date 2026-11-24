@@ -2,7 +2,11 @@ import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { KeyboardEvent } from 'react';
-import { champDateActif, ecranTactile, entreeSansEnvoi, retenirSaisieAvant, saisieDate } from '../saisieDate';
+import { act, fireEvent, render } from '@testing-library/react';
+import { Form } from 'antd';
+import { champDateActif, ecranTactile, entreeSansEnvoi, retenirSaisieAvant } from '../saisieDate';
+import { ChampDate } from '../components/ChampDate';
+import { I18nProvider } from '../contexts/I18nContext';
 
 /**
  * 0.21.0, point 0, R1 (DV-164) : une date tapée au clavier puis Entrée envoyait l'affectation sans la date.
@@ -18,12 +22,48 @@ describe('Champs de date et d’heure (R1)', () => {
       addListener: () => {}, removeListener: () => {}, addEventListener: () => {}, removeEventListener: () => {}, dispatchEvent: () => false })) as unknown as typeof window.matchMedia;
   };
 
+  const monterChamp = () => render(<I18nProvider><Form><Form.Item name="d" label="Date"><ChampDate format="DD/MM/YYYY" /></Form.Item></Form></I18nProvider>);
+  const calendrierAffiche = () => {
+    const d = document.querySelector<HTMLElement>('.ant-picker-dropdown');
+    return !!d && d.style.display !== 'none' && !d.className.includes('ant-picker-dropdown-hidden');
+  };
+  afterEach(() => { document.body.innerHTML = ''; });
+
   it('lecture seule sur écran tactile seulement', () => {
     ecran(true);
     expect(ecranTactile()).toBe(true);
-    expect(saisieDate().inputReadOnly).toBe(true);
+    const { container, unmount } = monterChamp();
+    expect(container.querySelector('input')?.readOnly).toBe(true);
+    unmount();
     ecran(false);
-    expect(saisieDate().inputReadOnly).toBe(false);
+    const r = monterChamp();
+    expect(r.container.querySelector('input')?.readOnly).toBe(false);
+  });
+
+  // 0.21.2 (DV-177, recette de la 0.21.1 sur NIXUS) : sur PC, le calendrier ne s'affiche pas de lui-même ; il ne
+  // recouvre donc plus le champ suivant ni le bouton d'envoi. Il s'affiche par l'icône ou Alt+Flèche bas.
+  it('PC : calendrier caché au toucher et à la frappe, affiché par l’icône et par Alt+Flèche bas', async () => {
+    ecran(false);
+    const { container } = monterChamp();
+    const champ = container.querySelector('input') as HTMLInputElement;
+    await act(async () => { fireEvent.mouseDown(champ); fireEvent.click(champ); champ.focus(); fireEvent.change(champ, { target: { value: '01/12/2026' } }); });
+    expect(calendrierAffiche()).toBe(false);
+    const icone = container.querySelector('.champ-date-icone') as HTMLElement;
+    expect(icone.getAttribute('aria-label')).toBe('Ouvrir le calendrier');
+    await act(async () => { fireEvent.mouseDown(icone); fireEvent.click(icone); });
+    expect(calendrierAffiche()).toBe(true);
+    await act(async () => { fireEvent.keyDown(champ, { key: 'Escape' }); fireEvent.mouseDown(document.body); champ.blur(); });
+    expect(calendrierAffiche()).toBe(false);
+    await act(async () => { champ.focus(); fireEvent.click(champ); fireEvent.keyDown(champ, { key: 'ArrowDown', altKey: true }); });
+    expect(calendrierAffiche()).toBe(true);
+  });
+
+  it('écran tactile : calendrier au toucher, comme avant', async () => {
+    ecran(true);
+    const { container } = monterChamp();
+    const champ = container.querySelector('input') as HTMLInputElement;
+    await act(async () => { fireEvent.mouseDown(champ); fireEvent.click(champ); champ.focus(); });
+    expect(calendrierAffiche()).toBe(true);
   });
 
   it('Entrée n’envoie pas le formulaire ; les autres touches passent', () => {
@@ -33,33 +73,24 @@ describe('Champs de date et d’heure (R1)', () => {
     const autre = { key: 'Tab', preventDefault: vi.fn() };
     entreeSansEnvoi(autre as unknown as KeyboardEvent);
     expect(autre.preventDefault).not.toHaveBeenCalled();
-    expect(saisieDate().onKeyDown).toBe(entreeSansEnvoi);
   });
 
-  // Exceptions motivées : hors d'un formulaire à enregistrer, ou Entrée voulue.
-  const EXCEPTIONS: Record<string, string> = {
-    'components/referentiel/SimulateurTab.tsx': 'Entrée lance le calcul du simulateur, rien n’est enregistré',
-    'pages/JournalPage.tsx': 'filtre de période du journal, rien n’est enregistré',
-    'components/referentiel/CalendrierTab.tsx#TimePicker': 'heures de l’horaire, hors formulaire (bouton Enregistrer de la ligne)',
-  };
   const fichiers = (d: string): string[] => readdirSync(d).flatMap((n) => {
     const p = join(d, n);
     return statSync(p).isDirectory() ? (n === 'test' ? [] : fichiers(p)) : p.endsWith('.tsx') ? [p] : [];
   });
 
-  it('aucun champ de date ou d’heure en lecture seule partout, ni sans la règle d’Entrée', () => {
+  // 0.21.2 (DV-177) : tout champ de date, d'heure ou de période passe par ChampDate, ChampHeure ou ChampPeriode
+  // (calendrier par l'icône sur PC, lecture seule sur écran tactile, Entrée sans envoi).
+  it('aucun DatePicker, TimePicker ni RangePicker direct hors de ChampDate.tsx, ni inputReadOnly en dur', () => {
     const racine = join(__dirname, '..');
     const fautes: string[] = [];
     for (const f of fichiers(racine)) {
       const rel = relative(racine, f).replace(/\\/g, '/');
+      if (rel === 'components/ChampDate.tsx') continue;
       const src = readFileSync(f, 'utf8');
-      if (/\binputReadOnly\b/.test(src)) fautes.push(`${rel} : inputReadOnly écrit en dur (utiliser saisieDate())`);
-      // La balise va jusqu'à « /> » (ses propriétés contiennent des flèches « => »).
-      for (const m of src.matchAll(/<(DatePicker\.RangePicker|DatePicker|TimePicker)\b/g)) {
-        if (EXCEPTIONS[rel] || EXCEPTIONS[`${rel}#${m[1]}`]) continue;
-        const balise = src.slice(m.index, src.indexOf('/>', m.index));
-        if (!/saisieDate\(\)|entreeSansEnvoi/.test(balise)) fautes.push(`${rel} : <${m[1]}> sans saisieDate() ni entreeSansEnvoi`);
-      }
+      if (/\binputReadOnly\b/.test(src)) fautes.push(`${rel} : inputReadOnly écrit en dur`);
+      for (const m of src.matchAll(/<(DatePicker\.RangePicker|DatePicker|TimePicker)\b/g)) fautes.push(`${rel} : <${m[1]}> (utiliser ChampDate, ChampHeure ou ChampPeriode)`);
     }
     expect(fautes).toEqual([]);
   });
@@ -95,6 +126,19 @@ describe('Champs de date et d’heure (R1)', () => {
       retenirSaisieAvant({ target: document.getElementById('cellule') } as unknown as Event);
       expect(touches).toEqual([]);
       expect(document.activeElement).toBe(champ);
+    });
+
+    // 0.21.2 (DV-177) : un vrai clic de souris retire le focus dès l'appui, avant « click » : la règle joue à l'appui.
+    it('appui de la souris (pointerdown, mousedown) sur un bouton : Entrée au champ avant qu’il perde le focus', () => {
+      const { champ, touches } = monter();
+      champ.focus();
+      const b = document.getElementById('b') as HTMLButtonElement;
+      fireEvent.pointerDown(b);
+      expect(touches).toEqual(['Enter']);
+      expect(document.activeElement).not.toBe(champ);
+      champ.focus();
+      fireEvent.mouseDown(b);
+      expect(touches).toEqual(['Enter', 'Enter']);
     });
 
     it('posée pour toute l’application : un vrai clic sur un bouton passe d’abord par la règle (setup.ts, comme main.tsx)', () => {

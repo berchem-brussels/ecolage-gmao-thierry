@@ -403,6 +403,8 @@ export const translations: Record<string, Record<Lang, string>> = {
   'tache.action.remettre': { fr: 'Remettre à faire', nl: 'Terug naar te doen' },
   'tache.action.rouvrir': { fr: 'Rouvrir', nl: 'Heropenen' },
   // 0.21.0 (point 1, R5) : heures réelles d'une tâche.
+  'champ.calendrier.ouvrir': { fr: 'Ouvrir le calendrier', nl: 'De kalender openen' },
+  'champ.heures.ouvrir': { fr: 'Choisir l’heure', nl: 'Het uur kiezen' },
   'tache.heures.titre': { fr: 'Terminer la tâche', nl: 'De taak beëindigen' },
   'tache.heures.aide': { fr: 'La tâche n’a pas été démarrée dans l’application : indiquez quand le travail a commencé et quand il s’est terminé.', nl: 'De taak werd niet gestart in de toepassing: geef aan wanneer het werk begonnen en geëindigd is.' },
   'tache.heures.debut': { fr: 'Début du travail', nl: 'Begin van het werk' },

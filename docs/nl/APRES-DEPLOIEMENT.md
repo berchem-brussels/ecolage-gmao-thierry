@@ -1,8 +1,12 @@
 # Na de uitrol
 
-Versie van de toepassing: **0.21.1** · Bijgewerkt op 24/11/2026
+Versie van de toepassing: **0.21.2** · Bijgewerkt op 24/11/2026
 
 De Franse tekst is rechtsgeldig. Bijwerkingsprocedure: archief plaatsen, `cd <map>`, `ls -l` van het archief, `sudo bash backup.sh`, `sudo rm -rf backend frontend docs`, `sudo tar xzf … --strip-components=1`, `ls backend frontend`, `sudo docker compose build`, `sudo docker compose up -d`, `sudo docker compose ps`, `curl -sk https://localhost:<https>/api/version`, controlelijst van het leveringsbericht. `.env` en de volumes worden nooit aangeraakt.
+
+## 0.21.2 (24/11/2026)
+
+Correctie van de datumvelden (kalender via het pictogram op een pc; « De taak beëindigen » met één klik). Update via sectie 3, **zonder migratie, zonder nieuwe afhankelijkheid, zonder `demo.js`**. `sudo docker logs gmao-api --tail 30`: `[APP] API 0.21.2`, geen regel `[DB] Migration`. `sudo bash recette.sh`: 9/9. Terug naar 0.21.1: dezelfde commando's met haar archief, zonder de databank te herstellen.
 
 ## 0.21.1 (24/11/2026)
 

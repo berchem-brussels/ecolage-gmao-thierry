@@ -1,6 +1,10 @@
 # Architecture
 
-Application version: **0.21.1** · The French text prevails (`docs/fr/ARCHITECTURE.md`); this file summarises each version.
+Application version: **0.21.2** · The French text prevails (`docs/fr/ARCHITECTURE.md`); this file summarises each version.
+
+## Date fields: calendar through the icon on a PC (0.21.2)
+
+`components/ChampDate.tsx` (`ChampDate`, `ChampHeure`, `ChampPeriode`) replaces the direct use of `DatePicker`, `TimePicker` and `RangePicker`: on a PC the calendar stays hidden until asked for through the icon or Alt+Down; original behaviour on touch screens. `installerSaisieDate()` also listens to `pointerdown` and `mousedown`.
 
 ## Typed dates and times kept before sending (0.21.1)
 

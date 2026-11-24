@@ -23,7 +23,8 @@
  * motif d'un ticket n'est plus écrit au journal (D8) : « Motif donné : Oui ».
  */
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Button, Card, DatePicker, Descriptions, Grid, Radio, Select, Space, Table, Tag, Typography, message } from 'antd';
+import { Button, Card, Descriptions, Grid, Radio, Select, Space, Table, Tag, Typography, message } from 'antd';
+import { ChampPeriode } from '../components/ChampDate';
 import { ClearOutlined } from '@ant-design/icons';
 import { useSearchParams } from 'react-router-dom';
 import dayjs, { type Dayjs } from 'dayjs';
@@ -290,7 +291,7 @@ export default function JournalPage() {
           <Select allowClear showSearch optionFilterProp="label" style={{ minWidth: 160, maxWidth: '100%' }} aria-label={t('audit.filtre.entite')}
             placeholder={t('audit.filtre.entite')} value={f.entite_id ? Number(f.entite_id) : undefined}
             options={entites.map((e) => ({ value: e.id, label: `${e.code} · ${tField(e as unknown as Record<string, unknown>, 'nom')}` }))} onChange={(v) => set({ entite: v ? String(v) : undefined })} />
-          <DatePicker.RangePicker aria-label={t('audit.filtre.periode')} format="L" allowEmpty={[true, true]}
+          <ChampPeriode aria-label={t('audit.filtre.periode')} format="L" allowEmpty={[true, true]}
             value={[f.du ? dayjs(f.du) : null, f.au ? dayjs(f.au) : null]}
             onChange={(v) => set({ du: v?.[0] ? (v[0] as Dayjs).format('YYYY-MM-DD') : undefined, au: v?.[1] ? (v[1] as Dayjs).format('YYYY-MM-DD') : undefined })} />
           <Radio.Group optionType="button" value={f.channel} onChange={(e) => set({ canal: e.target.value || undefined })}

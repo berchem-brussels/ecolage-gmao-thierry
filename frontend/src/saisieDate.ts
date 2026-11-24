@@ -23,6 +23,12 @@ import type { Dayjs } from 'dayjs';
  * Un texte que rc-picker refuse (format faux, date interdite) n'est pas retenu : le composant garde l'ancienne valeur et
  * remet l'ancien texte deux images plus tard. Le formulaire qui enregistre des heures vérifie donc, avant l'envoi, que le
  * texte affiché au moment du clic est bien la valeur retenue (texteNonRetenu) ; sinon rien ne part et le champ le dit.
+ *
+ * 0.21.2 (recette de la 0.21.1 sur NIXUS, DV-177) : un vrai clic de souris fait perdre le focus au champ dès l'appui du
+ * bouton, avant l'événement « click » ; la règle ne s'appliquait donc qu'aux clics pilotés. Le premier clic sur
+ * « Terminer » partait avec l'ancienne valeur, était refusé en silence, puis la valeur tapée arrivait : il fallait cliquer
+ * deux fois. La règle s'applique maintenant dès l'appui (pointerdown, mousedown). Le calendrier ne s'affiche plus de
+ * lui-même sur PC (components/ChampDate.tsx).
  */
 export function ecranTactile(): boolean {
   return typeof window !== 'undefined' && typeof window.matchMedia === 'function' && window.matchMedia('(pointer: coarse)').matches;
@@ -30,11 +36,6 @@ export function ecranTactile(): boolean {
 
 export function entreeSansEnvoi(e: KeyboardEvent): void {
   if (e.key === 'Enter') e.preventDefault();
-}
-
-/** Propriétés à étaler sur un DatePicker ou un TimePicker d'un formulaire. */
-export function saisieDate(): { inputReadOnly: boolean; onKeyDown: (e: KeyboardEvent) => void } {
-  return { inputReadOnly: ecranTactile(), onKeyDown: entreeSansEnvoi };
 }
 
 /** Champ de date ou d'heure d'Ant Design (rc-picker) qui a le focus, s'il y en a un. */
@@ -83,6 +84,7 @@ let installe = false;
 export function installerSaisieDate(doc: Document = document): void {
   if (installe && doc === document) return;
   if (doc === document) installe = true;
-  doc.addEventListener('click', retenirSaisieAvant, true);
-  doc.addEventListener('submit', retenirSaisieAvant, true);
+  // 0.21.2 (DV-177) : dès l'appui (pointerdown, mousedown), avant que le champ ne perde le focus ; le clic et l'envoi
+  // restent pour un clic piloté par la page ou l'assistance, sans appui.
+  for (const ev of ['pointerdown', 'mousedown', 'click', 'submit']) doc.addEventListener(ev, retenirSaisieAvant, true);
 }

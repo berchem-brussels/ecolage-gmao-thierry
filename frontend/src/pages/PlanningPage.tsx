@@ -17,7 +17,7 @@
  *   après un déplacement, les conflits rendus par le serveur s'affichent sans bloquer.
  */
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Alert, Button, Card, DatePicker, Grid, Modal, Segmented, Select, Space, Spin, Tag, Typography, message, theme } from 'antd';
+import { Alert, Button, Card, Grid, Modal, Segmented, Select, Space, Spin, Tag, Typography, message, theme } from 'antd';
 import { CalendarOutlined, LeftOutlined, RightOutlined, SwapOutlined, WarningOutlined } from '@ant-design/icons';
 import { Link, useSearchParams } from 'react-router-dom';
 import dayjs, { type Dayjs } from 'dayjs';
@@ -26,7 +26,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useI18n } from '../contexts/I18nContext';
 import { duree } from '../demandes';
 import { type Conflit, type ConflitAffectation, texteConflits } from '../planning';
-import { saisieDate } from '../saisieDate';
+import { ChampDate } from '../components/ChampDate';
 import { hasPermission, useRoles } from '../useRoles';
 import PageHeader from '../components/PageHeader';
 
@@ -312,7 +312,7 @@ export default function PlanningPage() {
           <Space direction="vertical" style={{ width: '100%' }}>
             <Typography.Text>{aDeplacer.tache.titre}</Typography.Text>
             <label htmlFor="planning-date">{t('planning.vers_jour')}</label>
-            <DatePicker id="planning-date" format="DD/MM/YYYY" value={cibleDate} onChange={setCibleDate} allowClear={false} style={{ width: '100%' }} {...saisieDate()} />
+            <ChampDate id="planning-date" format="DD/MM/YYYY" value={cibleDate} onChange={(d) => setCibleDate(d as Dayjs | null)} allowClear={false} style={{ width: '100%' }} />
             <label htmlFor="planning-ligne">{t(lignesPar === 'equipes' ? 'planning.vers_equipe' : 'planning.vers_ouvrier')}</label>
             <Select<string> id="planning-ligne" value={cibleLigne ?? undefined} onChange={setCibleLigne} showSearch optionFilterProp="label" style={{ width: '100%' }}
               disabled={lignesPar === 'ouvriers' && !!aDeplacer.tache.equipe_id}

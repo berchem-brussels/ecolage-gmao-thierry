@@ -2,6 +2,10 @@
 
 The French text (`docs/fr/SECURITE.md`) prevails and holds the full grid per version.
 
+## 0.21.2 (24/11/2026)
+
+Fix after the 0.21.1 acceptance test on NIXUS: on a PC, the calendar opened as soon as a date field was touched and covered what follows; in « Terminer la tâche », a click on the end field landed in the hours of the start calendar and silently changed the start. Also, a real mouse click removes the focus on press: the 0.21.1 rule only worked for scripted clicks. Fixes: `ChampDate.tsx` for every date, time and period field (calendar through the icon or Alt+Down on a PC, original behaviour on touch screens) and `installerSaisieDate()` also listens to `pointerdown` and `mousedown`. Tested with real mouse clicks in Chromium and WebKit; failure proofs in `docs/fr/SECURITE.md`.
+
 ## 0.21.1 (24/11/2026)
 
 Fix of the 0.21.0 acceptance-test anomaly: in « Terminer la tâche », a time typed without Enter, then sent without the field losing focus, saved the prefilled time instead of the displayed one. Rule for the whole application (`saisieDate.ts`): before any click or form submission from outside the field, the focused date or time field receives Enter, then loses focus; the window refuses to send a text the field did not accept. Tested: displayed time sent; invalid text blocked; failure proofs in the French text. No migration, no new route, dependency or permission.

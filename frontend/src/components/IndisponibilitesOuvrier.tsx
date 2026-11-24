@@ -9,13 +9,13 @@
  *   reste. Champs en 16 px et dates au calendrier sur téléphone (saisieDate).
  */
 import { useCallback, useEffect, useState } from 'react';
-import { Alert, Button, Card, DatePicker, Form, List, Popconfirm, Radio, Space, Typography, message } from 'antd';
+import { Alert, Button, Card, Form, List, Popconfirm, Radio, Space, Typography, message } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
 import dayjs, { type Dayjs } from 'dayjs';
 import api, { ApiError, qs } from '../api';
 import { useI18n } from '../contexts/I18nContext';
 import { dateSouhaitee } from '../demandes';
-import { saisieDate } from '../saisieDate';
+import { ChampDate } from './ChampDate';
 
 export interface Indisponibilite { id: number; user_id: number; du: string; au: string; periode: 'journee' | 'matin' | 'apres_midi'; motif?: 'conge' | 'formation' | 'autre' }
 /** Groupe de boutons nommé par aria-label : le type d'Ant Design refuse role en propriété directe (DV-145). */
@@ -75,11 +75,11 @@ export default function IndisponibilitesOuvrier({ ouvrierId, gerer }: { ouvrierI
         <Form<Saisie> form={form} layout="vertical" onFinish={enregistrer} requiredMark="optional" className="indispo-form" style={{ marginBottom: 12 }}>
           <Space wrap size={[16, 0]} align="start">
             <Form.Item name="du" label={t('indispo.field.du')} tooltip={hint('indispo.du')} rules={[{ required: true, message: t('form.obligatoire') }]}>
-              <DatePicker format="DD/MM/YYYY" {...saisieDate()} />
+              <ChampDate format="DD/MM/YYYY" />
             </Form.Item>
             <Form.Item name="au" label={t('indispo.field.au')} tooltip={hint('indispo.au')} dependencies={['du']}
               rules={[({ getFieldValue }) => ({ validator: (_, v: Dayjs | null) => (!v || !getFieldValue('du') || !v.isBefore(getFieldValue('du'), 'day') ? Promise.resolve() : Promise.reject(new Error(t('indispo.ordre')))) })]}>
-              <DatePicker format="DD/MM/YYYY" {...saisieDate()} />
+              <ChampDate format="DD/MM/YYYY" />
             </Form.Item>
           </Space>
           <Form.Item name="periode" label={t('indispo.field.periode')} tooltip={hint('indispo.periode')}>

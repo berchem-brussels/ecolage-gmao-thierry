@@ -2,6 +2,10 @@
 
 De Franse tekst (`docs/fr/SECURITE.md`) is rechtsgeldig en bevat het volledige rooster per versie.
 
+## 0.21.2 (24/11/2026)
+
+Correctie na de test van 0.21.1 op NIXUS: op een pc opende de kalender zodra men een datumveld aanraakte en bedekte hij wat volgt; in « De taak beëindigen » viel een klik op « Einde van het werk » in de uren van de kalender van het begin en wijzigde hij het begin ongemerkt. Bovendien verliest een echte muisklik de focus al bij het indrukken: de regel van 0.21.1 gold alleen voor gestuurde klikken. Correcties: `ChampDate.tsx` voor alle datum-, uur- en periodevelden (kalender via het pictogram of Alt+Pijl omlaag op een pc, oorspronkelijk gedrag op een aanraakscherm) en `installerSaisieDate()` luistert ook naar `pointerdown` en `mousedown`. Getest met echte muisklikken in Chromium en WebKit; bewijzen van falen in `docs/fr/SECURITE.md`.
+
 ## 0.21.1 (24/11/2026)
 
 Correctie van de anomalie van de test van 0.21.0: in « De taak beëindigen » bewaarde een getypt uur zonder Enter, verstuurd zonder dat het veld de focus verloor, het vooraf ingevulde uur in plaats van het getoonde. Regel voor de hele toepassing (`saisieDate.ts`): vóór elke klik of verzending van buiten het veld krijgt het actieve datum- of uurveld Enter en verliest het de focus; het venster weigert een tekst die het veld niet aanvaardde. Getest: getoond uur verzonden; ongeldige tekst tegengehouden; faalbewijzen in de Franse tekst. Geen migratie, geen nieuwe route, afhankelijkheid of permissie.
