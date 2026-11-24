@@ -1,8 +1,12 @@
 # After deployment
 
-Application version: **0.21.0** · Updated on 20/11/2026
+Application version: **0.21.1** · Updated on 24/11/2026
 
 The French text prevails. Update procedure: upload the archive, `cd <folder>`, `ls -l` the archive, `sudo bash backup.sh`, `sudo rm -rf backend frontend docs`, `sudo tar xzf … --strip-components=1`, `ls backend frontend`, `sudo docker compose build`, `sudo docker compose up -d`, `sudo docker compose ps`, `curl -sk https://localhost:<https>/api/version`, checklist from the delivery message. `.env` and the volumes are never touched.
+
+## 0.21.1 (24/11/2026)
+
+Fix of the « Terminer la tâche » window (typed time kept before sending). Update through section 3, **without migration, without new dependency, without `demo.js`**. `sudo docker logs gmao-api --tail 30`: `[APP] API 0.21.1`, no `[DB] Migration` line. `sudo bash recette.sh`: 9/9. Rollback to 0.21.0: same commands with its archive, without restoring the database.
 
 ## 0.21.0 (20/11/2026)
 

@@ -2,6 +2,10 @@
 
 De Franse tekst (`docs/fr/SECURITE.md`) is rechtsgeldig en bevat het volledige rooster per versie.
 
+## 0.21.1 (24/11/2026)
+
+Correctie van de anomalie van de test van 0.21.0: in « De taak beëindigen » bewaarde een getypt uur zonder Enter, verstuurd zonder dat het veld de focus verloor, het vooraf ingevulde uur in plaats van het getoonde. Regel voor de hele toepassing (`saisieDate.ts`): vóór elke klik of verzending van buiten het veld krijgt het actieve datum- of uurveld Enter en verliest het de focus; het venster weigert een tekst die het veld niet aanvaardde. Getest: getoond uur verzonden; ongeldige tekst tegengehouden; faalbewijzen in de Franse tekst. Geen migratie, geen nieuwe route, afhankelijkheid of permissie.
+
 ## 0.21.0 (20/11/2026)
 
 Werkelijke uren van de taken, afwezigheden van de arbeiders, planning per week en dag, niet-geplande taken en conflicten, datum aangekondigd aan de aanvrager, correcties van de test van 0.20.0. Getest: afwezigheden en planning van een andere entiteit geweigerd of leeg, via de API en de MCP; afwezigheid van een arbeider van beide entiteiten, genoteerd in de andere: zonder gevolg; reden van een afwezigheid nooit in het logboek en enkel getoond aan de beheerder en de verantwoordelijke; werkelijke uren nooit in de toekomst, einde na begin; migratie `018_planning` op een basis 0.20.0, terugkeer naar 0.20.0 geprobeerd. Bewijzen van falen: elf beschermingen, zie de Franse tekst. Telefooncontrole: 66 schermen zonder fout. Geen nieuwe afhankelijkheid.

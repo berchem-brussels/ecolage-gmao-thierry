@@ -2,7 +2,7 @@ import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { KeyboardEvent } from 'react';
-import { ecranTactile, entreeSansEnvoi, saisieDate } from '../saisieDate';
+import { champDateActif, ecranTactile, entreeSansEnvoi, retenirSaisieAvant, saisieDate } from '../saisieDate';
 
 /**
  * 0.21.0, point 0, R1 (DV-164) : une date tapée au clavier puis Entrée envoyait l'affectation sans la date.
@@ -63,4 +63,48 @@ describe('Champs de date et d’heure (R1)', () => {
     }
     expect(fautes).toEqual([]);
   });
+
+  // 0.21.1 (DV-173) : texte tapé retenu avant un clic ou un envoi qui ne passe pas par le champ (scénario complet de
+  // « Terminer la tâche » dans demandes.test.tsx, et rejoué dans Chromium et WebKit sur la copie locale).
+  describe('texte tapé retenu avant un clic ou un envoi (0.21.1)', () => {
+    const monter = () => {
+      document.body.innerHTML = '<form><div class="ant-picker"><input id="d" /></div><button id="b" type="button">OK</button></form>'
+        + '<div class="ant-picker-dropdown"><button id="cellule" type="button">12</button></div>';
+      const champ = document.getElementById('d') as HTMLInputElement;
+      const touches: string[] = [];
+      champ.addEventListener('keydown', (e) => touches.push((e as unknown as { key: string }).key));
+      return { champ, touches };
+    };
+    afterEach(() => { document.body.innerHTML = ''; });
+
+    it('champ de date actif : Entrée lui est envoyée puis il perd le focus, avant le clic', () => {
+      const { champ, touches } = monter();
+      champ.focus();
+      expect(champDateActif()).toBe(champ);
+      const b = document.getElementById('b') as HTMLButtonElement;
+      retenirSaisieAvant({ target: b } as unknown as Event);
+      expect(touches).toEqual(['Enter']);
+      expect(document.activeElement).not.toBe(champ);
+    });
+
+    it('rien quand aucun champ de date n’a le focus, ni pour un clic dans le champ ou son calendrier', () => {
+      const { champ, touches } = monter();
+      retenirSaisieAvant({ target: document.getElementById('b') } as unknown as Event);
+      champ.focus();
+      retenirSaisieAvant({ target: champ } as unknown as Event);
+      retenirSaisieAvant({ target: document.getElementById('cellule') } as unknown as Event);
+      expect(touches).toEqual([]);
+      expect(document.activeElement).toBe(champ);
+    });
+
+    it('posée pour toute l’application : un vrai clic sur un bouton passe d’abord par la règle (setup.ts, comme main.tsx)', () => {
+      const { champ, touches } = monter();
+      champ.focus();
+      (document.getElementById('b') as HTMLButtonElement).click();
+      expect(touches).toEqual(['Enter']);
+      const main = readFileSync(join(__dirname, '..', 'main.tsx'), 'utf8');
+      expect(main).toMatch(/installerSaisieDate\(\)/);
+    });
+  });
 });
+

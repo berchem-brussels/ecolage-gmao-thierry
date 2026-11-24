@@ -1,6 +1,6 @@
 # Architecture
 
-Version 0.21.0 · Le français fait foi.
+Version 0.21.1 · Le français fait foi.
 
 ## Services
 
@@ -412,3 +412,8 @@ Repris du gabarit 1.3.0 (`services/tickets.js`, `routes/tickets.js`, schémas, n
 - `has_photo` (0 ou 1) de `GET /api/lieux` et de `list_lieux` ; case « Sans photo (n) » de `PatrimoinePage.tsx`, calculée sur l'arbre déjà chargé, filtre `?photo=sans` gardé dans l'adresse.
 - Journal d'audit : `noms.cle` (réglage de l'instance ou de l'entité, nommé par le catalogue, sans requête) et type d'un lieu (`listes_valeurs`) dans `services/journal.js` ; `CODES_FAMILLE`, `CHAMPS_FAMILLE`, rôles par le catalogue et titre de fiche pour `topic_id` dans `JournalPage.tsx` ; `motif_donne` à la place du motif d'un ticket (E-46).
 - En-tête des téléphones (`AppLayout.tsx`, sous 768 px) : la langue passe dans le menu de la personne ; contrôle `npm run mobile:check` (`frontend/mobile-check/verifier-mobile.mjs`, Playwright, développement seulement).
+
+## Dates et heures tapées retenues avant l'envoi (0.21.1)
+
+- `saisieDate.ts` : `installerSaisieDate()`, appelée une fois dans `main.tsx` (et dans `test/setup.ts` pour les tests), écoute en capture `click` et `submit` sur le document ; quand un champ de date ou d'heure (rc-picker) a encore le focus et que l'événement vient d'ailleurs (ni le champ, ni son calendrier), elle envoie Entrée au champ (rc-picker retient tout de suite un texte valide ; la seule perte du focus ne le retient que deux images plus tard, après la lecture des valeurs) puis lui retire le focus. L'Entrée simulée n'envoie jamais un formulaire.
+- `texteNonRetenu(id, valeur, format)` compare le texte affiché au moment du clic (gardé deux secondes) à la valeur retenue ; « Terminer la tâche » (`TachesDemande.tsx`, formulaire nommé `tache-heures`, champs `tache-heures_debut` et `tache-heures_fin`) refuse l'envoi quand ils diffèrent (« Date ou heure non retenue »).

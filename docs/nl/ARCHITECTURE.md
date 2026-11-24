@@ -1,6 +1,10 @@
 # Architectuur
 
-Versie van de toepassing: **0.21.0** · De Franse tekst is rechtsgeldig (`docs/fr/ARCHITECTURE.md`); dit bestand vat elke versie samen.
+Versie van de toepassing: **0.21.1** · De Franse tekst is rechtsgeldig (`docs/fr/ARCHITECTURE.md`); dit bestand vat elke versie samen.
+
+## Getypte datums en uren bewaard vóór het verzenden (0.21.1)
+
+`saisieDate.ts`: `installerSaisieDate()` (één keer opgeroepen in `main.tsx`) luistert in de capture-fase naar `click` en `submit` op het document; heeft een datum- of uurveld (rc-picker) nog de focus en komt de gebeurtenis van elders, dan krijgt het veld Enter (rc-picker bewaart een geldige tekst meteen; enkel de focus verliezen bewaart hem pas twee beelden later, te laat) en verliest het de focus. `texteNonRetenu()` vergelijkt de tekst die bij de klik getoond werd met de bewaarde waarde; « De taak beëindigen » verzendt niet als ze verschillen.
 
 ## Werkelijke uren, afwezigheden, planning, conflicten en aangekondigde datum (0.21.0)
 

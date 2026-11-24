@@ -2,6 +2,25 @@
 
 Le français fait foi. Grille de la section 10.2 du standard, rejouée à chaque version. « Non joué » veut dire que le contrôle n'a pas tourné.
 
+## 0.21.1 (24/11/2026)
+
+Correctif de l'anomalie de la recette de la 0.21.0 (DV-173) : dans « Terminer la tâche », une heure tapée sans Entrée puis un envoi sans que le champ perde le focus enregistrait l'heure préremplie (maintenant) au lieu de l'heure affichée, sans erreur. Reproduit sur la copie locale dans Chromium et WebKit (fin affichée 09:00, envoyée 09:55). Règle pour toute l'application (`saisieDate.ts`, posée dans `main.tsx`) : avant tout clic et tout envoi venus d'ailleurs que du champ, le champ de date ou d'heure actif reçoit Entrée (texte valide retenu) puis perd le focus ; la fenêtre « Terminer la tâche » refuse l'envoi quand le texte affiché au moment du clic n'est pas la valeur retenue (« Date ou heure non retenue »). Aucune migration, aucune route, aucune dépendance, aucune permission nouvelle ; serveur inchangé hors numéro de version et note.
+
+| Famille | Contrôle | Résultat |
+| --- | --- | --- |
+| Validation | Ce qui part est ce qui est affiché : heure tapée retenue avant l'envoi ; texte non retenu (format faux, date future) bloqué à l'écran ; le serveur garde ses contrôles (fin après début, jamais dans le futur) | Conforme (`demandes.test.tsx`, `saisie-date.test.ts`, copie locale) |
+| Données | Plus d'heure réelle enregistrée différente de celle affichée | Conforme |
+| Interface | `mobile:check` complet rejoué (la règle agit sur tous les clics) | Voir `ETAT.md` |
+| Secrets, infrastructure, dépendances | Inchangés | Conforme |
+
+Preuves d'échec :
+
+| Protection retirée | Échec constaté |
+| --- | --- |
+| Règle posée au démarrage (`installerSaisieDate` retirée de `setup.ts`) | `demandes.test.tsx` : fin envoyée à l'heure préremplie au lieu de 10:30 |
+| Perte du focus seule, sans Entrée (premier essai) | `demandes.test.tsx` : même échec (rc-picker ne retient le texte que deux images plus tard) |
+| Contrôle du texte non retenu dans « Terminer la tâche » | `demandes.test.tsx` : heure impossible envoyée avec l'heure préremplie |
+
 ## 0.21.0 (20/11/2026)
 
 Étape 17 : remarques de la recette 0.20.0 (saisie des dates, bouton « Modifier la qualification », journal) ; heures réelles des tâches ; indisponibilités des ouvriers ; planning semaine et jour ; tâches non planifiées et conflits ; date annoncée au demandeur. Environnement : bac à sable de Claude, Node 22 ; parcours `ci.yml` rejoué sous Node 20.20.2 ; copie locale (API Node en production et relais HTTPS) partie d'une base de la 0.20.0.

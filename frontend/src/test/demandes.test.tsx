@@ -1425,6 +1425,48 @@ describe('tâches d’une demande, fiche du service technique (0.20.0, point 1 ;
     fireEvent.click(within(within(section).getByRole('group', { name: 'Tâche 2' })).getByRole('button', { name: 'Terminer' }));
     await waitFor(() => expect(posts.find((p) => p.url === '/api/taches/6/etat')?.body).toEqual({ etat: 'terminee' }));
   });
+  it('0.21.1 (DV-173) : fin tapée sans Entrée puis « Terminer » sans quitter le champ : la fin envoyée est celle affichée', async () => {
+    ficheData = fiche({ taches: [tache(5, 1, 'a_faire')] });
+    reponsePost = { status: 200, json: { data: { ...tache(5, 1, 'terminee'), demande_etat: 'qualifiee', demande_passage_auto: null }, meta: { envelope: 1 } } };
+    const d = await ouvrir();
+    const section = await within(d).findByRole('region', { name: 'Tâches (1)' });
+    fireEvent.click(within(within(section).getByRole('group', { name: 'Tâche 1' })).getByRole('button', { name: 'Terminer' }));
+    const fenetre = (await screen.findByText('Terminer la tâche · Tâche 1')).closest('.ant-modal') as HTMLElement;
+    const [champDebut, champFin] = within(fenetre).getAllByRole('textbox') as HTMLInputElement[];
+    const hier = dayjs().subtract(1, 'day');
+    // Début changé et retenu par Entrée ; fin tapée, sans Entrée, le champ gardant le focus.
+    champDebut.focus(); fireEvent.mouseDown(champDebut);
+    fireEvent.change(champDebut, { target: { value: `${hier.format('DD/MM/YYYY')} 08:00` } });
+    fireEvent.keyDown(champDebut, { key: 'Enter' });
+    champFin.focus(); fireEvent.mouseDown(champFin);
+    fireEvent.change(champFin, { target: { value: `${hier.format('DD/MM/YYYY')} 10:30` } });
+    expect(document.activeElement).toBe(champFin);
+    // Bouton activé sans que le champ perde d'abord le focus (clic piloté par la page).
+    (within(fenetre).getByRole('button', { name: 'Terminer' }) as HTMLButtonElement).click();
+    await waitFor(() => expect(posts.find((p) => p.url === '/api/taches/5/etat')?.body).toEqual({
+      etat: 'terminee', debut: hier.hour(8).minute(0).second(0).millisecond(0).toISOString(), fin: hier.hour(10).minute(30).second(0).millisecond(0).toISOString() }));
+    expect(champFin.value).toBe(`${hier.format('DD/MM/YYYY')} 10:30`);
+  });
+
+  it('0.21.1 (DV-173) : texte non retenu (heure impossible) au moment du clic : rien ne part, le champ le dit', async () => {
+    ficheData = fiche({ taches: [tache(5, 1, 'a_faire')] });
+    const d = await ouvrir();
+    const section = await within(d).findByRole('region', { name: 'Tâches (1)' });
+    fireEvent.click(within(within(section).getByRole('group', { name: 'Tâche 1' })).getByRole('button', { name: 'Terminer' }));
+    const fenetre = (await screen.findByText('Terminer la tâche · Tâche 1')).closest('.ant-modal') as HTMLElement;
+    const [champDebut, champFin] = within(fenetre).getAllByRole('textbox') as HTMLInputElement[];
+    expect(champDebut.id).toBe('tache-heures_debut');
+    expect(champFin.id).toBe('tache-heures_fin');
+    const hier = dayjs().subtract(1, 'day').format('DD/MM/YYYY');
+    champDebut.focus(); fireEvent.mouseDown(champDebut);
+    fireEvent.change(champDebut, { target: { value: `${hier} 08:00` } });
+    fireEvent.keyDown(champDebut, { key: 'Enter' });
+    champFin.focus(); fireEvent.mouseDown(champFin);
+    fireEvent.change(champFin, { target: { value: `${hier} 99:99` } });
+    (within(fenetre).getByRole('button', { name: 'Terminer' }) as HTMLButtonElement).click();
+    expect(await within(fenetre).findByText(/Date ou heure non retenue/)).toBeInTheDocument();
+    expect(posts.some((p) => p.url === '/api/taches/5/etat')).toBe(false);
+  });
 });
 
 describe('photo de l’endroit sur la fiche d’une demande (0.13.0, point 5, DV-101)', () => {

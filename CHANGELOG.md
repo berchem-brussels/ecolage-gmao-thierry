@@ -1,6 +1,17 @@
 # Journal des versions
 
-Version de l'application : **0.21.0** · Mis à jour le 20/11/2026
+Version de l'application : **0.21.1** · Mis à jour le 24/11/2026
+
+## 0.21.1 (24/11/2026)
+
+Correctif de l'anomalie de la recette de la 0.21.0 (DV-173), en version séparée avant l'audit du cahier des charges (DV-174). Aucune migration, aucune dépendance, aucune permission, aucun réglage, aucun outil MCP nouveau.
+
+- Anomalie reproduite sur la copie locale (Chromium et WebKit) : dans « Terminer la tâche », une heure tapée sans Entrée puis un envoi sans perte du focus enregistrait l'heure préremplie (maintenant) au lieu de l'heure affichée, sans erreur ; rc-picker ne retient le texte tapé qu'à Entrée ou deux images après la perte du focus.
+- `saisieDate.ts` : `installerSaisieDate()` (appelée dans `main.tsx` et `test/setup.ts`) écoute en capture `click` et `submit` ; le champ de date ou d'heure actif reçoit Entrée puis perd le focus avant tout clic ou envoi venu d'ailleurs ; `texteNonRetenu()` compare le texte affiché au moment du clic à la valeur retenue.
+- `TachesDemande.tsx` : formulaire `tache-heures` nommé (champs `tache-heures_debut`, `tache-heures_fin`), format commun `FORMAT_HEURES` ; un texte non retenu bloque l'envoi avec « Date ou heure non retenue » (`tache.heures.illisible`, FR et NL).
+- Aide : « Demandes de l'entité », problème fréquent « Date ou heure non retenue ».
+- Note de version : une ligne pour le service technique (`demandes:traiter`), une pour l'administrateur.
+- Tests : serveur 697 (note 0.21.1), interface 394 (+1) : `demandes.test.tsx` (heure tapée sans Entrée envoyée telle qu'affichée ; texte non retenu bloqué), `saisie-date.test.ts` (règle commune, trois tests).
 
 ## 0.21.0 (20/11/2026)
 
