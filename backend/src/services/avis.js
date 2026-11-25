@@ -32,6 +32,9 @@
  *      service technique de l'entité. Contrôle dans l'API au démarrage et toutes les 15 minutes, sans tâche planifiée.
  *      Au passage en 0.17.0, les retards déjà là sont notés comme signalés sans avis (rattraper) : pas de rafale le jour
  *      de la mise à jour ; le tableau de bord les compte toujours.
+ *   9. Demande nouvelle (0.21.3, DV-180) : à son arrivée au service technique (dépôt sans validation, danger, encodage ;
+ *      validation du chef), avis au gestionnaire et au responsable de l'entité, cloche et courriel ; un danger porte la
+ *      variante « danger » (priorité absolue), qui ne pourra pas être désactivée quand les préférences viendront (NOT-03).
  *   5. Contenu minimal (NOT-06) : numéro, lieu, état et délai dans la langue de la personne qui reçoit (LNG-05), lien vers
  *      son écran ; jamais la description, un commentaire, un motif ni un nom.
  */
@@ -118,6 +121,19 @@ function depot(db, { demandeId, validation, auteurId }) {
     const chefs = require('./services').valideurs(d.service_id).map((userId) => ({ userId, lien: lienValideur(d.id) }));
     avertir(db, { evenement: validation === 'danger' ? 'demande.danger_sans_validation' : 'demande.validation_demandee', d, auteurId, destinataires: chefs });
   }
+  if (d.etat === 'a_qualifier') nouvelleAuService(db, d, auteurId);
+}
+
+/**
+ * Règle 9 (0.21.3, audit M-02 ; DEM-06, NOT-01, DV-180) : une demande qui arrive au service technique (dépôt direct,
+ * danger, encodage, puis plus tard la GRC ; ou validation du chef de service) avertit le gestionnaire et le responsable
+ * de l'entité (« demandes:traiter »), cloche et courriel ; variante « danger » en priorité absolue. Pas l'auteur de
+ * l'action (encodage par un gestionnaire : ses collègues seulement).
+ */
+function nouvelleAuService(db, d, auteurId) {
+  avertir(db, { evenement: 'demande.nouvelle', d, auteurId,
+    destinataires: equipeService(db, d.entite_id).filter((userId) => userId !== auteurId)
+      .map((userId) => ({ userId, lien: lienService(d.id), variante: d.danger ? 'danger' : 'defaut' })) });
 }
 
 /** Personnes qui suivent la demande (« Moi aussi » ou abonnement). */
@@ -131,8 +147,10 @@ function changement(db, { demandeId, de, vers, auteurId }) {
     db.prepare("UPDATE notifications SET lue_le = datetime('now') WHERE objet = 'demande' AND objet_id = ? AND evenement = 'demande.validation_demandee' AND lue_le IS NULL").run(d.id);
   }
   const concernes = [{ userId: d.demandeur_id, lien: lienDemandeur(d.id) }, { userId: d.beneficiaire_id, lien: lienDemandeur(d.id) }];
-  if (de === 'en_validation' && vers === 'a_qualifier') avertir(db, { evenement: 'demande.validee', d, auteurId, destinataires: concernes });
-  else if (de === 'en_validation' && vers === 'refusee_validation') avertir(db, { evenement: 'demande.refusee_validation', d, auteurId, destinataires: concernes });
+  if (de === 'en_validation' && vers === 'a_qualifier') {
+    avertir(db, { evenement: 'demande.validee', d, auteurId, destinataires: concernes });
+    nouvelleAuService(db, d, auteurId);
+  } else if (de === 'en_validation' && vers === 'refusee_validation') avertir(db, { evenement: 'demande.refusee_validation', d, auteurId, destinataires: concernes });
   else if (ETATS_AVIS.has(vers)) {
     // La variante (état d'arrivée) choisit le texte de la cloche ; le courriel prend le modèle « demande.etat ».
     const tous = [...concernes, ...suiveurs(db, d.id).map((userId) => ({ userId, lien: lienDemandeur(d.id) }))].map((x) => ({ ...x, variante: vers }));

@@ -55,9 +55,11 @@ interface ContenuBrouillon {
 interface Brouillon { entite_id: number; contenu: ContenuBrouillon; updated_at: string }
 import ErreurObligatoire from '../components/ErreurObligatoire';
 import { seulementEspaces } from '../validation';
+import { useSaisieRetenue } from '../components/ChampDate';
 
 export default function NouvelleDemandePage({ encoder = false }: { encoder?: boolean }) {
   const { t, lang } = useI18n();
+  const verifierSaisie = useSaisieRetenue();
   const { user, entite, refresh } = useAuth();
   const [lieu, setLieu] = useState<LieuChoisi | null>(encoder ? null : user?.lieu_propose || null);
   const [encodage, setEncodage] = useState<Encodage>(ENCODAGE_VIDE);
@@ -170,6 +172,7 @@ export default function NouvelleDemandePage({ encoder = false }: { encoder?: boo
 
   const envoyer = async () => {
     if (manque.length || !lieu || !categorie) return;
+    if (await verifierSaisie()) return; // 0.21.3 (DV-176) : date ou heure tapée non retenue : rien ne part.
     setEnvoi(true);
     setErreur(null);
     try {

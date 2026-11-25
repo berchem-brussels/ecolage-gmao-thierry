@@ -18,7 +18,7 @@ import type { ArbreCategories, Categorie, PrioriteFiche } from '../../referentie
 import { type Demande, type LieuChoisi } from '../../demandes';
 import LieuPicker from './LieuPicker';
 import { obligatoire } from '../../validation';
-import { ChampDate } from '../ChampDate';
+import { ChampDate, useSaisieRetenue } from '../ChampDate';
 
 /** Rôle ARIA du groupe : Form.Item y pose aria-required, permis seulement sur un radiogroup (axe-core). */
 const GROUPE_RADIO = { role: 'radiogroup' } as Record<string, string>;
@@ -28,6 +28,7 @@ interface Valeurs { corps_metier_id?: number | null; priorite: string; motif_pri
 
 export default function QualificationForm({ d, onDone, onCancel }: { d: Demande; onDone: (d: Demande) => void; onCancel: () => void }) {
   const { t, lang, hint } = useI18n();
+  const verifierSaisie = useSaisieRetenue();
   const [form] = Form.useForm<Valeurs>();
   const [arbre, setArbre] = useState<Categorie[] | null>(null);
   const [priorites, setPriorites] = useState<PrioriteFiche[]>([]);
@@ -75,6 +76,7 @@ export default function QualificationForm({ d, onDone, onCancel }: { d: Demande;
   };
 
   const envoyer = async (v: Valeurs) => {
+    if (await verifierSaisie()) return; // 0.21.3 (DV-176) : date ou heure tapée non retenue : rien ne part.
     if (!lieu) return;
     setEnvoi(true);
     setErreur(null);

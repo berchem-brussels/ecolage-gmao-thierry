@@ -2,6 +2,10 @@
 
 The French text (`docs/fr/SECURITE.md`) prevails and holds the full grid per version.
 
+## 0.21.3 (25/11/2026)
+
+Fix from the specification audit: a reopened or on-hold request now reaches « Work finished » with its last task; a task of a request still to qualify does not start; the technical department is notified of every new request (only that department of the entity, never the author, without description); Alt+ArrowDown reopens the calendar after Escape; the calendar icon is on the left (a click no longer clears a filled field); an unretained typed date or time blocks saving in every form. Failure proofs in the French text.
+
 ## 0.21.2 (24/11/2026)
 
 Fix after the 0.21.1 acceptance test on NIXUS: on a PC, the calendar opened as soon as a date field was touched and covered what follows; in « Terminer la tâche », a click on the end field landed in the hours of the start calendar and silently changed the start. Also, a real mouse click removes the focus on press: the 0.21.1 rule only worked for scripted clicks. Fixes: `ChampDate.tsx` for every date, time and period field (calendar through the icon or Alt+Down on a PC, original behaviour on touch screens) and `installerSaisieDate()` also listens to `pointerdown` and `mousedown`. Tested with real mouse clicks in Chromium and WebKit; failure proofs in `docs/fr/SECURITE.md`.

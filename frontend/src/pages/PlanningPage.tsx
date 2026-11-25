@@ -26,7 +26,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useI18n } from '../contexts/I18nContext';
 import { duree } from '../demandes';
 import { type Conflit, type ConflitAffectation, texteConflits } from '../planning';
-import { ChampDate } from '../components/ChampDate';
+import { ChampDate, useSaisieRetenue } from '../components/ChampDate';
 import { hasPermission, useRoles } from '../useRoles';
 import PageHeader from '../components/PageHeader';
 
@@ -54,6 +54,7 @@ const COULEUR = { a_faire: 'default', en_cours: 'processing', terminee: 'success
 
 export default function PlanningPage() {
   const { t, lang, hint } = useI18n();
+  const verifierSaisie = useSaisieRetenue();
   const { roles } = useAuth();
   const catalogue = useRoles();
   const peutDeplacer = hasPermission(catalogue, roles, 'demandes:traiter');
@@ -168,6 +169,7 @@ export default function PlanningPage() {
     setCibleLigne(lignes.some((l) => l.cle === ligne) ? ligne : 'aucun');
   };
   const confirmerDeplacer = async () => {
+    if (await verifierSaisie()) return; // 0.21.3 (DV-176) : date ou heure tapée non retenue : rien ne part.
     if (!aDeplacer || !cibleDate || !cibleLigne) return;
     const vers = lignes.find((l) => l.cle === cibleLigne);
     if (!vers) return;

@@ -9,7 +9,7 @@
  */
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Alert, Button, Card, Form, Grid, Input, Modal, Radio, Select, Space, Table, Tag, Typography, Drawer, List, message } from 'antd';
-import { ChampDate } from '../components/ChampDate';
+import { ChampDate, useSaisieRetenue } from '../components/ChampDate';
 import { PlusOutlined } from '@ant-design/icons';
 import dayjs, { type Dayjs } from 'dayjs';
 import api, { ApiError, qs } from '../api';
@@ -36,6 +36,7 @@ const jourLu = (d: string | null) => (d ? dayjs(d).format('DD/MM/YYYY') : '');
 
 export default function ServicesPage() {
   const { t, tField, hint } = useI18n();
+  const verifierSaisie = useSaisieRetenue();
   const mobile = Grid.useBreakpoint().md === false;
   const catalogue = useRoles();
   const [entites, setEntites] = useState<Entite[]>([]);
@@ -85,6 +86,7 @@ export default function ServicesPage() {
   };
 
   const enregistrer = async (v: Saisie) => {
+    if (await verifierSaisie()) return; // 0.21.3 (DV-176) : date ou heure tapée non retenue : rien ne part.
     setEnvoi(true);
     setErreur(null);
     const suppleant = v.suppleant_id ?? null;

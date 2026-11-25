@@ -15,20 +15,23 @@ import { type Ferie, type Horaire, type JourNonOuvre, moisJourDate } from '../..
 import TraceFiche from './TraceFiche';
 import ErreurObligatoire from '../ErreurObligatoire';
 import { obligatoire, seulementEspaces, texteObligatoire } from '../../validation';
-import { ChampDate, ChampHeure, ChampPeriode } from '../ChampDate';
+import { ChampDate, ChampHeure, ChampPeriode, useSaisieRetenue } from '../ChampDate';
 
 const HM = 'HH:mm';
 
 /** Une ligne de l'horaire : ouvré ou non, début et fin, enregistrement et retour à l'horaire livré. */
 function LigneHoraire({ h, onSaved }: { h: Horaire; onSaved: () => void }) {
   const { t, hint } = useI18n();
+  const verifierSaisie = useSaisieRetenue();
   const [ouvre, setOuvre] = useState(!!h.debut);
   const [debut, setDebut] = useState<Dayjs | null>(h.debut ? dayjs(h.debut, HM) : null);
   const [fin, setFin] = useState<Dayjs | null>(h.fin ? dayjs(h.fin, HM) : null);
   const valeur = { debut: ouvre && debut ? debut.format(HM) : null, fin: ouvre && fin ? fin.format(HM) : null };
   const modifie = valeur.debut !== h.debut || valeur.fin !== h.fin;
   const fail = (e: unknown) => message.error(e instanceof ApiError ? e.message : t('common.error'));
-  const enregistrer = async () => { try { await api.put(`/horaires/${h.jour}`, valeur); message.success(t('common.saved')); onSaved(); } catch (e) { fail(e); } };
+  const enregistrer = async () => {
+    if (await verifierSaisie()) return; // 0.21.3 (DV-176) : heure tapée non retenue : rien ne part.
+    try { await api.put(`/horaires/${h.jour}`, valeur); message.success(t('common.saved')); onSaved(); } catch (e) { fail(e); } };
   const reset = async () => { try { await api.del(`/horaires/${h.jour}`); message.success(t('common.saved')); onSaved(); } catch (e) { fail(e); } };
   const jour = t(`ref.jour.${h.jour}`);
   return (
@@ -59,6 +62,7 @@ interface JourForm { nature: 'conge' | 'fermeture'; libelle_fr: string; libelle_
 
 export default function CalendrierTab() {
   const { t, tField, lang, hint } = useI18n();
+  const verifierSaisie = useSaisieRetenue();
   const { user } = useAuth();
   const annee0 = dayjs().year();
   const [horaires, setHoraires] = useState<Horaire[]>([]);
@@ -90,6 +94,7 @@ export default function CalendrierTab() {
     : j.date_debut === j.date_fin ? dateLongue(j.date_debut as string) : `${dateLongue(j.date_debut as string)} → ${dateLongue(j.date_fin as string)}`);
 
   const ajouter = async (v: JourForm) => {
+    if (await verifierSaisie()) return; // 0.21.3 (DV-176) : date ou heure tapée non retenue : rien ne part.
     const corps = v.nature === 'conge'
       ? { nature: 'conge', mois_jour: v.jour?.format('MM-DD') }
       : { nature: 'fermeture', date_debut: v.periode?.[0].format('YYYY-MM-DD'), date_fin: v.periode?.[1].format('YYYY-MM-DD') };

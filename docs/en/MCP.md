@@ -1,6 +1,10 @@
 # MCP server
 
-Application version: **0.21.2** · Updated on 24/11/2026 · The French text prevails (`docs/fr/MCP.md`).
+Application version: **0.21.3** · Updated on 25/11/2026 · The French text prevails (`docs/fr/MCP.md`).
+
+## 0.21.3
+
+No new tool. `change_etat_tache` refuses to start or finish a task of a request « To qualify » (`DEMANDE_A_QUALIFIER`); `change_etat_demande` accepts « Work finished » from « Reopened » and « On hold »; `list_evenements_notification` returns the `demande.nouvelle` event.
 
 ## 0.21.2
 

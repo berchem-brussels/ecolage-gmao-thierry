@@ -1,6 +1,19 @@
 # Journal des versions
 
-Version de l'application : **0.21.2** · Mis à jour le 24/11/2026
+Version de l'application : **0.21.3** · Mis à jour le 25/11/2026
+
+## 0.21.3 (25/11/2026)
+
+Correctif issu de l'audit du cahier des charges sur la 0.21.2 (`claude/AUDIT-CDC-0.21.2.md`, M-01 à M-04 ; DV-176, DV-179 à DV-182), avant le test orienté utilisateur et l'étape 18. Aucune migration, aucune dépendance, aucune permission, aucun réglage, aucun outil MCP nouveau.
+
+- Cycle de vie (CYC-03, D-0.21.2-2, DV-181) : `config/cycle-de-vie.json`, deux passages `rouverte` → `terminee` et `en_attente` → `terminee` (`depuis` 0.21.3), soit 44 passages, ajoutés au démarrage par `seedTransitions` ; une demande rouverte ou en attente passe « Travaux terminés » avec sa dernière tâche, ou à la main une fois les tâches finies. `services/taches.js`, règle 6 bis : sur une demande « À qualifier », une tâche ne démarre ni ne se termine (409 `DEMANDE_A_QUALIFIER`) ; `TachesDemande.tsx` retire « Démarrer » et « Terminer » et affiche « Qualifiez d'abord la demande ».
+- Notifications (DEM-06, NOT-01, DV-180) : événement `demande.nouvelle` (variantes `defaut` et `danger`, dix-huit événements) et modèles de courriel `demande.nouvelle` et `demande.nouvelle.danger` ; `services/avis.js`, règle 9 (`nouvelleAuService`) : au dépôt d'une demande arrivée « À qualifier » (dépôt direct, danger, encodage) et à sa validation par le chef, avis au service technique de l'entité (`demandes:traiter`), l'auteur excepté ; un danger en priorité absolue.
+- Champs de date (D-0.21.2-1, DV-182) : `ChampDate.tsx` tient l'ouverture du composant ; Alt+Flèche bas rouvre le calendrier après Échap ; icône à gauche du champ (`prefix`) : à droite, la croix d'effacement prenait la place de l'icône au survol d'un champ rempli et un clic effaçait la date (défaut de la 0.21.2).
+- Saisie non retenue (DV-176) : `saisieDate.ts`, `saisiesNonRetenues()` ; `ChampDate.tsx`, `useSaisieRetenue()`, appelé avant l'enregistrement de chaque formulaire qui a une date ou une heure (absences, nouvelle demande, affectation, qualification, horaire, congés et fermetures, simulateur, planning, services) : message « Date ou heure non retenue : rien n'est enregistré », champ marqué ; i18n `saisie.non_retenue`, `tache.qualifier_avant`.
+- Aide : Accueil (saisie des dates, cloche), Demandes de l'entité (tâches, « Qualifiez d'abord la demande ») ; captures `planning-overview`, `planning-deplacer`, `equipes-indisponibilites`, `journal-overview` refaites en FR et en NL.
+- Note de version : une ligne pour tous, deux pour le service technique.
+- Tests : `taches.test.js` (fin des tâches depuis « Rouverte » et « En attente », tâche d'une demande à qualifier), `cycle.test.js`, `avis.test.js`, `notifications.test.js`, `notes-version.test.js` ; `saisie-date.test.tsx` (Alt+Flèche bas, icône à gauche, `saisiesNonRetenues`, inventaire des formulaires), `demandes.test.tsx` (bandeau, affectation refusée) ; documentation d'architecture FR, EN, NL (44 passages).
+- Contrôle des téléphones : `mobile-check/verifier-mobile.mjs` prend, pour les écrans des tâches (« Terminer », « Affecter »), une demande qui n'est pas « À qualifier » (règle de DV-181).
 
 ## 0.21.2 (24/11/2026)
 

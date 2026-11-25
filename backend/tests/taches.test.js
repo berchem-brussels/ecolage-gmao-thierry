@@ -180,17 +180,67 @@ test('effet sur la demande : une tâche démarre → « En cours » ; la derniè
   assert.equal((await gest.get(`/api/demandes/${d.id}`)).body.data.taches_modifiables, 0);
 });
 
-test('effet sur la demande : toutes annulées → rien ; démarrage depuis « À qualifier » → rien (aucun passage dans la table)', async () => {
+test('effet sur la demande : toutes annulées → rien ; sur « À qualifier », une tâche se prépare mais ne démarre ni ne se termine (0.21.3)', async () => {
   const d = await qualifiee();
   const t = (await ajouter(gest, d.id, { titre: 'Seule tâche' })).body.data;
   const r = await passer(gest, t.id, { etat: 'annulee', motif: 'Plus nécessaire.' });
   assert.equal(r.body.data.demande_etat, 'qualifiee', 'aucune tâche terminée : pas de « Travaux terminés »');
   assert.equal(r.body.data.demande_passage_auto, null);
+  // 0.21.3 (M-01 de l'audit, CYC-03, DV-181) : la qualification vient avant les travaux.
   const a = await deposer('Prise arrachée dans la salle du conseil.');
   const ta = (await ajouter(gest, a.id, { titre: 'Remplacer la prise' })).body.data;
   const s = await passer(gest, ta.id, { etat: 'en_cours' });
-  assert.equal(s.status, 200);
-  assert.equal(s.body.data.demande_etat, 'a_qualifier', 'la qualification reste à faire');
+  assert.equal(s.status, 409);
+  assert.equal(s.body.code, 'DEMANDE_A_QUALIFIER');
+  assert.ok(s.body.message.includes('Qualifiez'));
+  assert.equal((await passer(gest, ta.id, { etat: 'terminee', ...H() })).body.code, 'DEMANDE_A_QUALIFIER');
+  assert.equal((await tool(gest, 'prepare_change_etat_tache', { id: ta.id, etat: 'en_cours' })).code, 'DEMANDE_A_QUALIFIER');
+  assert.equal(getDb().prepare('SELECT etat FROM demande_taches WHERE id = ?').get(ta.id).etat, 'a_faire', 'rien d’écrit');
+  assert.equal(etatDemande(a.id), 'a_qualifier');
+  assert.equal((await gest.put(`/api/taches/${ta.id}`, { titre: 'Remplacer la prise double' })).status, 200, 'préparer reste permis');
+  assert.equal((await passer(gest, ta.id, { etat: 'annulee', motif: 'Doublon.' })).status, 200, 'annuler reste permis');
+  const q = await gest.post(`/api/demandes/${a.id}/qualifier`, { categorie_id: categorie.id, lieu_id: lieu, priorite: categorie.priorite_effective || 'P3', motif_priorite: 'Essai', corps_metier_id: V.elec });
+  assert.equal(q.status, 200, JSON.stringify(q.body));
+  assert.equal((await passer(gest, ta.id, { etat: 'a_faire' })).status, 200);
+  assert.equal((await passer(gest, ta.id, { etat: 'en_cours' })).body.data.demande_etat, 'en_cours', 'qualifiée : le démarrage reprend son effet');
+});
+
+test('effet sur la demande (0.21.3, D-0.21.2-2) : « Rouverte » et « En attente » passent « Travaux terminés » par la dernière tâche, ou à la main tâches finies', async () => {
+  const motif = async (liste, code) => valeur(gest, liste, code);
+  const piece = await motif('motif_attente', 'piece');
+  const usure = await motif('cause_panne', 'usure');
+  // En attente, puis la dernière tâche se termine.
+  const d = await qualifiee();
+  const t = (await ajouter(gest, d.id, { titre: 'Changer le ballast' })).body.data;
+  assert.equal((await gest.post(`/api/demandes/${d.id}/transitions`, { etat: 'en_attente', motif_id: piece })).status, 200);
+  const f = await passer(gest, t.id, { etat: 'terminee', ...H() });
+  assert.equal(f.status, 200, JSON.stringify(f.body));
+  assert.equal(f.body.data.demande_passage_auto, 'terminee');
+  assert.equal(etatDemande(d.id), 'terminee');
+  // Clôturée, rouverte par le demandeur, nouvelle tâche démarrée puis terminée.
+  assert.equal((await gest.post(`/api/demandes/${d.id}/transitions`, { etat: 'cloturee', motif_id: usure })).status, 200);
+  const ro = await agent.post(`/api/demandes/${d.id}/transitions`, { etat: 'rouverte', commentaire: 'La lampe clignote de nouveau.' });
+  assert.equal(ro.status, 200, JSON.stringify(ro.body));
+  const t2 = (await ajouter(gest, d.id, { titre: 'Reprise du câblage' })).body.data;
+  assert.equal((await passer(gest, t2.id, { etat: 'en_cours' })).body.data.demande_etat, 'en_cours', 'rouverte → en cours (passage déjà là)');
+  assert.equal(etatDemande(d.id), 'en_cours');
+  // Rouverte avec une tâche terminée d'emblée.
+  assert.equal((await passer(gest, t2.id, { etat: 'terminee' })).body.data.demande_etat, 'terminee');
+  assert.equal((await gest.post(`/api/demandes/${d.id}/transitions`, { etat: 'cloturee', motif_id: usure })).status, 200);
+  assert.equal((await agent.post(`/api/demandes/${d.id}/transitions`, { etat: 'rouverte', commentaire: 'Toujours en panne.' })).status, 200);
+  const t3 = (await ajouter(gest, d.id, { titre: 'Remplacer le luminaire' })).body.data;
+  const g = await passer(gest, t3.id, { etat: 'terminee', ...H() });
+  assert.equal(g.body.data.demande_passage_auto, 'terminee', 'rouverte → travaux terminés par la dernière tâche');
+  assert.equal(etatDemande(d.id), 'terminee');
+  const h = getDb().prepare('SELECT de_etat, vers_etat FROM demande_historique WHERE demande_id = ? ORDER BY id DESC').get(d.id);
+  assert.deepEqual([h.de_etat, h.vers_etat], ['rouverte', 'terminee']);
+  // À la main : refusé avec une tâche ouverte, permis tâches finies, depuis « En attente ».
+  const e = await qualifiee();
+  const te = (await ajouter(gest, e.id, { titre: 'Vérifier le disjoncteur' })).body.data;
+  assert.equal((await gest.post(`/api/demandes/${e.id}/transitions`, { etat: 'en_attente', motif_id: piece })).status, 200);
+  assert.equal((await gest.post(`/api/demandes/${e.id}/transitions`, { etat: 'terminee' })).body.code, 'TACHES_OUVERTES');
+  assert.equal((await passer(gest, te.id, { etat: 'annulee', motif: 'Fait par un prestataire.' })).body.data.demande_etat, 'en_attente', 'aucune tâche terminée');
+  assert.equal((await gest.post(`/api/demandes/${e.id}/transitions`, { etat: 'terminee' })).status, 200, 'en attente → travaux terminés à la main');
 });
 
 test('« Travaux terminés » à la main refusé tant qu’une tâche est ouverte, et pas proposé ; permis une fois les tâches finies', async () => {

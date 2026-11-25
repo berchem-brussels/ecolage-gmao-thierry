@@ -4,7 +4,8 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { KeyboardEvent } from 'react';
 import { act, fireEvent, render } from '@testing-library/react';
 import { Form } from 'antd';
-import { champDateActif, ecranTactile, entreeSansEnvoi, retenirSaisieAvant } from '../saisieDate';
+import dayjs from 'dayjs';
+import { champDateActif, ecranTactile, entreeSansEnvoi, retenirSaisieAvant, saisiesNonRetenues } from '../saisieDate';
 import { ChampDate } from '../components/ChampDate';
 import { I18nProvider } from '../contexts/I18nContext';
 
@@ -58,6 +59,35 @@ describe('Champs de date et d’heure (R1)', () => {
     expect(calendrierAffiche()).toBe(true);
   });
 
+  // 0.21.3 (D-0.21.2-1, recette de la 0.21.2) : après Échap, le focus reste dans le champ ; Alt+Flèche bas doit rouvrir
+  // le calendrier sans clic (le composant se tenait pour fermé et ne s'ouvrait plus au clavier).
+  it('PC : Échap ferme le calendrier, Alt+Flèche bas le rouvre sans clic, plusieurs fois', async () => {
+    ecran(false);
+    const { container } = monterChamp();
+    const champ = container.querySelector('input') as HTMLInputElement;
+    await act(async () => { champ.focus(); fireEvent.keyDown(champ, { key: 'ArrowDown', altKey: true }); });
+    expect(calendrierAffiche()).toBe(true);
+    for (let i = 0; i < 2; i += 1) {
+      await act(async () => { fireEvent.keyDown(champ, { key: 'Escape' }); });
+      expect(calendrierAffiche()).toBe(false);
+      await act(async () => { fireEvent.keyDown(champ, { key: 'ArrowDown', altKey: true }); });
+      expect(calendrierAffiche()).toBe(true);
+    }
+  });
+
+  // 0.21.3 : l'icône est à gauche (prefix) ; à droite, Ant Design remplaçait l'icône par la croix au survol d'un champ
+  // rempli, et un clic sur « l'icône » effaçait la date (Chromium et WebKit, depuis la 0.21.2).
+  it('PC : icône du calendrier à gauche, jamais à la place de la croix ; un appui garde la date et ouvre le calendrier', async () => {
+    ecran(false);
+    const { container } = render(<I18nProvider><Form initialValues={{ d: dayjs('2026-12-03') }}><Form.Item name="d" label="Date"><ChampDate format="DD/MM/YYYY" /></Form.Item></Form></I18nProvider>);
+    const icone = container.querySelector('.ant-picker-prefix .champ-date-icone') as HTMLElement;
+    expect(icone).not.toBeNull();
+    expect(container.querySelector('.ant-picker-suffix .anticon')).toBeNull();
+    await act(async () => { fireEvent.mouseDown(icone); fireEvent.click(icone); });
+    expect(calendrierAffiche()).toBe(true);
+    expect((container.querySelector('input') as HTMLInputElement).value).toBe('03/12/2026');
+  });
+
   it('écran tactile : calendrier au toucher, comme avant', async () => {
     ecran(true);
     const { container } = monterChamp();
@@ -93,6 +123,53 @@ describe('Champs de date et d’heure (R1)', () => {
       for (const m of src.matchAll(/<(DatePicker\.RangePicker|DatePicker|TimePicker)\b/g)) fautes.push(`${rel} : <${m[1]}> (utiliser ChampDate, ChampHeure ou ChampPeriode)`);
     }
     expect(fautes).toEqual([]);
+  });
+
+  // 0.21.3 (DV-176, audit M-04) : tout formulaire qui enregistre une date ou une heure refuse d'envoyer une date ou une
+  // heure tapée et non retenue (useSaisieRetenue en tête de l'envoi). Le Journal d'audit (filtre, rien d'enregistré) et
+  // ChampDate.tsx lui-même en sont exemptés.
+  it('chaque fichier qui a un champ de date, d’heure ou de période appelle useSaisieRetenue avant d’enregistrer', () => {
+    const racine = join(__dirname, '..');
+    const exempts = new Set(['components/ChampDate.tsx', 'pages/JournalPage.tsx', 'components/demandes/ComplementsDemande.tsx']);
+    const fautes: string[] = [];
+    let vus = 0;
+    for (const f of fichiers(racine)) {
+      const rel = relative(racine, f).replace(/\\/g, '/');
+      const src = readFileSync(f, 'utf8');
+      if (exempts.has(rel) || !/<Champ(Date|Heure|Periode)\b/.test(src)) continue;
+      vus += 1;
+      if (!/useSaisieRetenue\(\)/.test(src) || !/await verifierSaisie\(\)/.test(src)) fautes.push(rel);
+    }
+    // ComplementsDemande.tsx (date souhaitée) n'envoie rien lui-même : c'est la page Nouvelle demande qui contrôle.
+    const nouvelle = readFileSync(join(racine, 'pages', 'NouvelleDemandePage.tsx'), 'utf8');
+    if (!/<ComplementsDemande\b/.test(nouvelle) || !/await verifierSaisie\(\)/.test(nouvelle)) fautes.push('pages/NouvelleDemandePage.tsx');
+    expect(fautes).toEqual([]);
+    expect(vus).toBeGreaterThanOrEqual(7);
+  });
+
+  describe('texte tapé non retenu (0.21.3)', () => {
+    afterEach(() => { document.body.innerHTML = ''; });
+    const monter = (valeur: string) => {
+      document.body.innerHTML = `<div class="ant-picker"><input id="d" value="${valeur}" /></div><button id="b" type="button">OK</button>`;
+      return document.getElementById('d') as HTMLInputElement;
+    };
+    it('texte remis à l’ancien par le composant : rendu comme non retenu ; texte gardé : rien', async () => {
+      const champ = monter('99/99/2026');
+      champ.focus();
+      retenirSaisieAvant({ target: document.getElementById('b') } as unknown as Event);
+      champ.value = '01/12/2026';
+      expect(await saisiesNonRetenues(0)).toEqual([champ]);
+      const bon = monter('05/12/2026');
+      bon.focus();
+      retenirSaisieAvant({ target: document.getElementById('b') } as unknown as Event);
+      expect(await saisiesNonRetenues(0)).toEqual([]);
+    });
+    it('aucun champ de date au moment du clic : rien, sans attendre', async () => {
+      monter('');
+      const t0 = Date.now();
+      expect(await saisiesNonRetenues(5000)).toEqual([]);
+      expect(Date.now() - t0).toBeLessThan(1000);
+    });
   });
 
   // 0.21.1 (DV-173) : texte tapé retenu avant un clic ou un envoi qui ne passe pas par le champ (scénario complet de

@@ -89,6 +89,48 @@ test('demande encodée par le service : accusé en néerlandais à l’agent (LN
   assert.equal(courriels(gest.id, d.id).length + notifs(gest.id, d.id).length, 0);
 });
 
+test('demande nouvelle (0.21.3, DV-180) : gestionnaire et responsable avertis à l’arrivée au service ; danger en priorité absolue ; validée par le chef ; encodée : les collègues seulement ; jamais l’agent ni le chef', async () => {
+  const resp = await person(srv.base, admin, 'resp.avis@exemple.test', ea.id, [[ea.id, 'responsable']]);
+  const nouvelles = (userId, id) => notifs(userId, id).filter((x) => x.evenement === 'demande.nouvelle');
+  const mails = (userId, id) => courriels(userId, id).filter((x) => x.evenement === 'demande.nouvelle');
+  // Dépôt direct.
+  const d = await deposer(agent);
+  for (const v of [gest, resp]) {
+    const n = nouvelles(v.id, d.id);
+    assert.equal(n.length, 1);
+    assert.equal(n[0].variante, 'defaut');
+    assert.equal(n[0].lien, `/demandes-entite?demande=${d.id}`);
+    assert.equal(n[0].lue_le, null);
+    const c = mails(v.id, d.id);
+    assert.equal(c.length, 1);
+    assert.equal(c[0].sujet, `Nouvelle demande ${d.numero} à qualifier`);
+    assert.match(c[0].corps, /Lieu : Maison communale/);
+    assert.match(c[0].corps, /https:\/\/gmao\.exemple\.test\/demandes-entite\?demande=/);
+    assert.ok(!c[0].corps.includes('néon'), 'jamais la description (NOT-06)');
+  }
+  for (const v of [agent, chef, collegue]) assert.equal(nouvelles(v.id, d.id).length, 0);
+  // Danger : variante « danger », priorité absolue.
+  const g = await deposer(agent, { danger: 1 });
+  assert.equal(nouvelles(gest.id, g.id)[0].variante, 'danger');
+  assert.equal(mails(resp.id, g.id)[0].sujet, `DANGER signalé : demande ${g.numero}, priorité absolue`);
+  assert.match((await gest.get('/api/notifications?limit=50')).body.data.find((x) => x.objet_id === g.id && x.evenement === 'demande.nouvelle').texte_fr, /Danger signalé : demande .*, priorité absolue/);
+  // Danger d'une catégorie à valider : part sans le chef, le service est averti aussi.
+  const gv = await deposer(agent, { danger: 1 }, demenagement);
+  assert.equal(nouvelles(gest.id, gv.id)[0].variante, 'danger');
+  // En validation : rien au service ; validée par le chef : avis au service.
+  const v = await deposer(agent, {}, demenagement);
+  assert.equal(v.etat, 'en_validation');
+  assert.equal(nouvelles(gest.id, v.id).length, 0, 'pas avant l’accord du chef');
+  assert.equal((await passer(chef, v.id, { etat: 'a_qualifier' })).status, 200);
+  assert.equal(nouvelles(gest.id, v.id).length, 1);
+  assert.equal(nouvelles(resp.id, v.id).length, 1);
+  assert.equal(nouvelles(chef.id, v.id).length, 0);
+  // Encodée par un gestionnaire : le responsable est averti, pas qui encode.
+  const e = await deposer(gest, { demandeur_id: agentNl.id, canal: 'telephone' });
+  assert.equal(nouvelles(resp.id, e.id).length, 1);
+  assert.equal(nouvelles(gest.id, e.id).length + mails(gest.id, e.id).length, 0, 'rien pour qui encode');
+});
+
 test('demande à valider : « attend l’accord » au demandeur (cloche) ; chef et suppléant en période avertis, lien vers « Demandes à valider »', async () => {
   const d = await deposer(agent, {}, demenagement);
   assert.equal(d.etat, 'en_validation');
@@ -154,7 +196,7 @@ test('changements d’état : prise en charge, terminée, annulée au demandeur 
   assert.equal(getDb().prepare('SELECT COUNT(*) AS n FROM courriels').get().n, avant, '« En cours » : pas d’avis');
   assert.equal((await passer(gest, d.id, { etat: 'terminee' })).status, 200);
   assert.equal(notifs(agent.id, d.id).at(-1).variante, 'terminee');
-  assert.equal(notifs(gest.id, d.id).length, 0, 'le service n’est pas averti de ses propres passages');
+  assert.equal(notifs(gest.id, d.id).filter((x) => x.evenement !== 'demande.nouvelle').length, 0, 'le service n’est pas averti de ses propres passages (seulement de l’arrivée, 0.21.3)');
   const d3 = await deposer(agent);
   await suiveur.post(`/api/demandes/${d3.id}/suivre`, {});
   assert.equal((await agent.del(`/api/demandes/${d3.id}`, { motif: 'Réglé seul.' })).status, 200);
@@ -219,10 +261,10 @@ test('note interne : seuls les collègues mentionnés sont avertis ; jamais le d
   const r = await gest.post(`/api/demandes/${d.id}/messages`, { texte: 'Prévoir l’échelle.', interne: true, mentions: [gest3.id] });
   assert.equal(r.status, 201, JSON.stringify(r.body));
   const n = notifs(gest3.id, d.id);
-  assert.deepEqual(n.map((x) => x.evenement), ['demande.mention']);
-  assert.equal(courriels(gest3.id, d.id)[0].sujet, `Note interne : demande ${d.numero}`);
+  assert.deepEqual(n.map((x) => x.evenement), ['demande.nouvelle', 'demande.mention'], 'l’arrivée (0.21.3), puis la mention');
+  assert.equal(courriels(gest3.id, d.id).at(-1).sujet, `Note interne : demande ${d.numero}`);
   assert.equal(notifs(agent.id, d.id).filter((x) => x.evenement !== 'demande.recue').length, 0);
-  assert.equal((await gest3.get('/api/notifications')).body.data.find((x) => x.objet_id === d.id).texte_fr, `Un collègue vous mentionne dans une note interne de la demande ${d.numero}.`);
+  assert.equal((await gest3.get('/api/notifications')).body.data.find((x) => x.objet_id === d.id && x.evenement === 'demande.mention').texte_fr, `Un collègue vous mentionne dans une note interne de la demande ${d.numero}.`);
 });
 
 test('ticket : accusé à l’auteur (cloche lue, courriel), avis aux personnes qui traitent ; réponse publique à l’auteur, note interne sans avis', async () => {

@@ -1,8 +1,25 @@
 # Manifeste
 
-Version de l'application : **0.21.2** · Mis à jour le 24/11/2026
+Version de l'application : **0.21.3** · Mis à jour le 25/11/2026
 
 Fichiers changés, dépendances et suites par version. Les décomptes sont recopiés de la sortie des commandes.
+
+## 0.21.3 (25/11/2026)
+
+Fichiers comparés à l'archive 0.21.2 (`gmao-v0_21_2.tar.gz`, SHA-256 `3e45c7d9…45c5d`) par `diff -rq` (hors `node_modules` et `dist`). Pour le contrôle du `git status` (`GITHUB.md`, section 5) : une ligne `A`, aucune ligne `D`, les autres `M`.
+
+- Nouveau (ligne `A`) : `NOTES_LIVRAISON_v0.21.3.md`.
+- Modifiés, serveur : `package.json` et `package-lock.json` (version 0.21.3) ; `config/cycle-de-vie.json` (deux passages, 44) ; `config/notifications.json` (`demande.nouvelle`) ; `config/modeles-courriel.json` (deux modèles) ; `config/notes-version.json` (note 0.21.3) ; `src/services/taches.js` (règle 6 bis) ; `src/services/avis.js` (règle 9) ; `src/i18n-server.js` (`DEMANDE_A_QUALIFIER`) ; tests `taches.test.js`, `cycle.test.js`, `avis.test.js`, `notifications.test.js`, `notes-version.test.js`.
+- Modifiés, interface : `package.json` et `package-lock.json` (version 0.21.3) ; `src/components/ChampDate.tsx` (ouverture tenue, icône à gauche, `useSaisieRetenue`) ; `src/saisieDate.ts` (`saisiesNonRetenues`) ; `src/i18n.ts` (`saisie.non_retenue`, `tache.qualifier_avant`) ; formulaires qui appellent le contrôle : `components/IndisponibilitesOuvrier.tsx`, `components/demandes/QualificationForm.tsx`, `components/demandes/TachesDemande.tsx` (aussi : boutons et bandeau d'une demande à qualifier), `components/referentiel/CalendrierTab.tsx`, `components/referentiel/SimulateurTab.tsx`, `pages/NouvelleDemandePage.tsx`, `pages/PlanningPage.tsx`, `pages/ServicesPage.tsx` ; aide `help/topics/accueil.ts`, `help/topics/demandes-entite.ts` ; tests `saisie-date.test.tsx`, `demandes.test.tsx` ; contrôle des téléphones `mobile-check/verifier-mobile.mjs` (la demande des écrans des tâches n'est jamais « À qualifier ») ; captures `public/aide-captures/{fr,nl}/` : `planning-overview`, `planning-deplacer`, `equipes-indisponibilites`, `journal-overview`.
+- Modifiés, documentation et racine : `CHANGELOG.md`, `ETAT.md`, `ECARTS-CDC.md`, `MANIFESTE.md` ; `README.md`, `README.nl.md`, `README.en.md` ; `docs/fr`, `docs/nl`, `docs/en` (`APRES-DEPLOIEMENT.md`, `ARCHITECTURE.md`, `EXPLOITATION.md`, `MCP.md`, `SECURITE.md`) ; `docs/fonctionnel/taches-planning.md` (règles 11 et 12), `docs/fonctionnel/notifications.md` (règle 10).
+- Inchangés : les deux Dockerfile, `nginx.conf`, `docker-entrypoint.sh`, `docker-compose.yml`, `.env.example`, `backup.sh`, `verifier-ports.sh`, `recette.sh`, `ci.yml`, `.gitignore`, `src/demo.js`, `src/database.js` (aucune migration).
+- Retirés : aucun fichier.
+- Dépendances : aucune nouvelle ; verrous inchangés hors numéro de version. Aucun `npm audit fix`.
+- Contrôle de la séance avant toute modification (audit DV-174) : archive 0.21.2 conforme à `ETAT.md` (14 054 700 octets, 728 entrées, SHA-256 `3e45c7d9…45c5d`) ; serveur 698/698, interface 397 (+1) sous Node 22.
+- Suites de la 0.21.3 : voir `ETAT.md`, section 2. Preuves d'échec : `docs/fr/SECURITE.md`, section 0.21.3 (huit).
+- Navigateur réel : Chromium et WebKit du bac à sable (Playwright), serveur réel en production sur une base de démonstration montée de zéro, interface construite servie en HTTPS ; et une page d'essai hors archive pour les trois champs de date.
+- Retour arrière : aucune migration ; la 0.21.2 sert la même base (les deux passages ajoutés y apparaissent comme boutons manuels).
+- Images Docker : non reconstruites dans le bac à sable ; l'image de l'interface change (`dist/`), celle du serveur pour son code, sa configuration et sa note.
 
 ## 0.21.2 (24/11/2026)
 

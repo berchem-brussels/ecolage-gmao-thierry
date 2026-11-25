@@ -95,6 +95,7 @@ const MESSAGES = {
   EQUIPE_INVALIDE: { fr: 'Choisissez une équipe active de l’entité.', nl: 'Kies een actieve ploeg van de entiteit.' },
   HEURE_SANS_DATE: { fr: 'Une heure de début demande une date.', nl: 'Een beginuur vereist een datum.' },
   DATE_PASSEE: { fr: 'La date prévue ne peut pas être dans le passé.', nl: 'De geplande datum kan niet in het verleden liggen.' },
+  DEMANDE_A_QUALIFIER: { fr: 'Qualifiez d\'abord la demande : une tâche ne démarre ni ne se termine sur une demande à qualifier.', nl: 'Kwalificeer eerst de aanvraag: een taak start of eindigt niet op een aanvraag die nog gekwalificeerd moet worden.' },
   TACHES_OUVERTES: { fr: 'Des tâches sont encore à faire ou en cours : terminez-les ou annulez-les avant « Travaux terminés ».', nl: 'Er zijn nog taken te doen of bezig: beëindig of annuleer ze vóór « Werken beëindigd ».' },
   CHEF_SANS_ROLE: { fr: 'Cette personne ne peut pas diriger l’équipe : elle doit avoir le rôle « Chef d’équipe » dans l’entité.', nl: 'Deze persoon kan de ploeg niet leiden: ze moet de rol « Ploegbaas » hebben in de entiteit.' },
   MEMBRE_SANS_ROLE: { fr: 'Seuls les ouvriers et les chefs d’équipe de l’entité peuvent être membres d’une équipe.', nl: 'Alleen de arbeiders en de ploegbazen van de entiteit kunnen lid zijn van een ploeg.' },

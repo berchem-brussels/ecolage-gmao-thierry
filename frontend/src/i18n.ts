@@ -422,6 +422,8 @@ export const translations: Record<string, Record<Lang, string>> = {
   'tache.motif.label': { fr: 'Pourquoi annuler cette tâche ?', nl: 'Waarom deze taak annuleren?' },
   'tache.annulee_avec': { fr: 'Annulée avec la demande :', nl: 'Geannuleerd met de aanvraag:' },
   'tache.demande_passee': { fr: 'demande passée', nl: 'aanvraag gezet op' },
+  'saisie.non_retenue': { fr: 'Date ou heure non retenue : rien n\'est enregistré. Tapez-la au format du champ (par exemple 03/12/2026 ou 08:30) ou choisissez-la dans le calendrier.', nl: 'Datum of uur niet aanvaard: er is niets opgeslagen. Typ het in de vorm van het veld (bijvoorbeeld 03/12/2026 of 08:30) of kies het in de kalender.' },
+  'tache.qualifier_avant': { fr: 'Qualifiez d\'abord la demande : ses tâches pourront ensuite être démarrées et terminées.', nl: 'Kwalificeer eerst de aanvraag: daarna kunnen de taken gestart en beëindigd worden.' },
   'tache.ajoutee': { fr: 'Tâche ajoutée', nl: 'Taak toegevoegd' },
   // 0.20.0 (point 2 ; PLA-01, DV-161) : affectation d'une tâche.
   'tache.action.affecter': { fr: 'Affecter', nl: 'Toewijzen' },

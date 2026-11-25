@@ -438,8 +438,11 @@ for (const compte of COMPTES.filter((c) => c.user && ECRANS)) {
           aQualifier: (await ids('/api/demandes?perimetre=entite&etats=a_qualifier&limit=1'))[0] ?? null,
           aValider: (await ids('/api/demandes/a-valider?limit=1'))[0] ?? null,
           // 0.20.0 (point 5) : une demande de l'entité avec une tâche ouverte ; une équipe de l'entité.
+          // 0.21.3 (DV-181) : jamais une demande « À qualifier », dont les tâches ne démarrent ni ne se terminent.
           taches: await (async () => {
-            for (const id of await ids('/api/demandes?perimetre=entite&limit=50')) {
+            const r0 = await fetch('/api/demandes?perimetre=entite&limit=50');
+            const liste = r0.ok ? ((await r0.json()).data || []).filter((d) => d.etat !== 'a_qualifier').map((d) => d.id) : [];
+            for (const id of liste) {
               const r = await fetch(`/api/demandes/${id}/taches`);
               if (r.ok && ((await r.json()).data || []).some((t) => t.etat === 'a_faire' || t.etat === 'en_cours')) return id;
             }
