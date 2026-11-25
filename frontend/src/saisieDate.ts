@@ -29,6 +29,14 @@ import type { Dayjs } from 'dayjs';
  * « Terminer » partait avec l'ancienne valeur, était refusé en silence, puis la valeur tapée arrivait : il fallait cliquer
  * deux fois. La règle s'applique maintenant dès l'appui (pointerdown, mousedown). Le calendrier ne s'affiche plus de
  * lui-même sur PC (components/ChampDate.tsx).
+ *
+ * 0.21.4 (contrôle 7 de la recette de la 0.21.3 sur NIXUS) : un texte refusé et suivi d'une sortie du champ (Tab, clic
+ * ailleurs, autre fenêtre) était remis en silence à l'ancienne valeur par rc-picker ; au clic sur « Enregistrer », le
+ * champ n'avait plus le focus ni le texte tapé, et l'ancienne date partait (« Affectation enregistrée » avec le 27/11 au
+ * lieu de 99/99/2026 refusé). Règle ajoutée : à la sortie d'un champ de date ou d'heure, un texte tapé que le composant
+ * remet à la valeur d'avant est noté refusé ; le champ se marque en erreur et l'écran le dit (évènement
+ * « gmao-saisie-refusee ») ; tout envoi reste bloqué (saisiesNonRetenues, texteNonRetenu) tant qu'on n'a pas retapé dans
+ * le champ ou changé sa valeur.
  */
 export function ecranTactile(): boolean {
   return typeof window !== 'undefined' && typeof window.matchMedia === 'function' && window.matchMedia('(pointer: coarse)').matches;
@@ -75,14 +83,18 @@ const recents: HTMLInputElement[] = [];
  * retenu, ou quand aucun champ de date n'avait le focus au moment du clic (rien à attendre).
  */
 export async function saisiesNonRetenues(attente = 120): Promise<HTMLInputElement[]> {
+  // 0.21.4 : un contrôle de sortie encore en cours (Tab puis clic rapide) est attendu ; un refus à la sortie bloque.
+  if (sortiesEnCours.size) await Promise.all([...sortiesEnCours]);
+  const bloquants = refusesBloquants();
   const maintenant = Date.now();
   const vus = [...new Set(recents)].filter((c) => {
     const g = textes.get(c);
     return c.isConnected && g && maintenant - g.quand < 2000 && g.texte.trim() !== '';
   });
-  if (!vus.length) return [];
+  if (!vus.length) return bloquants;
   await new Promise((r) => setTimeout(r, attente));
-  return vus.filter((c) => c.isConnected && c.value !== textes.get(c)!.texte);
+  const refuses = vus.filter((c) => c.isConnected && c.value !== textes.get(c)!.texte);
+  return [...new Set([...bloquants, ...refuses])];
 }
 
 /** Texte affiché d'un champ (par son id) au moment du clic qui envoie, sinon son texte actuel ; null s'il n'existe pas. */
@@ -95,9 +107,69 @@ export function texteAffiche(id: string, doc: Document = document): string | nul
 
 /** Vrai quand le champ montrait un texte que le composant n'a pas retenu (autre que la valeur envoyée). */
 export function texteNonRetenu(id: string, valeur: Dayjs | null | undefined, format: string, doc: Document = document): boolean {
+  const el = doc.getElementById(id);
+  if (el instanceof HTMLInputElement && refusesBloquants().includes(el)) return true;
   const texte = (texteAffiche(id, doc) ?? '').trim();
   if (!texte) return false;
   return !valeur || valeur.format(format) !== texte;
+}
+
+/** Valeur affichée de chaque champ à son entrée (focusin), pour reconnaître un texte remis à l'ancien à la sortie. */
+const aLEntree = new WeakMap<HTMLInputElement, string>();
+/** 0.21.4 : champs dont le texte tapé a été refusé à la sortie, avec la valeur remise ; bloquants tant qu'inchangés. */
+const refusesALaSortie = new Map<HTMLInputElement, { texte: string; remise: string }>();
+/** Contrôles de sortie encore en attente (deux images de rc-picker) : un envoi les attend. */
+const sortiesEnCours = new Set<Promise<void>>();
+
+function champDe(e: Event): HTMLInputElement | null {
+  const c = e.target;
+  return c instanceof HTMLInputElement && c.closest('.ant-picker') ? c : null;
+}
+
+/** Marque un champ en erreur (bordure rouge, aria-invalid) jusqu'à la prochaine frappe dans le champ. */
+export function marquerNonRetenu(c: HTMLInputElement): void {
+  c.setAttribute('aria-invalid', 'true');
+  c.closest('.ant-picker')?.classList.add('ant-picker-status-error');
+  c.addEventListener('input', () => {
+    refusesALaSortie.delete(c);
+    c.removeAttribute('aria-invalid');
+    c.closest('.ant-picker')?.classList.remove('ant-picker-status-error');
+  }, { once: true });
+}
+
+function surEntree(e: Event): void {
+  const c = champDe(e);
+  if (!c) return;
+  aLEntree.set(c, c.value);
+  // 0.21.4 : le texte gardé au dernier clic ne vaut plus quand on revient dans le champ (avant, une date retapée moins de
+  // deux secondes après un clic ailleurs était comparée à l'ancien texte gardé et refusée à tort).
+  textes.delete(c);
+}
+
+/** À la sortie du champ : un texte tapé, autre que celui d'avant, que rc-picker remet à la valeur d'avant est refusé. */
+function surSortie(e: Event): void {
+  const c = champDe(e);
+  if (!c) return;
+  const texte = c.value;
+  const avant = aLEntree.get(c) ?? '';
+  if (!texte.trim() || texte === avant) return;
+  const doc = c.ownerDocument;
+  const verif = new Promise<void>((r) => setTimeout(r, 150)).then(() => {
+    if (!c.isConnected || c.value === texte || c.value !== avant) return;
+    refusesALaSortie.set(c, { texte, remise: c.value });
+    marquerNonRetenu(c);
+    doc.dispatchEvent(new CustomEvent('gmao-saisie-refusee', { detail: c }));
+  });
+  sortiesEnCours.add(verif);
+  verif.finally(() => sortiesEnCours.delete(verif));
+}
+
+/** 0.21.4 : champs encore bloquants (texte refusé à la sortie, valeur remise inchangée, toujours à l'écran). */
+function refusesBloquants(): HTMLInputElement[] {
+  return [...refusesALaSortie].filter(([c, r]) => {
+    if (!c.isConnected || c.value !== r.remise) { refusesALaSortie.delete(c); return false; }
+    return true;
+  }).map(([c]) => c);
 }
 
 let installe = false;
@@ -108,4 +180,7 @@ export function installerSaisieDate(doc: Document = document): void {
   // 0.21.2 (DV-177) : dès l'appui (pointerdown, mousedown), avant que le champ ne perde le focus ; le clic et l'envoi
   // restent pour un clic piloté par la page ou l'assistance, sans appui.
   for (const ev of ['pointerdown', 'mousedown', 'click', 'submit']) doc.addEventListener(ev, retenirSaisieAvant, true);
+  // 0.21.4 : texte refusé à la sortie du champ (Tab, clic ailleurs, autre fenêtre).
+  doc.addEventListener('focusin', surEntree, true);
+  doc.addEventListener('focusout', surSortie, true);
 }

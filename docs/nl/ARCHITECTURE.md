@@ -1,6 +1,10 @@
 # Architectuur
 
-Versie van de toepassing: **0.21.3** · De Franse tekst is rechtsgeldig (`docs/fr/ARCHITECTURE.md`); dit bestand vat elke versie samen.
+Versie van de toepassing: **0.21.4** · De Franse tekst is rechtsgeldig (`docs/fr/ARCHITECTURE.md`); dit bestand vat elke versie samen.
+
+## Geweigerde datum gemeld bij het verlaten van het veld (0.21.4)
+
+`saisieDate.ts`: `installerSaisieDate()` luistert ook naar `focusin` en `focusout`; bij het verlaten van een datumveld waarvan Ant Design de getypte tekst teruggezet heeft, wordt het veld gemarkeerd, wordt het event `gmao-saisie-refusee` verzonden en blijft `saisiesNonRetenues()` blokkeren tot de tekst verbeterd is of een datum gekozen is. `ChampDate.tsx`: `useAvisSaisieRefusee()`, eenmaal opgeroepen in `AppLayout`, toont de melding.
 
 ## Correctie na de audit van het lastenboek (0.21.3)
 

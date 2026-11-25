@@ -2,6 +2,24 @@
 
 Le français fait foi. Grille de la section 10.2 du standard, rejouée à chaque version. « Non joué » veut dire que le contrôle n'a pas tourné.
 
+## 0.21.4 (25/11/2026)
+
+Correctif du contrôle 7 de la recette de la 0.21.3 sur NIXUS (DV-183). Une date tapée et refusée par le champ (99/99/2026), puis quittée sans clic sur un bouton (Tab, clic ailleurs, fenêtre passée à l'arrière-plan), était remplacée en silence par l'ancienne date ; la règle de la 0.21.3 ne voyait plus rien au moment du clic sur « Enregistrer », et l'ancienne date partait (27/11 écrit sur la tâche 10 de la recette, nettoyé depuis). Second défaut trouvé en le corrigeant : une date valable retapée moins de deux secondes après un clic, puis quittée par Tab, était refusée à tort. Corrections : `saisieDate.ts` (contrôle à la sortie du champ, texte du dernier clic oublié à l'entrée) ; `ChampDate.tsx` (message dès la sortie).
+
+| Famille | Contrôle | Résultat |
+| --- | --- | --- |
+| Validation | Date invalide puis Tab, clic ailleurs, sortie du champ ou fenêtre à l'arrière-plan : rien n'est envoyé, champ en rouge et message dès la sortie ; heure 99:99 puis Tab : rien n'est envoyé ; « Terminer la tâche », fin 99:99 puis Tab : rien n'est envoyé ; date valable par Tab ou clic direct : envoyée ; invalide puis retapée valable : envoyée ; refus puis choix au calendrier : envoyée (vrais claviers et souris, Chromium et WebKit, 7 cas × 2 moteurs et 3 cas complémentaires, copie locale) | Conforme (`saisie-date.test.tsx`, `demandes.test.tsx`) |
+| Interface | Un seul message à la fois ; marque effacée à la frappe suivante ; téléphones (6 appareils émulés, 2 moteurs) sans défaut | Conforme (`mobile:check`, émulation) |
+| Secrets, infrastructure, dépendances, serveur | Inchangés (note de version seulement) | Conforme |
+
+Preuves d'échec :
+
+| Protection retirée | Échec constaté |
+| --- | --- |
+| Contrôle à la sortie du champ (`saisieDate.ts` de la 0.21.3) | `saisie-date.test.tsx` : date refusée puis quittée ni marquée ni bloquante (deux tests) |
+| Oubli du texte du dernier clic à l'entrée | `saisie-date.test.tsx` : date valable retapée après un clic refusée à tort |
+| `saisieDate.ts` et `ChampDate.tsx` de la 0.21.3 | `demandes.test.tsx` : affectation, 99/99/2026 puis sortie du champ, l'ancienne date part |
+
 ## 0.21.3 (25/11/2026)
 
 Correctif issu de l'audit du cahier des charges (`claude/AUDIT-CDC-0.21.2.md`, M-01 à M-04 ; DV-176, DV-179 à DV-182). Une demande rouverte ou en attente restait dans son état quand sa dernière tâche se terminait (CYC-03) ; le service technique n'était averti d'aucune demande nouvelle, danger compris ; Alt+Flèche bas ne rouvrait pas le calendrier après Échap ; un clic sur l'icône d'un champ de date rempli effaçait la date (la croix prenait sa place au survol) ; hors de « Terminer la tâche », une date ou une heure tapée et refusée par le champ était remplacée en silence par l'ancienne valeur.

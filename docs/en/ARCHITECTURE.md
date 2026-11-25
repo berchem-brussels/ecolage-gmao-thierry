@@ -1,6 +1,10 @@
 # Architecture
 
-Application version: **0.21.3** · The French text prevails (`docs/fr/ARCHITECTURE.md`); this file summarises each version.
+Application version: **0.21.4** · The French text prevails (`docs/fr/ARCHITECTURE.md`); this file summarises each version.
+
+## Refused date reported on leaving the field (0.21.4)
+
+`saisieDate.ts`: `installerSaisieDate()` also listens to `focusin` and `focusout`; on leaving a date field whose typed text was reverted by Ant Design, the field is marked, the `gmao-saisie-refusee` event is dispatched and `saisiesNonRetenues()` keeps blocking until the text is corrected or a date is picked. `ChampDate.tsx`: `useAvisSaisieRefusee()`, called once in `AppLayout`, shows the message.
 
 ## Fix from the specification audit (0.21.3)
 

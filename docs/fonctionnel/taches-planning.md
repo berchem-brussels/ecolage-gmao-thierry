@@ -1,6 +1,6 @@
 # Tâches, affectation, absences et planning
 
-Version 0.21.3 · Fiche fonctionnelle (modèle du standard, section 17.8). Couvre les étapes 16 (0.20.0, tâches et affectation, fiche qui manquait) et 17 (0.21.0, heures réelles, absences, planning, tâches non planifiées, conflits, date annoncée au demandeur).
+Version 0.21.4 · Fiche fonctionnelle (modèle du standard, section 17.8). Couvre les étapes 16 (0.20.0, tâches et affectation, fiche qui manquait) et 17 (0.21.0, heures réelles, absences, planning, tâches non planifiées, conflits, date annoncée au demandeur).
 
 ## Objet
 
@@ -40,7 +40,7 @@ Découper une demande d'intervention en tâches, les confier à des ouvriers ou 
 | 9 | Date annoncée au demandeur : première date des tâches ouvertes ; un changement garde l'ancienne date et le jour du changement, et prévient demandeur, bénéficiaire et personnes qui suivent ; la première date passe par l'avis « Planifiée » |
 | 10 | Journal : création, champs changés, passages, affectation, absences et changement de date ; jamais de texte libre (titre en longueur, motif d'absence jamais) |
 | 11 | Effet des tâches sur la demande (0.21.3, CYC-03) : la demande passe « Travaux terminés » quand sa dernière tâche ouverte se termine, qu'elle soit qualifiée, planifiée, en cours, en attente ou rouverte ; sur une demande « À qualifier », une tâche se prépare et s'affecte mais ne démarre ni ne se termine (« Qualifiez d'abord la demande ») |
-| 12 | Dates et heures (0.21.3) : sur ordinateur, calendrier par l'icône à gauche du champ ou Alt+Flèche bas ; une date ou une heure tapée et non retenue bloque l'enregistrement de tout formulaire (« Date ou heure non retenue ») |
+| 12 | Dates et heures (0.21.3) : sur ordinateur, calendrier par l'icône à gauche du champ ou Alt+Flèche bas ; une date ou une heure tapée et non retenue bloque l'enregistrement de tout formulaire (« Date ou heure non retenue ») ; depuis la 0.21.4, le refus est signalé dès la sortie du champ |
 
 ## Écrans
 

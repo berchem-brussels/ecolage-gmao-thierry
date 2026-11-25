@@ -35,6 +35,7 @@ import ReportTicketModal from './ReportTicketModal';
 import NotificationsCloche from './NotificationsCloche';
 import RechercheGlobale, { ouvrirRecherche } from './RechercheGlobale';
 import VisiteGuidee, { EVENEMENT_MENU } from './VisiteGuidee';
+import { useAvisSaisieRefusee } from './ChampDate';
 import HelpButton from '../help/HelpButton';
 import { topicForPath } from '../help';
 import { hasPermission, useRoles } from '../useRoles';
@@ -57,6 +58,7 @@ function useEtroit(): boolean {
 }
 
 export default function AppLayout() {
+  useAvisSaisieRefusee(); // 0.21.4 : texte de date ou d'heure refusé à la sortie du champ, dit tout de suite
   const screens = Grid.useBreakpoint();
   // Grid.useBreakpoint() est vide au premier rendu : on attend la vraie valeur (piège SAGA 84)
   const isMobile = screens.md === false;

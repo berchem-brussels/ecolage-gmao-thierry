@@ -1,6 +1,6 @@
 # Architecture
 
-Version 0.21.3 · Le français fait foi.
+Version 0.21.4 · Le français fait foi.
 
 ## Services
 
@@ -412,6 +412,11 @@ Repris du gabarit 1.3.0 (`services/tickets.js`, `routes/tickets.js`, schémas, n
 - `has_photo` (0 ou 1) de `GET /api/lieux` et de `list_lieux` ; case « Sans photo (n) » de `PatrimoinePage.tsx`, calculée sur l'arbre déjà chargé, filtre `?photo=sans` gardé dans l'adresse.
 - Journal d'audit : `noms.cle` (réglage de l'instance ou de l'entité, nommé par le catalogue, sans requête) et type d'un lieu (`listes_valeurs`) dans `services/journal.js` ; `CODES_FAMILLE`, `CHAMPS_FAMILLE`, rôles par le catalogue et titre de fiche pour `topic_id` dans `JournalPage.tsx` ; `motif_donne` à la place du motif d'un ticket (E-46).
 - En-tête des téléphones (`AppLayout.tsx`, sous 768 px) : la langue passe dans le menu de la personne ; contrôle `npm run mobile:check` (`frontend/mobile-check/verifier-mobile.mjs`, Playwright, développement seulement).
+
+## Date refusée à la sortie du champ (0.21.4)
+
+- `saisieDate.ts` : `installerSaisieDate()` écoute aussi `focusin` et `focusout` (capture, document). À l'entrée dans un champ d'Ant Design (`.ant-picker input`), le texte du champ est noté et le texte gardé au dernier clic est oublié (un clic antérieur de moins de deux secondes faisait refuser une date valable retapée puis quittée par Tab). À la sortie, si le texte a changé et n'est pas vide, une vérification 150 ms plus tard constate le refus : le champ est revenu à son texte d'entrée. Le champ est alors marqué (`aria-invalid`, `ant-picker-status-error`, effacés à la frappe suivante) et l'événement `gmao-saisie-refusee` est émis sur le document. `saisiesNonRetenues()` attend les vérifications en cours et rend aussi ces refus tant que le champ garde la valeur remise (un choix au calendrier lève le blocage) ; `texteNonRetenu()` les rend aussi.
+- `ChampDate.tsx` : `marquerNonRetenu()` partagé ; `useAvisSaisieRefusee()`, appelé une fois dans `AppLayout`, affiche « Date ou heure non retenue » (clé unique, un seul message à la fois).
 
 ## Correctif issu de l'audit (0.21.3)
 
