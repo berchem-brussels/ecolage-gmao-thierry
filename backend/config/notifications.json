@@ -26,6 +26,26 @@
       }
     },
     {
+      "code": "demande.nouvelle",
+      "module": "demandes",
+      "disponible": true,
+      "depuis": "0.21.3",
+      "libelle_fr": "Demande nouvelle pour le service technique",
+      "libelle_nl": "Nieuwe aanvraag voor de technische dienst",
+      "destinataires_fr": "Gestionnaires et responsables du service technique de l'entité (danger : avis qui ne se désactivera pas)",
+      "destinataires_nl": "Beheerders en verantwoordelijken van de technische dienst van de entiteit (gevaar: melding die niet uitgeschakeld kan worden)",
+      "variantes": {
+        "defaut": {
+          "fr": "Nouvelle demande {numero} à qualifier.",
+          "nl": "Nieuwe aanvraag {numero} te kwalificeren."
+        },
+        "danger": {
+          "fr": "Danger signalé : demande {numero}, priorité absolue.",
+          "nl": "Gevaar gemeld: aanvraag {numero}, absolute voorrang."
+        }
+      }
+    },
+    {
       "code": "demande.validation_demandee",
       "module": "demandes",
       "disponible": true,

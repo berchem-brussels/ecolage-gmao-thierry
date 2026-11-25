@@ -20,8 +20,11 @@
  *   5. Effet sur la demande, par la table des passages seulement (services/cycle.js, passageAuto) : une tâche qui démarre
  *      fait passer la demande « En cours » si le passage existe depuis son état (qualifiée, en attente…) ; quand la
  *      dernière tâche ouverte se termine ou s'annule et qu'au moins une tâche est terminée, la demande passe « Travaux
- *      terminés » si le passage existe (qualifiée, en cours). Une demande sans tâche garde le passage manuel.
+ *      terminés » si le passage existe (qualifiée, planifiée, en cours ; rouverte et en attente depuis la 0.21.3). Une demande
+ *      sans tâche garde le passage manuel.
  *   6. « Travaux terminés » demandé à la main pendant qu'une tâche est à faire ou en cours : 409 TACHES_OUVERTES.
+ *   6 bis. 0.21.3 (CYC-03, DV-181) : sur une demande « À qualifier », une tâche se crée et se prépare, mais ne démarre ni ne
+ *      se termine (409 DEMANDE_A_QUALIFIER) ; « Rouverte » et « En attente » passent « Travaux terminés » comme « En cours ».
  *   7. Une demande qui se ferme (annulée, refusée, regroupée, refusée par le valideur) annule ses tâches encore
  *      ouvertes ; la tâche garde l'état de la demande qui l'a annulée (annulation_auto).
  *   8. Journal : création (titre en longueur seulement, corps de métier, durée), champs changés (changements(), sans
@@ -216,6 +219,8 @@ function controlerPassage(user, id, { etat, motif, debut, fin }) {
   const d = demandeDe(user, t.demande_id);
   modifiable(d);
   if (!(PASSAGES[t.etat] || []).includes(etat)) throw new AppError(409, 'TACHE_PASSAGE_INTERDIT', { de: t.etat, vers: etat });
+  // 0.21.3 (M-01 de l'audit, CYC-03, DV-181) : la qualification vient avant les travaux.
+  if (d.etat === 'a_qualifier' && (etat === 'en_cours' || etat === 'terminee')) throw new AppError(409, 'DEMANDE_A_QUALIFIER');
   const m = (motif || '').trim();
   if (etat === 'annulee' && !m) throw new AppError(409, 'TACHE_MOTIF_REQUIS');
   if (etat !== 'annulee' && m) throw new AppError(409, 'TACHE_MOTIF_INUTILE');

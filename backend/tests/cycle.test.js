@@ -228,7 +228,8 @@ test('MCP : passage en deux appels ; la préparation n’écrit rien ; canal MCP
   assert.equal(c.data.etat, 'en_attente');
   assert.equal(getDb().prepare('SELECT canal FROM demande_historique WHERE demande_id = ? ORDER BY id DESC').get(d.id).canal, 'mcp');
   assert.equal((await tool(agent, 'prepare_change_etat_demande', { id: d.id, etat: 'en_cours' })).code, 'FORBIDDEN');
-  assert.equal((await tool(gest, 'prepare_change_etat_demande', { id: d.id, etat: 'terminee' })).code, 'TRANSITION_INTERDITE');
+  // 0.21.3 (DV-181) : « En attente » → « Travaux terminés » est permis ; « Clôturée » ne l'est pas.
+  assert.equal((await tool(gest, 'prepare_change_etat_demande', { id: d.id, etat: 'cloturee', motif_id: V.usure })).code, 'TRANSITION_INTERDITE');
   const h = await tool(agent, 'get_historique_demande', { id: d.id });
   assert.equal(h.data.at(-1).commentaire, 'Pièce commandée.');
 });

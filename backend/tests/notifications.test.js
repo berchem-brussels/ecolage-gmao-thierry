@@ -67,7 +67,8 @@ test('catalogue (NOT-01) : événements en données, FR et NL ; émis ceux des d
     'demande.mention', 'demande.echeance_proche', 'demande.retard', 'demande.danger_sans_validation', 'reservation.confirmee', 'reservation.refusee',
     'materiel.rappel_retour', 'controle.echu', 'ticket.cree', 'ticket.reponse']) assert.ok(ev.find((e) => e.code === code), code);
   // 0.21.0 (point 5, SUI-03) : date prévue modifiée.
-  assert.deepEqual(ev.filter((e) => e.disponible).map((e) => e.code), ['demande.recue', 'demande.validation_demandee', 'demande.validee', 'demande.refusee_validation', 'demande.danger_sans_validation', 'demande.etat',
+  // 0.21.3 (DV-180) : demande nouvelle au service technique.
+  assert.deepEqual(ev.filter((e) => e.disponible).map((e) => e.code), ['demande.recue', 'demande.nouvelle', 'demande.validation_demandee', 'demande.validee', 'demande.refusee_validation', 'demande.danger_sans_validation', 'demande.etat',
     'demande.date_prevue', 'demande.message', 'demande.mention', 'demande.echeance_proche', 'demande.retard', 'ticket.cree', 'ticket.reponse']);
   for (const e of ev) {
     assert.ok(e.libelle_fr && e.libelle_nl && e.destinataires_fr && e.destinataires_nl, e.code);
@@ -93,7 +94,8 @@ test('accusé de réception (DEM-12) : la personne qui envoie sa demande le trou
   assert.ok(!JSON.stringify(n).includes('néon'), 'aucun texte de la demande (NOT-06)');
   assert.equal(r.body.meta.non_lues, 0);
   assert.deepEqual((await agent.get('/api/notifications/compteur')).body.data, { non_lues: 0, autres_entites: 0 });
-  assert.equal((await gest.get('/api/notifications')).body.data.filter((x) => x.objet_id === d.id).length, 0, 'le service n’a pas d’accusé');
+  // 0.21.3 (DV-180) : le service reçoit l'arrivée de la demande, jamais l'accusé du demandeur.
+  assert.deepEqual((await gest.get('/api/notifications')).body.data.filter((x) => x.objet_id === d.id).map((x) => x.evenement), ['demande.nouvelle'], 'le service n’a pas d’accusé');
 });
 
 test('demande à valider : variante « attend l’accord de votre chef de service »', async () => {

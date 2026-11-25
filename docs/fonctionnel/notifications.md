@@ -1,6 +1,6 @@
 # Notifications : la cloche et le courriel
 
-Version 0.17.0 · Fiche fonctionnelle (modèle du standard, section 17.8).
+Version 0.21.3 · Fiche fonctionnelle (modèle du standard, section 17.8). Créée en 0.17.0 ; avis d'une demande nouvelle au service technique en 0.21.3.
 
 ## Objet
 
@@ -12,7 +12,7 @@ Prévenir chaque personne de ce qui la concerne, au bon moment, sans qu'elle ait
 | --- | --- |
 | Tout agent (demandeur, bénéficiaire, personne qui suit) | Accusé de réception, accord ou refus du chef de service, changements d'état de ses demandes et de celles qu'il suit, réponses du service, accusé et réponse de ses signalements |
 | Chef de service et suppléant en période | Demande à valider ; demande partie sans son accord pour danger |
-| Service technique | Message d'un demandeur, mention dans une note interne, échéance proche, demande en retard, signalement à traiter |
+| Service technique (gestionnaire, responsable) | Demande nouvelle arrivée au service (depuis la 0.21.3 ; danger en priorité absolue), message d'un demandeur, mention dans une note interne, échéance proche, demande en retard, signalement à traiter |
 | Administrateur | Règle le courriel et ses modèles dans Paramètres, onglet « Courriel » ; lit le journal des courriels |
 
 ## Parcours
@@ -35,6 +35,7 @@ Prévenir chaque personne de ce qui la concerne, au bon moment, sans qu'elle ait
 | 7 | Échéance « proche » à moins de deux jours ouvrés, « en retard » dépassée ; une alerte par échéance, à la personne qui a qualifié la demande, sinon au service technique de l'entité ; les retards déjà là à la mise à jour ne font pas d'alerte | PRI-03, décision du 17/11/2026 |
 | 8 | Une notification de l'autre entité ou d'une autre personne n'est jamais rendue (API et MCP) | SEC-01 |
 | 9 | Avis gardés 90 jours une fois lus, 365 jours non lus ; journal des courriels 90 jours (à confirmer avec le DPO) | RGPD-04, D-09 |
+| 10 | Demande nouvelle (0.21.3) : dès qu'une demande arrive « À qualifier » (dépôt direct, danger, encodage par le service) ou qu'elle est validée par le chef de service, le gestionnaire et le responsable de l'entité sont avertis, sauf l'auteur de l'action ; un danger porte la mention « priorité absolue » et ne pourra pas être désactivé quand les préférences viendront ; une demande découpée par le service n'en fait pas | DEM-06, NOT-01, DV-180 |
 
 ## Hors périmètre de la version
 

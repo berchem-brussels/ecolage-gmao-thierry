@@ -2,6 +2,10 @@
 
 De Franse tekst (`docs/fr/SECURITE.md`) is rechtsgeldig en bevat het volledige rooster per versie.
 
+## 0.21.3 (25/11/2026)
+
+Correctie na de audit van het lastenboek: een heropende of wachtende aanvraag wordt « Werken beëindigd » met haar laatste taak; een taak van een nog te kwalificeren aanvraag start niet; de technische dienst wordt verwittigd van elke nieuwe aanvraag (alleen die dienst van de entiteit, nooit de auteur, zonder beschrijving); Alt+Pijl omlaag heropent de kalender na Escape; het kalenderpictogram staat links (een klik wist een ingevuld veld niet meer); een niet aanvaarde getypte datum of uur blokkeert het opslaan in elk formulier. Bewijzen van falen in de Franse tekst.
+
 ## 0.21.2 (24/11/2026)
 
 Correctie na de test van 0.21.1 op NIXUS: op een pc opende de kalender zodra men een datumveld aanraakte en bedekte hij wat volgt; in « De taak beëindigen » viel een klik op « Einde van het werk » in de uren van de kalender van het begin en wijzigde hij het begin ongemerkt. Bovendien verliest een echte muisklik de focus al bij het indrukken: de regel van 0.21.1 gold alleen voor gestuurde klikken. Correcties: `ChampDate.tsx` voor alle datum-, uur- en periodevelden (kalender via het pictogram of Alt+Pijl omlaag op een pc, oorspronkelijk gedrag op een aanraakscherm) en `installerSaisieDate()` luistert ook naar `pointerdown` en `mousedown`. Getest met echte muisklikken in Chromium en WebKit; bewijzen van falen in `docs/fr/SECURITE.md`.

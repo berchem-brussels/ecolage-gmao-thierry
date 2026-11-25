@@ -18,6 +18,8 @@
  *   « Terminer » celui d'une tâche en cours ; « Terminer » une tâche à faire ouvre une petite fenêtre qui demande l'heure
  *   de début et l'heure de fin (préremplies avec l'heure actuelle, modifiables, fin après début, pas dans le futur), pour
  *   un encodage après coup. Les heures réelles s'affichent sur la tâche ; une tâche terminée sans heure le dit.
+ * - 0.21.3 (M-01 de l'audit, CYC-03, DV-181) : sur une demande « À qualifier », « Démarrer » et « Terminer » sont retirés
+ *   et un bandeau dit de qualifier d'abord (le serveur refuse : DEMANDE_A_QUALIFIER) ; préparer, affecter, annuler restent.
  * Boutons qui passent à la ligne et champs en 16 px sur téléphone (DV-102) ; rien n'est montré au demandeur.
  */
 import { useEffect, useState } from 'react';
@@ -29,7 +31,7 @@ import api, { ApiError, qs } from '../../api';
 import { useI18n } from '../../contexts/I18nContext';
 import { COULEUR_TACHE, type Demande, type EtatTache, type Tache, dateSouhaitee, duree, instant } from '../../demandes';
 import { texteNonRetenu } from '../../saisieDate';
-import { ChampDate, ChampHeure } from '../ChampDate';
+import { ChampDate, ChampHeure, useSaisieRetenue } from '../ChampDate';
 import { type ConflitAffectation, texteConflits } from '../../planning';
 
 interface ValeurListe { id: number; libelle_fr: string; libelle_nl: string; is_active: number }
@@ -50,6 +52,7 @@ const enAvant = (de: EtatTache, vers: EtatTache) => (de === 'a_faire' && vers ==
 
 export default function TachesDemande({ d, onChange }: { d: Demande; onChange: () => void }) {
   const { t, lang, hint } = useI18n();
+  const verifierSaisie = useSaisieRetenue();
   const [corps, setCorps] = useState<ValeurListe[]>([]);
   const [edition, setEdition] = useState<Edition>(null);
   const [envoi, setEnvoi] = useState(false);
@@ -75,6 +78,9 @@ export default function TachesDemande({ d, onChange }: { d: Demande; onChange: (
   }, [tacheAffectee, dateChoisie ? (dateChoisie as Dayjs).format('YYYY-MM-DD') : '']);
   const basculer = (id: number) => formAff.setFieldsValue({ qui: 'ouvriers', ouvriers: choisis.includes(id) ? choisis.filter((x) => x !== id) : [...choisis, id].slice(0, 10) });
   const taches = d.taches || [];
+  /** 0.21.3 (M-01 de l'audit, CYC-03, DV-181) : sur une demande à qualifier, une tâche se prépare mais ne démarre ni ne se termine. */
+  const aQualifier = d.etat === 'a_qualifier';
+  const passagesVisibles = (x: Tache) => x.passages.filter((v) => v !== 'annulee' && !(aQualifier && (v === 'en_cours' || v === 'terminee')));
   const modifiables = d.taches_modifiables === 1;
   /** La tâche x a un formulaire ouvert (modifier ou annuler). */
   const enEdition = (x: Tache) => !!edition && edition.mode !== 'ajout' && edition.tache.id === x.id;
@@ -189,6 +195,7 @@ export default function TachesDemande({ d, onChange }: { d: Demande; onChange: (
   );
 
   const affecter = async (v: SaisieAffectation) => {
+    if (await verifierSaisie()) return; // 0.21.3 (DV-176) : date ou heure tapée non retenue : rien ne part.
     if (edition?.mode !== 'affecter') return;
     setEnvoi(true);
     setErreur(null);
@@ -315,6 +322,9 @@ export default function TachesDemande({ d, onChange }: { d: Demande; onChange: (
         )}
       </Space>
       {taches.length > 0 && <Typography.Paragraph type="secondary" style={{ fontSize: 13 }}>{t('tache.regle')}</Typography.Paragraph>}
+      {aQualifier && modifiables && taches.some((x) => x.etat === 'a_faire' || x.etat === 'en_cours') && (
+        <Alert type="info" showIcon className="taches-a-qualifier" message={t('tache.qualifier_avant')} style={{ marginBottom: 8 }} />
+      )}
       {!taches.length && edition?.mode !== 'ajout' && <Typography.Paragraph type="secondary">{t(modifiables ? 'tache.aucune' : 'tache.aucune.figee')}</Typography.Paragraph>}
       {erreur && <Alert type="error" showIcon message={erreur} style={{ marginBottom: 8 }} role="alert" />}
       {edition?.mode === 'ajout' && <Card size="small" title={t('tache.nouvelle')} style={{ marginBottom: 8 }}>{formulaire}</Card>}
@@ -353,7 +363,7 @@ export default function TachesDemande({ d, onChange }: { d: Demande; onChange: (
               )}
               {modifiables && !enEdition(x) && (
                 <Space wrap size={8} style={{ maxWidth: '100%' }} role="group" aria-label={`${t('tache.numero')} ${x.rang}`}>
-                  {x.passages.filter((v) => v !== 'annulee').map((v) => (
+                  {passagesVisibles(x).map((v) => (
                     <Button key={v} size="small" type={enAvant(x.etat, v) ? 'primary' : 'default'} disabled={envoi} onClick={() => (v === 'terminee' ? terminer(x) : passer(x, v))}
                       style={{ whiteSpace: 'normal', height: 'auto', minHeight: 28 }}>{t(cleBouton(x.etat, v))}</Button>
                   ))}

@@ -15,7 +15,7 @@ import dayjs, { type Dayjs } from 'dayjs';
 import api, { ApiError, qs } from '../api';
 import { useI18n } from '../contexts/I18nContext';
 import { dateSouhaitee } from '../demandes';
-import { ChampDate } from './ChampDate';
+import { ChampDate, useSaisieRetenue } from './ChampDate';
 
 export interface Indisponibilite { id: number; user_id: number; du: string; au: string; periode: 'journee' | 'matin' | 'apres_midi'; motif?: 'conge' | 'formation' | 'autre' }
 /** Groupe de boutons nommé par aria-label : le type d'Ant Design refuse role en propriété directe (DV-145). */
@@ -24,6 +24,7 @@ interface Saisie { du?: Dayjs | null; au?: Dayjs | null; periode: Indisponibilit
 
 export default function IndisponibilitesOuvrier({ ouvrierId, gerer }: { ouvrierId: number; gerer: boolean }) {
   const { t, lang, hint } = useI18n();
+  const verifierSaisie = useSaisieRetenue();
   const [liste, setListe] = useState<Indisponibilite[] | null>(null);
   const [ajout, setAjout] = useState(false);
   const [envoi, setEnvoi] = useState(false);
@@ -43,6 +44,7 @@ export default function IndisponibilitesOuvrier({ ouvrierId, gerer }: { ouvrierI
 
   const echec = (e: unknown) => setErreur(e instanceof ApiError ? e.message : t('common.error'));
   const enregistrer = async (v: Saisie) => {
+    if (await verifierSaisie()) return; // 0.21.3 (DV-176) : date ou heure tapée non retenue : rien ne part.
     if (!v.du) return;
     setEnvoi(true);
     setErreur(null);

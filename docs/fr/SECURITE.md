@@ -2,6 +2,32 @@
 
 Le français fait foi. Grille de la section 10.2 du standard, rejouée à chaque version. « Non joué » veut dire que le contrôle n'a pas tourné.
 
+## 0.21.3 (25/11/2026)
+
+Correctif issu de l'audit du cahier des charges (`claude/AUDIT-CDC-0.21.2.md`, M-01 à M-04 ; DV-176, DV-179 à DV-182). Une demande rouverte ou en attente restait dans son état quand sa dernière tâche se terminait (CYC-03) ; le service technique n'était averti d'aucune demande nouvelle, danger compris ; Alt+Flèche bas ne rouvrait pas le calendrier après Échap ; un clic sur l'icône d'un champ de date rempli effaçait la date (la croix prenait sa place au survol) ; hors de « Terminer la tâche », une date ou une heure tapée et refusée par le champ était remplacée en silence par l'ancienne valeur.
+
+| Famille | Contrôle | Résultat |
+| --- | --- | --- |
+| Contrôle d'accès | Le nouvel avis va au seul service technique de l'entité de la demande (`demandes:traiter`), jamais au demandeur, au chef ni à l'auteur de l'action ; pas avant l'accord du chef d'une demande à valider | Conforme (`avis.test.js`) |
+| Données | Avis et courriel sans description ni nom (numéro, lieu, délai, lien) | Conforme (`avis.test.js`, NOT-06) |
+| Cycle de vie | Deux passages ajoutés au catalogue, sans migration ; tâche d'une demande à qualifier refusée au démarrage et à la fin (API et MCP), rien d'écrit | Conforme (`taches.test.js`, `cycle.test.js`) |
+| Validation | Une date ou une heure non retenue bloque l'envoi de tout formulaire qui en enregistre (vrais claviers, Chromium et WebKit : date, heure, fin de période invalides refusées ; valides envoyées ; rien tapé, sans délai) | Conforme (`saisie-date.test.tsx`, `demandes.test.tsx`) |
+| Interface | Alt+Flèche bas rouvre après Échap (date, heure, période, trois fois de suite) ; clic sur l'icône d'un champ rempli : date gardée | Conforme (`saisie-date.test.tsx`, vrais claviers et souris) |
+| Secrets, infrastructure, dépendances | Inchangés | Conforme |
+
+Preuves d'échec :
+
+| Protection retirée | Échec constaté |
+| --- | --- |
+| Catalogue des passages de la 0.21.2 | `taches.test.js` : « Rouverte » et « En attente » restent dans leur état |
+| Règle 6 bis de `services/taches.js` | `taches.test.js` : la tâche d'une demande à qualifier démarre |
+| `TachesDemande.tsx` de la 0.21.2 | `demandes.test.tsx` : « Démarrer » proposé sur une demande à qualifier |
+| Avis au dépôt (`nouvelleAuService` dans `depot()`) | `avis.test.js` : aucun avis au service |
+| Avis à la validation par le chef | `avis.test.js` : aucun avis au service après l'accord |
+| Exclusion de l'auteur | `avis.test.js` : le gestionnaire qui encode est averti de sa propre demande |
+| `ChampDate.tsx` de la 0.21.2 | `saisie-date.test.tsx` : Alt+Flèche bas sans effet ; icône à droite |
+| Appel de `useSaisieRetenue()` dans l'affectation | `demandes.test.tsx` : la date 99/99/2026 laisse partir l'affectation |
+
 ## 0.21.2 (24/11/2026)
 
 Correctif de la recette de la 0.21.1 sur NIXUS (DV-177). Sur un PC, le calendrier d'Ant Design s'ouvrait dès qu'on touchait un champ de date et recouvrait ce qui suit : dans « Terminer la tâche », un clic sur « Fin du travail » tombait dans les heures du calendrier du début et changeait le début sans qu'on le voie (08:00 tapé, 12:00 retenu sur la copie locale) ; la fin tapée n'allait nulle part ; un clic sur « Terminer » ne faisait rien. Cause probable de l'anomalie du 23/11/2026. Second défaut trouvé en le corrigeant : un vrai clic de souris fait perdre le focus au champ dès l'appui, avant l'événement « click » ; la règle de la 0.21.1 ne jouait donc que pour les clics pilotés, et le premier clic sur « Terminer » était refusé en silence. Corrections : `components/ChampDate.tsx` (`ChampDate`, `ChampHeure`, `ChampPeriode`) pour tous les champs de date, d'heure et de période (calendrier par l'icône ou Alt+Flèche bas sur PC, comportement d'origine sur écran tactile, Échap ferme le calendrier sans fermer la fenêtre) ; `installerSaisieDate()` écoute aussi `pointerdown` et `mousedown`.

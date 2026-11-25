@@ -1234,6 +1234,21 @@ describe('tâches d’une demande, fiche du service technique (0.20.0, point 1 ;
     await audit(n as HTMLElement);
   });
 
+  it('0.21.3 (CYC-03, DV-181) : sur une demande à qualifier, ni « Démarrer » ni « Terminer » ; bandeau « Qualifiez d’abord » ; préparer reste', async () => {
+    ficheData = fiche({ etat: 'a_qualifier', taches: [tache(5, 1, 'a_faire')] });
+    const d = await ouvrir();
+    const section = await within(d).findByRole('region', { name: 'Tâches (1)' });
+    expect(within(section).getByText(/Qualifiez d’abord la demande|Qualifiez d'abord la demande/)).toBeInTheDocument();
+    expect(within(within(section).getByRole('group', { name: 'Tâche 1' })).getAllByRole('button').map((b) => b.textContent)).toEqual(['Affecter', 'Modifier', 'Annuler la tâche']);
+    await audit(d as HTMLElement);
+    cleanupAll();
+    ficheData = fiche({ taches: [tache(5, 1, 'a_faire')] });
+    const q = await ouvrir();
+    const s2 = await within(q).findByRole('region', { name: 'Tâches (1)' });
+    expect(within(s2).queryByText(/Qualifiez d.abord la demande/)).toBeNull();
+    expect(within(within(s2).getByRole('group', { name: 'Tâche 1' })).getByRole('button', { name: 'Démarrer' })).toBeInTheDocument();
+  });
+
   it('ajouter : corps de métier de la demande proposé, durée en heures envoyée en minutes ; titre exigé', async () => {
     ficheData = fiche({ taches: [] });
     reponsePost = { status: 201, json: { data: tache(8, 1, 'a_faire'), meta: { envelope: 1 } } };
@@ -1338,6 +1353,24 @@ describe('tâches d’une demande, fiche du service technique (0.20.0, point 1 ;
       // Les messages d'Ant Design restent un moment à l'écran : celui des tests précédents peut s'y trouver aussi.
       expect((await screen.findAllByText('Affectation enregistrée')).length).toBeGreaterThan(0);
     } finally { conflitsAffectation = []; }
+  });
+
+  it('0.21.3 (DV-176) : affectation, date tapée non retenue au moment du clic : rien ne part, l’écran le dit, le champ est marqué', async () => {
+    const demain = dayjs().add(1, 'day').format('YYYY-MM-DD');
+    ficheData = fiche({ taches: [tache(5, 1, 'a_faire', { ouvriers: [{ id: 21, prenom: 'Olivier', nom: 'Ouvrier' }], date_prevue: demain })] });
+    const d = await ouvrir();
+    const section = await within(d).findByRole('region', { name: 'Tâches (1)' });
+    fireEvent.click(within(section).getByRole('button', { name: 'Affecter' }));
+    await within(section).findByText('Odile Ouvrière');
+    const champ = section.querySelector('.tache-affectation .ant-picker input') as HTMLInputElement;
+    expect(champ.value).toBe(dayjs(demain).format('DD/MM/YYYY'));
+    champ.focus(); fireEvent.mouseDown(champ);
+    fireEvent.change(champ, { target: { value: '99/99/2026' } });
+    puts.length = 0;
+    (within(section).getByRole('button', { name: 'Enregistrer' }) as HTMLButtonElement).click();
+    expect(await screen.findByText(/Date ou heure non retenue : rien n.est enregistré/)).toBeInTheDocument();
+    expect(puts.some((p) => p.url === '/api/taches/5/affectation')).toBe(false);
+    expect(champ.getAttribute('aria-invalid')).toBe('true');
   });
 
   it('0.20.0 (point 2) : le demandeur lit « Intervention prévue le », sans nom d’ouvrier', async () => {

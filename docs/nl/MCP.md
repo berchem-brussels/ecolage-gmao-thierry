@@ -1,6 +1,10 @@
 # MCP-server
 
-Versie van de toepassing: **0.21.2** · Bijgewerkt op 24/11/2026 · De Franse tekst is rechtsgeldig (`docs/fr/MCP.md`).
+Versie van de toepassing: **0.21.3** · Bijgewerkt op 25/11/2026 · De Franse tekst is rechtsgeldig (`docs/fr/MCP.md`).
+
+## 0.21.3
+
+Geen nieuwe tool. `change_etat_tache` weigert een taak van een aanvraag « Te kwalificeren » te starten of te beëindigen (`DEMANDE_A_QUALIFIER`); `change_etat_demande` aanvaardt « Werken beëindigd » vanuit « Heropend » en « In wacht »; `list_evenements_notification` geeft de gebeurtenis `demande.nouvelle`.
 
 ## 0.21.2
 

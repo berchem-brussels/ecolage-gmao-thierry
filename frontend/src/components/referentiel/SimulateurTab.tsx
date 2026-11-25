@@ -10,7 +10,7 @@
  */
 import { useState } from 'react';
 import { Button, Card, Descriptions, Form, Grid, Radio, Select, Tag, Typography, message } from 'antd';
-import { ChampDate } from '../ChampDate';
+import { ChampDate, useSaisieRetenue } from '../ChampDate';
 import dayjs, { type Dayjs } from 'dayjs';
 import api, { ApiError, qs } from '../../api';
 import { useI18n } from '../../contexts/I18nContext';
@@ -33,6 +33,7 @@ function Echeance({ quand, delai }: { quand: string; delai: string }) {
 
 export default function SimulateurTab({ priorites, categories }: { priorites: PrioriteFiche[]; categories: Categorie[] }) {
   const { t, tField, lang, hint } = useI18n();
+  const verifierSaisie = useSaisieRetenue();
   const [form] = Form.useForm<FormValues>();
   const mode = Form.useWatch('mode', form);
   const [res, setRes] = useState<Echeance | null>(null);
@@ -44,6 +45,7 @@ export default function SimulateurTab({ priorites, categories }: { priorites: Pr
   }));
 
   const calculer = async (v: FormValues) => {
+    if (await verifierSaisie()) return; // 0.21.3 (DV-176) : date ou heure tapée non retenue : rien ne part.
     try {
       setRes(await api.get<Echeance>(`/echeances/simulation${qs({
         recu_le: v.recu.toDate().toISOString(),

@@ -56,6 +56,8 @@ export function retenirSaisieAvant(e: Event): void {
   const cible = e.target instanceof Element ? e.target : null;
   if (cible && (champ.closest('.ant-picker')?.contains(cible) || cible.closest('.ant-picker-dropdown'))) return;
   textes.set(champ, { texte: champ.value, quand: Date.now() });
+  recents.push(champ);
+  if (recents.length > 20) recents.shift();
   const Clavier = doc.defaultView?.KeyboardEvent ?? KeyboardEvent;
   champ.dispatchEvent(new Clavier('keydown', { key: 'Enter', code: 'Enter', bubbles: true, cancelable: true }));
   champ.blur();
@@ -63,6 +65,25 @@ export function retenirSaisieAvant(e: Event): void {
 
 /** Texte de chaque champ au moment du dernier clic ou envoi (avant qu'un texte refusé ne soit remis à l'ancien). */
 const textes = new WeakMap<HTMLInputElement, { texte: string; quand: number }>();
+/** Champs dont le texte vient d'être gardé, du plus ancien au plus récent (pour saisiesNonRetenues). */
+const recents: HTMLInputElement[] = [];
+
+/**
+ * 0.21.3 (DV-176, audit M-04) : règle de tous les formulaires qui enregistrent une date ou une heure. Après le clic qui
+ * envoie, attend que rc-picker ait remis l'ancien texte d'une saisie refusée (deux images ; 120 ms), puis rend les champs
+ * dont le texte affiché au moment du clic n'est plus celui du champ : ce texte n'a pas été retenu. Vide quand tout a été
+ * retenu, ou quand aucun champ de date n'avait le focus au moment du clic (rien à attendre).
+ */
+export async function saisiesNonRetenues(attente = 120): Promise<HTMLInputElement[]> {
+  const maintenant = Date.now();
+  const vus = [...new Set(recents)].filter((c) => {
+    const g = textes.get(c);
+    return c.isConnected && g && maintenant - g.quand < 2000 && g.texte.trim() !== '';
+  });
+  if (!vus.length) return [];
+  await new Promise((r) => setTimeout(r, attente));
+  return vus.filter((c) => c.isConnected && c.value !== textes.get(c)!.texte);
+}
 
 /** Texte affiché d'un champ (par son id) au moment du clic qui envoie, sinon son texte actuel ; null s'il n'existe pas. */
 export function texteAffiche(id: string, doc: Document = document): string | null {

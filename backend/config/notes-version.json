@@ -2,6 +2,27 @@
   "_description": "Notes de version pour les utilisateurs, en FR et en NL, sans terme technique (standard v3.2, sections 13.1 et 17.8 ; écart E-07). Une note par version, de la plus récente à la plus ancienne. Chaque ligne a un public : « tous », « admin » (administrateur de l'application) ou une permission du catalogue des rôles (par exemple « parametres:gerer »), lue dans l'entité active. La note de la version installée s'affiche une fois à la première connexion qui suit la mise à jour ; toutes restent relisibles dans Aide, Nouveautés.",
   "notes": [
     {
+      "version": "0.21.3",
+      "date": "2026-11-25",
+      "lignes": [
+        {
+          "public": "tous",
+          "fr": "Une date ou une heure tapée que le champ n'a pas retenue bloque l'enregistrement, et le champ le signale ; sur ordinateur, l'icône du calendrier est à gauche du champ.",
+          "nl": "Een getypte datum of uur die het veld niet aanvaard heeft, blokkeert het opslaan, en het veld meldt het; op de computer staat het kalenderpictogram links van het veld."
+        },
+        {
+          "public": "demandes:traiter",
+          "fr": "Le service technique est prévenu dès qu'une demande lui arrive ; un danger est annoncé en priorité absolue.",
+          "nl": "De technische dienst wordt verwittigd zodra een aanvraag binnenkomt; een gevaar wordt gemeld met absolute voorrang."
+        },
+        {
+          "public": "demandes:traiter",
+          "fr": "Une demande rouverte ou en attente passe « Travaux terminés » avec sa dernière tâche ; une tâche ne démarre qu'après la qualification de la demande.",
+          "nl": "Een heropende of wachtende aanvraag wordt « Werken beëindigd » met haar laatste taak; een taak start pas na de kwalificatie van de aanvraag."
+        }
+      ]
+    },
+    {
       "version": "0.21.2",
       "date": "2026-11-24",
       "lignes": [
