@@ -164,6 +164,47 @@ describe('Champs de date et d’heure (R1)', () => {
       retenirSaisieAvant({ target: document.getElementById('b') } as unknown as Event);
       expect(await saisiesNonRetenues(0)).toEqual([]);
     });
+    // 0.21.4 (contrôle 7 de la recette de la 0.21.3 sur NIXUS) : texte refusé puis sortie du champ (Tab, clic ailleurs,
+    // autre fenêtre) : le composant remet l'ancienne valeur en silence ; l'envoi doit rester bloqué et le champ le dire.
+    it('texte refusé à la sortie du champ : marqué, dit, bloquant jusqu’à la prochaine frappe', async () => {
+      const champ = monter('27/11/2026');
+      const dits: Event[] = [];
+      document.addEventListener('gmao-saisie-refusee', (e) => dits.push(e));
+      champ.focus();
+      champ.value = '99/99/2026';
+      champ.blur();
+      champ.value = '27/11/2026'; // ce que fait rc-picker deux images plus tard
+      expect(await saisiesNonRetenues(0)).toEqual([champ]);
+      expect(champ.getAttribute('aria-invalid')).toBe('true');
+      expect(dits).toHaveLength(1);
+      expect(await saisiesNonRetenues(0)).toEqual([champ]); // toujours bloquant, sans nouveau clic dans le champ
+      fireEvent.input(champ);
+      expect(champ.getAttribute('aria-invalid')).toBeNull();
+      expect(await saisiesNonRetenues(0)).toEqual([]);
+    });
+    it('texte refusé puis valeur changée autrement (calendrier) : plus bloquant', async () => {
+      const champ = monter('27/11/2026');
+      champ.focus(); champ.value = '99/99/2026'; champ.blur(); champ.value = '27/11/2026';
+      expect(await saisiesNonRetenues(0)).toEqual([champ]);
+      champ.value = '30/11/2026';
+      expect(await saisiesNonRetenues(0)).toEqual([]);
+    });
+    it('texte valide gardé à la sortie, ou champ vidé : rien', async () => {
+      const champ = monter('27/11/2026');
+      champ.focus(); champ.value = '28/11/2026'; champ.blur();
+      expect(await saisiesNonRetenues(0)).toEqual([]);
+      champ.focus(); champ.value = ''; champ.blur();
+      expect(await saisiesNonRetenues(0)).toEqual([]);
+      expect(champ.getAttribute('aria-invalid')).toBeNull();
+    });
+    it('date retapée juste après un clic ailleurs : l’ancien texte gardé ne compte plus (faux refus corrigé)', async () => {
+      const champ = monter('27/11/2026');
+      champ.focus();
+      retenirSaisieAvant({ target: document.getElementById('b') } as unknown as Event); // garde « 27/11/2026 »
+      champ.focus(); champ.value = '28/11/2026'; champ.blur();
+      retenirSaisieAvant({ target: document.getElementById('b') } as unknown as Event);
+      expect(await saisiesNonRetenues(0)).toEqual([]);
+    });
     it('aucun champ de date au moment du clic : rien, sans attendre', async () => {
       monter('');
       const t0 = Date.now();

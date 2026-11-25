@@ -1,6 +1,6 @@
 # Écarts
 
-Version de l'application : **0.21.3** · Mis à jour le 25/11/2026
+Version de l'application : **0.21.4** · Mis à jour le 25/11/2026
 
 Écarts mesurés entre le code, le standard (v3.3 depuis la 0.9.1), le gabarit v3 (1.1.0, puis 1.3.0 pour les modules de l'étape 8 bis) et le cahier des charges. Un numéro attribué ne change plus. Les écarts relevés à l'écriture du cahier des charges portent le préfixe EG (section 33 du cahier des charges) ; ceux du développement le préfixe E.
 

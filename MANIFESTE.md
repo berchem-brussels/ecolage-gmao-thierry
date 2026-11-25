@@ -1,8 +1,22 @@
 # Manifeste
 
-Version de l'application : **0.21.3** · Mis à jour le 25/11/2026
+Version de l'application : **0.21.4** · Mis à jour le 25/11/2026
 
 Fichiers changés, dépendances et suites par version. Les décomptes sont recopiés de la sortie des commandes.
+
+## 0.21.4 (25/11/2026)
+
+Fichiers comparés à l'archive 0.21.3 (`gmao-v0_21_3.tar.gz`, SHA-256 `ef98295d…8a559a`) par `git diff --stat` (hors `node_modules` et `dist`). Pour le contrôle du `git status` (`GITHUB.md`, section 5) : une ligne `A`, aucune ligne `D`, les autres `M`.
+
+- Nouveau (ligne `A`) : `NOTES_LIVRAISON_v0.21.4.md`.
+- Modifiés, serveur : `package.json` et `package-lock.json` (version 0.21.4) ; `config/notes-version.json` (note 0.21.4, note 0.21.2 corrigée) ; test `notes-version.test.js`.
+- Modifiés, interface : `package.json` et `package-lock.json` (version 0.21.4) ; `src/saisieDate.ts` (contrôle à la sortie du champ) ; `src/components/ChampDate.tsx` (`marquerNonRetenu`, `useAvisSaisieRefusee`) ; `src/components/AppLayout.tsx` (appel de `useAvisSaisieRefusee`) ; aide `help/topics/accueil.ts` ; tests `saisie-date.test.tsx`, `demandes.test.tsx`.
+- Modifiés, documentation et racine : `CHANGELOG.md`, `ETAT.md`, `ECARTS-CDC.md`, `MANIFESTE.md` ; `README.md`, `README.nl.md`, `README.en.md` ; `docs/fr`, `docs/nl`, `docs/en` (`APRES-DEPLOIEMENT.md`, `ARCHITECTURE.md`, `EXPLOITATION.md`, `MCP.md`, `SECURITE.md`) ; `docs/fonctionnel/taches-planning.md` (règle 12).
+- Inchangés : les deux Dockerfile, `nginx.conf`, `docker-entrypoint.sh`, `docker-compose.yml`, `.env.example`, `backup.sh`, `verifier-ports.sh`, `recette.sh`, `ci.yml`, `.gitignore`, `src/demo.js`, `src/database.js` (aucune migration), `i18n.ts` (message existant réutilisé), `mobile-check/verifier-mobile.mjs`.
+- Retirés : aucun fichier.
+- Dépendances : aucune nouvelle ; verrous inchangés hors numéro de version. Aucun `npm audit fix`.
+- Suites de la 0.21.4 : voir `ETAT.md`, section 2. Preuves d'échec : `docs/fr/SECURITE.md`, section 0.21.4 (trois).
+- Navigateur réel : Chromium et WebKit du bac à sable (Playwright), copie locale en production servie en HTTPS, vrais claviers et souris (7 cas × 2 moteurs, puis heure, choix au calendrier et « Terminer la tâche »).
 
 ## 0.21.3 (25/11/2026)
 

@@ -1,6 +1,16 @@
 # Journal des versions
 
-Version de l'application : **0.21.3** · Mis à jour le 25/11/2026
+Version de l'application : **0.21.4** · Mis à jour le 25/11/2026
+
+## 0.21.4 (25/11/2026)
+
+Correctif de la recette de la 0.21.3 sur NIXUS (contrôle 7, DV-183) et remarque R1, avant le test orienté utilisateur. Aucune migration, aucune dépendance, aucune permission, aucun réglage, aucun outil MCP nouveau.
+
+- Date refusée puis champ quitté (contrôle 7) : une date ou une heure tapée et refusée par le champ, puis quittée par Tab, par un clic ailleurs ou parce que la fenêtre passait à l'arrière-plan, était remplacée en silence par l'ancienne valeur, et l'enregistrement envoyait celle-ci. `saisieDate.ts` : `installerSaisieDate()` écoute `focusin` et `focusout` ; à la sortie, un texte changé et revenu à sa valeur d'entrée 150 ms plus tard est un refus : champ marqué, événement `gmao-saisie-refusee`, blocage de `saisiesNonRetenues()` et de `texteNonRetenu()` tant que le champ garde la valeur remise. `ChampDate.tsx` : `marquerNonRetenu()`, `useAvisSaisieRefusee()` (appelé dans `AppLayout.tsx`) affiche « Date ou heure non retenue » dès la sortie.
+- Faux refus trouvé en corrigeant : une date valable retapée moins de deux secondes après un clic, puis quittée par Tab, était refusée ; le texte gardé au dernier clic est oublié à l'entrée dans le champ.
+- Note de version : une ligne pour tous ; la note de la 0.21.2 dit « icône du champ (à gauche depuis la 0.21.3) » (R1).
+- Aide : Accueil, « Comment saisir une date ou une heure ? » (signalé dès la sortie du champ).
+- Tests : `saisie-date.test.tsx` (quatre), `demandes.test.tsx` (affectation, date refusée puis sortie du champ), `notes-version.test.js` (note 0.21.4, R1).
 
 ## 0.21.3 (25/11/2026)
 

@@ -1,6 +1,10 @@
 # MCP server
 
-Application version: **0.21.3** · Updated on 25/11/2026 · The French text prevails (`docs/fr/MCP.md`).
+Application version: **0.21.4** · Updated on 25/11/2026 · The French text prevails (`docs/fr/MCP.md`).
+
+## 0.21.4
+
+No new tool, no changed tool (screen fix only).
 
 ## 0.21.3
 

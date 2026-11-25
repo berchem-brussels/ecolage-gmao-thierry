@@ -1,6 +1,6 @@
 # Après déploiement : installer et mettre à jour la GMAO sur NIXUS
 
-Version de l'application : **0.21.3** · Mis à jour le 25/11/2026 · Le français fait foi.
+Version de l'application : **0.21.4** · Mis à jour le 25/11/2026 · Le français fait foi.
 
 Procédure pas à pas depuis un PC Windows, sans passer par DSM. Une commande à la fois ; on attend son résultat avant la suivante. Si un résultat diffère de l'attendu, on s'arrête et on colle la sortie dans la conversation.
 
@@ -188,6 +188,10 @@ Attendu : `[gmao] … : sauvegarde terminée (photos copiées, aucune pièce joi
 Suivie une seule fois, avec la 0.1.0. Elle reste décrite dans `docs/fr/INSTALLATION.md` et `NOTES_LIVRAISON_v0.1.0.md` de l'archive. Ordre : dossier `/volume1/docker/monapp` créé, archive copiée, extraction, `sudo sh verifier-ports.sh 18443 18080` (attendu : deux fois `LIBRE` ; le 18444 est occupé par la GRC), création du `.env` (une seule fois, `DEMO_ALLOWED=1` en acceptance, `chmod 600`), `build`, `up -d`, assistant d'installation dans le navigateur (nom du pouvoir local, entité AC, premier administrateur), création de l'entité CPAS dans Administration, Entités, comptes de démonstration.
 
 ## 8. Notes par version
+
+### 0.21.4 (25/11/2026)
+
+Correctif du contrôle 7 de la recette de la 0.21.3 (date ou heure refusée puis champ quitté ; DV-183) et remarque R1 (note de la 0.21.2). Mise à jour par la section 3, **sans migration, sans dépendance nouvelle, sans relance de `demo.js`** : seule l'image de l'interface change réellement, celle du serveur se reconstruit pour le numéro de version et la note ; `--no-cache` inutile. `sudo docker logs gmao-api --tail 30` : `[APP] API 0.21.4`, aucune ligne `[DB] Migration`. `sudo bash recette.sh` : 9/9, le contrôle 4 attend la version 0.21.4. Retour à la 0.21.3 sans restaurer la base. À l'écran : une date 99/99/2026 tapée puis quittée par Tab entoure le champ de rouge et affiche « Date ou heure non retenue » ; « Enregistrer » n'envoie rien.
 
 ### 0.21.3 (25/11/2026)
 

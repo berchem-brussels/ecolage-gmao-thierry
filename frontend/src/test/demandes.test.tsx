@@ -1373,6 +1373,28 @@ describe('tâches d’une demande, fiche du service technique (0.20.0, point 1 ;
     expect(champ.getAttribute('aria-invalid')).toBe('true');
   });
 
+  // 0.21.4 (contrôle 7 de la recette de la 0.21.3 sur NIXUS) : le champ perd le focus avant le clic (Tab, autre fenêtre).
+  it('0.21.4 : affectation, date non retenue puis sortie du champ : l’ancienne date ne part pas, l’écran le dit tout de suite', async () => {
+    const demain = dayjs().add(1, 'day').format('YYYY-MM-DD');
+    ficheData = fiche({ taches: [tache(5, 1, 'a_faire', { ouvriers: [{ id: 21, prenom: 'Olivier', nom: 'Ouvrier' }], date_prevue: demain })] });
+    const d = await ouvrir();
+    const section = await within(d).findByRole('region', { name: 'Tâches (1)' });
+    fireEvent.click(within(section).getByRole('button', { name: 'Affecter' }));
+    await within(section).findByText('Odile Ouvrière');
+    const champ = section.querySelector('.tache-affectation .ant-picker input') as HTMLInputElement;
+    const ancien = dayjs(demain).format('DD/MM/YYYY');
+    champ.focus(); fireEvent.mouseDown(champ);
+    fireEvent.change(champ, { target: { value: '99/99/2026' } });
+    champ.blur();
+    await waitFor(() => expect(champ.value).toBe(ancien)); // le composant remet l'ancienne date en silence
+    await waitFor(() => expect(champ.getAttribute('aria-invalid')).toBe('true'));
+    expect((await screen.findAllByText(/Date ou heure non retenue : rien n.est enregistré/)).length).toBeGreaterThan(0);
+    puts.length = 0;
+    (within(section).getByRole('button', { name: 'Enregistrer' }) as HTMLButtonElement).click();
+    await new Promise((r) => setTimeout(r, 400));
+    expect(puts.some((p) => p.url === '/api/taches/5/affectation')).toBe(false);
+  });
+
   it('0.20.0 (point 2) : le demandeur lit « Intervention prévue le », sans nom d’ouvrier', async () => {
     ficheData = demande(2, 'AA-DI-2026-00002', 'planifiee', { intervention_prevue_le: '2026-11-26' });
     render(wrap(MesDemandes, 'fr', ['/demandes?demande=2']));

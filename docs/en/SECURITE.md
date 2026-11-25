@@ -2,6 +2,10 @@
 
 The French text (`docs/fr/SECURITE.md`) prevails and holds the full grid per version.
 
+## 0.21.4 (25/11/2026)
+
+Fix of check 7 of the 0.21.3 acceptance test on NIXUS: a typed date refused by the field, then left without clicking a button (Tab, click elsewhere, window sent to the background), was silently replaced by the old date, which was then saved. The field is now marked and « Date ou heure non retenue » is shown as soon as it is left; saving stays blocked until the text is corrected or a date is picked in the calendar. A valid date retyped shortly after a click is no longer refused. Tested with real keyboards and mice in Chromium and WebKit; failure proofs in the French text.
+
 ## 0.21.3 (25/11/2026)
 
 Fix from the specification audit: a reopened or on-hold request now reaches « Work finished » with its last task; a task of a request still to qualify does not start; the technical department is notified of every new request (only that department of the entity, never the author, without description); Alt+ArrowDown reopens the calendar after Escape; the calendar icon is on the left (a click no longer clears a filled field); an unretained typed date or time blocks saving in every form. Failure proofs in the French text.

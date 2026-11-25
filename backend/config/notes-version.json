@@ -2,6 +2,17 @@
   "_description": "Notes de version pour les utilisateurs, en FR et en NL, sans terme technique (standard v3.2, sections 13.1 et 17.8 ; écart E-07). Une note par version, de la plus récente à la plus ancienne. Chaque ligne a un public : « tous », « admin » (administrateur de l'application) ou une permission du catalogue des rôles (par exemple « parametres:gerer »), lue dans l'entité active. La note de la version installée s'affiche une fois à la première connexion qui suit la mise à jour ; toutes restent relisibles dans Aide, Nouveautés.",
   "notes": [
     {
+      "version": "0.21.4",
+      "date": "2026-11-25",
+      "lignes": [
+        {
+          "public": "tous",
+          "fr": "Une date ou une heure tapée que le champ n'accepte pas est signalée dès que vous quittez le champ, et rien n'est enregistré tant qu'elle n'est pas corrigée.",
+          "nl": "Een getypte datum of uur die het veld niet aanvaardt, wordt gemeld zodra u het veld verlaat, en er wordt niets opgeslagen zolang ze niet verbeterd is."
+        }
+      ]
+    },
+    {
       "version": "0.21.3",
       "date": "2026-11-25",
       "lignes": [
@@ -28,8 +39,8 @@
       "lignes": [
         {
           "public": "tous",
-          "fr": "Sur ordinateur, une date ou une heure se tape directement dans le champ ; le calendrier s'ouvre seulement par l'icône à droite du champ.",
-          "nl": "Op de computer typt u een datum of uur rechtstreeks in het veld; de kalender opent alleen via het pictogram rechts van het veld."
+          "fr": "Sur ordinateur, une date ou une heure se tape directement dans le champ ; le calendrier s'ouvre seulement par l'icône du champ (à gauche depuis la 0.21.3).",
+          "nl": "Op de computer typt u een datum of uur rechtstreeks in het veld; de kalender opent alleen via het pictogram van het veld (links sinds 0.21.3)."
         },
         {
           "public": "demandes:traiter",

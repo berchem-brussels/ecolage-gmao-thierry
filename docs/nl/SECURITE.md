@@ -2,6 +2,10 @@
 
 De Franse tekst (`docs/fr/SECURITE.md`) is rechtsgeldig en bevat het volledige rooster per versie.
 
+## 0.21.4 (25/11/2026)
+
+Correctie van controle 7 van de test van 0.21.3 op NIXUS: een getypte datum die het veld weigerde en daarna verlaten werd zonder op een knop te klikken (Tab, klik elders, venster naar de achtergrond), werd ongemerkt vervangen door de oude datum, die daarna opgeslagen werd. Het veld wordt nu gemarkeerd en « Datum of uur niet aanvaard » verschijnt zodra het verlaten wordt; opslaan blijft geblokkeerd tot de tekst verbeterd is of een datum in de kalender gekozen is. Een geldige datum die kort na een klik opnieuw getypt wordt, wordt niet meer geweigerd. Getest met echte toetsenborden en muizen in Chromium en WebKit; bewijzen van falen in de Franse tekst.
+
 ## 0.21.3 (25/11/2026)
 
 Correctie na de audit van het lastenboek: een heropende of wachtende aanvraag wordt « Werken beëindigd » met haar laatste taak; een taak van een nog te kwalificeren aanvraag start niet; de technische dienst wordt verwittigd van elke nieuwe aanvraag (alleen die dienst van de entiteit, nooit de auteur, zonder beschrijving); Alt+Pijl omlaag heropent de kalender na Escape; het kalenderpictogram staat links (een klik wist een ingevuld veld niet meer); een niet aanvaarde getypte datum of uur blokkeert het opslaan in elk formulier. Bewijzen van falen in de Franse tekst.

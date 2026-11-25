@@ -1,6 +1,10 @@
 # MCP-server
 
-Versie van de toepassing: **0.21.3** · Bijgewerkt op 25/11/2026 · De Franse tekst is rechtsgeldig (`docs/fr/MCP.md`).
+Versie van de toepassing: **0.21.4** · Bijgewerkt op 25/11/2026 · De Franse tekst is rechtsgeldig (`docs/fr/MCP.md`).
+
+## 0.21.4
+
+Geen nieuwe tool, geen gewijzigde tool (enkel correctie van het scherm).
 
 ## 0.21.3
 

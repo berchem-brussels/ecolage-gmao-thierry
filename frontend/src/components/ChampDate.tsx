@@ -18,11 +18,11 @@
  * Les formulaires utilisent ChampDate, ChampHeure et ChampPeriode à la place de DatePicker, TimePicker et RangePicker
  * (contrôlé par saisie-date.test.ts).
  */
-import { useRef, useState, type ComponentProps, type CSSProperties, type KeyboardEvent, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ComponentProps, type CSSProperties, type KeyboardEvent, type ReactNode } from 'react';
 import { DatePicker, TimePicker, message } from 'antd';
 import { CalendarOutlined, ClockCircleOutlined } from '@ant-design/icons';
 import { useI18n } from '../contexts/I18nContext';
-import { ecranTactile, entreeSansEnvoi, saisiesNonRetenues } from '../saisieDate';
+import { ecranTactile, entreeSansEnvoi, marquerNonRetenu, saisiesNonRetenues } from '../saisieDate';
 
 type PropsDate = ComponentProps<typeof DatePicker>;
 type PropsHeure = ComponentProps<typeof TimePicker>;
@@ -112,13 +112,22 @@ export function useSaisieRetenue(): () => Promise<boolean> {
   return async () => {
     const refuses = await saisiesNonRetenues();
     if (!refuses.length) return false;
-    for (const c of refuses) {
-      c.setAttribute('aria-invalid', 'true');
-      c.closest('.ant-picker')?.classList.add('ant-picker-status-error');
-      c.addEventListener('input', () => { c.removeAttribute('aria-invalid'); c.closest('.ant-picker')?.classList.remove('ant-picker-status-error'); }, { once: true });
-    }
+    for (const c of refuses) marquerNonRetenu(c);
     refuses[0].focus();
     message.error(t('saisie.non_retenue'));
     return true;
   };
+}
+
+/**
+ * 0.21.4 (contrôle 7 de la recette de la 0.21.3) : un texte refusé à la sortie d'un champ de date ou d'heure (Tab, clic
+ * ailleurs, autre fenêtre) est dit tout de suite, pas seulement à l'enregistrement. Posé une fois, dans l'en-tête commun.
+ */
+export function useAvisSaisieRefusee(): void {
+  const { t } = useI18n();
+  useEffect(() => {
+    const dire = () => { message.error({ content: t('saisie.non_retenue'), key: 'saisie-non-retenue' }); };
+    document.addEventListener('gmao-saisie-refusee', dire);
+    return () => document.removeEventListener('gmao-saisie-refusee', dire);
+  }, [t]);
 }
