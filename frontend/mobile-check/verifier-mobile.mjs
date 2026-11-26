@@ -46,6 +46,8 @@
  *   panneau du calendrier doit tenir dans l'écran), liste filtrée par équipe avec la liste « Équipe » ouverte : 61 écrans.
  * 0.21.0 (étape 17) : fenêtre « Terminer » des heures d'une tâche, formulaire d'absence d'un ouvrier, planning, ses
  *   fenêtres « Déplacer » (première période qui montre une tâche) et « Planifier » (tâche sans date) : 66 écrans.
+ * 0.21.5 (E-57) : tablette (768 px) et écran de bureau (1280 px) dans Chromium, mêmes écrans et mêmes contrôles (sauf la
+ *   règle des 16 px, propre aux téléphones) ; MOBILE_LARGEURS=768,1280 pour ne jouer que certaines largeurs.
  * 0.17.0 (point 7) : volet de la cloche ouvert (service technique et chef de service), onglet Courriel de Paramètres et
  *   fiche d'un modèle de courriel avec son aperçu (administrateur) : 45 écrans avec les trois comptes.
  */
@@ -80,8 +82,16 @@ const TOUS = [
   // 0.16.1 : moteur de Safari et d'Edge sur iPhone.
   ['iPhone SE · WebKit (320 px)', devices['iPhone SE'], 'webkit'],
   ['iPhone 13 · WebKit (390 px)', devices['iPhone 13'], 'webkit'],
+  // 0.21.5 (E-57 ; ERG-05, REC-02) : tablette et écran de bureau, mêmes écrans, mêmes contrôles de débordement ; souris,
+  // sans écran tactile. Ajoutés en fin de liste : les parcours prennent TOUS[1] et TOUS[4]. Un champ en 14 px n'y est
+  // pas un défaut (la règle des 16 px vaut pour les téléphones, DV-51).
+  ['Tablette 768 px', { viewport: { width: 768, height: 1024 } }, 'chromium', { grand: true }],
+  ['Bureau 1280 px', { viewport: { width: 1280, height: 800 } }, 'chromium', { grand: true }],
 ];
-const APPAREILS = TOUS.filter(([, , m]) => MOTEURS.includes(m));
+// 0.21.5 : MOBILE_LARGEURS=768,1280 (largeurs en px, séparées par des virgules) ne joue que ces appareils, pour un essai
+// ciblé ; le passage de référence se fait sans ce filtre.
+const LARGEURS = (process.env.MOBILE_LARGEURS || '').split(',').map((l) => Number(l.trim())).filter(Boolean);
+const APPAREILS = TOUS.filter(([, a, m]) => MOTEURS.includes(m) && (!LARGEURS.length || LARGEURS.includes(a.viewport.width)));
 if (!APPAREILS.length) { console.error(`MOBILE_MOTEURS inconnu : ${MOTEURS.join(', ')} (chromium, webkit).`); process.exit(2); }
 const PARCOURS = process.env.MOBILE_PARCOURS === '1';
 if (PARCOURS && !hoteLocal(B)) { console.error('MOBILE_PARCOURS=1 écrit dans la base : réservé à une copie locale (localhost).'); process.exit(2); }
@@ -116,7 +126,9 @@ const mesurer = () => {
   const sort = [...document.querySelectorAll('body *')].filter((e) => {
     const b = e.getBoundingClientRect(); const s = getComputedStyle(e);
     if (!b.width || s.visibility === 'hidden' || s.display === 'none') return false;
-    if (e.closest('.ant-table-content, .ant-table-body, .ant-tabs-nav-wrap, .ant-drawer:not(.ant-drawer-open), .ant-select-dropdown, .ant-tooltip')) return false;
+    // 0.21.5 (E-57) : la vue en colonnes (0.16.0) et la grille du planning sur tablette et bureau (0.21.0) défilent en
+    // largeur dans leur cadre (.col-tableau, .planning-defile), jamais la page ; le défilement de la page reste contrôlé.
+    if (e.closest('.ant-table-content, .ant-table-body, .ant-tabs-nav-wrap, .ant-drawer:not(.ant-drawer-open), .ant-select-dropdown, .ant-tooltip, .col-tableau, .planning-defile')) return false;
     return b.right > W + 2 && e.childElementCount === 0 && (e.textContent || '').trim();
   }).slice(0, 3).map((e) => `« ${(e.textContent || '').trim().slice(0, 30)} »`);
   const petits = [...document.querySelectorAll('input:not([type=checkbox]):not([type=radio]):not([type=file]):not([type=hidden]), textarea')]
@@ -212,7 +224,9 @@ async function agir(page, action) {
       const r = await cliquer(page.locator('.tache-affectation .ant-radio-button-wrapper').first(), '« Ouvriers »');
       if (r) return r;
       try { await page.locator('.taches-proposes .ant-list-item').first().waitFor({ timeout: 5000 }); } catch { return 'ouvriers proposés absents'; }
-      const c = await cliquer(page.locator('.tache-affectation .ant-picker').first(), 'date prévue');
+      // Sur un écran sans toucher (tablette et bureau de ce contrôle), le calendrier ne s'ouvre que par son icône (0.21.2, DV-177).
+      const tactile = await page.evaluate(() => matchMedia('(pointer: coarse)').matches);
+      const c = await cliquer(tactile ? page.locator('.tache-affectation .ant-picker').first() : page.locator('.tache-affectation .champ-date-icone').first(), tactile ? 'date prévue' : 'icône du calendrier');
       if (c) return c;
       try { await page.locator('.ant-picker-dropdown:not(.ant-picker-dropdown-hidden) .ant-picker-panel').first().waitFor({ timeout: 5000 }); } catch { return 'calendrier non ouvert'; }
       const b = await page.evaluate(() => { const r = document.querySelector('.ant-picker-dropdown:not(.ant-picker-dropdown-hidden) .ant-picker-panel').getBoundingClientRect(); return { g: r.left, d: r.right, W: innerWidth }; });
@@ -352,11 +366,11 @@ async function stable(page) {
 }
 
 /** Défauts d'un écran mesuré (commun aux écrans et aux parcours). */
-const problemes = (m) => {
+const problemes = (m, { grand = false } = {}) => {
   const pb = [];
   if (m.large > m.W + 1) pb.push(`défilement horizontal (${m.large} px pour ${m.W})`);
   if (m.sort.length) pb.push(`sort de l'écran : ${m.sort.join(', ')}`);
-  if (m.petits) pb.push(`${m.petits} champ(s) en moins de 16 px`);
+  if (m.petits && !grand) pb.push(`${m.petits} champ(s) en moins de 16 px`);
   if (m.entete > 1) pb.push(`en-tête trop large de ${m.entete} px`);
   if (m.volet > 1) pb.push(`volet trop large de ${m.volet} px`);
   if (m.bulles) pb.push(`${m.bulles} message(s) plus large(s) que leur bulle`);
@@ -414,7 +428,7 @@ const FILTRE = (process.env.MOBILE_ROUTES || '').split(',').map((r) => r.trim())
 for (const compte of COMPTES.filter((c) => c.user && ECRANS)) {
   let langueInitiale = null;
   // Une seule connexion par compte, reprise par chaque appareil et chaque moteur (0.16.0, 0.16.1).
-  for (const [nom, appareil, moteur] of APPAREILS) {
+  for (const [nom, appareil, moteur, options = {}] of APPAREILS) {
     for (const lang of ['fr', 'nl']) {
       const { ctx, page, erreurs, suivi } = await connecter(await lancer(moteur), appareil, compte.user, compte.password);
       const quoi = `${compte.nom} · ${nom} · ${lang.toUpperCase()}`;
@@ -453,7 +467,8 @@ for (const compte of COMPTES.filter((c) => c.user && ECRANS)) {
       // Les erreurs comptent à partir d'ici : la lecture des fiches ci-dessus essaie des listes que le compte n'a pas
       // toujours le droit de lire (le chef de service n'a pas les demandes de l'entité).
       suivi.connecte = true;
-      const routes = compte.routes(fiches).filter((r) => !FILTRE.length || FILTRE.includes(r));
+      // 0.21.5 (E-57) : « visite et menu » contrôle le menu latéral des téléphones, absent sur tablette et bureau.
+      const routes = compte.routes(fiches).filter((r) => (!FILTRE.length || FILTRE.includes(r)) && !(options.grand && r === '/#visite-menu'));
       if (nom === APPAREILS[0][0] && lang === 'fr') nbEcrans += routes.length;
       for (const r of routes) {
         const [adresse, action] = r.split('#');
@@ -466,7 +481,7 @@ for (const compte of COMPTES.filter((c) => c.user && ECRANS)) {
         const manque = action ? await agir(page, action) : null;
         const fige = await stable(page);
         const m = await page.evaluate(mesurer);
-        const pb = [...(manque ? [manque] : []), ...(fige ? [fige] : []), ...problemes(m)];
+        const pb = [...(manque ? [manque] : []), ...(fige ? [fige] : []), ...problemes(m, options)];
         if (pb.length) defauts.push(`${quoi} · ${r} : ${pb.join(' ; ')}`);
         suivi.sansNouveautes = true;
       }

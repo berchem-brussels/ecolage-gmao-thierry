@@ -1,8 +1,23 @@
 # Manifeste
 
-Version de l'application : **0.21.4** · Mis à jour le 25/11/2026
+Version de l'application : **0.21.5** · Mis à jour le 26/11/2026
 
 Fichiers changés, dépendances et suites par version. Les décomptes sont recopiés de la sortie des commandes.
+
+## 0.21.5 (26/11/2026)
+
+Fichiers comparés à l'archive 0.21.4 (`gmao-v0_21_4.tar.gz`, SHA-256 `3cc3e162…d76165`) par `diff -rq` (hors `node_modules` et `dist`). Pour le contrôle du `git status` (`GITHUB.md`, section 5) : une ligne `A`, aucune ligne `D`, les autres `M`.
+
+- Nouveau (ligne `A`) : `NOTES_LIVRAISON_v0.21.5.md`.
+- Modifiés, serveur : `package.json` et `package-lock.json` (version 0.21.5) ; `config/notes-version.json` (note 0.21.5) ; `src/services/demandes.js` (`voisines` : proches ; `derniereActivite`) ; `src/mcp.js` (descriptions de `list_demandes_voisines` et `list_demandes`) ; tests `voisines.test.js`, `messages.test.js`, `heures-taches.test.js`, `notes-version.test.js` (note 0.21.5, listes décalées).
+- Modifiés, interface : `package.json` et `package-lock.json` (version 0.21.5, `@playwright/test` ^1.61.1) ; `src/saisieDate.ts` et `src/components/ChampDate.tsx` (R1) ; `src/components/demandes/LieuPicker.tsx` et `src/pages/NouvelleDemandePage.tsx` (R2) ; `src/components/demandes/DemandesVoisines.tsx` (R6) ; `src/pages/DemandesPage.tsx` et `src/demandes.ts` (dernière activité, types) ; `src/components/AppLayout.tsx`, `src/help/HelpButton.tsx` (en-tête compact) ; `src/components/VisiteGuidee.tsx` (placement) ; `src/i18n.ts` (textes FR et NL) ; aide `help/topics/nouvelle-demande.ts`, `mes-demandes.ts`, `accueil.ts` ; captures `public/aide-captures/{fr,nl}/demande-overview.jpg` et `mes-demandes-overview.jpg` ; `mobile-check/verifier-mobile.mjs` (tablette, bureau) et `mobile-check/parcours.mjs` (« Oui, c'est ici ») ; tests `saisie-date.test.tsx`, `demandes.test.tsx`.
+- Modifiés, dépôt : `.github/workflows/ci.yml` (`permissions`, E-51).
+- Modifiés, documentation et racine : `CHANGELOG.md`, `ETAT.md`, `ECARTS-CDC.md`, `MANIFESTE.md` ; `README.md`, `README.nl.md`, `README.en.md` ; `docs/fr`, `docs/nl`, `docs/en` (`APRES-DEPLOIEMENT.md`, `ARCHITECTURE.md`, `EXPLOITATION.md`, `MCP.md`, `SECURITE.md`) ; `docs/fonctionnel/demandes.md` (règles 52 à 54).
+- Inchangés : les deux Dockerfile, `nginx.conf`, `docker-entrypoint.sh`, `docker-compose.yml`, `.env.example`, `backup.sh`, `verifier-ports.sh`, `recette.sh`, `.gitignore`, `src/demo.js`, `src/database.js` (aucune migration), routes et schémas du serveur.
+- Retirés : aucun fichier.
+- Dépendances : aucune nouvelle ; minimum de `@playwright/test` relevé (outillage, absent des images) ; verrous inchangés hors numéro de version et cette ligne. Aucun `npm audit fix`.
+- Suites de la 0.21.5 : voir `ETAT.md`, section 2. Preuves d'échec : `docs/fr/SECURITE.md`, section 0.21.5 (quatre).
+- Navigateur réel : Chromium et WebKit du bac à sable (Playwright), copie locale en production ; `mobile:check` à huit appareils (six téléphones, une tablette, un bureau).
 
 ## 0.21.4 (25/11/2026)
 

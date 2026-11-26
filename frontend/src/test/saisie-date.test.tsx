@@ -3,9 +3,9 @@ import { join, relative } from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { KeyboardEvent } from 'react';
 import { act, fireEvent, render } from '@testing-library/react';
-import { Form } from 'antd';
+import { Button, Form } from 'antd';
 import dayjs from 'dayjs';
-import { champDateActif, ecranTactile, entreeSansEnvoi, retenirSaisieAvant, saisiesNonRetenues } from '../saisieDate';
+import { champDateActif, ecranTactile, entreeSansEnvoi, marquerNonRetenu, retenirSaisieAvant, saisiesNonRetenues } from '../saisieDate';
 import { ChampDate } from '../components/ChampDate';
 import { I18nProvider } from '../contexts/I18nContext';
 
@@ -145,6 +145,53 @@ describe('Champs de date et d’heure (R1)', () => {
     if (!/<ComplementsDemande\b/.test(nouvelle) || !/await verifierSaisie\(\)/.test(nouvelle)) fautes.push('pages/NouvelleDemandePage.tsx');
     expect(fautes).toEqual([]);
     expect(vus).toBeGreaterThanOrEqual(7);
+  });
+
+  // 0.21.5 (R1 de la recette de la 0.21.4, DV-185) : le contour rouge posé à la main sur le cadre était effacé par React au
+  // retour dans le champ ou dans la fenêtre (classe du cadre réécrite) ; il passe par status="error", gardé à chaque rendu.
+  // Le scénario réel (texte refusé, Tab, fenêtre à l'arrière-plan puis retour, clic dans le champ) est rejoué dans Chromium
+  // et WebKit sur la copie locale : jsdom ne fait pas la remise du texte par rc-picker.
+  describe('contour rouge d’une saisie refusée (0.21.5, R1)', () => {
+    const Formulaire = () => {
+      const [form] = Form.useForm();
+      return (
+        <Form form={form} initialValues={{ d: dayjs('2026-11-27') }}>
+          <Form.Item name="d" label="Date"><ChampDate format="DD/MM/YYYY" /></Form.Item>
+          <Button onClick={() => form.setFieldsValue({ d: dayjs('2026-12-11') })}>Calendrier</Button>
+        </Form>
+      );
+    };
+    const monterMarque = async () => {
+      ecran(false);
+      const r = render(<I18nProvider><Formulaire /></I18nProvider>);
+      const champ = r.container.querySelector('input') as HTMLInputElement;
+      const cadre = r.container.querySelector('.ant-picker') as HTMLElement;
+      await act(async () => { marquerNonRetenu(champ); });
+      return { ...r, champ, cadre };
+    };
+    it('gardé au retour dans le champ (le composant se redessine)', async () => {
+      const { champ, cadre } = await monterMarque();
+      expect(cadre.className).toContain('ant-picker-status-error');
+      await act(async () => { champ.focus(); fireEvent.focus(champ); });
+      expect(cadre.className).toContain('ant-picker-focused');
+      expect(cadre.className).toContain('ant-picker-status-error');
+      expect(champ.getAttribute('aria-invalid')).toBe('true');
+      await act(async () => { champ.blur(); fireEvent.blur(champ); });
+      expect(cadre.className).toContain('ant-picker-status-error');
+    });
+    it('retiré à la frappe dans le champ', async () => {
+      const { champ, cadre } = await monterMarque();
+      await act(async () => { fireEvent.input(champ); });
+      expect(cadre.className).not.toContain('ant-picker-status-error');
+      expect(champ.getAttribute('aria-invalid')).not.toBe('true');
+    });
+    it('retiré quand la valeur change autrement (calendrier)', async () => {
+      const { champ, cadre, getByText } = await monterMarque();
+      await act(async () => { fireEvent.click(getByText('Calendrier')); });
+      expect(cadre.className).not.toContain('ant-picker-status-error');
+      expect(champ.getAttribute('aria-invalid')).not.toBe('true');
+      expect(await saisiesNonRetenues(0)).toEqual([]);
+    });
   });
 
   describe('texte tapé non retenu (0.21.3)', () => {

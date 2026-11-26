@@ -2,6 +2,10 @@
 
 The French text (`docs/fr/SECURITE.md`) prevails and holds the full grid per version.
 
+## 0.21.5 (26/11/2026)
+
+Feedback from the user-oriented test of 26/11/2026 and the 0.21.4 acceptance test. A proposed location must be confirmed before sending; the red border of a refused date is kept; the last activity never counts an internal note; nearby requests are returned without the requester's name; the header fits from 768 to 1280 px; `ci.yml` gets read-only access to the code. No new dependency. Failure proofs: see the French text.
+
 ## 0.21.4 (25/11/2026)
 
 Fix of check 7 of the 0.21.3 acceptance test on NIXUS: a typed date refused by the field, then left without clicking a button (Tab, click elsewhere, window sent to the background), was silently replaced by the old date, which was then saved. The field is now marked and « Date ou heure non retenue » is shown as soon as it is left; saving stays blocked until the text is corrected or a date is picked in the calendar. A valid date retyped shortly after a click is no longer refused. Tested with real keyboards and mice in Chromium and WebKit; failure proofs in the French text.

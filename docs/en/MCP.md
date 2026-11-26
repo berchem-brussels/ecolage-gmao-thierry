@@ -1,6 +1,10 @@
 # MCP server
 
-Application version: **0.21.4** · Updated on 25/11/2026 · The French text prevails (`docs/fr/MCP.md`).
+Application version: **0.21.5** · Updated on 26/11/2026 · The French text prevails (`docs/fr/MCP.md`).
+
+## 0.21.5
+
+No new tool. `list_demandes_voisines` also returns `proches` (number of requests in the same room or of the same category, listed first) and, for each request, `meme_categorie` and `proche`; `list_demandes` returns `derniere_activite` (latest of submission, state change, message other than an internal note, or complement). Additions only: existing clients are unaffected. FR and NL descriptions updated.
 
 ## 0.21.4
 

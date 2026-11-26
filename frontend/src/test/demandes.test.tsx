@@ -4,7 +4,7 @@
  * Le simulacre de matchMedia ne répond à aucune requête : la mise en page est celle du téléphone (cartes).
  */
 import React from 'react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { cleanup as cleanupAll, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import axe from 'axe-core';
@@ -213,6 +213,8 @@ function wrap(C: React.ComponentType, lang: 'fr' | 'nl', entries: string[] = ['/
     </SettingsProvider>
   );
 }
+/** 0.21.5 (R2, DV-201) : le lieu proposé d'office se confirme d'un clic avant l'envoi. */
+const confirmerLieu = async () => { fireEvent.click(await screen.findByRole('button', { name: /Oui, c'est ici|Ja, het is hier/ })); };
 const audit = async (container: HTMLElement) => {
   const r = await axe.run(container, { rules: { 'color-contrast': { enabled: false }, region: { enabled: false } } });
   expect(r.violations.map((v) => `${v.id}: ${v.nodes.length} ${v.nodes.map((n) => n.html.slice(0, 200)).join(' | ')}`)).toEqual([]);
@@ -263,6 +265,10 @@ describe('demandes (0.5.0, 0.5.1)', () => {
     fireEvent.change(screen.getByLabelText('3. Décrivez le problème'), { target: { value: '   court   ' } });
     expect(envoyer).toBeDisabled();
     fireEvent.change(screen.getByLabelText('3. Décrivez le problème'), { target: { value: '  La lampe ne marche plus.  ' } });
+    // 0.21.5 (R2, DV-201) : le lieu proposé d'office n'est pas confirmé : l'envoi le dit et reste bloqué.
+    expect(envoyer).toBeDisabled();
+    expect(screen.getByText(/Pour envoyer, il manque : la confirmation du lieu$/)).toBeInTheDocument();
+    await confirmerLieu();
     expect(envoyer).toBeEnabled();
   });
 
@@ -286,6 +292,7 @@ describe('demandes (0.5.0, 0.5.1)', () => {
 
   it('nouvelle demande : envoi, puis numéro, lieu, délai indicatif et liens de suite (DEM-12 écran)', async () => {
     render(wrap(NouvelleDemandePage, 'fr'));
+    await confirmerLieu(); // 0.21.5 (R2) : lieu proposé confirmé d'un clic
     fireEvent.click(await screen.findByRole('button', { name: 'Divers' }));
     fireEvent.change(screen.getByLabelText('3. Décrivez le problème'), { target: { value: '  La porte du local grince fort.  ' } });
     fireEvent.click(screen.getByRole('button', { name: /Envoyer la demande/ }));
@@ -308,6 +315,7 @@ describe('demandes (0.5.0, 0.5.1)', () => {
     it(`nouvelle demande (0.16.1, R1 ; ${lang}) : demande « En validation » : accord du chef de service, ni délai ni « le service technique l’a reçue »`, async () => {
       reponsePost = { status: 201, json: { data: demande(3, 'AA-DI-2026-00003', 'en_validation', { service_id: 4, service_nom_fr: 'Secrétariat', service_nom_nl: 'Secretariaat' }), meta: { envelope: 1 } } };
       const { container } = render(wrap(NouvelleDemandePage, lang));
+      await confirmerLieu(); // 0.21.5 (R2) : lieu proposé confirmé d'un clic
       fireEvent.click(await screen.findByRole('button', { name: divers }));
       fireEvent.change(container.querySelector('textarea') as HTMLTextAreaElement, { target: { value: 'Déplacer deux armoires au premier étage.' } });
       fireEvent.click(screen.getByRole('button', { name: envoyer }));
@@ -322,6 +330,7 @@ describe('demandes (0.5.0, 0.5.1)', () => {
 
   it('nouvelle demande (0.5.2) : après l’envoi, « Mes demandes » et « Faire une autre demande » gardent un espace quand ils passent l’un sous l’autre', async () => {
     render(wrap(NouvelleDemandePage, 'fr'));
+    await confirmerLieu(); // 0.21.5 (R2) : lieu proposé confirmé d'un clic
     fireEvent.click(await screen.findByRole('button', { name: 'Divers' }));
     fireEvent.change(screen.getByLabelText('3. Décrivez le problème'), { target: { value: 'La porte du local grince fort.' } });
     fireEvent.click(screen.getByRole('button', { name: /Envoyer la demande/ }));
@@ -340,6 +349,7 @@ describe('demandes (0.5.0, 0.5.1)', () => {
   it('nouvelle demande : une erreur du serveur s’affiche et la saisie reste (ERG-09)', async () => {
     reponsePost = { status: 409, json: { error: true, code: 'DEMANDE_LIEU_INACTIF', message: "Ce lieu n'est plus actif : choisissez-en un autre." } };
     render(wrap(NouvelleDemandePage, 'fr'));
+    await confirmerLieu(); // 0.21.5 (R2) : lieu proposé confirmé d'un clic
     fireEvent.click(await screen.findByRole('button', { name: 'Divers' }));
     fireEvent.change(screen.getByLabelText('3. Décrivez le problème'), { target: { value: 'Texte qui ne doit pas se perdre.' } });
     fireEvent.click(screen.getByRole('button', { name: /Envoyer la demande/ }));
@@ -375,6 +385,20 @@ describe('demandes (0.5.0, 0.5.1)', () => {
     fireEvent.click(screen.getByRole('button', { name: 'AA-DI-2026-00002' }));
     expect(await screen.findByText('Demande AA-DI-2026-00002')).toBeInTheDocument();
     expect(screen.getByText('Électricité et éclairage › Lampe ou éclairage en panne')).toBeInTheDocument();
+  });
+
+  // 0.21.5 (E-56, SUI-01) : dernière activité (calculée par le serveur), sur téléphone quand elle diffère du dépôt.
+  it('« Mes demandes » : dernière activité sous le dépôt quand elle en diffère, rien sinon ; en NL', async () => {
+    const avant = demandes.map((d) => ({ ...d }));
+    demandes.splice(0, demandes.length, demande(2, 'AA-DI-2026-00002', 'a_qualifier', { created_at: '2026-11-02 08:00:00', derniere_activite: '2026-11-20 10:15:00' }),
+      demande(1, 'AA-DI-2026-00001', 'cloturee', { delai_annonce: null, created_at: '2026-11-01 08:00:00', derniere_activite: '2026-11-01 08:00:00' }));
+    try {
+      const fr = render(wrap(MesDemandes, 'fr'));
+      expect(await screen.findAllByText(/^Dernière activité : 20\/11\/2026 \d\d:15$/)).toHaveLength(1);
+      fr.unmount();
+      render(wrap(MesDemandes, 'nl'));
+      expect(await screen.findAllByText(/^Laatste activiteit : 20\/11\/2026/)).toHaveLength(1);
+    } finally { demandes.splice(0, demandes.length, ...avant); }
   });
 
   it('« Mes demandes » (0.5.1) : pas de bouton « Nouvelle demande » dans la page, en FR et en NL (celui du haut de l’écran et celui du menu suffisent)', async () => {
@@ -449,6 +473,7 @@ describe('demandes du même bâtiment et « Moi aussi » (0.7.0, DEM-04)', () =>
 
   it('aucune demande ouverte dans le bâtiment : rien ne s’affiche', async () => {
     render(wrap(NouvelleDemandePage, 'fr'));
+    await confirmerLieu(); // 0.21.5 (R2) : lieu proposé confirmé d'un clic
     await screen.findByRole('button', { name: 'Divers' });
     await waitFor(() => expect(gets.some((u) => u.startsWith('/api/demandes/voisines?lieu_id=3'))).toBe(true));
     expect(screen.queryByText(/déjà ouverte/)).toBeNull();
@@ -457,6 +482,7 @@ describe('demandes du même bâtiment et « Moi aussi » (0.7.0, DEM-04)', () =>
   it('bloc replié, puis cartes sans nom de demandeur, « Votre demande » pour la sienne ; catégorie choisie passée au serveur', async () => {
     voisinesData = { batiment, total: 2, demandes: [voisine(5, 'AA-DI-2026-00005'), voisine(6, 'AA-DI-2026-00006', { propre: 1, extrait: 'Ma propre demande.' })] };
     render(wrap(NouvelleDemandePage, 'fr'));
+    await confirmerLieu(); // 0.21.5 (R2) : lieu proposé confirmé d'un clic
     const bascule = await screen.findByRole('button', { name: /2 demandes déjà ouvertes dans ce bâtiment \(Maison communale\)/ });
     expect(bascule).toHaveAttribute('aria-expanded', 'false');
     expect(screen.queryByText(/néon/)).toBeNull();
@@ -475,6 +501,7 @@ describe('demandes du même bâtiment et « Moi aussi » (0.7.0, DEM-04)', () =>
     voisinesData = { batiment, total: 1, demandes: [voisine(5, 'AA-DI-2026-00005')] };
     reponsePost = { status: 200, json: { data: demande(5, 'AA-DI-2026-00005', 'a_qualifier', { suivie: 1, demandeur_id: null, demandeur_prenom: null, demandeur_nom: null }), meta: { envelope: 1 } } };
     render(wrap(NouvelleDemandePage, 'fr'));
+    await confirmerLieu(); // 0.21.5 (R2) : lieu proposé confirmé d'un clic
     fireEvent.change(await screen.findByLabelText('3. Décrivez le problème'), { target: { value: '  Chez nous aussi, guichet 4.  ' } });
     fireEvent.click(await screen.findByRole('button', { name: /1 demande déjà ouverte/ }));
     fireEvent.click(await screen.findByRole('button', { name: /^Moi aussi/ }));
@@ -493,11 +520,48 @@ describe('demandes du même bâtiment et « Moi aussi » (0.7.0, DEM-04)', () =>
   it('« Voir les autres (N) » demande la liste complète ; en néerlandais, sans violation axe-core', async () => {
     voisinesData = { batiment, total: 7, demandes: [1, 2, 3, 4, 5].map((i) => voisine(10 + i, `AA-DI-2026-0001${i}`)) };
     const { container } = render(wrap(NouvelleDemandePage, 'nl'));
+    await confirmerLieu(); // 0.21.5 (R2) : lieu proposé confirmé d'un clic
     fireEvent.click(await screen.findByRole('button', { name: /7 aanvragen al open in dit gebouw \(Gemeentehuis\)/ }));
     expect(await screen.findAllByRole('button', { name: /^Ik ook/ })).toHaveLength(5);
     await audit(container);
     fireEvent.click(screen.getByRole('button', { name: 'De andere bekijken (2)' }));
     await waitFor(() => expect(gets.some((u) => u.includes('limit=50'))).toBe(true));
+  }, 30000);
+
+  // 0.21.5 (R6 du test orienté utilisateur, DV-202) : « 20 demandes déjà ouvertes dans ce bâtiment » ne se lisait pas ;
+  // les demandes proches (même local ou même catégorie) d'abord, le reste du bâtiment replié.
+  it('R6 : résumé des demandes proches seules ; le reste du bâtiment replié, chargé à la demande', async () => {
+    const proche = (id: number, extra: Record<string, unknown>) => voisine(id, `AA-DI-2026-000${id}`, { proche: 1, ...extra });
+    voisinesData = { batiment, total: 20, proches: 2, demandes: [proche(31, { meme_lieu: 1, lieu_id: 3, lieu_nom_fr: 'Bureau 12' }), proche(32, { meme_categorie: 1 }),
+      voisine(33, 'AA-DI-2026-00033'), voisine(34, 'AA-DI-2026-00034'), voisine(35, 'AA-DI-2026-00035')] };
+    render(wrap(NouvelleDemandePage, 'fr'));
+    await confirmerLieu();
+    const bascule = await screen.findByRole('button', { name: /2 demandes déjà ouvertes à cet endroit · Voir/ });
+    expect(screen.queryByText(/20 demandes/)).toBeNull();
+    fireEvent.click(bascule);
+    expect(screen.getAllByRole('button', { name: /^Moi aussi/ })).toHaveLength(2);
+    const ailleurs = screen.getByRole('button', { name: /18 autres demandes ailleurs dans le bâtiment \(Maison communale\) · Voir/ });
+    expect(ailleurs).toHaveAttribute('aria-expanded', 'false');
+    expect(gets.some((u) => u.includes('limit=50'))).toBe(false);
+    voisinesData = { ...(voisinesData as object), demandes: [...(voisinesData as { demandes: unknown[] }).demandes,
+      ...Array.from({ length: 15 }, (_, i) => voisine(40 + i, `AA-DI-2026-000${40 + i}`))] };
+    fireEvent.click(ailleurs);
+    await waitFor(() => expect(gets.some((u) => u.includes('limit=50'))).toBe(true));
+    expect(await screen.findByRole('list', { name: /18 autres demandes ailleurs/ })).toBeInTheDocument();
+    await waitFor(() => expect(screen.getAllByRole('button', { name: /^Moi aussi/ })).toHaveLength(20));
+  }, 30000);
+
+  it('R6 : catégorie choisie, résumé « à cet endroit ou pour le même type de problème » ; en néerlandais, sans violation axe-core', async () => {
+    voisinesData = { batiment, total: 3, proches: 1, demandes: [voisine(31, 'AA-DI-2026-00031', { proche: 1, meme_categorie: 1 }), voisine(32, 'AA-DI-2026-00032'), voisine(33, 'AA-DI-2026-00033')] };
+    const { container } = render(wrap(NouvelleDemandePage, 'nl'));
+    await confirmerLieu();
+    fireEvent.click(await screen.findByRole('button', { name: 'Elektriciteit en verlichting : de soorten bekijken' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Lamp of verlichting defect' }));
+    fireEvent.click(await screen.findByRole('button', { name: /1 aanvraag al open op deze plaats of voor hetzelfde soort probleem · Bekijken/ }));
+    fireEvent.click(screen.getByRole('button', { name: /2 andere aanvragen elders in het gebouw \(Gemeentehuis\)/ }));
+    await waitFor(() => expect(screen.getAllByRole('button', { name: /^Ik ook/ })).toHaveLength(3));
+    await waitFor(() => expect(container.querySelector('.ant-spin-spinning')).toBeNull());
+    await audit(container);
   }, 30000);
 
   it('« Mes demandes » : une demande suivie porte « Vous suivez aussi cette demande », sa fiche le redit, sans demandeur', async () => {
@@ -536,6 +600,7 @@ describe('case « Danger » (0.7.0, DEM-06)', () => {
   it('cochée : numéro à appeler en lien « tel: », envoi avec danger, écran « priorité absolue » sans heure', async () => {
     reponsePost = { status: 201, json: { data: demande(3, 'AA-DI-2026-00003', 'a_qualifier', { danger: 1, priorite: 'P1', delai_annonce: null }), meta: { envelope: 1 } } };
     render(wrap(NouvelleDemandePage, 'fr'));
+    await confirmerLieu(); // 0.21.5 (R2) : lieu proposé confirmé d'un clic
     const caseDanger = await screen.findByRole('checkbox', { name: 'Danger pour les personnes ou les biens' });
     expect(screen.queryByRole('alert')).toBeNull();
     fireEvent.click(caseDanger);
@@ -584,6 +649,7 @@ describe('« Pour », date souhaitée et créneau (0.7.0, DEM-07, DEM-08)', () =
   it('pour un collègue : recherche, choix en bouton, envoi de beneficiaire_id, rappel après l’envoi', async () => {
     reponsePost = { status: 201, json: { data: demande(3, 'AA-DI-2026-00003', 'a_qualifier', { beneficiaire_id: 9, beneficiaire_prenom: 'Hélène', beneficiaire_nom: 'Dupré' }), meta: { envelope: 1 } } };
     render(wrap(NouvelleDemandePage, 'fr'));
+    await confirmerLieu(); // 0.21.5 (R2) : lieu proposé confirmé d'un clic
     await remplir();
     const lien = screen.getByRole('button', { name: /Pour quelqu'un d'autre/ });
     expect(lien).toHaveAttribute('aria-expanded', 'false');
@@ -601,6 +667,7 @@ describe('« Pour », date souhaitée et créneau (0.7.0, DEM-07, DEM-08)', () =
 
   it('pour un service sans compte, avec un moment à respecter : texte et créneau envoyés, champs vides omis', async () => {
     render(wrap(NouvelleDemandePage, 'fr'));
+    await confirmerLieu(); // 0.21.5 (R2) : lieu proposé confirmé d'un clic
     await remplir();
     fireEvent.click(screen.getByRole('button', { name: /Pour quelqu'un d'autre/ }));
     fireEvent.click(screen.getByRole('radio', { name: 'Un service ou une personne sans compte' }));
@@ -706,6 +773,7 @@ describe('questions propres à la catégorie (0.7.0, DEM-05)', () => {
     reponsePost = { status: 201, json: { data: demande(3, 'AA-DI-2026-00003', 'a_qualifier', { reponses: [
       { question_id: 32, question_fr: 'Combien de lampes ?', question_nl: 'Hoeveel lampen?', valeur: '2', reponse_fr: 'Plusieurs', reponse_nl: 'Meerdere' }] }), meta: { envelope: 1 } } };
     render(wrap(NouvelleDemandePage, 'fr'));
+    await confirmerLieu(); // 0.21.5 (R2) : lieu proposé confirmé d'un clic
     expect(screen.queryByRole('group', { name: /Combien de lampes/ })).toBeNull();
     await choisirLampe();
     await screen.findByRole('group', { name: /Combien de lampes/ });
@@ -733,6 +801,7 @@ describe('questions propres à la catégorie (0.7.0, DEM-05)', () => {
 
   it('sans questions : rien ne s’affiche et rien n’est envoyé ; changer de catégorie retire les réponses qui ne valent plus', async () => {
     render(wrap(NouvelleDemandePage, 'fr'));
+    await confirmerLieu(); // 0.21.5 (R2) : lieu proposé confirmé d'un clic
     await choisirLampe();
     fireEvent.click(within(await screen.findByRole('group', { name: /Combien de lampes/ })).getByRole('button', { name: 'Une' }));
     fireEvent.click(screen.getByRole('button', { name: /Revenir aux domaines/ }));
@@ -805,6 +874,87 @@ describe('mentions RGPD et consigne (0.7.0, RGPD-10, DEM-16)', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'Meer weten' }));
     expect(screen.getByText(/Fictief bestuur verwerkt de gegevens/)).toBeVisible();
     expect(screen.getByText(/Vermeld geen naam of persoonsgegevens van een andere persoon\./)).toBeInTheDocument();
+    await waitFor(() => expect(container.querySelector('.ant-spin-spinning')).toBeNull());
+    await audit(container);
+  }, 30000);
+});
+
+// 0.21.5 (R2 du test orienté utilisateur du 26/11/2026, piste A, DV-201) : un agent avait décrit la salle de gym ; la
+// demande est partie sur l'accueil, lieu proposé d'office et accepté sans le voir. Un lieu que la personne n'a pas choisi
+// dans ce formulaire se confirme d'un clic avant l'envoi.
+describe('lieu proposé à confirmer (0.21.5, R2)', () => {
+  beforeEach(() => {
+    user.lieu_propose = { id: 3, code: 'MC-A-12', nom_fr: 'Bureau 12', nom_nl: 'Bureau 12', chemin, source: 'habituel' };
+    user.lieux_recents = [{ id: 8, code: 'MC-ACC', nom_fr: 'Accueil', nom_nl: 'Onthaal', nature: 'local',
+      chemin: [{ id: 1, code: 'MC', nom_fr: 'Maison communale', nom_nl: 'Gemeentehuis' }, { id: 8, code: 'MC-ACC', nom_fr: 'Accueil', nom_nl: 'Onthaal' }] }];
+  });
+  afterEach(() => { user.lieux_recents = []; });
+  const remplirSansLieu = async () => {
+    fireEvent.click(await screen.findByRole('button', { name: 'Divers' }));
+    fireEvent.change(screen.getByLabelText('3. Décrivez le problème'), { target: { value: 'La porte de la salle grince.' } });
+  };
+
+  it('proposé : question, « Oui, c’est ici » et « Changer de lieu » ; envoi bloqué ; demandes voisines lues après la confirmation', async () => {
+    const { container } = render(wrap(NouvelleDemandePage, 'fr'));
+    expect(await screen.findByText('Le problème est-il bien à cet endroit ?')).toBeInTheDocument();
+    expect(container.querySelector('.dem-lieu-a-confirmer')).not.toBeNull();
+    expect(screen.getByRole('button', { name: /Changer de lieu/ })).toBeInTheDocument();
+    await remplirSansLieu();
+    const envoyer = screen.getByRole('button', { name: /Envoyer la demande/ });
+    expect(envoyer).toBeDisabled();
+    expect(screen.getByText(/il manque : la confirmation du lieu$/)).toBeInTheDocument();
+    fireEvent.click(envoyer);
+    expect(posts).toHaveLength(0);
+    expect(gets.some((u) => u.startsWith('/api/demandes/voisines'))).toBe(false);
+    await confirmerLieu();
+    expect(screen.queryByText('Le problème est-il bien à cet endroit ?')).toBeNull();
+    expect(container.querySelector('.dem-lieu-a-confirmer')).toBeNull();
+    expect(screen.getByRole('button', { name: /Changer de lieu/ })).toBeInTheDocument();
+    await waitFor(() => expect(gets.some((u) => u.startsWith('/api/demandes/voisines?lieu_id=3'))).toBe(true));
+    expect(envoyer).toBeEnabled();
+    fireEvent.click(envoyer);
+    await waitFor(() => expect(posts).toHaveLength(1));
+    expect((posts[0].body as { lieu_id: number }).lieu_id).toBe(3);
+  }, 30000);
+
+  it('« Changer de lieu » puis un lieu choisi : confirmé sans autre clic, envoyé avec ce lieu', async () => {
+    render(wrap(NouvelleDemandePage, 'fr'));
+    fireEvent.click(await screen.findByRole('button', { name: /Changer de lieu/ }));
+    fireEvent.click(within(screen.getByRole('list', { name: 'Vos lieux récents' })).getByRole('button', { name: /Accueil/ }));
+    expect(screen.queryByText('Le problème est-il bien à cet endroit ?')).toBeNull();
+    await remplirSansLieu();
+    fireEvent.click(screen.getByRole('button', { name: /Envoyer la demande/ }));
+    await waitFor(() => expect(posts).toHaveLength(1));
+    expect((posts[0].body as { lieu_id: number }).lieu_id).toBe(8);
+  }, 30000);
+
+  it('« Changer de lieu » puis « Annuler » : le lieu proposé reste à confirmer', async () => {
+    render(wrap(NouvelleDemandePage, 'fr'));
+    fireEvent.click(await screen.findByRole('button', { name: /Changer de lieu/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Annuler' }));
+    expect(screen.getByText('Le problème est-il bien à cet endroit ?')).toBeInTheDocument();
+  }, 30000);
+
+  it('« Faire une autre demande » : le lieu de la précédente est gardé, mais à confirmer de nouveau', async () => {
+    render(wrap(NouvelleDemandePage, 'fr'));
+    await confirmerLieu();
+    await remplirSansLieu();
+    fireEvent.click(screen.getByRole('button', { name: /Envoyer la demande/ }));
+    fireEvent.click(await screen.findByRole('button', { name: /Faire une autre demande/ }));
+    expect(await screen.findByText('Le problème est-il bien à cet endroit ?')).toBeInTheDocument();
+  }, 30000);
+
+  it('brouillon repris : son lieu est à confirmer', async () => {
+    brouillonData = { entite_id: 1, updated_at: '2026-10-28 09:05:00', contenu: { lieu: { id: 3, code: 'MC-A-12', nom_fr: 'Bureau 12', nom_nl: 'Bureau 12', chemin }, description: 'La porte grince.' } };
+    render(wrap(NouvelleDemandePage, 'fr'));
+    fireEvent.click(await screen.findByRole('button', { name: 'Reprendre' }));
+    expect(screen.getByText('Le problème est-il bien à cet endroit ?')).toBeInTheDocument();
+  }, 30000);
+
+  it('en néerlandais, lieu à confirmer, sans violation axe-core', async () => {
+    const { container } = render(wrap(NouvelleDemandePage, 'nl'));
+    expect(await screen.findByText('Is het probleem wel op deze plaats?')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Ja, het is hier/ })).toBeInTheDocument();
     await waitFor(() => expect(container.querySelector('.ant-spin-spinning')).toBeNull());
     await audit(container);
   }, 30000);
@@ -956,6 +1106,7 @@ describe('pièces jointes du formulaire (0.8.0, DEM-09, DEM-16)', () => {
     reponsePost = { status: 201, json: { data: demande(3, 'AA-DI-2026-00003', 'a_qualifier', { pieces: [piece(1, 'fuite.jpg', 'image/jpeg', { demande_id: 3, brouillon: 0 })] }), meta: { envelope: 1 } } };
     piecesData = { pieces: [piece(1, 'fuite.jpg')], plafonds: PLAFONDS };
     render(wrap(NouvelleDemandePage, 'fr'));
+    await confirmerLieu(); // 0.21.5 (R2) : lieu proposé confirmé d'un clic
     fireEvent.click(await screen.findByRole('button', { name: 'Divers' }));
     fireEvent.change(screen.getByLabelText('3. Décrivez le problème'), { target: { value: 'Une fuite sous l’évier de la cuisine.' } });
     fireEvent.click(screen.getByRole('button', { name: /Envoyer/ }));

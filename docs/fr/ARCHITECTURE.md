@@ -1,6 +1,6 @@
 # Architecture
 
-Version 0.21.4 · Le français fait foi.
+Version 0.21.5 · Le français fait foi.
 
 ## Services
 
@@ -412,6 +412,15 @@ Repris du gabarit 1.3.0 (`services/tickets.js`, `routes/tickets.js`, schémas, n
 - `has_photo` (0 ou 1) de `GET /api/lieux` et de `list_lieux` ; case « Sans photo (n) » de `PatrimoinePage.tsx`, calculée sur l'arbre déjà chargé, filtre `?photo=sans` gardé dans l'adresse.
 - Journal d'audit : `noms.cle` (réglage de l'instance ou de l'entité, nommé par le catalogue, sans requête) et type d'un lieu (`listes_valeurs`) dans `services/journal.js` ; `CODES_FAMILLE`, `CHAMPS_FAMILLE`, rôles par le catalogue et titre de fiche pour `topic_id` dans `JournalPage.tsx` ; `motif_donne` à la place du motif d'un ticket (E-46).
 - En-tête des téléphones (`AppLayout.tsx`, sous 768 px) : la langue passe dans le menu de la personne ; contrôle `npm run mobile:check` (`frontend/mobile-check/verifier-mobile.mjs`, Playwright, développement seulement).
+
+## Retours de tests et adaptations (0.21.5)
+
+- Contour d'une saisie refusée (R1) : `saisieDate.ts` tient les champs marqués (`estMarque`, `marquerNonRetenu`, `demarquer`) et l'annonce (`gmao-saisie-marque`) ; `ChampDate`, `ChampHeure`, `ChampPeriode` les rendent par `status="error"` (`useMarque`, référence du composant par `nativeElement`), `aria-invalid` reposé après chaque rendu ; une valeur changée autrement que par la frappe (calendrier) retire la marque.
+- Lieu à confirmer (R2, DV-201) : `NouvelleDemandePage.tsx`, `lieuConfirme`, `proposerLieu` (profil, brouillon, demande précédente) et `choisirLieu` (recherche, liste, lieux récents) ; `LieuPicker.tsx`, `confirme` et `onConfirmer` (vrai par défaut : qualification et lieu habituel inchangés) ; demandes voisines lues après la confirmation. Règle d'écran : l'API et le MCP reçoivent toujours un `lieu_id` explicite.
+- Demandes proches (R6, DV-202) : `voisines` de `services/demandes.js` rend `proches`, `meme_categorie`, `proche`, proches en tête ; `DemandesVoisines.tsx` résume les proches et replie le reste du bâtiment (chargé au clic, 50 au plus).
+- Dernière activité (E-56) : `derniereActivite` de `services/demandes.js`, une requête par page (`demande_historique`, `demande_messages` hors `interne`, `demande_complements`), sans migration ; `derniere_activite` sur chaque demande de la liste.
+- En-tête compact (D-0.21.5-1, DV-203) : `AppLayout.tsx`, `compact` sous le point `xl` d'Ant Design (1200 px) : boutons en icônes avec infobulle, mode, langue et thème dans le menu de la personne ; `HelpButton` reçoit `iconeSeule`. Visite guidée (D-0.21.5-2) : `placement` de `VisiteGuidee.tsx` aligne le panneau sur le bord de la cible qui le garde à 8 px des bords (768 px et plus).
+- Outillage : `mobile:check` joue « Tablette 768 px » et « Bureau 1280 px » (E-57, `MOBILE_LARGEURS`), sans la règle des 16 px ; cadres qui défilent en largeur exclus (`.col-tableau`, `.planning-defile`). `ci.yml` : `permissions: contents: read` (E-51).
 
 ## Date refusée à la sortie du champ (0.21.4)
 

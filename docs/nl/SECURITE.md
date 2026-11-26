@@ -2,6 +2,10 @@
 
 De Franse tekst (`docs/fr/SECURITE.md`) is rechtsgeldig en bevat het volledige rooster per versie.
 
+## 0.21.5 (26/11/2026)
+
+Feedback van de gebruikerstest van 26/11/2026 en van de test van 0.21.4. Een voorgestelde plaats moet bevestigd worden voor het verzenden; de rode rand van een geweigerde datum blijft staan; de laatste activiteit telt nooit een interne nota; de aanvragen in de buurt worden zonder naam van de aanvrager gegeven; de kop past in de breedte van 768 tot 1280 px; `ci.yml` krijgt enkel leesrecht op de code. Geen nieuwe afhankelijkheid. Bewijzen van falen: zie de Franse tekst.
+
 ## 0.21.4 (25/11/2026)
 
 Correctie van controle 7 van de test van 0.21.3 op NIXUS: een getypte datum die het veld weigerde en daarna verlaten werd zonder op een knop te klikken (Tab, klik elders, venster naar de achtergrond), werd ongemerkt vervangen door de oude datum, die daarna opgeslagen werd. Het veld wordt nu gemarkeerd en « Datum of uur niet aanvaard » verschijnt zodra het verlaten wordt; opslaan blijft geblokkeerd tot de tekst verbeterd is of een datum in de kalender gekozen is. Een geldige datum die kort na een klik opnieuw getypt wordt, wordt niet meer geweigerd. Getest met echte toetsenborden en muizen in Chromium en WebKit; bewijzen van falen in de Franse tekst.

@@ -6,7 +6,7 @@
  * accessible ; un écran sans fiche mène au mode d'emploi.
  */
 import { useEffect, useState } from 'react';
-import { Button, Drawer, Grid } from 'antd';
+import { Button, Drawer, Grid, Tooltip } from 'antd';
 import { QuestionCircleOutlined } from '@ant-design/icons';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import api, { qs } from '../api';
@@ -14,11 +14,13 @@ import { useI18n } from '../contexts/I18nContext';
 import { topicForPath, useHelpAccess } from './index';
 import TopicView, { type LocalFaq } from './TopicView';
 
-export default function HelpButton() {
+/** 0.21.5 (D-0.21.5-1) : iconeSeule, en-tête compact de 768 à 1199 px (nom en infobulle). */
+export default function HelpButton({ iconeSeule }: { iconeSeule?: boolean } = {}) {
   const { t } = useI18n();
   const location = useLocation();
   const navigate = useNavigate();
   const mobile = Grid.useBreakpoint().md === false;
+  const icone = iconeSeule ?? mobile;
   const voit = useHelpAccess();
   const [open, setOpen] = useState(false);
   const [faq, setFaq] = useState<LocalFaq[]>([]);
@@ -31,10 +33,12 @@ export default function HelpButton() {
   if (location.pathname === '/help') return null;
   return (
     <>
-      <Button size={mobile ? 'middle' : 'small'} icon={<QuestionCircleOutlined />} aria-label={mobile ? t('help.button') : undefined} data-visite="aide"
-        onClick={() => (topic ? setOpen(true) : navigate('/help'))}>
-        {mobile ? null : t('help.button')}
-      </Button>
+      <Tooltip title={icone && !mobile ? t('help.button') : undefined}>
+        <Button size={mobile ? 'middle' : 'small'} icon={<QuestionCircleOutlined />} aria-label={icone ? t('help.button') : undefined} data-visite="aide"
+          onClick={() => (topic ? setOpen(true) : navigate('/help'))}>
+          {icone ? null : t('help.button')}
+        </Button>
+      </Tooltip>
       {topic && (
         <Drawer open={open} onClose={() => setOpen(false)} width={mobile ? '100%' : 760} title={t('help.button')}
           extra={<Link to={`/help?fiche=${topic.id}`} onClick={() => setOpen(false)}>{t('help.full')}</Link>}>

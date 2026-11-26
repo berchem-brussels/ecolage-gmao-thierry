@@ -1,6 +1,6 @@
 # Après déploiement : installer et mettre à jour la GMAO sur NIXUS
 
-Version de l'application : **0.21.4** · Mis à jour le 25/11/2026 · Le français fait foi.
+Version de l'application : **0.21.5** · Mis à jour le 26/11/2026 · Le français fait foi.
 
 Procédure pas à pas depuis un PC Windows, sans passer par DSM. Une commande à la fois ; on attend son résultat avant la suivante. Si un résultat diffère de l'attendu, on s'arrête et on colle la sortie dans la conversation.
 
@@ -173,21 +173,49 @@ sudo docker compose up -d
 
 Attendu : `Container gmao-api Healthy`.
 
-## 6. Sauvegarde planifiée (à faire une fois)
+## 6. Sauvegarde planifiée (faite le 26/11/2026)
 
-La tâche se crée dans DSM, seul endroit où le NAS planifie des tâches : ouvrir `http://192.0.2.10:5000`, Panneau de configuration, Planificateur de tâches, Créer, Tâche planifiée, Script défini par l'utilisateur. Utilisateur `root` ; chaque jour à 02:00 ; script `bash /volume1/docker/monapp/backup.sh` ; courriel en cas d'échec. Contrôle immédiat dans la session SSH :
+Tâche « Sauvegarde GMAO » du Planificateur de tâches de DSM, ID 9, créée en ligne de commande le 26/11/2026 (DV-188) : utilisateur `root`, chaque jour à 01:45 (le courrier tourne à 02:00, la mise à jour de DSM le jeudi à 02:30), commande `bash /volume1/docker/monapp/backup.sh`, courriel à `helpdesk@exemple.invalid` seulement en cas d'erreur. Une ligne ajoutée à la main dans `/etc/crontab` n'est pas sûre : DSM réécrit ce fichier. `synoschedtask --run` ne lance pas la tâche sur DSM 7.4.1 ; passer par l'API de DSM.
+
+Contrôle, dans la session SSH du NAS :
 
 ```
-sudo bash /volume1/docker/monapp/backup.sh
+sudo synoschedtask --get id=9
 ```
 
-Attendu : `[gmao] … : sauvegarde terminée (photos copiées, aucune pièce jointe à copier), N sauvegardes de la base conservées.` Depuis la 0.8.0, `pièces jointes copiées` dès la première pièce déposée.
+Attendu : `State: [enabled]`, `Run time: [1]:[45]`, `Last Run Time` de la nuit, `Status: [Success]`.
+
+```
+sudo ls -lt /volume1/backups/gmao | head -4
+```
+
+Attendu : trois fichiers de la nuit (`gmao-AAAAMMJJ-0145.db`, photos, pièces). La date du fichier `.db` est celle de la dernière écriture de la base, pas celle de la copie.
+
+Lancer la tâche à la main (test) :
+
+```
+sudo /usr/syno/bin/synowebapi --exec api=SYNO.Core.TaskScheduler method=run version=2 tasks='[{"id":9,"real_owner":"root"}]'
+```
+
+Attendu : `"success" : true`, puis, 30 secondes plus tard, `Status: [Success]` et trois fichiers nouveaux.
+
+Recréer la tâche si elle a disparu (même méthode que le 26/11/2026) :
+
+```
+sudo /usr/syno/bin/synowebapi --exec api=SYNO.Core.TaskScheduler.Root method=create version=4 name='"Sauvegarde GMAO"' owner='"root"' enable=true type='"script"' schedule='{"date":"2026/11/26","date_type":0,"hour":1,"minute":45,"last_work_hour":1,"repeat_date":1001,"repeat_hour":0,"repeat_min":0,"week_day":"0,1,2,3,4,5,6","monthly_week":[]}' extra='{"notify_enable":true,"notify_if_error":true,"notify_mail":"helpdesk@exemple.invalid","script":"bash /volume1/docker/monapp/backup.sh"}'
+```
+
+Attendu : `"success" : true` et l'identifiant de la tâche.
 
 ## 7. Première installation (pour mémoire, faite le 15/10/2026)
 
 Suivie une seule fois, avec la 0.1.0. Elle reste décrite dans `docs/fr/INSTALLATION.md` et `NOTES_LIVRAISON_v0.1.0.md` de l'archive. Ordre : dossier `/volume1/docker/monapp` créé, archive copiée, extraction, `sudo sh verifier-ports.sh 18443 18080` (attendu : deux fois `LIBRE` ; le 18444 est occupé par la GRC), création du `.env` (une seule fois, `DEMO_ALLOWED=1` en acceptance, `chmod 600`), `build`, `up -d`, assistant d'installation dans le navigateur (nom du pouvoir local, entité AC, premier administrateur), création de l'entité CPAS dans Administration, Entités, comptes de démonstration.
 
 ## 8. Notes par version
+
+### 0.21.5 (26/11/2026)
+
+Retours du test orienté utilisateur et de la recette de la 0.21.4 (DV-200 à DV-203). Mise à jour par la section 3, **sans migration, sans dépendance nouvelle, sans relance de `demo.js`** ; les deux images se reconstruisent (serveur et interface changent) ; `--no-cache` inutile. `sudo docker logs gmao-api --tail 30` : `[APP] API 0.21.5`, aucune ligne `[DB] Migration`. `sudo bash recette.sh` : 9/9, le contrôle 4 attend la version 0.21.5. Retour à la 0.21.4 sans restaurer la base. À l'écran : lieu proposé à confirmer, demandes proches d'abord, « Dernière activité » dans « Mes demandes », en-tête compact sur tablette.
 
 ### 0.21.4 (25/11/2026)
 

@@ -70,7 +70,10 @@ test('terminer une tâche jamais démarrée : les deux heures exigées et contr�
   assert.equal((await passer(gest, t.id, { etat: 'terminee', debut: iso(60) })).body.code, 'TACHE_HEURES_REQUISES');
   assert.equal((await passer(gest, t.id, { etat: 'terminee', fin: iso(5) })).body.code, 'TACHE_HEURES_REQUISES');
   assert.equal((await passer(gest, t.id, { etat: 'terminee', debut: iso(5), fin: iso(60) })).body.code, 'TACHE_FIN_AVANT_DEBUT');
-  assert.equal((await passer(gest, t.id, { etat: 'terminee', debut: iso(5), fin: iso(5) })).body.code, 'TACHE_FIN_AVANT_DEBUT', 'fin égale au début');
+  // 0.21.5 : une seule heure pour les deux champs ; deux appels à iso(5) tombaient parfois à une milliseconde, ou à une
+  // seconde, d'écart, et la fin passait alors après le début (test instable vu sur la suite complète sous charge).
+  const meme = iso(5);
+  assert.equal((await passer(gest, t.id, { etat: 'terminee', debut: meme, fin: meme })).body.code, 'TACHE_FIN_AVANT_DEBUT', 'fin égale au début');
   assert.equal((await passer(gest, t.id, { etat: 'terminee', debut: iso(60), fin: iso(-30) })).body.code, 'TACHE_HEURE_FUTURE');
   assert.equal((await passer(gest, t.id, { etat: 'terminee', debut: iso(-30), fin: iso(-60) })).body.code, 'TACHE_HEURE_FUTURE');
   assert.equal((await passer(gest, t.id, { etat: 'terminee', debut: 'hier', fin: iso(5) })).status, 400, 'format date-time exigé');

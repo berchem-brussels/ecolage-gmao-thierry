@@ -358,6 +358,21 @@ function valeurs(texte, admises, champ) {
  * (tâches non annulées confiées à l'ouvrier ou à une de ses équipes) ; mêmes filtres pour l'export et les vues enregistrées.
  * 0.14.0 : attente=longue, demandes « En attente » depuis plus de N jours ouvrés (compteur du tableau de bord).
  */
+/** 0.21.5 (E-56) : instant de la dernière activité visible du demandeur, par demande (UTC, format de la base). */
+function derniereActivite(ids) {
+  const out = new Map();
+  if (!ids.length) return out;
+  const inQ = ids.map(() => '?').join(', ');
+  // Seuls des « ? » entrent dans la requête : les identifiants passent en paramètres.
+  const rows = getDb().prepare(`SELECT demande_id, MAX(t) AS t FROM (
+      SELECT demande_id, created_at AS t FROM demande_historique WHERE demande_id IN (${inQ})
+      UNION ALL SELECT demande_id, created_at FROM demande_messages WHERE interne = 0 AND demande_id IN (${inQ})
+      UNION ALL SELECT demande_id, created_at FROM demande_complements WHERE demande_id IN (${inQ})
+    ) GROUP BY demande_id`).all(...ids, ...ids, ...ids);
+  for (const r of rows) out.set(r.demande_id, r.t);
+  return out;
+}
+
 function list(user, { limit = 50, offset = 0, q, etat, etats, priorites, categorie_id: categorieId, batiment_id: batimentId,
   echeance, attente, messages, mentions, canal, danger, ouvertes, tri, ordre, perimetre = 'miennes', equipe_id: equipeId, ouvrier_id: ouvrierId } = {}) {
   const entiteId = entiteActive(user);
@@ -445,6 +460,10 @@ function list(user, { limit = 50, offset = 0, q, etat, etats, priorites, categor
   // 0.15.0 (point 2) : nombre de messages non lus par la personne, sur chaque demande de la page.
   const nonLus = require('./messages').nonLus(user, rows.map((d) => d.id));
   for (const d of rows) d.messages_non_lus = nonLus.get(d.id) || 0;
+  // 0.21.5 (E-56, SUI-01, DV-186) : dernière activité que le demandeur voit (dépôt, changement d'état, message hors
+  // note interne, complément), calculée à la lecture, sans migration ; même valeur pour tous les lecteurs.
+  const derniere = derniereActivite(rows.map((d) => d.id));
+  for (const d of rows) d.derniere_activite = [d.created_at, derniere.get(d.id)].filter(Boolean).sort().pop();
   return { rows, pagination: { total, limit, offset } };
 }
 
@@ -619,6 +638,10 @@ function descendants(entiteId, racineId) {
  * Demandes ouvertes de l'entité active dans le même bâtiment que le lieu choisi (DEM-04, 0.7.0), avant l'envoi.
  * Sans le nom des demandeurs. Ordre : même local, puis même catégorie, puis les plus récentes ; « limit » au plus,
  * avec le total pour « Voir les autres ».
+ * 0.21.5 (R6 du test orienté utilisateur du 26/11/2026, DV-202) : « 20 demandes déjà ouvertes dans ce bâtiment » ne se
+ * lisait pas. Une demande « proche » est au même local ou de la même catégorie (si elle est choisie) ; les proches
+ * passent en tête (même local et même catégorie d'abord), leur nombre est rendu à part (proches), chaque demande dit
+ * meme_categorie et proche ; l'écran montre d'abord les proches et replie le reste du bâtiment.
  */
 function voisines(user, { lieu_id: lieuId, categorie_id: categorieId, limit = 5 }) {
   const entiteId = entiteActive(user);
@@ -635,20 +658,25 @@ function voisines(user, { lieu_id: lieuId, categorie_id: categorieId, limit = 5 
       l.code AS lieu_code, l.nom_fr AS lieu_nom_fr, l.nom_nl AS lieu_nom_nl,
       c.libelle_fr AS categorie_libelle_fr, c.libelle_nl AS categorie_libelle_nl, c.icone AS categorie_icone
     FROM demandes d JOIN lieux l ON l.id = d.lieu_id JOIN categories c ON c.id = d.categorie_id ${clause}`).all(entiteId, ...ids);
-  const rang = (d) => [d.lieu_id === lieuId ? 0 : 1, categorieId && d.categorie_id === categorieId ? 0 : 1];
+  const memeLieu = (d) => d.lieu_id === lieuId;
+  const memeCat = (d) => !!categorieId && d.categorie_id === categorieId;
+  const rang = (d) => [memeLieu(d) || memeCat(d) ? 0 : 1, memeLieu(d) ? 0 : 1, memeCat(d) ? 0 : 1];
   rows.sort((a, b) => {
     const [ra, rb] = [rang(a), rang(b)];
-    return ra[0] - rb[0] || ra[1] - rb[1] || b.created_at.localeCompare(a.created_at) || b.id - a.id;
+    return ra[0] - rb[0] || ra[1] - rb[1] || ra[2] - rb[2] || b.created_at.localeCompare(a.created_at) || b.id - a.id;
   });
   return {
     batiment: { id: racine.id, nature: racine.nature, code: racine.code, nom_fr: racine.nom_fr, nom_nl: racine.nom_nl },
     total: rows.length,
+    proches: rows.filter((d) => memeLieu(d) || memeCat(d)).length,
     demandes: rows.slice(0, limit).map((d) => ({
       id: d.id, numero: d.numero, etat: d.etat, danger: d.danger, created_at: d.created_at,
       lieu_id: d.lieu_id, lieu_code: d.lieu_code, lieu_nom_fr: d.lieu_nom_fr, lieu_nom_nl: d.lieu_nom_nl,
       categorie_id: d.categorie_id, categorie_libelle_fr: d.categorie_libelle_fr, categorie_libelle_nl: d.categorie_libelle_nl,
       categorie_icone: d.categorie_icone, extrait: extrait(d.description),
-      meme_lieu: d.lieu_id === lieuId ? 1 : 0,
+      meme_lieu: memeLieu(d) ? 1 : 0,
+      meme_categorie: memeCat(d) ? 1 : 0,
+      proche: memeLieu(d) || memeCat(d) ? 1 : 0,
       propre: d.demandeur_id === user.id || d.beneficiaire_id === user.id ? 1 : 0,
       suivie: d.demandeur_id !== user.id && d.beneficiaire_id !== user.id && db.prepare(SUIVIE).get(d.id, user.id) ? 1 : 0,
     })),

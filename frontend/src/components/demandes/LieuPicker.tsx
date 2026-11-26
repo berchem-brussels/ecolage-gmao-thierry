@@ -10,11 +10,16 @@
  *
  * 0.7.5 (DV-74) : « Vos lieux récents », les derniers lieux des demandes de la personne (profil, lieux_recents), en
  * boutons au-dessus de la recherche, sans le lieu déjà choisi ; rien ne s'affiche s'il n'y en a pas.
+ *
+ * 0.21.5 (R2 du test orienté utilisateur du 26/11/2026, piste A, DV-201) : un lieu qui n'a pas été choisi dans ce
+ * formulaire (proposé d'office par le profil, repris d'un brouillon ou de la demande précédente) se confirme d'un clic :
+ * « Oui, c'est ici » ou « Changer de lieu » ; tant qu'il ne l'est pas, le cadre est en couleur d'avertissement et la page
+ * n'envoie pas. Constaté au test : un agent avait décrit la salle de gym, la demande était partie sur l'accueil proposé.
  */
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
-import { Button, Card, Input, Space, Spin, Tree, Typography } from 'antd';
+import { Button, Card, Input, Space, Spin, Tree, Typography, theme } from 'antd';
 import type { DataNode } from 'antd/es/tree';
-import { EnvironmentOutlined, SwapOutlined, ApartmentOutlined, UpOutlined, DownOutlined } from '@ant-design/icons';
+import { EnvironmentOutlined, SwapOutlined, ApartmentOutlined, UpOutlined, DownOutlined, CheckOutlined } from '@ant-design/icons';
 import api, { qs } from '../../api';
 import { useAuth } from '../../contexts/AuthContext';
 import { useI18n } from '../../contexts/I18nContext';
@@ -28,12 +33,18 @@ interface Props {
   onChange: (l: LieuChoisi) => void;
   /** Identifiant du titre qui nomme la zone (accessibilité). */
   labelledBy?: string;
+  /** 0.21.5 : faux quand le lieu affiché est proposé et attend d'être confirmé (vrai par défaut). */
+  confirme?: boolean;
+  /** 0.21.5 : « Oui, c'est ici ». */
+  onConfirmer?: () => void;
 }
 
 const versChoix = (l: LieuTrouve): LieuChoisi => ({ id: l.id, code: l.code, nom_fr: l.nom_fr, nom_nl: l.nom_nl, chemin: l.chemin });
 
-export default function LieuPicker({ value, onChange, labelledBy }: Props) {
+export default function LieuPicker({ value, onChange, labelledBy, confirme = true, onConfirmer }: Props) {
   const { t, lang } = useI18n();
+  const { token } = theme.useToken();
+  const aConfirmer = !!value && !confirme;
   const { user } = useAuth();
   const recents = (user?.lieux_recents || []).filter((l) => l.id !== value?.id);
   const [ouvert, setOuvert] = useState(!value);
@@ -85,7 +96,8 @@ export default function LieuPicker({ value, onChange, labelledBy }: Props) {
   return (
     <div role="group" aria-labelledby={labelledBy}>
       {value && (
-        <Card size="small" style={{ marginBottom: ouvert ? 12 : 0 }}>
+        <Card size="small" className={aConfirmer ? 'dem-lieu-a-confirmer' : undefined}
+          style={{ marginBottom: ouvert ? 12 : 0, ...(aConfirmer ? { borderColor: token.colorWarning, borderWidth: 2 } : {}) }}>
           <Space align="start" style={{ width: '100%', justifyContent: 'space-between' }} wrap>
             <Space align="start">
               <EnvironmentOutlined style={{ color: 'var(--app-primary)', fontSize: 20, marginTop: 2 }} aria-hidden />
@@ -95,8 +107,18 @@ export default function LieuPicker({ value, onChange, labelledBy }: Props) {
                 {value.source && <div><Typography.Text type="secondary" style={{ fontSize: 12 }}>{t(`demande.lieu.source.${value.source}`)}</Typography.Text></div>}
               </div>
             </Space>
-            {!ouvert && <Button icon={<SwapOutlined />} onClick={() => setOuvert(true)}>{t('demande.lieu.changer')}</Button>}
+            {!ouvert && !aConfirmer && <Button icon={<SwapOutlined />} onClick={() => setOuvert(true)}>{t('demande.lieu.changer')}</Button>}
           </Space>
+          {aConfirmer && !ouvert && (
+            <div style={{ marginTop: 12 }}>
+              <Typography.Text strong style={{ display: 'block' }} id={`${idListe}-confirmer`}>{t('demande.lieu.confirmer.question')}</Typography.Text>
+              <Typography.Text type="secondary" style={{ display: 'block', fontSize: 13, marginBottom: 8 }}>{t('demande.lieu.confirmer.aide')}</Typography.Text>
+              <Space wrap role="group" aria-labelledby={`${idListe}-confirmer`}>
+                <Button type="primary" icon={<CheckOutlined />} onClick={() => onConfirmer?.()}>{t('demande.lieu.confirmer.oui')}</Button>
+                <Button icon={<SwapOutlined />} onClick={() => setOuvert(true)}>{t('demande.lieu.changer')}</Button>
+              </Space>
+            </div>
+          )}
         </Card>
       )}
       {ouvert && (

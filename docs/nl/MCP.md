@@ -1,6 +1,10 @@
 # MCP-server
 
-Versie van de toepassing: **0.21.4** · Bijgewerkt op 25/11/2026 · De Franse tekst is rechtsgeldig (`docs/fr/MCP.md`).
+Versie van de toepassing: **0.21.5** · Bijgewerkt op 26/11/2026 · De Franse tekst is rechtsgeldig (`docs/fr/MCP.md`).
+
+## 0.21.5
+
+Geen nieuw hulpmiddel. `list_demandes_voisines` geeft ook `proches` (aantal aanvragen in hetzelfde lokaal of van dezelfde categorie, vooraan in de lijst) en, per aanvraag, `meme_categorie` en `proche`; `list_demandes` geeft `derniere_activite` (indiening, statuswijziging, bericht buiten interne nota of aanvulling, de meest recente). Enkel toevoegingen: een bestaande client wordt niet geraakt. Beschrijvingen FR en NL aangevuld.
 
 ## 0.21.4
 

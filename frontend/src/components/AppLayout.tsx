@@ -62,6 +62,12 @@ export default function AppLayout() {
   const screens = Grid.useBreakpoint();
   // Grid.useBreakpoint() est vide au premier rendu : on attend la vraie valeur (piège SAGA 84)
   const isMobile = screens.md === false;
+  // 0.21.5 (D-0.21.5-1, trouvé par mobile:check à 768 et 1280 px, E-57) : de 768 à 1199 px (tablette, portable en
+  // 1024 px, fenêtre réduite), l'en-tête complet dépassait l'écran (boutons écrasés, cloche et compte hors de l'écran).
+  // En dessous de 1200 px (point « xl » d'Ant Design), l'en-tête est compact : boutons en icônes avec leur nom en
+  // infobulle, mode, langue et thème dans le menu de la personne, comme sur téléphone ; menu latéral gardé.
+  const compact = !isMobile && screens.xl === false;
+  const iconesSeules = isMobile || compact;
   const etroit = useEtroit();
   const [collapsed, setCollapsed] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -176,10 +182,10 @@ export default function AppLayout() {
   const userMenu: MenuProps = {
     items: [
       // Sur téléphone, la bascule Simple ou Complet passe dans ce menu : elle reste accessible (standard section 12.5).
-      ...(isMobile ? [{ key: 'mode', icon: <ControlOutlined />, label: `${t('layout.mode')} : ${user?.ui_mode === 'complet' ? t('layout.mode.simple') : t('layout.mode.complet')}` }] : []),
-      ...(isMobile ? [{ key: 'theme', icon: dark ? <SunOutlined /> : <MoonOutlined />, label: dark ? t('layout.theme.light') : t('layout.theme.dark') }] : []),
+      ...(iconesSeules ? [{ key: 'mode', icon: <ControlOutlined />, label: `${t('layout.mode')} : ${user?.ui_mode === 'complet' ? t('layout.mode.simple') : t('layout.mode.complet')}` }] : []),
+      ...(iconesSeules ? [{ key: 'theme', icon: dark ? <SunOutlined /> : <MoonOutlined />, label: dark ? t('layout.theme.light') : t('layout.theme.dark') }] : []),
       // 0.13.0 (D1) : la langue aussi, sous le nom de l'autre langue écrit dans cette langue, pour qui ne lit pas l'écran.
-      ...(isMobile ? [{ key: 'lang', icon: <GlobalOutlined />, label: <span lang={lang === 'fr' ? 'nl' : 'fr'}>{lang === 'fr' ? 'Nederlands' : 'Français'}</span> }] : []),
+      ...(iconesSeules ? [{ key: 'lang', icon: <GlobalOutlined />, label: <span lang={lang === 'fr' ? 'nl' : 'fr'}>{lang === 'fr' ? 'Nederlands' : 'Français'}</span> }] : []),
       ...(entite ? [{ key: 'lieu', icon: <EnvironmentOutlined />, label: t('profil.lieu.title') }] : []),
       { key: 'password', icon: <LockOutlined />, label: t('layout.password') },
       { key: 'logout', icon: <LogoutOutlined />, label: t('layout.logout') },
@@ -224,25 +230,29 @@ export default function AppLayout() {
           <div className="entete-actions" style={{ display: 'flex', alignItems: 'center', gap: isMobile ? 4 : 12, minWidth: 0 }}>
             {/* Bouton « Nouvelle demande » sur chaque écran (DEM-01) ; sur téléphone, l'icône seule avec son nom accessible. */}
             {entite && location.pathname !== '/demandes/nouvelle' && (
-              <Button type="primary" size={isMobile ? 'middle' : 'small'} icon={<PlusOutlined />} onClick={() => navigate('/demandes/nouvelle')} data-visite="nouvelle"
-                aria-label={isMobile ? t('nav.demande.nouvelle') : undefined}>
-                {isMobile ? null : t('nav.demande.nouvelle')}
-              </Button>
+              <Tooltip title={compact ? t('nav.demande.nouvelle') : undefined}>
+                <Button type="primary" size={isMobile ? 'middle' : 'small'} icon={<PlusOutlined />} onClick={() => navigate('/demandes/nouvelle')} data-visite="nouvelle"
+                  aria-label={iconesSeules ? t('nav.demande.nouvelle') : undefined}>
+                  {iconesSeules ? null : t('nav.demande.nouvelle')}
+                </Button>
+              </Tooltip>
             )}
-            <Button size={isMobile ? 'middle' : 'small'} icon={<FlagOutlined />} onClick={() => setReportOpen(true)} data-visite="signaler"
-              aria-label={isMobile ? t('tickets.report') : undefined}>
-              {isMobile ? null : t('tickets.report')}
-            </Button>
-            <HelpButton />
+            <Tooltip title={compact ? t('tickets.report') : undefined}>
+              <Button size={isMobile ? 'middle' : 'small'} icon={<FlagOutlined />} onClick={() => setReportOpen(true)} data-visite="signaler"
+                aria-label={iconesSeules ? t('tickets.report') : undefined}>
+                {iconesSeules ? null : t('tickets.report')}
+              </Button>
+            </Tooltip>
+            <HelpButton iconeSeule={iconesSeules} />
             {entiteSelector}
-            {!isMobile && <Segmented size="small" aria-label={t('layout.mode')} value={user?.ui_mode || 'simple'}
+            {!iconesSeules && <Segmented size="small" aria-label={t('layout.mode')} value={user?.ui_mode || 'simple'}
               onChange={(v) => savePreferences({ ui_mode: v as 'simple' | 'complet' })}
               options={[{ label: t('layout.mode.simple'), value: 'simple' }, { label: t('layout.mode.complet'), value: 'complet' }]} />}
             {/* 0.13.0 (D1) : sur téléphone, la langue passe dans le menu de la personne ; l'en-tête dépassait 320 et 360 px. */}
-            {!isMobile && <Select size="small" aria-label={t('layout.lang')} value={lang} onChange={changeLang} style={{ width: 64 }}
+            {!iconesSeules && <Select size="small" aria-label={t('layout.lang')} value={lang} onChange={changeLang} style={{ width: 64 }}
               options={[{ value: 'fr', label: 'FR' }, { value: 'nl', label: 'NL' }]} />}
             {/* 0.12.0 : avec le bouton « Aide », l'en-tête dépassait 360 px ; sur téléphone, le thème passe dans le menu de la personne. */}
-            {!isMobile && (
+            {!iconesSeules && (
               <Tooltip title={dark ? t('layout.theme.light') : t('layout.theme.dark')}>
                 <Button type="text" aria-label={dark ? t('layout.theme.light') : t('layout.theme.dark')}
                   icon={dark ? <SunOutlined /> : <MoonOutlined />} onClick={() => savePreferences({ theme: dark ? 'clair' : 'sombre' })} />

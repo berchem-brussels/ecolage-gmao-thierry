@@ -1,6 +1,22 @@
 # Journal des versions
 
-Version de l'application : **0.21.4** · Mis à jour le 25/11/2026
+Version de l'application : **0.21.5** · Mis à jour le 26/11/2026
+
+## 0.21.5 (26/11/2026)
+
+Retours du test orienté utilisateur sur la 0.21.4 (R1, R2, R6 ; `claude/TEST-UTILISATEUR-0.21.4.md`) et écarts de l'audit (E-56, E-57) et du gabarit (E-51, E-37), avant l'étape 18 (DV-192 à DV-203). Aucune migration, aucune dépendance, aucune permission, aucun réglage, aucun outil MCP nouveau.
+
+- Contour rouge gardé (R1, recette de la 0.21.4) : `saisieDate.ts` garde l'ensemble des champs marqués (`estMarque`, `annoncerMarque`, `demarquer`, événement `gmao-saisie-marque`) ; `ChampDate.tsx`, crochet `useMarque` : `status="error"` et `aria-invalid` tenus par React, rendus après un nouveau rendu du champ, levés au changement de valeur ; `ChampDate`, `ChampHeure`, `ChampPeriode`.
+- Lieu à confirmer (R2, DV-201) : `LieuPicker.tsx`, propriétés `confirme` et `onConfirmer` ; lieu proposé (profil, brouillon, dernière demande, changement d'entité) dans un cadre orange avec « Est-ce bien l'endroit du problème ? », « Oui, c'est ici » et « Changer de lieu » ; `NouvelleDemandePage.tsx` : « Envoyer » grisé avec « Confirmez le lieu » (`demande.manque.lieu_confirme`), demandes voisines après la confirmation ; un lieu choisi soi-même vaut confirmation.
+- Demandes proches d'abord (R6, DV-202) : `services/demandes.js` (`voisines`) rend `proches` et, par demande, `meme_categorie` et `proche` (même local ou même catégorie), proches en tête ; `DemandesVoisines.tsx` : résumé des proches, cinq au plus puis « Voir les autres », reste du bâtiment replié (« Autres demandes du bâtiment (N) ») ; `list_demandes_voisines` décrit en FR et NL.
+- Dernière activité (SUI-01, E-56) : `services/demandes.js` (`derniereActivite`) : plus récent du dépôt, d'un passage, d'un message hors note interne et d'un complément, calculé à la lecture, sans migration ; `derniere_activite` dans `GET /api/demandes` et `list_demandes` ; `DemandesPage.tsx` : colonne sur ordinateur, ligne sous la date de dépôt sur téléphone.
+- Tablette et bureau (E-57) : `mobile-check/verifier-mobile.mjs`, appareils « Tablette 768 px » et « Bureau 1280 px » (Chromium, sans écran tactile, sans la règle des 16 px), filtre `MOBILE_LARGEURS` ; grilles qui défilent dans leur cadre (`.col-tableau`, `.planning-defile`) exclues du contrôle de débordement ; écran « visite et menu » sauté sur grand écran ; sur un écran sans toucher, l'écran de l'affectation ouvre le calendrier par son icône (règle de la 0.21.2), comme une personne au bureau.
+- En-tête de 768 à 1199 px (D-0.21.5-1, DV-203) : `AppLayout.tsx` en mode compact sous 1200 px (point `xl`) : « Nouvelle demande », « Signaler » et « Aide » en icônes avec leur nom accessible et une infobulle (`HelpButton.tsx`, `iconeSeule`) ; mode, langue et thème dans le menu de la personne.
+- Visite guidée sur tablette et bureau (D-0.21.5-2, DV-203) : `VisiteGuidee.tsx`, `placement()` : panneau aligné sur le bord de la cible qui le garde à 8 px des bords de l'écran ; téléphone inchangé.
+- `ci.yml` (E-51, DV-196) : `permissions: contents: read` en tête ; `@playwright/test` ^1.61.1 (E-37, DV-197), version résolue inchangée (1.65.0).
+- Test instable corrigé dans le test seul : `heures-taches.test.js` (une seule heure lue pour le début et la fin).
+- Note de version : trois lignes pour tous. Aide : « Nouvelle demande », « Mes demandes », Accueil ; captures `demande-overview` et `mes-demandes-overview` refaites (FR, NL).
+- Tests : `saisie-date.test.tsx` (trois), `demandes.test.tsx` (six pour le lieu, deux pour les proches, un pour la dernière activité ; quatorze adaptés à la confirmation), `voisines.test.js`, `messages.test.js`, `notes-version.test.js`.
 
 ## 0.21.4 (25/11/2026)
 

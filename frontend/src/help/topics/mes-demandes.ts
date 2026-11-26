@@ -1,4 +1,4 @@
-/** Fiche d'aide « Mes demandes » (SUI-01, DEM-04 ; 0.12.0), reprise de l'ancienne rubrique help.guide.mesdemandes. 0.14.0 : ligne du temps, compléter, annuler, avis, rouvrir (SUI-02, SUI-05, SUI-06). */
+/** Fiche d'aide « Mes demandes » (SUI-01, DEM-04 ; 0.12.0), reprise de l'ancienne rubrique help.guide.mesdemandes. 0.14.0 : ligne du temps, compléter, annuler, avis, rouvrir (SUI-02, SUI-05, SUI-06). 0.21.5 : dernière activité (E-56). */
 import type { HelpTopic } from '../types';
 
 const topic: HelpTopic = {
@@ -11,7 +11,7 @@ const topic: HelpTopic = {
   layout: [
     { fr: '[[1]] {{demande.filtre}} : {{demande.filtre.ouvertes}}, {{demande.filtre.closes}} ou {{demande.filtre.toutes}}.', nl: '[[1]] {{demande.filtre}}: {{demande.filtre.ouvertes}}, {{demande.filtre.closes}} of {{demande.filtre.toutes}}.' },
     { fr: '[[2]] {{demande.chercher}} : par numéro, mot de la description ou lieu.', nl: '[[2]] {{demande.chercher}}: op nummer, woord uit de beschrijving of plaats.' },
-    { fr: '[[3]] La liste : numéro, problème, lieu, état en clair et délai annoncé ; sur téléphone, une carte par demande. « 1 nouveau message » signale une réponse du service technique.', nl: '[[3]] De lijst: nummer, probleem, plaats, status in gewone woorden en aangekondigde termijn; op een telefoon een kaart per aanvraag. « 1 nieuw bericht » wijst op een antwoord van de technische dienst.' },
+    { fr: '[[3]] La liste : numéro, problème, lieu, état en clair, {{demande.champ.activite}} (dernier changement d’état, message ou complément) et délai annoncé ; sur téléphone, une carte par demande. « 1 nouveau message » signale une réponse du service technique.', nl: '[[3]] De lijst: nummer, probleem, plaats, status in gewone woorden, {{demande.champ.activite}} (laatste statuswijziging, bericht of aanvulling) en aangekondigde termijn; op een telefoon een kaart per aanvraag. « 1 nieuw bericht » wijst op een antwoord van de technische dienst.' },
   ],
   overviewShot: 'mes-demandes-overview',
   procedures: [
