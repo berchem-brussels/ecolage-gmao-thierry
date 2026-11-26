@@ -26,6 +26,11 @@
  * ou par courriel, pour un agent choisi dans l'entité (bloc « Demande reçue », EncodageDemande). Ni brouillon, ni
  * pièce jointe, ni « Moi aussi », ni mention d'information (la personne n'est pas devant l'écran) ; aucun lieu proposé
  * d'office. Après l'envoi : liens vers les demandes de l'entité et vers un autre encodage.
+ * 0.21.5 (R2 du test orienté utilisateur, piste A, DV-201) : un lieu que la personne n'a pas choisi dans ce formulaire
+ * (proposé par le profil, repris d'un brouillon, gardé de la demande précédente) est à confirmer d'un clic avant l'envoi
+ * (« Oui, c'est ici » ou « Changer de lieu ») ; tant qu'il ne l'est pas, l'envoi manque « la confirmation du lieu » et les
+ * demandes déjà ouvertes du bâtiment ne s'affichent pas encore. Un lieu choisi (recherche, liste, lieux récents) vaut
+ * confirmation.
  */
 import { useEffect, useRef, useState } from 'react';
 import dayjs from 'dayjs';
@@ -61,7 +66,13 @@ export default function NouvelleDemandePage({ encoder = false }: { encoder?: boo
   const { t, lang } = useI18n();
   const verifierSaisie = useSaisieRetenue();
   const { user, entite, refresh } = useAuth();
-  const [lieu, setLieu] = useState<LieuChoisi | null>(encoder ? null : user?.lieu_propose || null);
+  const [lieu, setLieuBrut] = useState<LieuChoisi | null>(encoder ? null : user?.lieu_propose || null);
+  // 0.21.5 (R2) : vrai seulement pour un lieu choisi ou confirmé dans ce formulaire.
+  const [lieuConfirme, setLieuConfirme] = useState(false);
+  /** Lieu proposé (profil, brouillon, demande précédente) : à confirmer. */
+  const proposerLieu = (l: LieuChoisi | null) => { setLieuBrut(l); setLieuConfirme(false); };
+  /** Lieu choisi par la personne (recherche, liste, lieux récents) : vaut confirmation. */
+  const choisirLieu = (l: LieuChoisi) => { setLieuBrut(l); setLieuConfirme(true); };
   const [encodage, setEncodage] = useState<Encodage>(ENCODAGE_VIDE);
   const [categorie, setCategorie] = useState<CategorieChoisie | null>(null);
   const [reponses, setReponses] = useState<ReponseDonnee[]>([]);
@@ -132,7 +143,7 @@ export default function NouvelleDemandePage({ encoder = false }: { encoder?: boo
   const reprendre = () => {
     const c = brouillon?.contenu || {};
     setDanger(c.danger === 1);
-    if (c.lieu) setLieu({ ...c.lieu, chemin: c.lieu.chemin || [] });
+    if (c.lieu) proposerLieu({ ...c.lieu, chemin: c.lieu.chemin || [] });
     setCategorie(c.categorie || null);
     setReponses(c.reponses || []);
     setDescription(c.description || '');
@@ -150,7 +161,7 @@ export default function NouvelleDemandePage({ encoder = false }: { encoder?: boo
   };
 
   // Changement d'entité active : le lieu et la catégorie de l'autre entité ne valent plus.
-  useEffect(() => { setLieu(encoder ? null : user?.lieu_propose || null); setCategorie(null); setReponses([]); setEncodage(ENCODAGE_VIDE); }, [user?.entite_active_id]);
+  useEffect(() => { proposerLieu(encoder ? null : user?.lieu_propose || null); setCategorie(null); setReponses([]); setEncodage(ENCODAGE_VIDE); }, [user?.entite_active_id]);
 
   /** Choix d'une catégorie : seules restent les réponses d'une question encore posée (même domaine). */
   const choisirCategorie = (c: CategorieChoisie) => {
@@ -165,13 +176,14 @@ export default function NouvelleDemandePage({ encoder = false }: { encoder?: boo
     ...(encoder && !encodage.canal ? [t('encoder.manque.canal')] : []),
     ...(encoder && !encodage.demandeur ? [t('encoder.manque.demandeur')] : []),
     ...(!lieu ? [t('demande.manque.lieu')] : []),
+    ...(lieu && !lieuConfirme ? [t('demande.manque.lieu_confirme')] : []),
     ...(!categorie ? [t('demande.manque.quoi')] : []),
     ...(obligatoiresManquantes(questions, valables).length ? [t('demande.manque.questions')] : []),
     ...(texte.length < DESCRIPTION_MIN ? [t('demande.manque.description')] : []),
   ];
 
   const envoyer = async () => {
-    if (manque.length || !lieu || !categorie) return;
+    if (manque.length || !lieu || !lieuConfirme || !categorie) return;
     if (await verifierSaisie()) return; // 0.21.3 (DV-176) : date ou heure tapée non retenue : rien ne part.
     setEnvoi(true);
     setErreur(null);
@@ -197,7 +209,7 @@ export default function NouvelleDemandePage({ encoder = false }: { encoder?: boo
     setReponses([]);
     setDescription('');
     setEncodage((e) => ({ ...e, demandeur: null }));
-    setLieu(faite ? { id: faite.lieu_id, code: faite.lieu_code, nom_fr: faite.lieu_nom_fr, nom_nl: faite.lieu_nom_nl, chemin: faite.lieu_chemin } : lieu);
+    proposerLieu(faite ? { id: faite.lieu_id, code: faite.lieu_code, nom_fr: faite.lieu_nom_fr, nom_nl: faite.lieu_nom_nl, chemin: faite.lieu_chemin } : lieu);
   };
 
   // Boutons de suite communs : l'un sous l'autre sur téléphone, 12 px entre eux (0.5.2).
@@ -319,8 +331,8 @@ export default function NouvelleDemandePage({ encoder = false }: { encoder?: boo
         </Card>
         <Card>
           <Typography.Title level={2} id="dem-ou" style={{ fontSize: 17 }}>{t('demande.ou.title')}</Typography.Title>
-          <LieuPicker value={lieu} onChange={setLieu} labelledBy="dem-ou" />
-          {!encoder && <DemandesVoisines lieuId={lieu?.id ?? null} categorieId={categorie?.id ?? null} remarque={description}
+          <LieuPicker value={lieu} onChange={choisirLieu} labelledBy="dem-ou" confirme={lieuConfirme} onConfirmer={() => setLieuConfirme(true)} />
+          {!encoder && <DemandesVoisines lieuId={lieuConfirme ? lieu?.id ?? null : null} categorieId={categorie?.id ?? null} remarque={description}
             onSuivie={(d) => { setSuivie(d); setEnregistreA(null); setPieces([]); api.del('/demandes/brouillon').catch(() => {}); refresh(); }} />}
         </Card>
         <Card>

@@ -1,6 +1,6 @@
 # Demandes d'intervention : dépôt et suivi par le demandeur
 
-Version 0.16.1 · Fiche fonctionnelle (modèle du standard, section 17.8).
+Version 0.21.5 · Fiche fonctionnelle (modèle du standard, section 17.8).
 
 ## Objet
 
@@ -81,6 +81,9 @@ Permettre à tout agent de l'administration communale et du CPAS de signaler un 
 | 49 | Demande regroupée (0.16.0) : quand le service technique regroupe la demande avec une autre qui signale le même problème, elle est fermée (« Regroupée avec une autre demande ») et renvoie vers la demande principale, que le demandeur, le bénéficiaire et les personnes qui suivaient suivent d'office | GES-06, DV-130 |
 | 50 | Demande découpée (0.16.0) : quand une demande signale plusieurs problèmes, le service technique en crée de nouvelles au nom du même demandeur ; chacune dit « Cette demande est issue de la demande … », avec les délais comptés depuis la demande d'origine | GES-06, DV-131 |
 | 51 | Danger et validation (0.16.1) : une demande « Danger pour les personnes ou les biens » d'une catégorie à valider part tout de suite au service technique en P1, sans attendre l'accord du chef de service ; le journal note la validation sautée pour danger. Après l'envoi d'une demande qui attend l'accord du chef, l'écran le dit et n'annonce pas de délai | DEM-06, DEM-15, DV-135 |
+| 52 | Lieu proposé à confirmer : un lieu que la personne n'a pas choisi dans le formulaire (lieu habituel, lieu de la dernière demande, brouillon repris, « Faire une autre demande ») se confirme par « Oui, c'est ici » ou se change par « Changer de lieu » ; avant, cadre en couleur d'avertissement, « il manque : la confirmation du lieu » et envoi impossible ; un lieu choisi (recherche, liste, lieux récents) vaut confirmation ; les demandes voisines s'affichent après la confirmation ; règle d'écran, l'API et le MCP reçoivent toujours un lieu explicite (0.21.5) | R2 du test orienté utilisateur du 26/11/2026, DV-201 |
+| 53 | Demandes proches : au même local, ou de la même catégorie une fois la catégorie choisie ; le résumé ne compte qu'elles (« N demandes déjà ouvertes à cet endroit », ou « … ou pour le même type de problème ») ; cinq cartes puis « Voir les autres (N) » ; les autres demandes du bâtiment sont repliées sous « N autres demandes ailleurs dans le bâtiment », lues au clic ; sans demande proche, comme la règle 18 (0.21.5) | R6, DV-202, DEM-04 |
+| 54 | « Mes demandes » : « Dernière activité », la plus récente des dates de dépôt, de changement d'état, de message (hors note interne du service) et de complément ; sur téléphone, sous la date de dépôt quand elle en diffère (0.21.5) | E-56, SUI-01 |
 
 ## Données personnelles
 

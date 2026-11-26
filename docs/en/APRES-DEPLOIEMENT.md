@@ -1,8 +1,12 @@
 # After deployment
 
-Application version: **0.21.4** · Updated on 25/11/2026
+Application version: **0.21.5** · Updated on 26/11/2026
 
 The French text prevails. Update procedure: upload the archive, `cd <folder>`, `ls -l` the archive, `sudo bash backup.sh`, `sudo rm -rf backend frontend docs`, `sudo tar xzf … --strip-components=1`, `ls backend frontend`, `sudo docker compose build`, `sudo docker compose up -d`, `sudo docker compose ps`, `curl -sk https://localhost:<https>/api/version`, checklist from the delivery message. `.env` and the volumes are never touched.
+
+## 0.21.5 (26/11/2026)
+
+Feedback from the user-oriented test and the 0.21.4 acceptance test. Update through section 3, **without migration, without new dependency, without `demo.js`**. `sudo docker logs gmao-api --tail 30`: `[APP] API 0.21.5`, no `[DB] Migration` line. `sudo bash recette.sh`: 9/9, check 4 expects 0.21.5. Rollback to 0.21.4 without restoring the database.
 
 ## 0.21.4 (25/11/2026)
 

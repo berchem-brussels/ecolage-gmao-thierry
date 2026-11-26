@@ -2,6 +2,27 @@
   "_description": "Notes de version pour les utilisateurs, en FR et en NL, sans terme technique (standard v3.2, sections 13.1 et 17.8 ; écart E-07). Une note par version, de la plus récente à la plus ancienne. Chaque ligne a un public : « tous », « admin » (administrateur de l'application) ou une permission du catalogue des rôles (par exemple « parametres:gerer »), lue dans l'entité active. La note de la version installée s'affiche une fois à la première connexion qui suit la mise à jour ; toutes restent relisibles dans Aide, Nouveautés.",
   "notes": [
     {
+      "version": "0.21.5",
+      "date": "2026-11-26",
+      "lignes": [
+        {
+          "public": "tous",
+          "fr": "Nouvelle demande : le lieu proposé d'office se confirme d'un clic (« Oui, c'est ici ») ou se change avant l'envoi.",
+          "nl": "Nieuwe aanvraag: de automatisch voorgestelde plaats bevestigt u met één klik (« Ja, het is hier ») of wijzigt u vóór het verzenden."
+        },
+        {
+          "public": "tous",
+          "fr": "Les demandes déjà ouvertes au même endroit ou pour le même problème s'affichent d'abord ; « Mes demandes » montre la dernière activité de chaque demande.",
+          "nl": "De aanvragen die al open zijn op dezelfde plaats of voor hetzelfde probleem worden eerst getoond; « Mijn aanvragen » toont de laatste activiteit van elke aanvraag."
+        },
+        {
+          "public": "tous",
+          "fr": "Sur tablette ou dans une fenêtre réduite, le haut de l'écran tient dans la largeur : les boutons gardent leur icône, et le mode, la langue et le thème passent dans votre menu.",
+          "nl": "Op een tablet of in een verkleind venster past de bovenkant van het scherm in de breedte: de knoppen behouden hun pictogram, en de modus, de taal en het thema gaan naar uw menu."
+        }
+      ]
+    },
+    {
       "version": "0.21.4",
       "date": "2026-11-25",
       "lignes": [

@@ -130,6 +130,9 @@ export async function parcours(navigateur, moteur, appareil, comptes, outils) {
         await tap(page.locator('.dem-resultats button, .dem-resultat'), 'lieu trouvé');
         await attendre(page);
       }
+      // 0.21.5 (R2, DV-201) : un lieu proposé d'office se confirme d'un clic avant l'envoi.
+      const oui = page.getByRole('button', { name: /Oui, c.est ici/ });
+      if (await oui.count()) { await tap(oui, '« Oui, c’est ici »'); await attendre(page); }
       await tap(page.getByRole('button', { name: /Aménagement, déménagement, achat : voir les natures/ }), 'domaine « Aménagement »');
       await attendre(page, 500);
       await tap(page.getByRole('button', { name: "Aménagement d'un local", exact: true }), 'nature « Aménagement d’un local »');

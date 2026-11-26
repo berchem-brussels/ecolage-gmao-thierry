@@ -1,6 +1,10 @@
 # Architecture
 
-Application version: **0.21.4** · The French text prevails (`docs/fr/ARCHITECTURE.md`); this file summarises each version.
+Application version: **0.21.5** · The French text prevails (`docs/fr/ARCHITECTURE.md`); this file summarises each version.
+
+## Test feedback and adjustments (0.21.5)
+
+Red border of a refused entry through `status="error"` (`useMarque`); proposed location to confirm (`lieuConfirme`, `LieuPicker`: `confirme`); `voisines` returns `proches`, `meme_categorie`, `proche`; `derniere_activite` on the request list (internal notes excluded, no migration); compact header below 1200 px (`AppLayout.tsx`); guided tour panel kept on screen; `mobile:check` at 768 and 1280 px; `ci.yml` with `permissions: contents: read`. See the French text.
 
 ## Refused date reported on leaving the field (0.21.4)
 

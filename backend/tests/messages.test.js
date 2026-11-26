@@ -411,3 +411,24 @@ test('R2 : langue donnée gardée même si l’écran de l’auteur est dans l�
     await gest.put('/api/auth/preferences', { preferred_lang: 'fr' });
   }
 });
+
+// 0.21.5 (E-56, SUI-01) : « dernière activité » de « Mes demandes » : dépôt, changement d'état, message hors note interne,
+// complément ; une note interne du service ne compte pas (le demandeur ne la voit pas).
+test('dernière activité : message public oui, note interne non ; même valeur pour le service', async () => {
+  const d = await deposer('La porte du hall grince fort.');
+  const db = getDb();
+  db.prepare("UPDATE demandes SET created_at = '2026-11-01 08:00:00' WHERE id = ?").run(d.id);
+  db.prepare("UPDATE demande_historique SET created_at = '2026-11-01 08:00:00' WHERE demande_id = ?").run(d.id);
+  const activite = async (c, perimetre) => (await c.get(`/api/demandes?perimetre=${perimetre}&limit=200`)).body.data.find((x) => x.id === d.id).derniere_activite;
+  assert.equal(await activite(agent, 'miennes'), '2026-11-01 08:00:00');
+  const note = await gest.post(`/api/demandes/${d.id}/messages`, { texte: 'Voir avec le menuisier.', interne: true });
+  db.prepare("UPDATE demande_messages SET created_at = '2026-11-05 10:00:00' WHERE id = ?").run(note.body.data.id);
+  assert.equal(await activite(agent, 'miennes'), '2026-11-01 08:00:00', 'note interne : pas une activité du demandeur');
+  const rep = await gest.post(`/api/demandes/${d.id}/messages`, { texte: 'Nous passons jeudi.' });
+  db.prepare("UPDATE demande_messages SET created_at = '2026-11-03 09:30:00' WHERE id = ?").run(rep.body.data.id);
+  assert.equal(await activite(agent, 'miennes'), '2026-11-03 09:30:00');
+  assert.equal(await activite(gest, 'entite'), '2026-11-03 09:30:00');
+  // Complément du demandeur (route de l'étape 9 ; ici posé en base pour fixer l'heure).
+  db.prepare("INSERT INTO demande_complements (demande_id, entite_id, user_id, texte, created_at) VALUES (?, ?, NULL, 'Précision', '2026-11-04 11:00:00')").run(d.id, ea.id);
+  assert.equal(await activite(agent, 'miennes'), '2026-11-04 11:00:00');
+});

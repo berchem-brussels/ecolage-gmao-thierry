@@ -18,11 +18,11 @@
  * Les formulaires utilisent ChampDate, ChampHeure et ChampPeriode à la place de DatePicker, TimePicker et RangePicker
  * (contrôlé par saisie-date.test.ts).
  */
-import { useEffect, useRef, useState, type ComponentProps, type CSSProperties, type KeyboardEvent, type ReactNode } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState, type ComponentProps, type CSSProperties, type KeyboardEvent, type ReactNode } from 'react';
 import { DatePicker, TimePicker, message } from 'antd';
 import { CalendarOutlined, ClockCircleOutlined } from '@ant-design/icons';
 import { useI18n } from '../contexts/I18nContext';
-import { ecranTactile, entreeSansEnvoi, marquerNonRetenu, saisiesNonRetenues } from '../saisieDate';
+import { demarquer, ecranTactile, entreeSansEnvoi, estMarque, marquerNonRetenu, saisiesNonRetenues } from '../saisieDate';
 
 type PropsDate = ComponentProps<typeof DatePicker>;
 type PropsHeure = ComponentProps<typeof TimePicker>;
@@ -84,22 +84,58 @@ function useOuverture(p: Commun, icone: ReactNode, libelle: string): Commun {
   };
 }
 
+type Statut = 'error' | 'warning' | '' | undefined;
+type RefChamp = { nativeElement?: HTMLElement } | null;
+
+/**
+ * 0.21.5 (R1 de la recette de la 0.21.4) : marque d'erreur d'une saisie non retenue rendue par `status="error"`, que
+ * React garde à chaque rendu (la classe posée à la main était effacée au retour dans le champ ou dans la fenêtre).
+ * La marque tombe à la frappe dans le champ (saisieDate.ts) ou quand la valeur change autrement (calendrier).
+ */
+function useMarque(valeur: unknown, statut: Statut): { ref: { current: RefChamp }; status: Statut } {
+  const ref = useRef<RefChamp>(null);
+  const [erreur, setErreur] = useState(false);
+  const champs = () => Array.from(ref.current?.nativeElement?.querySelectorAll('input') ?? []);
+  useEffect(() => {
+    const suivre = (e: Event) => {
+      const c = (e as CustomEvent<HTMLInputElement>).detail;
+      if (ref.current?.nativeElement?.contains(c)) setErreur(champs().some(estMarque));
+    };
+    document.addEventListener('gmao-saisie-marque', suivre);
+    return () => document.removeEventListener('gmao-saisie-marque', suivre);
+  }, []);
+  // Valeur changée (calendrier, autre champ du formulaire) : la saisie refusée ne vaut plus.
+  const premiere = useRef(true);
+  useEffect(() => {
+    if (premiere.current) { premiere.current = false; return; }
+    champs().filter(estMarque).forEach(demarquer);
+  }, [valeur]);
+  // rc-picker réécrit aria-invalid quand sa propre validation change : la marque est reposée après chaque rendu.
+  useLayoutEffect(() => {
+    if (erreur) champs().filter(estMarque).forEach((c) => c.setAttribute('aria-invalid', 'true'));
+  });
+  return { ref, status: erreur ? 'error' : statut };
+}
+
 export function ChampDate(props: PropsDate) {
   const { t } = useI18n();
   const o = useOuverture(props as Commun, <CalendarOutlined />, t('champ.calendrier.ouvrir'));
-  return <DatePicker {...props} {...(o as Partial<PropsDate>)} />;
+  const m = useMarque(props.value, props.status);
+  return <DatePicker {...props} {...(o as Partial<PropsDate>)} ref={m.ref as never} status={m.status} />;
 }
 
 export function ChampHeure(props: PropsHeure) {
   const { t } = useI18n();
   const o = useOuverture(props as Commun, <ClockCircleOutlined />, t('champ.heures.ouvrir'));
-  return <TimePicker {...props} {...(o as Partial<PropsHeure>)} />;
+  const m = useMarque(props.value, props.status);
+  return <TimePicker {...props} {...(o as Partial<PropsHeure>)} ref={m.ref as never} status={m.status} />;
 }
 
 export function ChampPeriode(props: PropsPeriode) {
   const { t } = useI18n();
   const o = useOuverture(props as Commun, <CalendarOutlined />, t('champ.calendrier.ouvrir'));
-  return <DatePicker.RangePicker {...props} {...(o as Partial<PropsPeriode>)} />;
+  const m = useMarque(props.value, props.status);
+  return <DatePicker.RangePicker {...props} {...(o as Partial<PropsPeriode>)} ref={m.ref as never} status={m.status} />;
 }
 
 /**

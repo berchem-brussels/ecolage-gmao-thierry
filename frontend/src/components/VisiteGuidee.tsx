@@ -58,6 +58,23 @@ export default function VisiteGuidee() {
     ];
   }, [catalogue, roles, entite, isAdmin]);
 
+  /**
+   * 0.21.5 (D-0.21.5-2, mobile:check à 768 et 1280 px, E-57) : centré sous une cible de l'en-tête (recherche, cloche,
+   * nouvelle demande, signaler) ou au-dessus de l'assistant, le panneau de 520 px sortait de l'écran ou en touchait le
+   * bord. Sur tablette et bureau, il s'aligne sur le bord de la cible qui le garde à 8 px au moins des bords de l'écran :
+   * bord droit de la cible si le panneau tient à sa gauche, sinon bord gauche ; au-dessus de la cible si elle est en bas.
+   * Sur téléphone, le panneau prend toute la largeur (index.css) : rien ne change.
+   */
+  const placement = (el: HTMLElement): { placement?: 'bottomRight' | 'topRight' | 'bottomLeft' | 'topLeft' } => {
+    const W = window.innerWidth;
+    if (W < 768) return {};
+    const r = el.getBoundingClientRect();
+    const largeur = Math.min(520, W - 24);
+    const haut = r.top > window.innerHeight / 2;
+    if (r.right - largeur >= 8) return { placement: haut ? 'topRight' : 'bottomRight' };
+    if (r.left + largeur <= W - 8) return { placement: haut ? 'topLeft' : 'bottomLeft' };
+    return {};
+  };
   const ouvrir = useCallback(() => {
     const cibles = CIBLES.map((c) => ({ c, el: document.querySelector<HTMLElement>(`[data-visite="${c}"]`) })).filter((x) => x.el);
     // 0.19.0 (point 0) : libellés courts ; ceux d'Ant Design (« Fin de la visite guidée ») sortaient du panneau à 320 px.
@@ -68,7 +85,7 @@ export default function VisiteGuidee() {
     const liste = [
       { title: t('visite.accueil.titre'), description: t('visite.accueil.texte') },
       ...profils.map((p) => ({ title: t(`visite.profil.${p}.titre`), description: t(`visite.profil.${p}.texte`) })),
-      ...cibles.map(({ c, el }) => ({ title: t(`visite.cible.${c}.titre`), description: t(`visite.cible.${c}.texte`), target: () => el! })),
+      ...cibles.map(({ c, el }) => ({ title: t(`visite.cible.${c}.titre`), description: t(`visite.cible.${c}.texte`), target: () => el!, ...placement(el!) })),
     ];
     setEtapes(liste.map((e, k) => ({ ...e, ...boutons(k === liste.length - 1) })));
     setCourante(0);

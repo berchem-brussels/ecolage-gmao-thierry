@@ -25,6 +25,9 @@
  * demandes avec un message non lu, filtre retiré par la croix de son étiquette. Point 5 (SUI-09) : « Suivre cette
  * demande » et « Ne plus suivre » (SuiviDemande) ; la fiche du service dit si chaque personne suit par « Moi aussi » ou
  * par abonnement.
+ * 0.21.5 (E-56, SUI-01, DV-186) : colonne « Dernière activité » (dépôt, changement d'état, message du service ou du
+ * demandeur, complément ; jamais une note interne), calculée par le serveur ; sur téléphone, sous la date de dépôt
+ * quand elle en diffère.
  */
 import { useCallback, useEffect, useState } from 'react';
 import { Alert, Button, Card, Descriptions, Drawer, Grid, Input, List, Segmented, Space, Table, Tag, Typography, message } from 'antd';
@@ -334,6 +337,9 @@ function MesDemandes() {
                   {d.suivie === 1 && <Tag color="green" style={{ alignSelf: 'flex-start' }}>{t('demande.suivie.tag')}</Tag>}
                   {d.pour_moi === 1 && <Tag color="purple" style={{ alignSelf: 'flex-start' }}>{t('demande.pour_moi.tag')}</Tag>}
                   <Typography.Text type="secondary" style={{ fontSize: 13 }}>{lieu(d)} · {dateDepot(d.created_at)}</Typography.Text>
+                  {d.derniere_activite && d.derniere_activite !== d.created_at && (
+                    <Typography.Text type="secondary" style={{ fontSize: 13 }}>{t('demande.champ.activite')} : {dateDepot(d.derniere_activite)}</Typography.Text>
+                  )}
                   {d.ouverte !== 0 && <Typography.Text type="secondary" style={{ fontSize: 13 }}>{t('demande.champ.delai')} : {delai(d)}</Typography.Text>}
                 </Space>
               </Card>
@@ -362,6 +368,7 @@ function MesDemandes() {
             ) },
             { title: t('demande.champ.etat'), key: 'etat', render: (_, d) => <Space size={4} wrap>{d.danger === 1 && <DangerTag />}<EtatTag etat={d.etat} d={d} /><NonLusTag n={d.messages_non_lus} /></Space> },
             { title: t('demande.champ.depot'), key: 'depot', render: (_, d) => dateDepot(d.created_at) },
+            { title: t('demande.champ.activite'), key: 'activite', render: (_, d) => dateDepot(d.derniere_activite || d.created_at) },
             { title: t('demande.champ.delai'), key: 'delai', render: (_, d) => delai(d) },
           ]} />
       )}

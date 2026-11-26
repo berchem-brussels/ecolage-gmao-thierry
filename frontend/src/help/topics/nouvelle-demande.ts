@@ -9,7 +9,7 @@ const topic: HelpTopic = {
     nl: 'Dit scherm dient om de technische dienst een probleem in een gebouw of aan een uitrusting te melden: een lamp, een lek, een deur, een verwarming. Drie stappen: waar, wat, en enkele woorden. De aanvraag gaat naar de technische dienst van de actieve entiteit, die zelf de arbeider kiest.',
   },
   layout: [
-    { fr: '[[1]] {{demande.ou.title}} le lieu, déjà proposé : votre lieu de travail ou celui de votre dernière demande.', nl: '[[1]] {{demande.ou.title}} de plaats, al voorgesteld: uw werkplek of die van uw laatste aanvraag.' },
+    { fr: '[[1]] {{demande.ou.title}} le lieu, déjà proposé : votre lieu de travail ou celui de votre dernière demande ; confirmez-le d’un clic ({{demande.lieu.confirmer.oui}}) ou changez-le.', nl: '[[1]] {{demande.ou.title}} de plaats, al voorgesteld: uw werkplek of die van uw laatste aanvraag; bevestig ze met één klik ({{demande.lieu.confirmer.oui}}) of wijzig ze.' },
     { fr: '[[2]] {{demande.quoi.title}} une tuile par domaine, puis une par problème.', nl: '[[2]] {{demande.quoi.title}} een tegel per domein, daarna een per probleem.' },
     { fr: '[[3]] {{demande.description.title}} quelques mots, et des photos si elles aident.', nl: '[[3]] {{demande.description.title}} enkele woorden, en foto’s als ze helpen.' },
     { fr: 'En bas, le bouton {{demande.envoyer}}, avec ce qui manque encore s’il est grisé.', nl: 'Onderaan de knop {{demande.envoyer}}, met wat nog ontbreekt als hij grijs is.' },
@@ -21,14 +21,14 @@ const topic: HelpTopic = {
       when: { fr: 'Quand quelque chose est en panne ou abîmé dans un bâtiment de votre entité.', nl: 'Wanneer iets defect of beschadigd is in een gebouw van uw entiteit.' },
       steps: [
         { fr: 'Cliquez sur {{nav.demande.nouvelle}}, en haut de chaque écran ou sur l’accueil.', nl: 'Klik op {{nav.demande.nouvelle}}, bovenaan elk scherm of op de startpagina.' },
-        { fr: 'Où ? Gardez le lieu proposé, ou cliquez sur {{demande.lieu.changer}} : choisissez dans {{demande.lieu.recents}}, tapez quelques mots du bâtiment ou de la salle (en français ou en néerlandais, avec ou sans accents), ou {{demande.lieu.arbre}}.', nl: 'Waar? Behoud de voorgestelde plaats, of klik op {{demande.lieu.changer}}: kies in {{demande.lieu.recents}}, typ enkele woorden van het gebouw of de zaal (in het Frans of het Nederlands, met of zonder accenten), of {{demande.lieu.arbre}}.' },
+        { fr: 'Où ? Vérifiez le lieu proposé : s’il est juste, cliquez sur {{demande.lieu.confirmer.oui}} ; sinon, cliquez sur {{demande.lieu.changer}} : choisissez dans {{demande.lieu.recents}}, tapez quelques mots du bâtiment ou de la salle (en français ou en néerlandais, avec ou sans accents), ou {{demande.lieu.arbre}}.', nl: 'Waar? Controleer de voorgestelde plaats: als ze juist is, klik op {{demande.lieu.confirmer.oui}}; zo niet, klik op {{demande.lieu.changer}}: kies in {{demande.lieu.recents}}, typ enkele woorden van het gebouw of de zaal (in het Frans of het Nederlands, met of zonder accenten), of {{demande.lieu.arbre}}.' },
         { fr: 'Quoi ? Touchez la tuile du domaine, puis celle du problème ; répondez, si vous savez, aux questions qui apparaissent dessous.', nl: 'Wat? Tik op de tegel van het domein, daarna op die van het probleem; beantwoord, als u het weet, de vragen die eronder verschijnen.' },
         { fr: 'Décrivez le problème en quelques mots, 10 caractères au moins, dans votre langue, sans nom ni donnée personnelle sur une autre personne.', nl: 'Beschrijf het probleem in enkele woorden, minstens 10 tekens, in uw taal, zonder naam of persoonsgegevens over een andere persoon.' },
         { fr: 'Cliquez sur {{demande.envoyer}}.', nl: 'Klik op {{demande.envoyer}}.' },
       ],
       result: { fr: "L'écran donne votre numéro, par exemple AC-DI-2026-00001, et le délai indicatif. Vous suivez la demande dans {{nav.demandes}}.", nl: 'Het scherm geeft uw nummer, bijvoorbeeld AC-DI-2026-00001, en de indicatieve termijn. U volgt de aanvraag op in {{nav.demandes}}.' },
       errors: [
-        { problem: { fr: 'Le bouton {{demande.envoyer}} est grisé.', nl: 'De knop {{demande.envoyer}} is grijs.' }, solution: { fr: 'Lisez {{demande.manque}} juste au-dessus : il manque le lieu, le type de problème, une réponse obligatoire ou une description assez longue.', nl: 'Lees {{demande.manque}} er net boven: de plaats, het soort probleem, een verplicht antwoord of een lang genoeg beschrijving ontbreekt.' } },
+        { problem: { fr: 'Le bouton {{demande.envoyer}} est grisé.', nl: 'De knop {{demande.envoyer}} is grijs.' }, solution: { fr: 'Lisez {{demande.manque}} juste au-dessus : il manque le lieu, sa confirmation ({{demande.lieu.confirmer.oui}}), le type de problème, une réponse obligatoire ou une description assez longue.', nl: 'Lees {{demande.manque}} er net boven: de plaats, de bevestiging ervan ({{demande.lieu.confirmer.oui}}), het soort probleem, een verplicht antwoord of een lang genoeg beschrijving ontbreekt.' } },
         { problem: { fr: 'Le lieu est introuvable.', nl: 'De plaats is niet te vinden.' }, solution: { fr: 'Essayez le nom du bâtiment seul, ou {{demande.lieu.arbre}} ; pour plusieurs salles d’un même bâtiment, choisissez le bâtiment et citez les salles dans la description.', nl: 'Probeer enkel de naam van het gebouw, of {{demande.lieu.arbre}}; voor meerdere zalen van eenzelfde gebouw kiest u het gebouw en noemt u de zalen in de beschrijving.' } },
       ],
     },
@@ -44,7 +44,7 @@ const topic: HelpTopic = {
     },
     {
       title: { fr: 'Le même problème est déjà signalé : « Moi aussi »', nl: 'Hetzelfde probleem is al gemeld: « Ik ook »' },
-      when: { fr: 'Quand, sous le lieu choisi, des demandes déjà ouvertes dans le même bâtiment apparaissent.', nl: 'Wanneer onder de gekozen plaats al open aanvragen in hetzelfde gebouw verschijnen.' },
+      when: { fr: 'Quand, sous le lieu confirmé, des demandes déjà ouvertes apparaissent : d’abord celles du même endroit ou du même type de problème ; les autres du bâtiment restent repliées.', nl: 'Wanneer onder de bevestigde plaats al open aanvragen verschijnen: eerst die op dezelfde plaats of voor hetzelfde soort probleem; de andere van het gebouw blijven dichtgeklapt.' },
       steps: [
         { fr: 'Lisez les demandes proposées ; {{demande.voisines.voir}} en montre le détail.', nl: 'Lees de voorgestelde aanvragen; {{demande.voisines.voir}} toont het detail.' },
         { fr: 'Si votre problème y est, cliquez sur {{demande.voisines.moiaussi}} et confirmez.', nl: 'Als uw probleem erbij staat, klik op {{demande.voisines.moiaussi}} en bevestig.' },

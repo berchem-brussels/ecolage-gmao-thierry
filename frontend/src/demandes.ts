@@ -103,6 +103,8 @@ export interface Demande {
   avis?: Avis[]; avis_possible?: 0 | 1; reouvrable?: 0 | 1; reouvrable_jusqu_au?: string | null;
   /** Fil de messages (0.15.0, point 2) : droits de la personne (fiche seulement) et messages non lus (liste et fiche). */
   fil?: DroitsFil; messages_non_lus?: number;
+  /** 0.21.5 (E-56, SUI-01) : dernière activité visible du demandeur (dépôt, état, message public, complément), UTC. */
+  derniere_activite?: string;
 }
 
 /** Avis du demandeur ou du bénéficiaire à la clôture (0.14.0) : note de 1 à 5. */
@@ -319,11 +321,15 @@ export interface DemandeVoisine {
   lieu_id: number; lieu_code: string; lieu_nom_fr: string; lieu_nom_nl: string;
   categorie_id: number; categorie_libelle_fr: string; categorie_libelle_nl: string; categorie_icone: string;
   extrait: string; meme_lieu: 0 | 1; propre: 0 | 1; suivie: 0 | 1;
+  /** 0.21.5 (R6) : même catégorie que celle choisie ; proche = même local ou même catégorie. */
+  meme_categorie?: 0 | 1; proche?: 0 | 1;
 }
 
 export interface Voisines {
   batiment: { id: number; nature: string; code: string; nom_fr: string; nom_nl: string };
   total: number;
+  /** 0.21.5 (R6) : nombre de demandes au même local ou de la même catégorie (en tête de « demandes »). */
+  proches?: number;
   demandes: DemandeVoisine[];
 }
 

@@ -91,6 +91,24 @@ test('ordre : même local, puis même catégorie, puis les plus récentes ; limi
   assert.equal((await voisines(agent2, L.acc33, '&limit=0')).status, 400);
 });
 
+// 0.21.5 (R6 du test orienté utilisateur, DV-202) : les demandes « proches » (même local ou même catégorie) sont comptées
+// à part et passent en tête ; le reste du bâtiment se replie à l'écran.
+test('proches : même local ou même catégorie, comptés à part et en tête ; sans catégorie, le même local seul', async () => {
+  const avec = (await voisines(agent2, L.acc33, `&categorie_id=${C.eclairage}`)).body.data;
+  assert.equal(avec.total, 2);
+  assert.equal(avec.proches, 2, 'Accueil du 33 (même local) et Accueil Population (même catégorie)');
+  assert.deepEqual(avec.demandes.map((d) => [d.id, d.meme_lieu, d.meme_categorie, d.proche]), [[D.acc33.id, 1, 0, 1], [D.pop.id, 0, 1, 1]]);
+  const sans = (await voisines(agent2, L.acc33)).body.data;
+  assert.equal(sans.proches, 1, 'sans catégorie choisie, seul le même local est proche');
+  assert.deepEqual(sans.demandes.map((d) => [d.id, d.proche]), [[D.acc33.id, 1], [D.pop.id, 0]]);
+  const autreCat = (await voisines(agent2, L.accPop, `&categorie_id=${C.autre}`)).body.data;
+  assert.deepEqual(autreCat.demandes.map((d) => [d.id, d.meme_lieu, d.meme_categorie]), [[D.pop.id, 1, 0], [D.acc33.id, 0, 1]],
+    'même local d’abord, puis même catégorie');
+  assert.equal(autreCat.proches, 2);
+  const limite = (await voisines(agent2, L.acc33, `&categorie_id=${C.eclairage}&limit=1`)).body.data;
+  assert.equal(limite.proches, 2, 'le nombre de proches ne dépend pas de la limite');
+});
+
 test('un site choisi vaut pour tous ses bâtiments ; un local hors bâtiment se range sous son site', async () => {
   const site = (await voisines(agent2, L.site)).body.data;
   assert.equal(site.batiment.id, L.site);

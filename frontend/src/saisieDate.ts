@@ -37,6 +37,10 @@ import type { Dayjs } from 'dayjs';
  * remet à la valeur d'avant est noté refusé ; le champ se marque en erreur et l'écran le dit (évènement
  * « gmao-saisie-refusee ») ; tout envoi reste bloqué (saisiesNonRetenues, texteNonRetenu) tant qu'on n'a pas retapé dans
  * le champ ou changé sa valeur.
+ *
+ * 0.21.5 (R1 de la recette de la 0.21.4, DV-185) : le contour rouge disparaissait au retour dans le champ ou dans la
+ * fenêtre (React réécrit la classe du cadre) ; le marquage passe par `status="error"` des champs (estMarque,
+ * « gmao-saisie-marque », components/ChampDate.tsx). Une valeur changée par le calendrier retire aussi la marque.
  */
 export function ecranTactile(): boolean {
   return typeof window !== 'undefined' && typeof window.matchMedia === 'function' && window.matchMedia('(pointer: coarse)').matches;
@@ -126,15 +130,42 @@ function champDe(e: Event): HTMLInputElement | null {
   return c instanceof HTMLInputElement && c.closest('.ant-picker') ? c : null;
 }
 
-/** Marque un champ en erreur (bordure rouge, aria-invalid) jusqu'à la prochaine frappe dans le champ. */
+/**
+ * 0.21.5 (R1 de la recette de la 0.21.4, DV-185) : champs marqués en erreur. La classe posée à la main sur le cadre du
+ * champ était effacée par React au premier rendu suivant (retour dans le champ, fenêtre revenue au premier plan : le
+ * composant réécrit toute sa classe) ; le message et le blocage restaient, le contour rouge disparaissait. Le marquage
+ * est maintenant tenu ici et annoncé (« gmao-saisie-marque ») ; ChampDate, ChampHeure et ChampPeriode le traduisent en
+ * `status="error"` d'Ant Design, que React garde à chaque rendu.
+ */
+const marques = new Set<HTMLInputElement>();
+
+/** Vrai quand le champ est marqué en erreur (texte tapé non retenu, pas encore corrigé). */
+export function estMarque(c: HTMLInputElement): boolean {
+  if (marques.has(c) && !c.isConnected) marques.delete(c);
+  return marques.has(c);
+}
+
+function annoncerMarque(c: HTMLInputElement): void {
+  c.ownerDocument.dispatchEvent(new CustomEvent('gmao-saisie-marque', { detail: c }));
+}
+
+/** Marque un champ en erreur (bordure rouge, aria-invalid) jusqu'à la prochaine frappe ou au changement de sa valeur. */
 export function marquerNonRetenu(c: HTMLInputElement): void {
+  const deja = marques.has(c);
+  marques.add(c);
   c.setAttribute('aria-invalid', 'true');
   c.closest('.ant-picker')?.classList.add('ant-picker-status-error');
-  c.addEventListener('input', () => {
-    refusesALaSortie.delete(c);
-    c.removeAttribute('aria-invalid');
-    c.closest('.ant-picker')?.classList.remove('ant-picker-status-error');
-  }, { once: true });
+  if (!deja) c.addEventListener('input', () => demarquer(c), { once: true });
+  annoncerMarque(c);
+}
+
+/** Retire la marque d'erreur d'un champ (frappe dans le champ, valeur changée autrement, par le calendrier). */
+export function demarquer(c: HTMLInputElement): void {
+  refusesALaSortie.delete(c);
+  if (!marques.delete(c)) return;
+  c.removeAttribute('aria-invalid');
+  c.closest('.ant-picker')?.classList.remove('ant-picker-status-error');
+  annoncerMarque(c);
 }
 
 function surEntree(e: Event): void {
@@ -167,7 +198,8 @@ function surSortie(e: Event): void {
 /** 0.21.4 : champs encore bloquants (texte refusé à la sortie, valeur remise inchangée, toujours à l'écran). */
 function refusesBloquants(): HTMLInputElement[] {
   return [...refusesALaSortie].filter(([c, r]) => {
-    if (!c.isConnected || c.value !== r.remise) { refusesALaSortie.delete(c); return false; }
+    // 0.21.5 : valeur changée autrement (calendrier) : plus bloquant, et plus marqué en rouge non plus.
+    if (!c.isConnected || c.value !== r.remise) { refusesALaSortie.delete(c); if (c.isConnected) demarquer(c); else marques.delete(c); return false; }
     return true;
   }).map(([c]) => c);
 }

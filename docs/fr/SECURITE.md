@@ -2,6 +2,28 @@
 
 Le français fait foi. Grille de la section 10.2 du standard, rejouée à chaque version. « Non joué » veut dire que le contrôle n'a pas tourné.
 
+## 0.21.5 (26/11/2026)
+
+Retours du test orienté utilisateur du 26/11/2026 et de la recette de la 0.21.4 (DV-200 à DV-203). R1 : le contour rouge d'une date refusée disparaissait au retour dans le champ ou dans la fenêtre (classe posée à la main, effacée par React) ; R2 : un lieu proposé d'office partait sans être vu (demande décrite « salle de gym », partie sur « Accueil ») ; R6 : demandes voisines trop nombreuses pour être lues ; E-56 : dernière activité de « Mes demandes » ; E-57 : `mobile:check` à 768 et 1280 px, qui a trouvé deux défauts du livré (en-tête plus large que l'écran de 768 à environ 1100 px ; panneau de la visite guidée hors de l'écran ou collé au bord) ; E-51 : `ci.yml` limité à la lecture du code ; E-37 : minimum de `@playwright/test` ; test instable de `heures-taches.test.js` corrigé dans le test seul.
+
+| Famille | Contrôle | Résultat |
+| --- | --- | --- |
+| Validation | Lieu proposé non confirmé : envoi impossible (« il manque : la confirmation du lieu ») ; lieu choisi : confirmé ; date refusée : marque gardée au retour dans le champ, retirée à la frappe ou au choix au calendrier | Conforme (tests, Chromium et WebKit sur copie locale) |
+| Données personnelles | `derniere_activite` ne compte jamais une note interne (le demandeur ne la voit pas) ; `proches` et `meme_categorie` sans nom de demandeur (règle de DEM-04 inchangée) | Conforme (`messages.test.js`, `voisines.test.js`) |
+| Requêtes | `derniereActivite` : identifiants en paramètres « ? » (`inQ`), règle statique de `securite.test.js` | Conforme (un premier nom de variable refusé par la règle, renommé) |
+| Interface | En-tête à la largeur de l'écran de 768 à 1280 px ; visite guidée à 8 px des bords ; téléphones inchangés | Conforme (`mobile:check`, huit appareils) |
+| Infrastructure | `ci.yml` : `permissions: contents: read` (alerte CodeQL n° 11) | À constater sur GitHub après l'envoi |
+| Secrets, dépendances | Aucune dépendance nouvelle ; minimum de `@playwright/test` relevé (développement seulement, version installée inchangée) | Conforme |
+
+Preuves d'échec :
+
+| Protection retirée | Échec constaté |
+| --- | --- |
+| `saisieDate.ts` et `ChampDate.tsx` de la 0.21.4 (classe posée à la main) | `saisie-date.test.tsx` : marque perdue au retour dans le champ ; marque gardée après un choix au calendrier (deux tests) |
+| Confirmation du lieu retirée de l'envoi (`NouvelleDemandePage.tsx`) | `demandes.test.tsx` : envoi permis avec un lieu proposé non confirmé (deux tests) |
+| Note interne comptée dans la dernière activité | `messages.test.js` : « dernière activité : message public oui, note interne non » |
+| Même catégorie ignorée dans les demandes proches | `voisines.test.js` : « proches : même local ou même catégorie » |
+
 ## 0.21.4 (25/11/2026)
 
 Correctif du contrôle 7 de la recette de la 0.21.3 sur NIXUS (DV-183). Une date tapée et refusée par le champ (99/99/2026), puis quittée sans clic sur un bouton (Tab, clic ailleurs, fenêtre passée à l'arrière-plan), était remplacée en silence par l'ancienne date ; la règle de la 0.21.3 ne voyait plus rien au moment du clic sur « Enregistrer », et l'ancienne date partait (27/11 écrit sur la tâche 10 de la recette, nettoyé depuis). Second défaut trouvé en le corrigeant : une date valable retapée moins de deux secondes après un clic, puis quittée par Tab, était refusée à tort. Corrections : `saisieDate.ts` (contrôle à la sortie du champ, texte du dernier clic oublié à l'entrée) ; `ChampDate.tsx` (message dès la sortie).

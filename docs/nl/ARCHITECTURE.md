@@ -1,6 +1,10 @@
 # Architectuur
 
-Versie van de toepassing: **0.21.4** · De Franse tekst is rechtsgeldig (`docs/fr/ARCHITECTURE.md`); dit bestand vat elke versie samen.
+Versie van de toepassing: **0.21.5** · De Franse tekst is rechtsgeldig (`docs/fr/ARCHITECTURE.md`); dit bestand vat elke versie samen.
+
+## Feedback van tests en aanpassingen (0.21.5)
+
+Rode rand van een geweigerde invoer via `status="error"` (`useMarque`); voorgestelde plaats te bevestigen (`lieuConfirme`, `LieuPicker`: `confirme`); `voisines` geeft `proches`, `meme_categorie`, `proche`; `derniere_activite` in de lijst van aanvragen (zonder interne nota's, zonder migratie); compacte kop onder 1200 px (`AppLayout.tsx`); paneel van de rondleiding binnen het scherm; `mobile:check` op 768 en 1280 px; `ci.yml` met `permissions: contents: read`. Zie de Franse tekst.
 
 ## Geweigerde datum gemeld bij het verlaten van het veld (0.21.4)
 
